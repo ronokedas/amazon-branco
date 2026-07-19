@@ -30,6 +30,44 @@ if (!$c) {
     die('Certificado não encontrado.');
 }
 
+$stmt_revisao_conv = $pdo->prepare("SELECT MAX(atualizado_em) FROM cert_convalidacoes WHERE certificado_id = :id AND tipo_certificado = 'CNBL'");
+$stmt_revisao_conv->execute([':id' => $id]);
+$convalidacoes_revisadas_em = $stmt_revisao_conv->fetchColumn();
+$convalidacoes_revisadas = !empty($convalidacoes_revisadas_em)
+    && !empty($c['assinatura_em'])
+    && strtotime($convalidacoes_revisadas_em) > strtotime($c['assinatura_em']);
+
+// Depois da aprovação, o PDF oficial é o artefato imutável armazenado.
+// Não execute novamente o gerador-base, pois ele não contém o bloco de auditoria.
+if (!isset($salvar_pdf_caminho) && !$convalidacoes_revisadas && (int)($c['assinado'] ?? 0) === 1 && !empty($c['caminho_arquivo_pdf'])) {
+    $base_sistema = realpath(__DIR__ . '/../../../');
+    $caminho_fisico = realpath(__DIR__ . '/../../../' . ltrim((string)$c['caminho_arquivo_pdf'], '/\\'));
+
+    $arquivo_dentro_do_sistema = $base_sistema !== false
+        && $caminho_fisico !== false
+        && str_starts_with(strtolower($caminho_fisico), strtolower($base_sistema . DIRECTORY_SEPARATOR));
+
+    if (!$arquivo_dentro_do_sistema || !is_file($caminho_fisico)) {
+        http_response_code(409);
+        die('O PDF oficial assinado não foi encontrado. Solicite a reemissão do documento.');
+    }
+
+    $hash_esperado = strtolower(trim((string)($c['hash_arquivo_pdf'] ?? '')));
+    $hash_atual = hash_file('sha256', $caminho_fisico);
+    if ($hash_esperado !== '' && !hash_equals($hash_esperado, $hash_atual)) {
+        http_response_code(409);
+        die('A verificação de integridade do PDF oficial falhou.');
+    }
+
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: inline; filename="' . basename($caminho_fisico) . '"');
+    header('Content-Length: ' . filesize($caminho_fisico));
+    header('Cache-Control: private, no-store, max-age=0');
+    header('X-Content-Type-Options: nosniff');
+    readfile($caminho_fisico);
+    exit;
+}
+
 $tipo_embarcacao_convalidacoes = $c['tipo_embarcacao'] ?? '';
 if (!empty($c['vistoria_id'])) {
     $stmtTipoConv = $pdo->prepare("
@@ -423,42 +461,6 @@ $pdf->Cell(190, 6, 'VÁLIDO até: ' . cnblDataExtenso($c['data_validade']), 0, 1
 $pdf->SetXY(10, 248);
 $pdf->Cell(190, 6, 'Expedido em ' . cnblPdfText(cnblText($c['local_emissao'] ?? '', 'Belém-PA')) . ', em ' . cnblDataExtenso($c['data_emissao']), 0, 1, 'C');
 
-// Assinatura
-$sigX = 25; $sigY = 255; $sigW = 160; $sigH = 36;
-$pdf->SetLineWidth(0.45);
-$pdf->Rect($sigX, $sigY, $sigW, $sigH);
-$logo = __DIR__ . '/../../../assets/img/logo.png';
-if (cnblImgOk($logo)) {
-    $pdf->Image($logo, $sigX + 12, $sigY + 8, 24, 23.2, '', '', '', true, 150);
-}
-
-if (!empty($c['assinatura_imagem'])) {
-    $imgData = $c['assinatura_imagem'];
-    if (preg_match('/^data:image\/(\w+);base64,/', $imgData)) {
-        $imgData = substr($imgData, strpos($imgData, ',') + 1);
-    }
-    $decoded = base64_decode($imgData);
-    if ($decoded !== false && strlen($decoded) > 100) {
-        $tmp = tempnam(sys_get_temp_dir(), 'cnbl_sig_') . '.png';
-        file_put_contents($tmp, $decoded);
-        if (cnblImgOk($tmp)) {
-            $pdf->Image($tmp, $sigX + 58, $sigY + 13, 58, 12, 'PNG', '', '', true, 150);
-        }
-        @unlink($tmp);
-    }
-}
-
-$pdf->SetLineWidth(0.25);
-$pdf->Line($sigX + 51, $sigY + 23, $sigX + 118, $sigY + 23);
-$pdf->SetFont('helvetica', 'B', 9);
-$pdf->SetXY($sigX + 51, $sigY + 23.1);
-$pdf->Cell(67, 4, cnblPdfText(cnblText($c['assinante_nome'] ?? '', 'Responsável Técnico')), 0, 1, 'C');
-$pdf->SetFont('helvetica', 'B', 8);
-$pdf->SetX($sigX + 51);
-$pdf->Cell(67, 4, cnblPdfText(cnblText($c['assinante_titulo'] ?? '', '')), 0, 1, 'C');
-$pdf->SetX($sigX + 51);
-$pdf->Cell(67, 4, cnblPdfText(cnblText($c['assinante_registro'] ?? '', '')), 0, 1, 'C');
-
 // =========================
 // PÁGINA 2
 // =========================
@@ -522,7 +524,8 @@ foreach ($nomesConv as $i => $nome) {
 
 // Observações
 $obsY = $ty + $headerH + ($rowH * $qtdConv) + 8;
-$pdf->Rect(10, $obsY, 190, 80);
+$obsH = max(30, 210 - $obsY);
+$pdf->Rect(10, $obsY, 190, $obsH);
 $pdf->SetFont('helvetica', 'B', 9);
 $pdf->SetXY(11, $obsY + 2);
 $pdf->Cell(188, 5, 'Observações:', 0, 1, 'L');
@@ -534,10 +537,10 @@ $pdf->MultiCell(188, 5, cnblPdfText($obs1), 0, 'L');
 $pdf->SetX(11);
 $pdf->MultiCell(188, 5, cnblPdfText($obs2), 0, 'L');
 
-// Rodapé
+// Identificação do anexo acima da faixa reservada para aprovação auditável.
 $pdf->SetFont('helvetica', 'B', 10);
-$pdf->Rect(10, 281, 73, 5);
-$pdf->SetXY(10, 281.2);
+$pdf->Rect(10, 212, 73, 6);
+$pdf->SetXY(10, 212.5);
 $pdf->Cell(73, 5, 'ANEXO 6-A - NORMAM 202/DPC', 0, 0, 'C');
 
 $nome_arquivo = 'CNBL_' . str_replace('/', '-', $c['numero']) . '.pdf';

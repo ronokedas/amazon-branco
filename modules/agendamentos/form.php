@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VENDEDOR', 'VISTORIADOR'], true)) {
+if (!in_array($cargo, ['ADMIN', 'VENDEDOR'], true)) {
     setMensagem('error', 'Acesso negado.');
     redirecionar(APP_URL . 'dashboard');
 }
@@ -64,7 +64,8 @@ try {
     $armadores = $pdo->query("SELECT id, nome, cpf_cnpj FROM clientes WHERE status = 'ATIVO' AND perfil = 'armador' ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
 
     $propostas = $pdo->query("
-        SELECT p.id, p.numero, p.armador_id, p.operador_nome, c.nome AS cliente_nome, p.valor_total
+        SELECT p.id, p.numero, p.responsavel_fechamento_nome, p.responsavel_fechamento_telefone,
+               c.nome AS cliente_nome, p.valor_total
         FROM propostas p
         INNER JOIN clientes c ON p.cliente_id = c.id
         WHERE p.status IN ('enviada','aprovada','assinada')
@@ -96,14 +97,6 @@ $servicosTravados = !empty($agendamento['proposta_id']);
 $origemTravada = $editando && !empty($agendamento['proposta_id']);
 $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['hora_vistoria'], 0, 5) : '';
 
-if (!empty($agendamento['proposta_id'])) {
-    foreach ($propostas as $prop) {
-        if ($prop['id'] === $agendamento['proposta_id'] && !empty($prop['armador_id'])) {
-            $agendamento['armador_id'] = $prop['armador_id'];
-            break;
-        }
-    }
-}
 ?>
 
 <style>
@@ -172,8 +165,8 @@ if (!empty($agendamento['proposta_id'])) {
                             <?php foreach ($propostas as $prop): ?>
                                 <option value="<?php echo h($prop['id']); ?>"
                                         data-cliente="<?php echo h($prop['cliente_nome']); ?>"
-                                        data-armador-id="<?php echo h($prop['armador_id'] ?? ''); ?>"
-                                        data-operador-nome="<?php echo h($prop['operador_nome'] ?? ''); ?>"
+                                        data-contato-nome="<?php echo h($prop['responsavel_fechamento_nome'] ?? ''); ?>"
+                                        data-contato-telefone="<?php echo h($prop['responsavel_fechamento_telefone'] ?? ''); ?>"
                                         <?php echo $agendamento['proposta_id'] === $prop['id'] ? 'selected' : ''; ?>>
                                     <?php echo h($prop['numero']); ?> — <?php echo h($prop['cliente_nome']); ?> (<?php echo formatarMoeda($prop['valor_total']); ?>)
                                 </option>
@@ -284,11 +277,11 @@ if (!empty($agendamento['proposta_id'])) {
                 <h4 class="form-section-title"><i class="fas fa-phone-volume"></i> Contato e orientações</h4>
                 <div class="form-row">
                     <div class="form-group col-6">
-                        <label for="contato_nome">Nome do contato no local</label>
+                        <label for="contato_nome">Responsável pelo fechamento / contato</label>
                         <input type="text" id="contato_nome" name="contato_nome" value="<?php echo h($agendamento['contato_nome']); ?>" placeholder="Pessoa de contato">
                     </div>
                     <div class="form-group col-6">
-                        <label for="contato_telefone">Telefone do contato</label>
+                        <label for="contato_telefone">Telefone do responsável</label>
                         <input type="text" id="contato_telefone" name="contato_telefone"
                                value="<?php echo h($agendamento['contato_telefone']); ?>"
                                placeholder="(91) 99999-9999"
@@ -383,11 +376,15 @@ function carregarDadosProposta(propostaId) {
     const selectCliente = document.getElementById('cliente_id');
     const selectArmador = document.getElementById('armador_id');
     const campoOperador = document.getElementById('operador_nome');
+    const campoContatoNome = document.getElementById('contato_nome');
+    const campoContatoTelefone = document.getElementById('contato_telefone');
     const campoVistoria = document.getElementById('tipo_vistoria');
     if (!propostaId) {
         if (selectCliente) selectCliente.value = '';
         if (selectArmador) selectArmador.value = '';
         if (campoOperador) campoOperador.value = '';
+        if (campoContatoNome) campoContatoNome.value = '';
+        if (campoContatoTelefone) campoContatoTelefone.value = '';
         if (campoVistoria) campoVistoria.value = '';
         atualizarEstadoServicosTravados(false);
         restaurarEmbarcacoes();
@@ -403,12 +400,8 @@ function carregarDadosProposta(propostaId) {
                 if (data.cliente_id && selectCliente) {
                     selectCliente.value = data.cliente_id;
                 }
-                if (selectArmador && data.armador_id) {
-                    selectArmador.value = data.armador_id;
-                }
-                if (campoOperador) {
-                    campoOperador.value = data.operador_nome || '';
-                }
+                if (campoContatoNome) campoContatoNome.value = data.contato_nome || '';
+                if (campoContatoTelefone) campoContatoTelefone.value = data.contato_telefone || '';
                 if (selectEmbarcacao && data.embarcacoes && data.embarcacoes.length > 0) {
                     let options = '<option value="">Selecione a embarcação</option>';
                     data.embarcacoes.forEach(function(emb) {

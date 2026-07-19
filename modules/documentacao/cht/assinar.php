@@ -113,6 +113,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 <?php if($erro): ?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> <?php echo h($erro); ?></div><?php endif; ?>
 <div class="info-box"><h3><i class="fas fa-info-circle"></i> Documento</h3><p><strong>CHT:</strong> <?php echo h($numero_cht); ?></p><p><strong>Profissional:</strong> <?php echo h($cert['profissional_empresa']); ?></p><a href="<?php echo APP_URL; ?>documentacao/cht/pdf?token=<?php echo h($token); ?>" target="_blank" style="color:#0891b2;font-weight:600">Visualizar</a></div>
 <form method="POST" id="formAssinatura" onsubmit="return validarForm()">
+<input type="hidden" name="_submission_token" value="<?= h(bin2hex(random_bytes(24))) ?>">
 <div class="form-group"><label for="nome">Nome Completo *</label><input type="text" id="nome" name="nome" required placeholder="Seu nome" value="<?php echo h($_POST['nome']??''); ?>"></div>
 <div class="form-group"><label for="cpf">CPF *</label><input type="text" id="cpf" name="cpf" required placeholder="000.000.000-00" maxlength="14" oninput="mascararCPF(this)" value="<?php echo h($_POST['cpf']??''); ?>"></div>
 <div class="form-group"><label>Assinatura *</label><div class="canvas-wrapper"><canvas id="canvasAssinatura" width="640" height="150"></canvas></div><div class="canvas-tools"><button type="button" onclick="limparAssinatura()"><i class="fas fa-eraser"></i> Limpar</button><button type="button" onclick="mudarCor()"><i class="fas fa-palette"></i> Cor</button></div><input type="hidden" name="assinatura_dados" id="assinatura_dados"></div>

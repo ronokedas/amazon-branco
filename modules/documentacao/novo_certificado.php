@@ -28,7 +28,11 @@ $stmt = $pdo->prepare("
            v.numero AS relatorio_numero
     FROM agendamentos a
     JOIN embarcacoes e ON a.embarcacao_id = e.id
-    LEFT JOIN vistorias v ON v.agendamento_id = a.id
+    LEFT JOIN vistorias v ON v.id = (
+        SELECT v2.id FROM vistorias v2
+         WHERE v2.agendamento_id = a.id
+         ORDER BY v2.criado_em DESC, v2.id DESC LIMIT 1
+    )
     WHERE a.id = :agendamento_id
     LIMIT 1
 ");
@@ -45,6 +49,11 @@ $pode_etapa2 = in_array($status, ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true);
 if (!$pode_etapa2) {
     setMensagem('error', 'Este relatório não está aprovado para emissão de certificado.');
     redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id));
+}
+$liberacao = avaliarLiberacaoCertificacao($pdo, (string)$dados['vistoria_id']);
+if (empty($liberacao['permitido'])) {
+    setMensagem('error', $liberacao['mensagem']);
+    redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id) . '&vistoria_id=' . urlencode((string)$liberacao['vistoria_id']));
 }
 
 $tipos = [

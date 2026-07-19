@@ -12,13 +12,17 @@ require_once __DIR__ . '/../../includes/auth.php';
 verificar_sessao();
 verificar_cargo('ADMIN');
 
-// Buscar todos os usuarios
+// Buscar todos os usuarios ainda disponíveis no sistema
 try {
-    $stmt = $pdo->query("SELECT id, nome, email, cargo, ativo, criado_em, atualizado_em FROM usuarios ORDER BY nome ASC");
+    $stmt = $pdo->query("SELECT id, nome, email, cargo, ativo, criado_em, atualizado_em FROM usuarios WHERE excluido_em IS NULL ORDER BY nome ASC");
     $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $totalAdministradores = (int)$pdo->query(
+        "SELECT COUNT(*) FROM usuarios WHERE cargo = 'ADMIN' AND excluido_em IS NULL"
+    )->fetchColumn();
 } catch (Exception $e) {
     error_log('Erro ao listar usuarios: ' . $e->getMessage());
     $usuarios = [];
+    $totalAdministradores = 0;
 }
 
 // Verificar se veio mensagem de erro de permissao
@@ -83,9 +87,18 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </td>
                         <td><?php echo h($u['email']); ?></td>
                         <td>
-                            <span class="badge <?php echo $u['cargo'] === 'ADMIN' ? 'badge-success' : ($u['cargo'] === 'VENDEDOR' ? 'badge-primary' : 'badge-info'); ?>">
-                                <i class="fas <?php echo $u['cargo'] === 'ADMIN' ? 'fa-user-shield' : ($u['cargo'] === 'VENDEDOR' ? 'fa-user-tie' : 'fa-user-check'); ?>"></i>
-                                <?php echo h($u['cargo'] === 'ADMIN' ? 'Administrador' : ($u['cargo'] === 'VENDEDOR' ? 'Vendedor' : 'Vistoriador')); ?>
+                            <?php
+                                $cargoLabels = [
+                                    'ADMIN' => ['Administrador', 'badge-success', 'fa-user-shield'],
+                                    'VENDEDOR' => ['Vendedor', 'badge-primary', 'fa-user-tie'],
+                                    'VISTORIADOR' => ['Vistoriador', 'badge-info', 'fa-user-check'],
+                                    'ANALISTA' => ['Analista', 'badge-warning', 'fa-user-pen'],
+                                ];
+                                [$cargoLabel, $cargoBadge, $cargoIcon] = $cargoLabels[$u['cargo']] ?? [$u['cargo'], 'badge-secondary', 'fa-user'];
+                            ?>
+                            <span class="badge <?php echo h($cargoBadge); ?>">
+                                <i class="fas <?php echo h($cargoIcon); ?>"></i>
+                                <?php echo h($cargoLabel); ?>
                             </span>
                         </td>
                         <td>
@@ -110,6 +123,32 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         <i class="fas <?php echo $u['ativo'] ? 'fa-ban' : 'fa-check'; ?>"></i>
                                     </a>
                                 <?php endif; ?>
+                                <?php
+                                    $unicoAdminTentandoAutoExcluir = $u['id'] === $_SESSION['usuario_id']
+                                        && $u['cargo'] === 'ADMIN'
+                                        && !podeExcluirProprioAdministrador($totalAdministradores);
+                                ?>
+                                <form method="POST"
+                                      action="<?php echo APP_URL; ?>usuarios/actions"
+                                      style="display:inline"
+                                      <?php if (!$unicoAdminTentandoAutoExcluir): ?>
+                                      onsubmit="return confirm('Excluir permanentemente o acesso de <?php echo h(addslashes($u['nome'])); ?>? O histórico operacional será preservado.')"
+                                      <?php endif; ?>>
+                                    <input type="hidden" name="csrf_token" value="<?php echo h(gerarCSRF()); ?>">
+                                    <input type="hidden" name="action" value="excluir">
+                                    <input type="hidden" name="id" value="<?php echo h($u['id']); ?>">
+                                    <button type="submit"
+                                            class="btn btn-danger btn-sm"
+                                            title="<?php echo $unicoAdminTentandoAutoExcluir
+                                                ? 'O único administrador do sistema não pode excluir a própria conta.'
+                                                : 'Excluir usuário'; ?>"
+                                            aria-label="<?php echo $unicoAdminTentandoAutoExcluir
+                                                ? 'Exclusão indisponível: único administrador'
+                                                : 'Excluir ' . h($u['nome']); ?>"
+                                            <?php echo $unicoAdminTentandoAutoExcluir ? 'disabled' : ''; ?>>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>

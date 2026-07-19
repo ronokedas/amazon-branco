@@ -12,3 +12,7 @@ storage/
 !.env.example
 *.bak
 *.tmp
+pwa-campo/test-results/
+pwa-campo/playwright-report/
+/test-results/
+/tmp/

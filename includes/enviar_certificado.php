@@ -27,12 +27,12 @@ function enviarCertificadoEmail(PDO $pdo, string $certificado_id, string $tabela
 {
     try {
         $mapas = [
-            'certificados_csn' => 'id, numero, token_assinatura, nome_embarcacao, data_emissao, data_validade, status, NULL AS email_destinatario',
-            'certificados_cnbl' => 'id, numero, token_assinatura, nome_embarcacao, data_emissao, data_validade, status, NULL AS email_destinatario',
-            'certificados_cnarq' => 'id, numero, token_assinatura, nome_embarcacao, data_emissao, data_validade, status, NULL AS email_destinatario',
-            'certificados_lc' => 'id, numero_lc AS numero, token_assinatura, nome_embarcacao, data_emissao, data_validade, status, NULL AS email_destinatario',
-            'certificados_lp' => 'id, numero_lp AS numero, token_assinatura, nome_embarcacao, data_emissao, validade_data AS data_validade, status, NULL AS email_destinatario',
-            'certificados_cht' => 'id, COALESCE(numero_certificado, numero_relatorio_ht) AS numero, token_assinatura, profissional_empresa AS nome_embarcacao, data_emissao, data_validade, status, email_destinatario',
+            'certificados_csn' => 'id, numero, nome_embarcacao, data_emissao, data_validade, status, assinado, caminho_arquivo_pdf, hash_arquivo_pdf, NULL AS email_destinatario',
+            'certificados_cnbl' => 'id, numero, nome_embarcacao, data_emissao, data_validade, status, assinado, caminho_arquivo_pdf, hash_arquivo_pdf, NULL AS email_destinatario',
+            'certificados_cnarq' => 'id, numero, nome_embarcacao, data_emissao, data_validade, status, assinado, caminho_arquivo_pdf, hash_arquivo_pdf, NULL AS email_destinatario',
+            'certificados_lc' => 'id, numero_lc AS numero, nome_embarcacao, data_emissao, data_validade, status, assinado, caminho_arquivo_pdf, hash_arquivo_pdf, NULL AS email_destinatario',
+            'certificados_lp' => 'id, numero_lp AS numero, nome_embarcacao, data_emissao, validade_data AS data_validade, status, assinado, caminho_arquivo_pdf, hash_arquivo_pdf, NULL AS email_destinatario',
+            'certificados_cht' => 'id, COALESCE(numero_certificado, numero_relatorio_ht) AS numero, profissional_empresa AS nome_embarcacao, data_emissao, data_validade, status, assinado, caminho_arquivo_pdf, hash_arquivo_pdf, email_destinatario',
         ];
         if (!isset($mapas[$tabela])) {
             return ['success' => false, 'message' => 'Tipo de documento não suportado para envio.'];
@@ -46,6 +46,18 @@ function enviarCertificadoEmail(PDO $pdo, string $certificado_id, string $tabela
         if (!$cert) {
             return ['success' => false, 'message' => 'Certificado não encontrado.'];
         }
+
+        if (empty($cert['assinado']) || $cert['status'] !== 'assinado' || empty($cert['caminho_arquivo_pdf']) || empty($cert['hash_arquivo_pdf'])) {
+            return ['success' => false, 'message' => 'Aprove e assine eletronicamente o certificado antes de envia-lo por e-mail.'];
+        }
+        $pdfFile = __DIR__ . '/../' . ltrim(str_replace(['../', '..\\'], '', (string)$cert['caminho_arquivo_pdf']), '/\\');
+        if (!is_file($pdfFile) || !hash_equals((string)$cert['hash_arquivo_pdf'], hash_file('sha256', $pdfFile))) {
+            return ['success' => false, 'message' => 'O PDF oficial falhou na verificacao de integridade.'];
+        }
+        $stmtAudit = $pdo->prepare("SELECT token_validacao FROM documento_aprovacoes WHERE documento_id=:id AND status='APROVADO' ORDER BY versao DESC LIMIT 1");
+        $stmtAudit->execute([':id'=>$certificado_id]);
+        $tokenValidacao = $stmtAudit->fetchColumn();
+        if (!$tokenValidacao) return ['success'=>false, 'message'=>'A auditoria publica do certificado nao foi encontrada.'];
 
         $cliente = resolverDestinatarioDocumento($pdo, $cert, $tabela);
 
@@ -61,7 +73,7 @@ function enviarCertificadoEmail(PDO $pdo, string $certificado_id, string $tabela
         $htmlBody = file_get_contents($templatePath);
 
         // Link de assinatura
-        $link_assinatura = APP_URL . 'assinar/' . $cert['token_assinatura'];
+        $link_assinatura = rtrim(APP_URL, '/') . '/validar/' . $tokenValidacao;
 
         // Substituir placeholders
         $replacements = [
@@ -78,13 +90,11 @@ function enviarCertificadoEmail(PDO $pdo, string $certificado_id, string $tabela
         $htmlBody = str_replace(array_keys($replacements), array_values($replacements), $htmlBody);
 
         // Gerar PDF internamente, sem depender de APP_URL/localhost.
-        $pdfFile = gerarDocumentoPdfTemporario($certificado_id, $pdf_rel_path, $tabela, __DIR__ . '/../temp_pdf/');
         $pdfContent = file_get_contents($pdfFile);
 
         if (!$pdfContent || strlen($pdfContent) < 200) {
             return ['success' => false, 'message' => 'Não foi possível gerar o PDF do certificado.'];
         }
-        file_put_contents($pdfFile, $pdfContent);
 
         // Incluir mailer e enviar
         $resultado = enviarEmail(
@@ -111,10 +121,6 @@ function enviarCertificadoEmail(PDO $pdo, string $certificado_id, string $tabela
         ]);
 
         // Limpar PDF temporário
-        if (file_exists($pdfFile)) {
-            unlink($pdfFile);
-        }
-
         return $resultado;
 
     } catch (Exception $e) {

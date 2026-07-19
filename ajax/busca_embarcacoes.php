@@ -18,7 +18,7 @@ try {
     if ($cliente_id !== '') {
         $sql = "SELECT DISTINCT e.id, e.nome, e.registro
                 FROM embarcacoes e
-                LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id
+                LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND ce.status='ATIVO'
                 WHERE e.ativo = 1
                   AND (
                     ce.cliente_id = :cliente_id

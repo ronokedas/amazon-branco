@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/cliente_vinculos.php';
 
 verificar_sessao();
 $cargo = getCargo();
@@ -101,22 +102,15 @@ switch ($action) {
                 ':criado_por' => $_SESSION['usuario_id'],
             ]);
 
-            // Vincular embarcacoes (N:N historico) e atualizar tabela embarcacoes (permanente)
+            sincronizarClienteEmbarcacoes($pdo, $cliente_id, is_array($embarcacoes_ids) ? $embarcacoes_ids : [], $_SESSION['usuario_id'] ?? null);
+            // Atualizar o proprietario estruturado da embarcacao.
             if (!empty($embarcacoes_ids)) {
-                $stmtEmb = $pdo->prepare("
-                    INSERT INTO clientes_embarcacoes (id, cliente_id, embarcacao_id) 
-                    VALUES (UUID(), :cliente_id, :embarcacao_id)
-                ");
                 $stmtUpdEmb = $pdo->prepare("
                     UPDATE embarcacoes 
                     SET proprietario_id = :cliente_id, proprietario = :nome 
                     WHERE id = :embarcacao_id
                 ");
                 foreach ($embarcacoes_ids as $emb_id) {
-                    $stmtEmb->execute([
-                        ':cliente_id'    => $cliente_id,
-                        ':embarcacao_id' => $emb_id,
-                    ]);
                     $stmtUpdEmb->execute([
                         ':cliente_id'    => $cliente_id,
                         ':nome'          => $nome,
@@ -213,25 +207,15 @@ switch ($action) {
             $stmtClearEmb = $pdo->prepare("UPDATE embarcacoes SET proprietario_id = NULL, proprietario = NULL WHERE proprietario_id = :id" . $placeholders);
             $stmtClearEmb->execute($paramsClear);
 
-            // Atualizar vinculos N:N: remover todos e reinserir
-            $stmtDel = $pdo->prepare("DELETE FROM clientes_embarcacoes WHERE cliente_id = :cliente_id");
-            $stmtDel->execute([':cliente_id' => $id]);
-
+            sincronizarClienteEmbarcacoes($pdo, $id, is_array($embarcacoes_ids) ? $embarcacoes_ids : [], $_SESSION['usuario_id'] ?? null);
+            sincronizarLoginPortalCliente($pdo, $id);
             if (!empty($embarcacoes_ids)) {
-                $stmtEmb = $pdo->prepare("
-                    INSERT INTO clientes_embarcacoes (id, cliente_id, embarcacao_id) 
-                    VALUES (UUID(), :cliente_id, :embarcacao_id)
-                ");
                 $stmtUpdEmb = $pdo->prepare("
                     UPDATE embarcacoes 
                     SET proprietario_id = :cliente_id, proprietario = :nome 
                     WHERE id = :embarcacao_id
                 ");
                 foreach ($embarcacoes_ids as $emb_id) {
-                    $stmtEmb->execute([
-                        ':cliente_id'    => $id,
-                        ':embarcacao_id' => $emb_id,
-                    ]);
                     $stmtUpdEmb->execute([
                         ':cliente_id'    => $id,
                         ':nome'          => $nome,

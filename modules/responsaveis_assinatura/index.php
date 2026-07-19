@@ -21,6 +21,8 @@ $responsaveis = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </a>
     </div>
 
+    <div class="alert alert-info mb-4"><strong>Antes de aprovar PDFs:</strong> cadastre o CPF/CNPJ e envie a assinatura manuscrita de cada responsável. Somente cadastros completos ficam disponíveis no botão “Aprovar e assinar”.</div>
+
     <div class="card shadow mb-4">
         <div class="card-body">
             <div class="table-responsive">
@@ -29,7 +31,9 @@ $responsaveis = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <tr>
                             <th>Nome Completo</th>
                             <th>Cargo/Título</th>
+                            <th>CPF/CNPJ</th>
                             <th>Registro Profissional</th>
+                            <th>Assinatura</th>
                             <th>Status</th>
                             <th>Ações</th>
                         </tr>
@@ -39,7 +43,9 @@ $responsaveis = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <tr>
                                 <td><?= htmlspecialchars($resp['nome_completo']) ?></td>
                                 <td><?= htmlspecialchars($resp['cargo_titulo']) ?></td>
+                                <td><?= htmlspecialchars($resp['cpf_cnpj'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($resp['registro_profissional'] ?? '-') ?></td>
+                                <td><?= !empty($resp['assinatura_arquivo']) && !empty($resp['assinatura_hash']) ? '<span class="badge badge-success"><i class="fas fa-check"></i> Cadastrada</span>' : '<span class="badge badge-warning">Pendente</span>' ?></td>
                                 <td>
                                     <?php if ($resp['ativo']): ?>
                                         <span class="badge badge-success">Ativo</span>
@@ -62,12 +68,14 @@ $responsaveis = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <script>
-$(document).ready(function() {
-    $('#dataTable').DataTable({
-        "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Portuguese-Brasil.json"
-        }
-    });
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable) {
+        window.jQuery('#dataTable').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.10.24/i18n/Portuguese-Brasil.json'
+            }
+        });
+    }
 });
 </script>
 

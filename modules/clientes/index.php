@@ -22,7 +22,7 @@ try {
         SELECT c.*, 
                COUNT(ce.id) AS total_embarcacoes
         FROM clientes c
-        LEFT JOIN clientes_embarcacoes ce ON ce.cliente_id = c.id
+        LEFT JOIN clientes_embarcacoes ce ON ce.cliente_id = c.id AND ce.status='ATIVO'
         WHERE c.status = 'ATIVO'
         GROUP BY c.id
         ORDER BY c.criado_em DESC, c.nome ASC

@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VENDEDOR', 'VISTORIADOR'])) {
+if (!in_array($cargo, ['ADMIN', 'VENDEDOR'])) {
     setMensagem('error', 'Acesso negado.');
     redirecionar(APP_URL . 'dashboard');
 }
@@ -27,7 +27,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {
     
     try {
         $stmt = $pdo->prepare("
-            SELECT p.cliente_id, p.armador_id, p.operador_nome, c.nome AS cliente_nome
+            SELECT p.cliente_id, p.responsavel_fechamento_nome, p.responsavel_fechamento_telefone, c.nome AS cliente_nome
             FROM propostas p
             INNER JOIN clientes c ON p.cliente_id = c.id
             WHERE p.id = :id
@@ -64,8 +64,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {
             'success'          => true,
             'cliente_id'       => $proposta['cliente_id'],
             'cliente_nome'     => $proposta['cliente_nome'],
-            'armador_id'       => $proposta['armador_id'] ?? null,
-            'operador_nome'    => $proposta['operador_nome'] ?? null,
+            'contato_nome'     => $proposta['responsavel_fechamento_nome'] ?? null,
+            'contato_telefone' => $proposta['responsavel_fechamento_telefone'] ?? null,
             'embarcacoes'      => $embarcacoes,
             'embarcacao_id'    => !empty($embarcacoes) ? $embarcacoes[0]['id'] : null,
             'tipo_vistoria'    => !empty($servicos) ? implode(', ', $servicos) : '',
@@ -136,16 +136,16 @@ function obterTipoVistoriaDaProposta(PDO $pdo, ?string $proposta_id): string
 function obterDadosResponsavelDaProposta(PDO $pdo, ?string $proposta_id): array
 {
     if (empty($proposta_id)) {
-        return ['armador_id' => null, 'operador_nome' => null];
+        return ['contato_nome' => null, 'contato_telefone' => null];
     }
 
-    $stmt = $pdo->prepare("SELECT armador_id, operador_nome FROM propostas WHERE id = :id");
+    $stmt = $pdo->prepare("SELECT responsavel_fechamento_nome, responsavel_fechamento_telefone FROM propostas WHERE id = :id");
     $stmt->execute([':id' => $proposta_id]);
     $dados = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
     return [
-        'armador_id' => $dados['armador_id'] ?? null,
-        'operador_nome' => $dados['operador_nome'] ?? null,
+        'contato_nome' => $dados['responsavel_fechamento_nome'] ?? null,
+        'contato_telefone' => $dados['responsavel_fechamento_telefone'] ?? null,
     ];
 }
 
@@ -197,11 +197,11 @@ switch ($action) {
                     $tipo_vistoria = $tipoVistoriaProposta;
                 }
                 $responsavelProposta = obterDadosResponsavelDaProposta($pdo, $proposta_id);
-                if (!empty($responsavelProposta['armador_id'])) {
-                    $armador_id = $responsavelProposta['armador_id'];
+                if (!empty($responsavelProposta['contato_nome'])) {
+                    $contato_nome = $responsavelProposta['contato_nome'];
                 }
-                if (!empty($responsavelProposta['operador_nome'])) {
-                    $operador_nome = $responsavelProposta['operador_nome'];
+                if (!empty($responsavelProposta['contato_telefone'])) {
+                    $contato_telefone = preg_replace('/\D/', '', $responsavelProposta['contato_telefone']) ?: null;
                 }
             }
             if (!horaVistoriaValida($hora_vistoria)) {
@@ -317,15 +317,11 @@ switch ($action) {
                     $tipo_vistoria = $tipoVistoriaProposta;
                 }
                 $responsavelProposta = obterDadosResponsavelDaProposta($pdo, $proposta_id);
-                if (!empty($responsavelProposta['armador_id'])) {
-                    $armador_id = $responsavelProposta['armador_id'];
-                } elseif ($agendamentoAtual && !empty($agendamentoAtual['armador_id'])) {
-                    $armador_id = $agendamentoAtual['armador_id'];
+                if (!empty($responsavelProposta['contato_nome'])) {
+                    $contato_nome = $responsavelProposta['contato_nome'];
                 }
-                if (!empty($responsavelProposta['operador_nome'])) {
-                    $operador_nome = $responsavelProposta['operador_nome'];
-                } elseif ($agendamentoAtual && !empty($agendamentoAtual['operador_nome'])) {
-                    $operador_nome = $agendamentoAtual['operador_nome'];
+                if (!empty($responsavelProposta['contato_telefone'])) {
+                    $contato_telefone = preg_replace('/\D/', '', $responsavelProposta['contato_telefone']) ?: null;
                 }
             }
             if (!horaVistoriaValida($hora_vistoria)) {

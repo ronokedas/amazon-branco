@@ -1,6 +1,6 @@
 <?php
 /**
- * CHT — Actions: Salvar, Excluir (soft delete)
+ * CHT — Actions: Salvar e enviar documentos
  * Numeração: AM-REL-HT:{n}/{ano}
  */
 
@@ -21,12 +21,25 @@ if ($action === 'salvar') {
 
     $id = $_POST['id'] ?? null;
     $editando = !empty($id);
+    bloquearEdicaoDocumentoAssinado($pdo,'certificados_cht',$id,APP_URL.'documentacao/cht');
 
     $profissional_empresa = trim($_POST['profissional_empresa'] ?? '');
     $cpf_cnpj = trim($_POST['cpf_cnpj'] ?? '');
     $email_destinatario = trim($_POST['email_destinatario'] ?? '');
     $atividade_homologada = trim($_POST['atividade_homologada'] ?? '');
     $relatorio_homologacao_numero = trim($_POST['relatorio_homologacao_numero'] ?? '');
+    if ($relatorio_homologacao_numero !== '') {
+        $stmtRelatorio = $pdo->prepare("SELECT id FROM vistorias WHERE numero = :numero ORDER BY criado_em DESC, id DESC LIMIT 1");
+        $stmtRelatorio->execute([':numero' => $relatorio_homologacao_numero]);
+        $vistoriaRelacionada = $stmtRelatorio->fetchColumn();
+        if ($vistoriaRelacionada) {
+            $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoriaRelacionada);
+            if (empty($liberacao['permitido'])) {
+                setMensagem('error', $liberacao['mensagem']);
+                redirecionar(APP_URL . 'documentacao/cht/form' . ($editando ? "?id={$id}" : ''));
+            }
+        }
+    }
     $observacoes = trim($_POST['observacoes'] ?? '');
     $data_emissao = $_POST['data_emissao'] ?? date('Y-m-d');
     $data_validade = $_POST['data_validade'] ?? '';
@@ -109,14 +122,6 @@ if ($action === 'salvar') {
         setMensagem('error','Erro: '.$e->getMessage());
         redirecionar(APP_URL.'documentacao/cht/form'.($editando?"?id={$id}":''));
     }
-}
-
-if ($action === 'excluir') {
-    if (!verificarCSRF($_POST['csrf_token']??'')) { setMensagem('error','Token inválido.'); redirecionar(APP_URL.'documentacao/cht'); }
-    $id=$_POST['id']??'';
-    if(empty($id)){ setMensagem('error','ID não informado.'); redirecionar(APP_URL.'documentacao/cht'); }
-    try{ $pdo->prepare("UPDATE certificados_cht SET ativo=0 WHERE id=:id")->execute([':id'=>$id]); log_atividade('cht_excluido',"CHT ID: {$id}"); setMensagem('success','Excluído.'); }catch(Exception$e){ setMensagem('error','Erro: '.$e->getMessage()); }
-    redirecionar(APP_URL.'documentacao/cht');
 }
 
 if ($action === 'enviar_assinatura') {

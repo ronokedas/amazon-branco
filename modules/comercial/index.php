@@ -11,7 +11,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VISTORIADOR'])) {
+if (!in_array($cargo, ['ADMIN', 'VENDEDOR'], true)) {
     setMensagem('error', 'Acesso negado.');
     redirecionar(APP_URL . 'dashboard');
 }
@@ -34,6 +34,11 @@ $total_paginas_lista = 1;
 
 $where = [];
 $params = [];
+
+if ($cargo === 'VENDEDOR') {
+    $where[] = 'p.criado_por = :vendedor_id';
+    $params[':vendedor_id'] = $_SESSION['usuario_id'];
+}
 
 if ($modo_foco_proposta) {
     $where[] = 'p.id = :proposta_foco_id';
@@ -75,15 +80,41 @@ if ($cargo === 'ADMIN') {
     $mesAtual = date('Y-m');
 
     try {
-        // Total de propostas do mês
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM propostas WHERE DATE_FORMAT(created_at, '%Y-%m') = :mes");
+        // Propostas emitidas no mês. Este indicador mede volume comercial,
+        // independentemente de a proposta ter sido aceita ou não.
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM propostas WHERE DATE_FORMAT(data_emissao, '%Y-%m') = :mes");
         $stmt->execute([':mes' => $mesAtual]);
         $totalPropostasMes = (int)$stmt->fetchColumn();
 
-        // Valor total do mês (propostas do mês corrente, independente de status)
-        $stmt = $pdo->prepare("SELECT COALESCE(SUM(valor_total), 0) FROM propostas WHERE DATE_FORMAT(created_at, '%Y-%m') = :mes");
+        // Valor emitido no mês (pipeline), independentemente do status.
+        $stmt = $pdo->prepare("SELECT COALESCE(SUM(valor_total), 0) FROM propostas WHERE DATE_FORMAT(data_emissao, '%Y-%m') = :mes");
         $stmt->execute([':mes' => $mesAtual]);
-        $valorTotalMes = (float)$stmt->fetchColumn();
+        $valorPropostasEmitidasMes = (float)$stmt->fetchColumn();
+
+        // Vendas contratadas no mês: somente propostas efetivamente assinadas.
+        // A data da assinatura define o mês da venda. O fallback para created_at
+        // mantém compatibilidade com assinaturas históricas sem data registrada.
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) AS quantidade, COALESCE(SUM(valor_total), 0) AS valor
+            FROM propostas
+            WHERE assinado = 1
+              AND DATE_FORMAT(COALESCE(assinatura_em, created_at), '%Y-%m') = :mes
+        ");
+        $stmt->execute([':mes' => $mesAtual]);
+        $vendasAssinadasMes = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['quantidade' => 0, 'valor' => 0];
+        $assinadasMes = (int)$vendasAssinadasMes['quantidade'];
+        $valorAssinadoMes = (float)$vendasAssinadasMes['valor'];
+
+        // Conversão da safra de propostas emitidas no mês: quantas delas já
+        // foram assinadas, mesmo que o aceite tenha ocorrido depois da emissão.
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM propostas
+            WHERE assinado = 1
+              AND DATE_FORMAT(data_emissao, '%Y-%m') = :mes
+        ");
+        $stmt->execute([':mes' => $mesAtual]);
+        $assinadasDasEmitidasMes = (int)$stmt->fetchColumn();
 
         // Meta mensal (buscar da tabela configuracoes)
         $metaMensal = 50000.00; // valor padrão
@@ -97,15 +128,11 @@ if ($cargo === 'ADMIN') {
         } catch (Exception $e) {
             // Se tabela não existir, usa o valor padrão
         }
-        $percMeta = ($metaMensal > 0) ? round(($valorTotalMes / $metaMensal) * 100, 1) : 0;
+        $percMeta = ($metaMensal > 0) ? round(($valorAssinadoMes / $metaMensal) * 100, 1) : 0;
 
-        // Propostas aprovadas no mês
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM propostas WHERE status = 'aprovada' AND DATE_FORMAT(created_at, '%Y-%m') = :mes");
-        $stmt->execute([':mes' => $mesAtual]);
-        $aprovadasMes = (int)$stmt->fetchColumn();
-
-        // Taxa de conversão (aprovadas / total * 100)
-        $taxaConversao = ($totalPropostasMes > 0) ? round(($aprovadasMes / $totalPropostasMes) * 100, 1) : 0;
+        // Taxa de conversão baseada em aceite/assinatura, não no status
+        // intermediário "aprovada".
+        $taxaConversao = ($totalPropostasMes > 0) ? round(($assinadasDasEmitidasMes / $totalPropostasMes) * 100, 1) : 0;
 
         // Total geral de propostas (todos os tempos)
         $stmt = $pdo->query("SELECT COUNT(*) FROM propostas");
@@ -113,10 +140,12 @@ if ($cargo === 'ADMIN') {
 
         $indicadores = [
             'total_mes'        => $totalPropostasMes,
-            'valor_total_mes'  => $valorTotalMes,
+            'valor_emitido_mes'=> $valorPropostasEmitidasMes,
+            'valor_assinado_mes' => $valorAssinadoMes,
             'meta_mensal'      => $metaMensal,
             'perc_meta'        => $percMeta,
-            'aprovadas_mes'    => $aprovadasMes,
+            'assinadas_mes'    => $assinadasMes,
+            'assinadas_emitidas_mes' => $assinadasDasEmitidasMes,
             'taxa_conversao'   => $taxaConversao,
             'total_geral'      => $totalGeralProp,
         ];
@@ -124,10 +153,12 @@ if ($cargo === 'ADMIN') {
         error_log('Erro ao carregar indicadores comerciais: ' . $e->getMessage());
         $indicadores = [
             'total_mes'       => 0,
-            'valor_total_mes' => 0,
+            'valor_emitido_mes' => 0,
+            'valor_assinado_mes' => 0,
             'meta_mensal'     => 50000.00,
             'perc_meta'       => 0,
-            'aprovadas_mes'   => 0,
+            'assinadas_mes'   => 0,
+            'assinadas_emitidas_mes' => 0,
             'taxa_conversao'  => 0,
             'total_geral'     => 0,
         ];
@@ -236,7 +267,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
     <?php if ($cargo === 'ADMIN'): ?>
     <!-- ===== INDICADORES COMERCIAIS ===== -->
-    <div class="cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 25px;">
+    <div class="cards-grid" data-testid="indicadores-comerciais"
+         data-total-propostas="<?php echo $indicadores['total_mes']; ?>"
+         data-assinadas-emitidas="<?php echo $indicadores['assinadas_emitidas_mes']; ?>"
+         data-valor-emitido="<?php echo number_format($indicadores['valor_emitido_mes'], 2, '.', ''); ?>"
+         data-valor-assinado="<?php echo number_format($indicadores['valor_assinado_mes'], 2, '.', ''); ?>"
+         data-meta="<?php echo number_format($indicadores['meta_mensal'], 2, '.', ''); ?>"
+         data-percentual-meta="<?php echo number_format($indicadores['perc_meta'], 1, '.', ''); ?>"
+         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 25px;">
         <!-- Card: Propostas do Mês -->
         <div class="card" style="border-left: 4px solid #2ECC71;">
             <div style="padding: 18px 20px; display: flex; align-items: center; gap: 14px;">
@@ -245,23 +283,26 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
                 <div>
                     <small style="display: block; color: var(--cor-texto-secundario); margin-bottom: 2px;">Propostas do Mês</small>
-                    <span style="font-size: 1.6rem; font-weight: 700; color: var(--cor-texto);"><?php echo $indicadores['total_mes']; ?></span>
-                    <small style="display: block; color: var(--cor-texto-secundario); margin-top: 2px;">
-                        <?php echo $indicadores['aprovadas_mes']; ?> aprovadas (<?php echo $indicadores['taxa_conversao']; ?>%)
+                    <span data-testid="total-propostas-mes" style="font-size: 1.6rem; font-weight: 700; color: var(--cor-texto);"><?php echo $indicadores['total_mes']; ?></span>
+                    <small data-testid="conversao-propostas-mes" style="display: block; color: var(--cor-texto-secundario); margin-top: 2px;">
+                        <?php echo $indicadores['assinadas_emitidas_mes']; ?> assinadas (<?php echo number_format($indicadores['taxa_conversao'], 1, ',', '.'); ?>%)
                     </small>
                 </div>
             </div>
         </div>
 
-        <!-- Card: Valor Total do Mês -->
+        <!-- Card: Vendas assinadas no mês -->
         <div class="card" style="border-left: 4px solid #3498DB;">
             <div style="padding: 18px 20px; display: flex; align-items: center; gap: 14px;">
                 <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(52,152,219,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                     <i class="fas fa-dollar-sign" style="font-size: 1.3rem; color: #3498DB;"></i>
                 </div>
                 <div>
-                    <small style="display: block; color: var(--cor-texto-secundario); margin-bottom: 2px;">Valor Total do Mês</small>
-                    <span style="font-size: 1.6rem; font-weight: 700; color: var(--cor-texto);">R$ <?php echo number_format($indicadores['valor_total_mes'], 2, ',', '.'); ?></span>
+                    <small style="display: block; color: var(--cor-texto-secundario); margin-bottom: 2px;">Vendas Assinadas no Mês</small>
+                    <span data-testid="valor-vendas-assinadas" style="display: block; white-space: nowrap; font-size: clamp(1.25rem, 1.65vw, 1.6rem); letter-spacing: -0.025em; font-weight: 700; color: var(--cor-texto);">R$ <?php echo number_format($indicadores['valor_assinado_mes'], 2, ',', '.'); ?></span>
+                    <small data-testid="valor-propostas-emitidas" style="display: block; color: var(--cor-texto-secundario); margin-top: 2px;">
+                        <?php echo $indicadores['assinadas_mes']; ?> venda(s) contratada(s) · R$ <?php echo number_format($indicadores['valor_emitido_mes'], 2, ',', '.'); ?> emitidos
+                    </small>
                 </div>
             </div>
         </div>
@@ -271,14 +312,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <div style="padding: 18px 20px;">
                 <small style="display: block; color: var(--cor-texto-secundario); margin-bottom: 4px;">Meta Mensal (R$ <?php echo number_format($indicadores['meta_mensal'], 2, ',', '.'); ?>)</small>
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 1.6rem; font-weight: 700; color: var(--cor-texto);"><?php echo $indicadores['perc_meta']; ?>%</span>
+                    <span data-testid="percentual-meta" style="font-size: 1.6rem; font-weight: 700; color: var(--cor-texto);"><?php echo number_format($indicadores['perc_meta'], 1, ',', '.'); ?>%</span>
                 </div>
                 <!-- Barra de progresso -->
                 <div style="margin-top: 10px; background: var(--cor-borda); border-radius: 6px; height: 8px; overflow: hidden;">
                     <div style="width: <?php echo min(100, $indicadores['perc_meta']); ?>%; height: 100%; background: linear-gradient(90deg, #F39C12, #E67E22); border-radius: 6px; transition: width 0.6s ease;"></div>
                 </div>
-                <small style="display: block; color: var(--cor-texto-secundario); margin-top: 6px;">
-                    Restam R$ <?php echo number_format(max(0, $indicadores['meta_mensal'] - $indicadores['valor_total_mes']), 2, ',', '.'); ?> para atingir a meta
+                <small data-testid="restante-meta" style="display: block; color: var(--cor-texto-secundario); margin-top: 6px;">
+                    Restam R$ <?php echo number_format(max(0, $indicadores['meta_mensal'] - $indicadores['valor_assinado_mes']), 2, ',', '.'); ?> para atingir a meta
                 </small>
             </div>
         </div>

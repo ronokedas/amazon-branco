@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../includes/functions.php';
+require_once __DIR__ . '/../../../includes/aprovacao_ui.php';
 
 verificar_sessao();
 if (!podeAcessar('documentacao')) {
@@ -103,11 +104,11 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                             <div class="d-flex gap-1" style="flex-wrap:nowrap;">
                                 <a href="<?php echo APP_URL; ?>documentacao/cht/form?id=<?php echo h($c['id']); ?>" class="btn btn-sm btn-primary" title="Editar"><i class="fas fa-edit"></i></a>
                                 <a href="<?php echo APP_URL; ?>documentacao/cht/pdf?id=<?php echo h($c['id']); ?>" class="btn btn-sm btn-secondary" title="PDF" target="_blank"><i class="fas fa-file-pdf"></i></a>
+                                <?php renderBotaoAprovacaoDocumento($pdo,'CHT',$c['id'],$c['status'],(bool)$c['assinado']); ?>
                                 <form method="POST" action="<?php echo APP_URL; ?>documentacao/cht/actions" style="display:inline;" onsubmit="return confirm('Enviar CHT <?php echo h(addslashes($c['numero_relatorio_ht'])); ?> por e-mail?')"><input type="hidden" name="action" value="enviar_certificado"><input type="hidden" name="id" value="<?php echo h($c['id']); ?>"><input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>"><button type="submit" class="btn btn-sm btn-success" title="E-mail"><i class="fas fa-envelope"></i></button></form>
                                 <?php $t=$pdo->prepare("SELECT token_assinatura FROM certificados_cht WHERE id=:id");$t->execute([':id'=>$c['id']]);$tr=$t->fetch();$la=APP_URL.'assinar/'.$tr['token_assinatura']; ?>
                                 <button type="button" class="btn btn-sm btn-info" title="Copiar Link" onclick="copiarLink('<?php echo h($la); ?>',this)"><i class="fas fa-link"></i></button>
                                 <form method="POST" action="<?php echo APP_URL; ?>documentacao/cht/actions" style="display:inline;" onsubmit="return confirm('Enviar link de assinatura por e-mail?')"><input type="hidden" name="action" value="enviar_assinatura"><input type="hidden" name="id" value="<?php echo h($c['id']); ?>"><input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>"><button type="submit" class="btn btn-sm btn-warning" title="Link Assinatura"><i class="fas fa-file-signature"></i></button></form>
-                                <form method="POST" action="<?php echo APP_URL; ?>documentacao/cht/actions" style="display:inline;" onsubmit="return confirm('Excluir certificado?')"><input type="hidden" name="action" value="excluir"><input type="hidden" name="id" value="<?php echo h($c['id']); ?>"><input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>"><button type="submit" class="btn btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button></form>
                             </div>
                         </td>
                     </tr>
@@ -120,4 +121,4 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
 <script>
 function copiarLink(url,btn){navigator.clipboard.writeText(url).then(function(){const h=btn.innerHTML;btn.innerHTML='<i class="fas fa-check"></i>';btn.classList.remove('btn-info');btn.classList.add('btn-success');setTimeout(function(){btn.innerHTML=h;btn.classList.remove('btn-success');btn.classList.add('btn-info')},2000)}).catch(function(){const i=document.createElement('input');i.value=url;document.body.appendChild(i);i.select();document.execCommand('copy');document.body.removeChild(i);alert('Link copiado!')})}
 </script>
-<?php require_once __DIR__ . '/../../../includes/footer.php'; ?>
+<?php renderAprovacaoUi($pdo); require_once __DIR__ . '/../../../includes/footer.php'; ?>

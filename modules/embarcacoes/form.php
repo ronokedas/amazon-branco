@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/dados_teste_embarcacoes.php';
 
 // Exigir login e permissao do modulo
 verificar_sessao();
@@ -24,6 +25,9 @@ try {
 } catch (Exception $e) {
     error_log('Erro ao buscar tipos de embarcacao: ' . $e->getMessage());
 }
+
+$dadosTesteAtivos = dadosTesteEmbarcacoesAtivos($pdo);
+$perfisTeste = $dadosTesteAtivos ? perfisDadosTesteEmbarcacoes($tipos_embarcacao) : [];
 
 // Buscar embarcacao se for edicao
 $id = $_GET['id'] ?? '';
@@ -108,9 +112,9 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
 }
 .tab-item.active {
     color: #fff;
-    background: var(--cor-primaria);
+    background: var(--cor-destaque);
     border-radius: 6px 6px 0 0;
-    border-bottom-color: var(--cor-primaria);
+    border-bottom-color: var(--cor-destaque);
 }
 .tab-item:hover:not(.active) {
     color: var(--cor-texto);
@@ -122,6 +126,45 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
 .tab-pane.active {
     display: block;
 }
+.test-data-panel {
+    margin-bottom: 22px;
+    padding: 16px;
+    border: 1px dashed #d99b1d;
+    border-radius: 10px;
+    background: #fff9e8;
+}
+.test-data-controls {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+.test-data-controls .form-group { margin: 0; }
+@media (max-width: 767px) {
+    .tabs-nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        overflow: visible;
+        border-bottom: 0;
+    }
+    .tab-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 52px;
+        padding: 8px 10px;
+        margin: 0;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.25;
+        border: 1px solid var(--cor-borda);
+        border-radius: 10px;
+    }
+    .tab-item.active { border-radius: 10px; }
+    .test-data-controls { grid-template-columns: 1fr; }
+    .test-data-controls .btn { width: 100%; }
+}
 </style>
 
 <div class="conteudo-principal">
@@ -129,17 +172,47 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
         <div class="card-header">
             <h3 style="color: var(--cor-destaque); margin: 0;">
                 <i class="fas <?php echo $isEdicao ? 'fa-edit' : 'fa-plus-circle'; ?>"></i>
-                <?php echo $isEdicao ? 'Editar Embarcacao' : 'Nova Embarcacao'; ?>
+                <?php echo $isEdicao ? 'Editar Embarcação' : 'Nova Embarcação'; ?>
             </h3>
         </div>
         <div class="card-body">
-            <form method="POST" 
+            <form method="POST"
                   action="<?php echo APP_URL; ?>embarcacoes/actions?action=salvar" 
                   id="formEmbarcacao"
+                  autocomplete="off"
                   onsubmit="return validarFormulario('formEmbarcacao')">
                 
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>">
+                <input type="hidden" name="_submission_token" value="<?php echo h(bin2hex(random_bytes(24))); ?>">
                 <input type="hidden" name="id" value="<?php echo h($embarcacao['id'] ?? ''); ?>">
+
+                <?php if ($dadosTesteAtivos && !$isEdicao): ?>
+                <section class="test-data-panel" aria-labelledby="titulo-preenchimento-teste">
+                    <strong id="titulo-preenchimento-teste" style="display:block;margin-bottom:5px;color:#755000;">
+                        <i class="fas fa-flask"></i> Preenchimento rápido para testes
+                    </strong>
+                    <p style="margin:0 0 13px;color:#6b5a2b;font-size:.92rem;">
+                        Selecione um modelo fictício. Os dados serão colocados no formulário, mas o cadastro só será criado quando você clicar em “Criar Embarcação”.
+                    </p>
+                    <div class="test-data-controls">
+                        <div class="form-group">
+                            <label for="perfil_dados_teste">Modelo de embarcação</label>
+                            <select id="perfil_dados_teste">
+                                <option value="">-- Escolha um modelo --</option>
+                                <?php foreach ($perfisTeste as $chavePerfil => $perfil): ?>
+                                <option value="<?php echo h($chavePerfil); ?>">
+                                    <?php echo h($perfil['label'] . ' — ' . $perfil['description']); ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-warning" id="btn-preencher-dados-teste">
+                            <i class="fas fa-magic"></i> Preencher formulário
+                        </button>
+                    </div>
+                    <small id="status-dados-teste" style="display:block;margin-top:10px;color:#496b2f;" role="status" aria-live="polite"></small>
+                </section>
+                <?php endif; ?>
 
                 <ul class="tabs-nav" id="embarcacoesTabs">
                     <li class="tab-item active" onclick="openTab('tab-gerais', this)">Dados Gerais</li>
@@ -150,14 +223,16 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
 
                 <!-- TAB: DADOS GERAIS -->
                 <div id="tab-gerais" class="tab-pane active">
+                    <?php if ($isEdicao): ?>
+                    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;padding:12px;border:1px solid var(--cor-borda);border-radius:10px;background:rgba(9,155,112,.05)">
+                        <img src="<?= h($embarcacao['foto_url'] ?: APP_URL . 'assets/img/portal-hero-ship.png') ?>" alt="Foto oficial da embarcação" style="width:104px;height:78px;object-fit:cover;border-radius:9px;border:1px solid var(--cor-borda)">
+                        <span><strong style="display:block">Foto oficial da embarcação</strong><small class="text-muted"><?= $embarcacao['foto_url'] ? 'Capturada pelo vistoriador no Amazon Campo.' : 'Ainda não capturada. O vistoriador poderá adicionar pelo Amazon Campo.' ?></small></span>
+                    </div>
+                    <?php endif; ?>
                     <div class="grid-2">
                         <div class="form-group">
                             <label for="nome"><i class="fas fa-ship"></i> Nome da embarcacao *</label>
                             <input type="text" id="nome" name="nome" required maxlength="150" value="<?php echo h($embarcacao['nome'] ?? ''); ?>">
-                        </div>
-                        <div class="form-group">
-                            <label for="registro"><i class="fas fa-hashtag"></i> Registro *</label>
-                            <input type="text" id="registro" name="registro" required maxlength="80" value="<?php echo h($embarcacao['registro'] ?? ''); ?>">
                         </div>
                     </div>
 
@@ -188,7 +263,7 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                         </div>
                         <div class="form-group">
                             <label for="numero_inscricao"><i class="fas fa-id-card"></i> Número de Inscrição</label>
-                            <input type="text" id="numero_inscricao" name="numero_inscricao" maxlength="80" autocomplete="off" value="<?php echo h($embarcacao['numero_inscricao'] ?? ''); ?>">
+                            <input type="text" id="numero_inscricao" name="numero_inscricao" maxlength="80" autocomplete="new-password" aria-autocomplete="none" autocapitalize="characters" spellcheck="false" data-lpignore="true" data-1p-ignore value="<?php echo h($embarcacao['numero_inscricao'] ?? ''); ?>">
                         </div>
                     </div>
 
@@ -221,14 +296,29 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                         </div>
                         <div class="form-group">
                             <label for="fabricante_motor"><i class="fas fa-industry"></i> Fabricante do Motor</label>
-                            <input type="text" id="fabricante_motor" name="fabricante_motor" maxlength="300" value="<?php echo h($embarcacao['fabricante_motor'] ?? ''); ?>">
+                            <input type="text" id="fabricante_motor" name="fabricante_motor" maxlength="300" autocomplete="off" value="<?php echo h($embarcacao['fabricante_motor'] ?? ''); ?>">
                         </div>
                     </div>
 
                     <div class="grid-2">
                         <div class="form-group">
+                            <label for="modelo_motor"><i class="fas fa-cog"></i> Modelo do Motor</label>
+                            <input type="text" id="modelo_motor" name="modelo_motor" maxlength="150" autocomplete="off" value="<?php echo h($embarcacao['modelo_motor'] ?? ''); ?>">
+                        </div>
+                        <div class="form-group">
+                            <label for="numero_motor"><i class="fas fa-hashtag"></i> Número do Motor</label>
+                            <input type="text" id="numero_motor" name="numero_motor" maxlength="100" autocomplete="new-password" aria-autocomplete="none" autocapitalize="characters" spellcheck="false" data-lpignore="true" data-1p-ignore value="<?php echo h($embarcacao['numero_motor'] ?? ''); ?>">
+                        </div>
+                    </div>
+
+                    <small class="text-muted" id="ajuda_propulsao" style="display:block; margin: -4px 0 14px;">
+                        Para embarcações com propulsão, fabricante, modelo, número do motor e potência são obrigatórios e alimentam o CSN.
+                    </small>
+
+                    <div class="grid-2">
+                        <div class="form-group">
                             <label for="potencia_kw"><i class="fas fa-bolt"></i> Potência (kW / HP)</label>
-                            <input type="text" id="potencia_kw" name="potencia_kw" maxlength="50" value="<?php echo h($embarcacao['potencia_kw'] ?? ''); ?>">
+                            <input type="text" id="potencia_kw" name="potencia_kw" maxlength="50" autocomplete="off" inputmode="decimal" placeholder="Ex.: 450 kW" value="<?php echo h($embarcacao['potencia_kw'] ?? ''); ?>">
                         </div>
                         <div class="form-group">
                             <label for="material_casco"><i class="fas fa-layer-group"></i> Material do Casco</label>
@@ -273,15 +363,15 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                     <div class="grid-3">
                         <div class="form-group">
                             <label for="numero_tripulantes">Qtd Tripulantes</label>
-                            <input type="number" id="numero_tripulantes" name="numero_tripulantes" value="<?php echo h($embarcacao['numero_tripulantes'] ?? ''); ?>">
+                            <input type="number" id="numero_tripulantes" name="numero_tripulantes" min="0" value="<?php echo h($embarcacao['numero_tripulantes'] ?? ''); ?>">
                         </div>
                         <div class="form-group">
                             <label for="numero_passageiros_n1">Passageiros N1</label>
-                            <input type="number" id="numero_passageiros_n1" name="numero_passageiros_n1" value="<?php echo h($embarcacao['numero_passageiros_n1'] ?? ''); ?>">
+                            <input type="number" id="numero_passageiros_n1" name="numero_passageiros_n1" min="0" value="<?php echo h($embarcacao['numero_passageiros_n1'] ?? ''); ?>">
                         </div>
                         <div class="form-group">
                             <label for="numero_passageiros_n2">Passageiros N2</label>
-                            <input type="number" id="numero_passageiros_n2" name="numero_passageiros_n2" value="<?php echo h($embarcacao['numero_passageiros_n2'] ?? ''); ?>">
+                            <input type="number" id="numero_passageiros_n2" name="numero_passageiros_n2" min="0" value="<?php echo h($embarcacao['numero_passageiros_n2'] ?? ''); ?>">
                         </div>
                     </div>
                     
@@ -306,33 +396,33 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                     <div class="grid-2">
                         <div class="form-group">
                             <label for="comprimento_total">Comprimento Total (m)</label>
-                            <input type="number" step="0.01" id="comprimento_total" name="comprimento_total" value="<?php echo h($embarcacao['comprimento_total'] ?? ''); ?>">
+                            <input type="number" step="0.01" min="0" id="comprimento_total" name="comprimento_total" value="<?php echo h($embarcacao['comprimento_total'] ?? ''); ?>">
                         </div>
                         <div class="form-group">
                             <label for="comprimento_casco">Comprimento Casco (m)</label>
-                            <input type="number" step="0.01" id="comprimento_casco" name="comprimento_casco" value="<?php echo h($embarcacao['comprimento_casco'] ?? ''); ?>">
+                            <input type="number" step="0.01" min="0" id="comprimento_casco" name="comprimento_casco" value="<?php echo h($embarcacao['comprimento_casco'] ?? ''); ?>">
                         </div>
                     </div>
 
                     <div class="grid-2">
                         <div class="form-group">
                             <label for="comprimento_lpp">Comprimento LPP (m)</label>
-                            <input type="number" step="0.01" id="comprimento_lpp" name="comprimento_lpp" value="<?php echo h($embarcacao['comprimento_lpp'] ?? ''); ?>">
+                            <input type="number" step="0.01" min="0" id="comprimento_lpp" name="comprimento_lpp" value="<?php echo h($embarcacao['comprimento_lpp'] ?? ''); ?>">
                         </div>
                         <div class="form-group">
                             <label for="pontal_moldado">Pontal Moldado (m)</label>
-                            <input type="number" step="0.01" id="pontal_moldado" name="pontal_moldado" value="<?php echo h($embarcacao['pontal_moldado'] ?? ''); ?>">
+                            <input type="number" step="0.01" min="0" id="pontal_moldado" name="pontal_moldado" value="<?php echo h($embarcacao['pontal_moldado'] ?? ''); ?>">
                         </div>
                     </div>
 
                     <div class="grid-2">
                         <div class="form-group">
                             <label for="boca_moldada">Boca Moldada (m)</label>
-                            <input type="number" step="0.01" id="boca_moldada" name="boca_moldada" value="<?php echo h($embarcacao['boca_moldada'] ?? ''); ?>">
+                            <input type="number" step="0.01" min="0" id="boca_moldada" name="boca_moldada" value="<?php echo h($embarcacao['boca_moldada'] ?? ''); ?>">
                         </div>
                         <div class="form-group">
                             <label for="boca_maxima">Boca Máxima (m)</label>
-                            <input type="number" step="0.01" id="boca_maxima" name="boca_maxima" value="<?php echo h($embarcacao['boca_maxima'] ?? ''); ?>">
+                            <input type="number" step="0.01" min="0" id="boca_maxima" name="boca_maxima" value="<?php echo h($embarcacao['boca_maxima'] ?? ''); ?>">
                         </div>
                     </div>
 
@@ -540,7 +630,7 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                 <!-- Botoes -->
                 <div class="d-flex gap-2" style="margin-top: 20px;">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> <?php echo $isEdicao ? 'Atualizar' : 'Criar Embarcacao'; ?>
+                        <i class="fas fa-save"></i> <?php echo $isEdicao ? 'Atualizar' : 'Criar Embarcação'; ?>
                     </button>
                     <a href="<?php echo APP_URL; ?>embarcacoes" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Voltar
@@ -567,6 +657,94 @@ function openTab(tabId, element) {
     // Adicionar classe ativa na aba
     element.classList.add('active');
 }
+
+function atualizarCamposPropulsao() {
+    const possuiPropulsao = document.getElementById('possui_propulsao');
+    const campos = ['fabricante_motor', 'modelo_motor', 'numero_motor', 'potencia_kw']
+        .map(id => document.getElementById(id))
+        .filter(Boolean);
+    if (!possuiPropulsao) return;
+
+    const comPropulsao = possuiPropulsao.value === '1';
+    const semPropulsao = possuiPropulsao.value === '0';
+
+    campos.forEach(campo => {
+        campo.required = comPropulsao;
+        campo.disabled = semPropulsao;
+        campo.toggleAttribute('disabled', semPropulsao);
+        campo.readOnly = false;
+        campo.setAttribute('aria-disabled', semPropulsao ? 'true' : 'false');
+
+        const grupo = campo.closest('.form-group');
+        if (grupo) {
+            grupo.style.opacity = semPropulsao ? '0.55' : '1';
+            grupo.style.pointerEvents = semPropulsao ? 'none' : 'auto';
+        }
+
+        if (semPropulsao) campo.value = '';
+    });
+
+    const ajuda = document.getElementById('ajuda_propulsao');
+    ajuda.textContent = semPropulsao
+        ? 'Embarcação sem propulsão: os dados do motor não se aplicam e serão apresentados assim no CSN.'
+        : 'Para embarcações com propulsão, fabricante, modelo, número do motor e potência são obrigatórios e alimentam o CSN.';
+}
+
+function agendarAtualizacaoCamposPropulsao() {
+    atualizarCamposPropulsao();
+    // Alguns navegadores atualizam o valor visual do select no fim do clique.
+    setTimeout(atualizarCamposPropulsao, 0);
+}
+
+const campoPossuiPropulsao = document.getElementById('possui_propulsao');
+['change', 'input', 'click'].forEach(evento => {
+    campoPossuiPropulsao.addEventListener(evento, agendarAtualizacaoCamposPropulsao);
+});
+atualizarCamposPropulsao();
+
+<?php if ($dadosTesteAtivos && !$isEdicao): ?>
+const perfisDadosTeste = <?php echo json_encode($perfisTeste, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+
+function preencherFormularioComDadosTeste() {
+    const seletor = document.getElementById('perfil_dados_teste');
+    const perfil = perfisDadosTeste[seletor.value];
+    const status = document.getElementById('status-dados-teste');
+
+    if (!perfil) {
+        status.textContent = 'Escolha um dos três modelos antes de preencher.';
+        seletor.focus();
+        return;
+    }
+
+    const sufixo = new Date().toISOString().replace(/\D/g, '').slice(2, 14);
+    const dados = {
+        ...perfil.dados,
+        nome: `${perfil.dados.nome} ${sufixo.slice(-6)}`,
+        numero_inscricao: `TESTE${sufixo}`,
+        indicativo_chamada: `T${sufixo.slice(-7)}`,
+        numero_motor: perfil.dados.numero_motor ? `MOT-${sufixo}` : '',
+        numero_casco: `CASCO-${sufixo}`,
+    };
+    const form = document.getElementById('formEmbarcacao');
+
+    Object.entries(dados).forEach(([nome, valor]) => {
+        const campo = form.elements.namedItem(nome);
+        if (!campo) return;
+        campo.disabled = false;
+        campo.value = valor;
+        campo.dispatchEvent(new Event('input', { bubbles: true }));
+        campo.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    atualizarCamposPropulsao();
+    openTab('tab-gerais', document.querySelector('[onclick*="tab-gerais"]'));
+    status.textContent = `${perfil.label} preenchida com dados fictícios. Revise ou clique em “Criar Embarcação”.`;
+    document.getElementById('nome').focus();
+}
+
+document.getElementById('btn-preencher-dados-teste')
+    .addEventListener('click', preencherFormularioComDadosTeste);
+<?php endif; ?>
 </script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

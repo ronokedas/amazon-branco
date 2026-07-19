@@ -40,7 +40,7 @@ if ($editando) {
         if ($dados) {
             $armador = array_merge($armador, $dados);
             // Carregar embarcacoes vinculadas
-            $stmtEmb = $pdo->prepare("SELECT embarcacao_id FROM clientes_embarcacoes WHERE cliente_id = :cliente_id");
+            $stmtEmb = $pdo->prepare("SELECT embarcacao_id FROM clientes_embarcacoes WHERE cliente_id = :cliente_id AND status='ATIVO'");
             $stmtEmb->execute([':cliente_id' => $id]);
             $armador['embarcacoes_ids'] = array_column($stmtEmb->fetchAll(PDO::FETCH_ASSOC), 'embarcacao_id');
         } else {

@@ -27,6 +27,11 @@ $filtro_data_fim = $_GET['data_fim'] ?? '';
 $where = [];
 $params = [];
 
+if ($cargo === 'VENDEDOR') {
+    $where[] = 'p.criado_por = :vendedor_id';
+    $params[':vendedor_id'] = $_SESSION['usuario_id'];
+}
+
 if ($filtro_status !== 'todos') {
     $where[] = 'p.status = :status';
     $params[':status'] = $filtro_status;
@@ -206,6 +211,22 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
             <div>
                 <small class="text-muted">Email</small>
                 <div><?php echo h($propostaDetalhe['cliente_email'] ?? '-'); ?></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header">
+            <h3><i class="fas fa-user-check"></i> Responsável pelo fechamento da proposta</h3>
+        </div>
+        <div class="card-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 20px;">
+            <div>
+                <small class="text-muted">Nome</small>
+                <div style="font-weight: 600;"><?php echo h($propostaDetalhe['responsavel_fechamento_nome'] ?? '-'); ?></div>
+            </div>
+            <div>
+                <small class="text-muted">Telefone</small>
+                <div><?php echo h($propostaDetalhe['responsavel_fechamento_telefone'] ?? '-'); ?></div>
             </div>
         </div>
     </div>

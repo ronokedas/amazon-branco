@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../includes/functions.php';
+require_once __DIR__ . '/../../../includes/aprovacao_ui.php';
 
 // Verificar permissão
 verificar_sessao();
@@ -157,6 +158,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                        class="btn btn-sm btn-secondary" title="Gerar PDF" target="_blank">
                                         <i class="fas fa-file-pdf"></i>
                                     </a>
+                                    <?php renderBotaoAprovacaoDocumento($pdo,'CSN',$c['id'],$c['status'],(bool)$c['assinado']); ?>
 
                                     <!-- Enviar por E-mail -->
                                     <form method="POST" action="<?php echo APP_URL; ?>documentacao/certificados/actions" 
@@ -194,17 +196,6 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                         </button>
                                     </form>
 
-                                    <!-- Excluir -->
-                                    <form method="POST" action="<?php echo APP_URL; ?>documentacao/certificados/actions" 
-                                          style="display:inline;" 
-                                          onsubmit="return confirm('Tem certeza que deseja excluir este certificado?');">
-                                        <input type="hidden" name="action" value="excluir">
-                                        <input type="hidden" name="id" value="<?php echo h($c['id']); ?>">
-                                        <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Excluir">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
                                 </div>
                             </td>
                         </tr>
@@ -240,4 +231,4 @@ function copiarLink(url, btn) {
 }
 </script>
 
-<?php require_once __DIR__ . '/../../../includes/footer.php'; ?>
+<?php renderAprovacaoUi($pdo); require_once __DIR__ . '/../../../includes/footer.php'; ?>

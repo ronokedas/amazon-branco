@@ -5,18 +5,18 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if ($cargo !== 'ADMIN') {
-    setMensagem('error', 'Acesso negado. Apenas administradores podem acessar esta pagina.');
+if (!temPerfil('ANALISTA')) {
+    setMensagem('error', 'Acesso negado. Apenas administradores e analistas podem acessar esta pagina.');
     redirecionar(APP_URL . 'dashboard');
 }
 
 global $pdo;
 
-$stmt = $pdo->prepare("SELECT v.id, v.numero, v.status, v.data_vistoria, v.atualizado_em as data_envio, v.agendamento_id, e.nome as embarcacao, e.registro, u.nome as vistoriador, COUNT(ve.id) as total_itens, SUM(CASE WHEN ve.conforme = 'nao' THEN 1 ELSE 0 END) as itens_nao_conformes FROM vistorias v JOIN embarcacoes e ON v.embarcacao_id = e.id JOIN agendamentos a ON v.agendamento_id = a.id JOIN usuarios u ON a.vistoriador_id = u.id LEFT JOIN vistoria_exigencias ve ON v.id = ve.vistoria_id WHERE v.status = 'AGUARDANDO_APROVACAO' GROUP BY v.id ORDER BY v.atualizado_em ASC");
+$stmt = $pdo->prepare("SELECT v.id, v.numero, v.status, v.data_vistoria, v.atualizado_em as data_envio, v.agendamento_id, e.nome as embarcacao, e.registro, COALESCE(u.nome,'Sem vistoriador vinculado') as vistoriador, COUNT(ve.id) as total_itens, SUM(CASE WHEN ve.conforme = 'nao' THEN 1 ELSE 0 END) as itens_nao_conformes, (SELECT COUNT(*) FROM vistoria_anexos va WHERE va.vistoria_id = v.id) AS total_fotos FROM vistorias v JOIN embarcacoes e ON v.embarcacao_id = e.id LEFT JOIN agendamentos a ON v.agendamento_id = a.id LEFT JOIN usuarios u ON a.vistoriador_id = u.id LEFT JOIN vistoria_exigencias ve ON v.id = ve.vistoria_id WHERE v.status = 'AGUARDANDO_APROVACAO' GROUP BY v.id ORDER BY v.atualizado_em ASC");
 $stmt->execute();
 $pendentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt2 = $pdo->prepare("SELECT v.id, v.numero, v.status, v.data_aprovacao, v.observacao_admin, v.agendamento_id, e.nome as embarcacao, u.nome as vistoriador, adm.nome as aprovado_por_nome FROM vistorias v JOIN embarcacoes e ON v.embarcacao_id = e.id JOIN agendamentos a ON v.agendamento_id = a.id JOIN usuarios u ON a.vistoriador_id = u.id LEFT JOIN usuarios adm ON v.aprovado_por = adm.id WHERE v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA') ORDER BY v.data_aprovacao DESC LIMIT 20");
+$stmt2 = $pdo->prepare("SELECT v.id, v.numero, v.status, v.data_aprovacao, v.observacao_admin, v.agendamento_id, e.nome as embarcacao, COALESCE(u.nome,'Sem vistoriador vinculado') as vistoriador, adm.nome as aprovado_por_nome FROM vistorias v JOIN embarcacoes e ON v.embarcacao_id = e.id LEFT JOIN agendamentos a ON v.agendamento_id = a.id LEFT JOIN usuarios u ON a.vistoriador_id = u.id LEFT JOIN usuarios adm ON v.aprovado_por = adm.id WHERE v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA') ORDER BY v.data_aprovacao DESC LIMIT 20");
 $stmt2->execute();
 $historico = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
@@ -75,6 +75,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <th>Data Vistoria</th>
                             <th>Enviado em</th>
                             <th>Itens</th>
+                            <th>Fotos</th>
                             <th>Não Conformes</th>
                             <th>Ações</th>
                         </tr>
@@ -88,6 +89,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <td><?= $rel['data_vistoria'] ? formatarData($rel['data_vistoria']) : '—' ?></td>
                             <td><?= formatarDataCompleta($rel['data_envio']) ?></td>
                             <td><?= $rel['total_itens'] ?></td>
+                            <td><span class="badge badge-info"><i class="fas fa-camera"></i> <?= (int)$rel['total_fotos'] ?></span></td>
                             <td>
                                 <?php if ($rel['itens_nao_conformes'] > 0): ?>
                                     <span class="badge badge-danger"><?= $rel['itens_nao_conformes'] ?> não conforme(s)</span>
@@ -96,7 +98,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($rel['agendamento_id'] ?? '') ?>"
+                                <?php $urlRevisao = !empty($rel['agendamento_id']) ? APP_URL.'vistorias/relatorio?agendamento_id='.urlencode($rel['agendamento_id']).'&vistoria_id='.urlencode($rel['id']) : APP_URL.'vistorias/detalhe?id='.urlencode($rel['id']); ?>
+                                <a href="<?= h($urlRevisao) ?>"
                                    class="btn btn-primary btn-sm approval-action-btn"
                                    title="Revisar e aprovar"
                                    aria-label="Revisar e aprovar">
@@ -143,7 +146,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <td><?= $h['data_aprovacao'] ? formatarData($h['data_aprovacao']) : '—' ?></td>
                             <td><?= h($h['aprovado_por_nome'] ?? '—') ?></td>
                             <td><?= h(mb_strimwidth($h['observacao_admin'] ?? '', 0, 40, '...')) ?></td>
-                            <td><a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($h['agendamento_id'] ?? '') ?>" class="btn btn-sm btn-secondary">Ver</a></td>
+                            <?php $urlHistorico = !empty($h['agendamento_id']) ? APP_URL.'vistorias/relatorio?agendamento_id='.urlencode($h['agendamento_id']).'&vistoria_id='.urlencode($h['id']) : APP_URL.'vistorias/detalhe?id='.urlencode($h['id']); ?>
+                            <td><a href="<?= h($urlHistorico) ?>" class="btn btn-sm btn-secondary">Ver</a></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

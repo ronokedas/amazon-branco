@@ -21,11 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $stmt = $pdo->prepare("
-                SELECT c.id, c.nome, c.email, a.senha_hash, a.ativo, a.forcar_troca_senha
+                SELECT c.id, c.nome, c.email, c.perfil, a.senha_hash, a.ativo, a.forcar_troca_senha
                 FROM clientes c
                 INNER JOIN cliente_portal_acessos a ON a.cliente_id = c.id
-                WHERE c.email = :email
-                  AND c.perfil = 'proprietario'
+                WHERE a.login = :email
+                  AND c.perfil IN ('proprietario','despachante')
                   AND c.status = 'ATIVO'
                   AND a.ativo = 1
                 LIMIT 1
@@ -37,10 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 loginCliente($row, $row);
                 $pdo->prepare("UPDATE cliente_portal_acessos SET ultimo_login_em = NOW() WHERE cliente_id = :id")
                     ->execute([':id' => $row['id']]);
+                clientePortalAuditar($pdo, 'LOGIN_SUCESSO', $row['id'], null, null, null, true, 'Perfil: '.$row['perfil']);
                 header('Location: ' . APP_URL . (clientePortalForcarTrocaSenha() ? 'portal/trocar-senha' : 'portal'));
                 exit;
             }
 
+            clientePortalAuditar($pdo, 'LOGIN_FALHA', $row['id'] ?? null, null, null, null, false, 'Login informado: '.substr($email,0,190));
             $erro_msg = 'E-mail ou senha incorretos.';
         } catch (Exception $e) {
             error_log('Erro no login do portal: ' . $e->getMessage());
@@ -58,7 +60,7 @@ require_once __DIR__ . '/../../includes/portal_header.php';
             <img src="<?php echo APP_URL; ?>img/logo-amazon-sidebar.svg" alt="Amazon Certificadora" class="portal-auth-logo">
         </div>
         <h1>Portal do Cliente</h1>
-        <p>Acesse seus certificados</p>
+        <p>Acesse certificados e relatórios das suas embarcações</p>
 
         <?php if ($erro_msg): ?>
             <div class="message error"><i class="fas fa-circle-exclamation"></i><span><?php echo h($erro_msg); ?></span></div>

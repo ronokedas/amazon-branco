@@ -74,7 +74,7 @@ if (!$editando && !empty($_GET['agendamento_id'])) {
             v.numero as relatorio_numero
         FROM agendamentos a
         JOIN embarcacoes e ON a.embarcacao_id = e.id
-        LEFT JOIN vistorias v ON v.agendamento_id = a.id
+        LEFT JOIN vistorias v ON v.id = (SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC, v2.id DESC LIMIT 1)
         WHERE a.id = :aid
     ");
     $stmtPre->execute([':aid' => $_GET['agendamento_id']]);

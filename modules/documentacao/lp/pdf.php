@@ -237,51 +237,6 @@ $pdf->SetY(222);
 $pdf->SetFont('helvetica', '', 10);
 $pdf->Cell($w, 6, 'Expedido em Santarém-PA, ' . lpDataExtenso($c['data_emissao']), 0, 1, 'C');
 
-// Assinatura
-$sigY = 235;
-$pdf->SetDrawColor(0, 0, 0);
-$pdf->SetLineWidth(0.35);
-$pdf->Rect(32, $sigY, 146, 42);
-
-if (lpImgOK($logo)) {
-    $pdf->Image($logo, 45, $sigY + 12, 23, 14, 'PNG', '', '', true, 150);
-}
-
-$lineX1 = 84;
-$lineX2 = 156;
-$pdf->Line($lineX1, $sigY + 21, $lineX2, $sigY + 21);
-
-if (!empty($c['assinatura_imagem'])) {
-    $img_data = $c['assinatura_imagem'];
-    if (preg_match('/^data:image\/(\w+);base64,/', $img_data)) {
-        $img_data = substr($img_data, strpos($img_data, ',') + 1);
-    }
-    $decoded = base64_decode($img_data);
-    if ($decoded !== false) {
-        $decoded = lpConverterAssinaturaParaJpeg($decoded);
-        $tmp_file = tempnam(sys_get_temp_dir(), 'lp_sig_') . '.jpg';
-        file_put_contents($tmp_file, $decoded);
-        $pdf->Image($tmp_file, 88, $sigY + 4, 58, 16, 'JPG', '', '', true, 150);
-        @unlink($tmp_file);
-    }
-}
-
-$pdf->SetXY(74, $sigY + 22);
-$pdf->SetFont('helvetica', 'B', 8);
-$pdf->Cell(92, 4, lpTxt($c['assinante_nome']), 0, 1, 'C');
-$pdf->SetX(74);
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(92, 4, lpTxt($c['assinante_titulo']), 0, 1, 'C');
-$pdf->SetX(74);
-$pdf->SetFont('helvetica', 'B', 7.5);
-$pdf->Cell(92, 4, lpTxt($c['assinante_registro']), 0, 1, 'C');
-
-if ((int)$c['assinado'] === 1 && !empty($c['assinatura_em'])) {
-    $pdf->SetXY(32, 281);
-    $pdf->SetFont('helvetica', 'I', 6.5);
-    $pdf->Cell(146, 4, 'Documento assinado eletronicamente em ' . formatarDataCompleta($c['assinatura_em']) . '.', 0, 1, 'C');
-}
-
 $nome_arquivo = 'LP_' . str_replace('/', '-', $c['numero_lp']) . '.pdf';
 
 if (isset($salvar_pdf_caminho) && !empty($salvar_pdf_caminho)) {

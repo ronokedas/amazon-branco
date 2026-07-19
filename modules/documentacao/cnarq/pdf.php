@@ -254,47 +254,13 @@ $pdf->SetFont('helvetica', 'B', 10);
 $pdf->SetXY(10, 240);
 $pdf->Cell(190, 6, 'Expedido em ' . cnarqPdfText(cnarqText($c['local_emissao'] ?? '', 'Belém-PA')) . ', em ' . cnarqDataExtenso($c['data_emissao']), 0, 1, 'C');
 
-// Assinatura
-$sigX = 25; $sigY = 252; $sigW = 160; $sigH = 36;
-$pdf->SetLineWidth(0.45);
-$pdf->Rect($sigX, $sigY, $sigW, $sigH);
-$logo = __DIR__ . '/../../../assets/img/logo.png';
-if (cnarqImgOk($logo)) {
-    $pdf->Image($logo, $sigX + 12, $sigY + 8, 24, 23.2, '', '', '', true, 150);
-}
-if (!empty($c['assinatura_imagem'])) {
-    $imgData = $c['assinatura_imagem'];
-    if (preg_match('/^data:image\/(\w+);base64,/', $imgData)) {
-        $imgData = substr($imgData, strpos($imgData, ',') + 1);
-    }
-    $decoded = base64_decode($imgData);
-    if ($decoded !== false && strlen($decoded) > 100) {
-        $tmp = tempnam(sys_get_temp_dir(), 'cnarq_sig_') . '.png';
-        file_put_contents($tmp, $decoded);
-        if (cnarqImgOk($tmp)) {
-            $pdf->Image($tmp, $sigX + 58, $sigY + 13, 58, 12, 'PNG', '', '', true, 150);
-        }
-        @unlink($tmp);
-    }
-}
-$pdf->SetLineWidth(0.25);
-$pdf->Line($sigX + 51, $sigY + 23, $sigX + 118, $sigY + 23);
-$pdf->SetFont('helvetica', 'B', 9);
-$pdf->SetXY($sigX + 51, $sigY + 23.1);
-$pdf->Cell(67, 4, cnarqPdfText(cnarqText($c['assinante_nome'] ?? '', 'Responsável Técnico')), 0, 1, 'C');
-$pdf->SetFont('helvetica', 'B', 8);
-$pdf->SetX($sigX + 51);
-$pdf->Cell(67, 4, cnarqPdfText(cnarqText($c['assinante_titulo'] ?? '', '')), 0, 1, 'C');
-$pdf->SetX($sigX + 51);
-$pdf->Cell(67, 4, cnarqPdfText(cnarqText($c['assinante_registro'] ?? '', '')), 0, 1, 'C');
-
 // =========================
 // PÁGINA 2
 // =========================
 $pdf->AddPage();
 $pdf->SetLineWidth(0.45);
 
-$boxX = 10; $boxY = 18; $boxW = 190; $boxH = 226;
+$boxX = 10; $boxY = 18; $boxW = 190; $boxH = 196;
 $pdf->Rect($boxX, $boxY, $boxW, $boxH);
 $pdf->Line($boxX, $boxY + 12, $boxX + $boxW, $boxY + 12);
 $pdf->SetFont('helvetica', 'B', 11);
@@ -380,7 +346,7 @@ $pdf->SetFont('helvetica', '', 10);
 $pdf->SetX($boxX + 95);
 $pdf->Cell(95, 5, $calado !== '' ? cnarqPdfText($calado . ' m') : '', 0, 1, 'C');
 
-$infoY = $boxY + 182;
+$infoY = $boxY + 170;
 $pdf->Line($boxX, $infoY, $boxX + $boxW, $infoY);
 $pdf->Line($boxX, $infoY + 5, $boxX + $boxW, $infoY + 5);
 $pdf->Line($boxX, $infoY + 10, $boxX + $boxW, $infoY + 10);
@@ -401,12 +367,13 @@ $pdf->MultiCell(188, 5, cnarqPdfText($obs1), 0, 'L');
 $pdf->SetX($boxX + 1);
 $pdf->MultiCell(188, 5, cnarqPdfText($obs2), 0, 'L');
 
-$pdf->SetFont('helvetica', 'B', 10);
-$pdf->SetXY(10, 266);
-$pdf->Cell(190, 6, 'VÁLIDO até: ' . cnarqDataExtenso($c['data_validade']), 0, 1, 'C');
-$pdf->Rect(10, 281, 73, 5);
-$pdf->SetXY(10, 281.2);
+$pdf->SetFont('helvetica', 'B', 8);
+$pdf->Rect(10, 215, 73, 6);
+$pdf->SetXY(10, 215.5);
 $pdf->Cell(73, 5, 'ANEXO 7-A - NORMAM 202/DPC', 0, 0, 'C');
+$pdf->Rect(85, 215, 115, 6);
+$pdf->SetXY(85, 215.5);
+$pdf->Cell(115, 5, 'VÁLIDO ATÉ: ' . cnarqDataExtenso($c['data_validade']), 0, 1, 'C');
 
 $nome_arquivo = 'CNARQ_' . str_replace('/', '-', $c['numero']) . '.pdf';
 if (isset($salvar_pdf_caminho) && !empty($salvar_pdf_caminho)) {

@@ -20,6 +20,15 @@ mb_http_output('UTF-8');
 
 // Sessao
 if (session_status() === PHP_SESSION_NONE) {
+    $sessionSecure = str_starts_with(strtolower((string)(getenv('APP_URL') ?: '')), 'https://')
+        || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    session_set_cookie_params([
+        'lifetime' => 60 * 60 * 24 * 30,
+        'path' => '/',
+        'secure' => $sessionSecure,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
 }
 

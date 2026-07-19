@@ -262,6 +262,7 @@ $titulo_page = 'Assinar Licença Provisória - ' . APP_NAME;
                 </div>
                 
                 <form method="POST" id="formAssinatura" onsubmit="return validarForm()">
+                    <input type="hidden" name="_submission_token" value="<?= h(bin2hex(random_bytes(24))) ?>">
                     <div class="form-group">
                         <label for="nome">Nome Completo *</label>
                         <input type="text" id="nome" name="nome" required placeholder="Digite seu nome completo"

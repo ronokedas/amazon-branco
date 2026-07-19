@@ -7,7 +7,7 @@ requireClienteSenhaDefinitiva();
 
 $clienteId = clientePortalId();
 $embarcacoes = clientePortalEmbarcacoes($pdo, $clienteId);
-$configs = clientePortalConfigDocumentos();
+$tiposDocumentos = clientePortalTiposDocumentos();
 
 $filtros = [
     'busca' => trim($_GET['busca'] ?? ''),
@@ -54,9 +54,9 @@ require_once __DIR__ . '/../../includes/portal_header.php';
         <label for="tipo">Tipo</label>
         <select id="tipo" name="tipo">
             <option value="">Todos</option>
-            <?php foreach ($configs as $tipo => $cfg): ?>
+            <?php foreach ($tiposDocumentos as $tipo => $label): ?>
                 <option value="<?php echo h($tipo); ?>" <?php echo $filtros['tipo'] === $tipo ? 'selected' : ''; ?>>
-                    <?php echo h($cfg['label']); ?>
+                    <?php echo h($label); ?>
                 </option>
             <?php endforeach; ?>
         </select>
@@ -103,11 +103,12 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                             <td><?php echo h($doc['embarcacao_nome']); ?></td>
                             <td><?php echo formatarData($doc['data_emissao']); ?></td>
                             <td><?php echo formatarData($doc['data_validade']); ?></td>
-                            <td><span class="portal-status <?php echo $doc['status'] === 'assinado' ? 'is-valid' : 'is-issued'; ?>"><?php echo h(ucfirst($doc['status'])); ?></span></td>
+                            <td><span class="portal-status is-valid"><?php echo h(ucfirst(strtolower(str_replace('_', ' ', $doc['status'])))); ?></span></td>
                             <td>
-                                <a class="btn btn-primary btn-sm" target="_blank" href="<?php echo APP_URL; ?>portal/documentos/pdf?tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>">
+                                <a class="btn btn-primary btn-sm" target="_blank" href="<?php echo APP_URL; ?>portal/documentos/pdf?acao=visualizar&tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>">
                                     <i class="fas fa-eye"></i> Visualizar
                                 </a>
+                                <a class="btn btn-secondary btn-sm" href="<?php echo APP_URL; ?>portal/documentos/pdf?acao=download&tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>"><i class="fas fa-download"></i> PDF</a>
                             </td>
                         </tr>
                     <?php endforeach; ?>

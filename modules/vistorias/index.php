@@ -37,6 +37,8 @@ try {
     if (getCargo() === 'VISTORIADOR') {
         $where_extra = " AND a.vistoriador_id = :vistoriador_id";
         $params[':vistoriador_id'] = $_SESSION['usuario_id'];
+    } elseif (getCargo() === 'ANALISTA') {
+        $where_extra = " AND v.status = 'AGUARDANDO_APROVACAO'";
     } elseif (getCargo() === 'VENDEDOR') {
         $where_extra = " AND (a.vendedor_id = :vendedor_id OR a.id IN (SELECT id FROM agendamentos WHERE vendedor_id = :agend_vendedor_id))";
         $params[':vendedor_id'] = $_SESSION['usuario_id'];
@@ -65,6 +67,8 @@ try {
     $sql_contadores = "SELECT v.status, COUNT(*) as total FROM vistorias v LEFT JOIN agendamentos a ON v.agendamento_id = a.id WHERE 1=1";
     if ($cargo === 'VISTORIADOR') {
         $sql_contadores .= " AND a.vistoriador_id = :vistoriador_id";
+    } elseif ($cargo === 'ANALISTA') {
+        $sql_contadores .= " AND v.status = 'AGUARDANDO_APROVACAO'";
     } elseif ($cargo === 'VENDEDOR') {
         $sql_contadores .= " AND (a.vendedor_id = :vendedor_id OR a.id IN (SELECT id FROM agendamentos WHERE vendedor_id = :agend_vendedor_id))";
     }
@@ -85,73 +89,78 @@ try {
 }
 $total_geral = array_sum($contadores);
 
+function vistoriaStatusMeta(string $status): array
+{
+    $map = [
+        'PENDENTE' => ['badge-warning', 'fa-clock', 'Pendente'],
+        'AGUARDANDO_APROVACAO' => ['badge-warning', 'fa-hourglass-half', 'Aguardando aprovação'],
+        'APROVADA_COM_EXIGENCIAS' => ['badge-info', 'fa-clipboard-check', 'Aprovada com exigências'],
+        'APROVADA' => ['badge-success', 'fa-check-circle', 'Aprovada'],
+        'REPROVADA' => ['badge-danger', 'fa-times-circle', 'Reprovada'],
+        'CANCELADA' => ['badge-secondary', 'fa-ban', 'Cancelada'],
+    ];
+
+    return $map[$status] ?? ['badge-info', 'fa-circle-info', ucfirst(strtolower(str_replace('_', ' ', $status)))];
+}
+
 $titulo_page = 'Vistorias - ERP Sistema';
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 ?>
 
-<div class="conteudo-principal">
-    <div class="tabela-container">
-        <div class="tabela-header">
-            <h3><i class="fas fa-clipboard-check"></i> Gerenciar Vistorias</h3>
-            <a href="<?php echo APP_URL; ?>vistorias/nova" class="btn btn-primary btn-sm">
-                <i class="fas fa-plus"></i> Nova Vistoria
-            </a>
+<div class="conteudo-principal inspection-page">
+    <header class="inspection-page-header">
+        <div>
+            <h1>Vistorias</h1>
+            <p>Acompanhe a execução, a análise e o resultado de cada vistoria.</p>
         </div>
+        <a href="<?php echo APP_URL; ?>agendamentos" class="inspection-new-button">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i> Ver agendamentos
+        </a>
+    </header>
 
-        <!-- Cards de filtro por status -->
-        <div style="display: flex; gap: 10px; margin: 15px 20px; flex-wrap: wrap;">
-            <a href="<?php echo APP_URL; ?>vistorias" 
-               class="btn btn-sm <?php echo empty($filtro_status) ? 'btn-primary' : 'btn-secondary'; ?>"
-               style="text-decoration: none;">
-                <i class="fas fa-list"></i> Todos 
-                <span class="badge" style="background: rgba(255,255,255,0.2); margin-left: 4px;"><?php echo $total_geral; ?></span>
+    <nav class="inspection-status-nav" aria-label="Filtrar vistorias por situação">
+        <?php
+        $statusFilters = [
+            '' => ['fa-list', 'Todas', $total_geral],
+            'PENDENTE' => ['fa-clock', 'Pendentes', $contadores['PENDENTE'] ?? 0],
+            'APROVADA' => ['fa-check-circle', 'Aprovadas', $contadores['APROVADA'] ?? 0],
+            'REPROVADA' => ['fa-times-circle', 'Reprovadas', $contadores['REPROVADA'] ?? 0],
+            'CANCELADA' => ['fa-ban', 'Canceladas', $contadores['CANCELADA'] ?? 0],
+        ];
+        foreach ($statusFilters as $statusKey => [$statusIcon, $statusLabel, $statusCount]):
+            $active = $filtro_status === $statusKey;
+            $href = APP_URL . 'vistorias' . ($statusKey !== '' ? '?status=' . urlencode($statusKey) : '');
+        ?>
+            <a href="<?php echo h($href); ?>" class="<?php echo $active ? 'is-active' : ''; ?>" <?php echo $active ? 'aria-current="page"' : ''; ?>>
+                <i class="fas <?php echo h($statusIcon); ?>" aria-hidden="true"></i>
+                <span><?php echo h($statusLabel); ?></span>
+                <strong><?php echo (int) $statusCount; ?></strong>
             </a>
-            <a href="<?php echo APP_URL; ?>vistorias?status=PENDENTE" 
-               class="btn btn-sm <?php echo $filtro_status === 'PENDENTE' ? 'btn-warning' : 'btn-secondary'; ?>"
-               style="text-decoration: none;">
-                <i class="fas fa-clock"></i> Pendentes 
-                <span class="badge" style="background: rgba(255,255,255,0.2); margin-left: 4px;"><?php echo $contadores['PENDENTE'] ?? 0; ?></span>
-            </a>
-            <a href="<?php echo APP_URL; ?>vistorias?status=APROVADA" 
-               class="btn btn-sm <?php echo $filtro_status === 'APROVADA' ? 'btn-success' : 'btn-secondary'; ?>"
-               style="text-decoration: none;">
-                <i class="fas fa-check-circle"></i> Aprovadas 
-                <span class="badge" style="background: rgba(255,255,255,0.2); margin-left: 4px;"><?php echo $contadores['APROVADA'] ?? 0; ?></span>
-            </a>
-            <a href="<?php echo APP_URL; ?>vistorias?status=REPROVADA" 
-               class="btn btn-sm <?php echo $filtro_status === 'REPROVADA' ? 'btn-danger' : 'btn-secondary'; ?>"
-               style="text-decoration: none;">
-                <i class="fas fa-times-circle"></i> Reprovadas 
-                <span class="badge" style="background: rgba(255,255,255,0.2); margin-left: 4px;"><?php echo $contadores['REPROVADA'] ?? 0; ?></span>
-            </a>
-            <a href="<?php echo APP_URL; ?>vistorias?status=CANCELADA" 
-               class="btn btn-sm <?php echo $filtro_status === 'CANCELADA' ? 'btn-secondary' : 'btn-secondary'; ?>"
-               style="text-decoration: none;">
-                <i class="fas fa-ban"></i> Canceladas 
-                <span class="badge" style="background: rgba(255,255,255,0.2); margin-left: 4px;"><?php echo $contadores['CANCELADA'] ?? 0; ?></span>
-            </a>
+        <?php endforeach; ?>
+    </nav>
+
+    <div class="inspection-search">
+        <i class="fas fa-search" aria-hidden="true"></i>
+        <label class="sr-only" for="buscaVistoria">Buscar vistoria</label>
+        <input type="search" id="buscaVistoria" placeholder="Buscar por embarcação, pessoa ou registro">
+    </div>
+
+    <?php if (empty($vistorias)): ?>
+        <div class="inspection-empty">
+            <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+            <h2>Nenhuma vistoria encontrada</h2>
+            <p>As vistorias são iniciadas pelos agendamentos atribuídos.</p>
         </div>
-
-        <!-- Filtro de busca -->
-        <div class="filtros" style="margin: 0 20px 15px;">
-            <div class="form-group" style="margin-bottom: 0; flex: 1;">
-                <label><i class="fas fa-search"></i> Buscar vistoria</label>
-                <input type="text" 
-                       id="buscaVistoria" 
-                       placeholder="Embarcacao, pessoa ou registro..." 
-                       onkeyup="filtrarTabela('buscaVistoria', 'tabelaVistorias')">
+    <?php else: ?>
+        <section class="inspection-desktop-list" aria-label="Lista de vistorias">
+            <div class="inspection-list-heading">
+                <div>
+                    <h2>Vistorias cadastradas</h2>
+                    <p><?php echo count($vistorias); ?> registro(s) no filtro atual</p>
+                </div>
             </div>
-        </div>
-
-        <?php if (empty($vistorias)): ?>
-            <div class="tabela-vazia">
-                <i class="fas fa-clipboard-check"></i>
-                <h3>Nenhuma vistoria encontrada</h3>
-                <p>Clique em "Nova Vistoria" para iniciar o cadastro.</p>
-            </div>
-        <?php else: ?>
-            <table id="tabelaVistorias">
+            <table id="tabelaVistorias" data-responsive="off">
                 <thead>
                     <tr>
                         <th>Embarcacao</th>
@@ -165,7 +174,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </thead>
                 <tbody>
                     <?php foreach ($vistorias as $v): ?>
-                    <tr>
+                    <?php $statusMeta = vistoriaStatusMeta((string) $v['status']); ?>
+                    <tr data-inspection-search="<?php echo h(strtolower(implode(' ', [$v['embarcacao_nome'] ?? '', $v['embarcacao_registro'] ?? '', $v['pessoa_nome'] ?? '', $v['pessoa_cpf'] ?? '']))); ?>">
                         <td>
                             <strong><?php echo h($v['embarcacao_nome'] ?? 'N/A'); ?></strong>
                             <?php if (!empty($v['embarcacao_registro'])): ?>
@@ -180,68 +190,76 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </td>
                         <td><?php echo formatarData($v['data_vistoria']); ?></td>
                         <td>
-                            <?php
-                            $badgeClass = 'badge-info';
-                            $iconClass = 'fa-clock';
-                            switch ($v['status']) {
-                                                                case 'PENDENTE':
-                                    $badgeClass = 'badge-warning';
-                                    $iconClass = 'fa-clock';
-                                    break;
-                                case 'AGUARDANDO_APROVACAO':
-                                    $badgeClass = 'badge-warning';
-                                    $iconClass = 'fa-hourglass-half';
-                                    break;
-                                case 'APROVADA_COM_EXIGENCIAS':
-                                    $badgeClass = 'badge-primary';
-                                    $iconClass = 'fa-clipboard-check';
-                                    break;
-                                case 'APROVADA':
-                                    $badgeClass = 'badge-success';
-                                    $iconClass = 'fa-check-circle';
-                                    break;
-                                case 'REPROVADA':
-                                    $badgeClass = 'badge-danger';
-                                    $iconClass = 'fa-times-circle';
-                                    break;
-                                case 'CANCELADA':
-                                    $badgeClass = 'badge-secondary';
-                                    $iconClass = 'fa-ban';
-                                    break;
-                            }
-                            ?>
-                            <span class="badge <?php echo $badgeClass; ?>">
-                                <i class="fas <?php echo $iconClass; ?>"></i> <?php echo h($v['status']); ?>
+                            <span class="badge <?php echo h($statusMeta[0]); ?>">
+                                <i class="fas <?php echo h($statusMeta[1]); ?>"></i> <?php echo h($statusMeta[2]); ?>
                             </span>
                         </td>
                         <td><?php echo h($v['criado_por_nome'] ?? 'N/A'); ?></td>
                         <td><?php echo formatarDataCompleta($v['criado_em']); ?></td>
                         <td>
                             <a href="<?php echo APP_URL; ?>vistorias/detalhe?id=<?php echo urlencode($v['id']); ?>" 
-                               class="btn btn-secondary btn-sm" title="Ver detalhes">
-                                <i class="fas fa-eye"></i>
+                               class="inspection-table-action" title="Ver detalhes" aria-label="Ver detalhes da vistoria de <?php echo h($v['embarcacao_nome'] ?? 'embarcação'); ?>">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
                             </a>
                         </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
-        <?php endif; ?>
+        </section>
 
-        <!-- Resumo -->
-        <div class="card-footer" style="padding: 12px 20px;">
-            <small class="text-muted">
-                <i class="fas fa-info-circle"></i> 
-                Total: <?php echo count($vistorias); ?> vistoria(s) | 
-                <?php
-                $pendentes = count(array_filter($vistorias, function($v) { return $v['status'] === 'PENDENTE'; }));
-                $aprovadas = count(array_filter($vistorias, function($v) { return $v['status'] === 'APROVADA'; }));
-                $reprovadas = count(array_filter($vistorias, function($v) { return $v['status'] === 'REPROVADA'; }));
-                echo $pendentes . ' pendente(s), ' . $aprovadas . ' aprovada(s), ' . $reprovadas . ' reprovada(s)';
-                ?>
-            </small>
-        </div>
-    </div>
+        <section class="inspection-mobile-list" aria-label="Vistorias cadastradas">
+            <?php foreach ($vistorias as $v): ?>
+                <?php $statusMeta = vistoriaStatusMeta((string) $v['status']); ?>
+                <article class="inspection-card" data-inspection-search="<?php echo h(strtolower(implode(' ', [$v['embarcacao_nome'] ?? '', $v['embarcacao_registro'] ?? '', $v['pessoa_nome'] ?? '', $v['pessoa_cpf'] ?? '']))); ?>">
+                    <div class="inspection-card-top">
+                        <div class="inspection-card-icon"><i class="fas fa-ship" aria-hidden="true"></i></div>
+                        <div class="inspection-card-title">
+                            <span><?php echo formatarData($v['data_vistoria']); ?></span>
+                            <h2><?php echo h($v['embarcacao_nome'] ?? 'Embarcação não informada'); ?></h2>
+                            <p><?php echo !empty($v['embarcacao_registro']) ? 'Registro ' . h($v['embarcacao_registro']) : 'Sem registro informado'; ?></p>
+                        </div>
+                        <span class="badge <?php echo h($statusMeta[0]); ?>"><i class="fas <?php echo h($statusMeta[1]); ?>" aria-hidden="true"></i> <?php echo h($statusMeta[2]); ?></span>
+                    </div>
+                    <div class="inspection-card-meta">
+                        <span><i class="fas fa-user" aria-hidden="true"></i><span><small>Cliente</small><?php echo h($v['pessoa_nome'] ?? 'Não informado'); ?></span></span>
+                        <span><i class="fas fa-user-check" aria-hidden="true"></i><span><small>Criada por</small><?php echo h($v['criado_por_nome'] ?? 'Não informado'); ?></span></span>
+                    </div>
+                    <a class="inspection-card-primary" href="<?php echo APP_URL; ?>vistorias/detalhe?id=<?php echo urlencode($v['id']); ?>">
+                        Ver detalhes <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                    <details class="inspection-card-more">
+                        <summary>Mais informações <i class="fas fa-chevron-down" aria-hidden="true"></i></summary>
+                        <dl>
+                            <div><dt>Documento</dt><dd><?php echo !empty($v['pessoa_cpf']) ? h(formatarCPF($v['pessoa_cpf'])) : 'Não informado'; ?></dd></div>
+                            <div><dt>Criada em</dt><dd><?php echo formatarDataCompleta($v['criado_em']); ?></dd></div>
+                        </dl>
+                    </details>
+                </article>
+            <?php endforeach; ?>
+        </section>
+        <p class="inspection-no-results" hidden>Nenhuma vistoria corresponde à busca.</p>
+    <?php endif; ?>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('buscaVistoria');
+    const entries = Array.from(document.querySelectorAll('[data-inspection-search]'));
+    const empty = document.querySelector('.inspection-no-results');
+    if (!input || !entries.length) return;
+
+    input.addEventListener('input', function () {
+        const term = this.value.toLocaleLowerCase('pt-BR').trim();
+        let visibleCards = 0;
+        entries.forEach(function (entry) {
+            const show = !term || entry.dataset.inspectionSearch.includes(term);
+            entry.hidden = !show;
+            if (show && entry.classList.contains('inspection-card')) visibleCards++;
+        });
+        if (empty) empty.hidden = visibleCards !== 0;
+    });
+});
+</script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

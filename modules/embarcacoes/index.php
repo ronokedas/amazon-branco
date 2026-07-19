@@ -18,7 +18,7 @@ if (!in_array($cargo, ['ADMIN', 'VISTORIADOR'])) {
 
 // Buscar apenas embarcacoes ativas
 try {
-    $stmt = $pdo->query("SELECT id, nome, tipo, tipo_embarcacao, registro, proprietario, ano, observacoes, ativo, criado_em, atualizado_em FROM embarcacoes WHERE ativo = 1 ORDER BY criado_em DESC, nome ASC");
+    $stmt = $pdo->query("SELECT id, nome, tipo, tipo_embarcacao, numero_inscricao, proprietario, ano, observacoes, foto_url, ativo, criado_em, atualizado_em FROM embarcacoes WHERE ativo = 1 ORDER BY criado_em DESC, nome ASC");
     $embarcacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     error_log('Erro ao listar embarcacoes: ' . $e->getMessage());
@@ -31,6 +31,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 ?>
 
 <div class="conteudo-principal">
+    <style>
+        .embarcacao-identidade{display:flex;align-items:center;gap:11px}.embarcacao-identidade img{width:54px;height:44px;object-fit:cover;border:1px solid var(--cor-borda);border-radius:8px;background:#edf2f0}.embarcacao-identidade span{display:grid;gap:2px}.embarcacao-identidade small{color:var(--cor-texto-secundario)}
+    </style>
     <div class="tabela-container">
         <div class="tabela-header">
             <h3><i class="fas fa-ship"></i> Gerenciar Embarcacoes</h3>
@@ -45,7 +48,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <label><i class="fas fa-search"></i> Buscar embarcacao</label>
                 <input type="text" 
                        id="buscaEmbarcacao" 
-                       placeholder="Nome ou registro..." 
+                       placeholder="Nome ou número de inscrição..."
                        onkeyup="filtrarTabela('buscaEmbarcacao', 'tabelaEmbarcacoes')">
             </div>
         </div>
@@ -62,7 +65,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <tr>
                         <th>Nome</th>
                         <th>Tipo</th>
-                        <th>Registro</th>
+                        <th>Número de Inscrição</th>
                         <th>Proprietario</th>
                         <th>Ano</th>
                         <th>Acoes</th>
@@ -72,10 +75,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <?php foreach ($embarcacoes as $e): ?>
                     <tr>
                         <td>
-                            <strong><?php echo h($e['nome']); ?></strong>
+                            <span class="embarcacao-identidade">
+                                <img src="<?= h($e['foto_url'] ?: APP_URL . 'assets/img/portal-hero-ship.png') ?>" alt="Foto de <?= h($e['nome']) ?>" loading="lazy">
+                                <span><strong><?php echo h($e['nome']); ?></strong><small><?= $e['foto_url'] ? 'Foto oficial' : 'Sem foto oficial' ?></small></span>
+                            </span>
                         </td>
                         <td><?php echo h($e['tipo_embarcacao'] ?: ($e['tipo'] ?? '-')); ?></td>
-                        <td><?php echo h($e['registro'] ?? '-'); ?></td>
+                        <td><?php echo h($e['numero_inscricao'] ?? '-'); ?></td>
                         <td><?php echo h($e['proprietario'] ?? '-'); ?></td>
                         <td><?php echo h($e['ano'] ?? '-'); ?></td>
                         <td>

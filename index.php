@@ -6,6 +6,14 @@
 
 // Configuracao do sistema
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/auth.php';
+
+// Impedir que duplo clique, recarregamento ou repeticao de rede execute
+// novamente o mesmo formulario de gravacao.
+if (!aceitarEnvioUnico()) {
+    responderEnvioDuplicado();
+}
 
 // Capturar a URI solicitada
 $request_uri = $_SERVER['REQUEST_URI'] ?? '/';
@@ -20,6 +28,12 @@ if (strpos($path, $app_folder) === 0) {
     $path = substr($path, strlen($app_folder));
 }
 $path = ltrim($path, '/');
+
+// Evita erro de console nos navegadores e reutiliza o ícone da aplicação de campo.
+if ($path === 'favicon.ico') {
+    header('Location: ' . APP_URL . 'campo/icon.svg', true, 302);
+    exit;
+}
 
 // Mapeamento de rotas para modulos
 $rotas = [
@@ -46,6 +60,7 @@ $rotas = [
     'embarcacoes'          => 'modules/embarcacoes/index.php',
     'embarcacoes/form'     => 'modules/embarcacoes/form.php',
     'embarcacoes/actions'  => 'modules/embarcacoes/actions.php',
+    'embarcacoes/foto'     => 'modules/embarcacoes/foto.php',
     'vistorias'          => 'modules/vistorias/index.php',
     'vistorias/nova'     => 'modules/vistorias/nova.php',
     'vistorias/detalhe'  => 'modules/vistorias/detalhe.php',
@@ -53,6 +68,11 @@ $rotas = [
     'vistorias/relatorio' => 'modules/vistorias/relatorio.php',
     'vistorias/relatorio_pdf' => 'modules/vistorias/relatorio_pdf.php',
     'vistorias/relatorio_pdf.php' => 'modules/vistorias/relatorio_pdf.php',
+    'analises-planos' => 'modules/analises_planos/index.php',
+    'analises-planos/form' => 'modules/analises_planos/form.php',
+    'analises-planos/actions' => 'modules/analises_planos/actions.php',
+    'analises-planos/arquivo' => 'modules/analises_planos/arquivo.php',
+    'analises-planos/parecer-pdf' => 'modules/analises_planos/parecer_pdf.php',
     'financeiro'          => 'modules/financeiro/index.php',
     'financeiro/form'     => 'modules/financeiro/form.php',
     'financeiro/actions'  => 'modules/financeiro/actions.php',
@@ -99,10 +119,6 @@ $rotas = [
     'comercial/pdf'                 => 'modules/comercial/pdf.php',
     'comercial/propostas'           => 'modules/comercial/propostas/index.php',
     'comercial/propostas/actions'   => 'modules/comercial/propostas/actions.php',
-    'contratos'                     => 'modules/contratos/index.php',
-    'contratos/form'                => 'modules/contratos/form.php',
-    'contratos/actions'             => 'modules/contratos/actions.php',
-    'contratos/view'                => 'modules/contratos/view.php',
     'relatorios'                    => 'modules/relatorios/index.php',
     'agendamentos'          => 'modules/agendamentos/index.php',
     'agendamentos/form'     => 'modules/agendamentos/form.php',
@@ -115,11 +131,17 @@ $rotas = [
     'configuracoes/geral'       => 'modules/configuracoes/geral.php',
     'configuracoes/basicas'     => 'modules/configuracoes/basicas.php',
     'configuracoes/backup'      => 'modules/configuracoes/backup.php',
+    'configuracoes/exportacoes' => 'modules/configuracoes/exportacoes.php',
+    'configuracoes/exportacoes_actions' => 'modules/configuracoes/exportacoes_actions.php',
+    'configuracoes/exportacoes_download' => 'modules/configuracoes/exportacoes_download.php',
     'configuracoes/actions'     => 'modules/configuracoes/actions.php',
     'configuracoes/backup_actions' => 'modules/configuracoes/backup_actions.php',
     'responsaveis_assinatura'         => 'modules/responsaveis_assinatura/index.php',
     'responsaveis_assinatura/form'    => 'modules/responsaveis_assinatura/form.php',
     'responsaveis_assinatura/actions' => 'modules/responsaveis_assinatura/actions.php',
+    'responsaveis_assinatura/assinatura' => 'modules/responsaveis_assinatura/assinatura.php',
+    'documentos/aprovar'             => 'modules/documentos/aprovar.php',
+    'documentos/cancelar'            => 'modules/documentos/cancelar.php',
     'busca-global'              => 'ajax/busca_global.php',
     'ajax/busca_cidades.php'    => 'ajax/busca_cidades.php',
     'perfil'                    => 'modules/perfil/index.php',
@@ -128,13 +150,17 @@ $rotas = [
 // Se nao esta logado, sempre ir para login (exceto proprio login)
 if (!isset($_SESSION['usuario_logado']) && $path !== '' && $path !== 'login') {
     // Verificar se é rota pública de assinatura
-    $is_rota_publica = (strpos($path, 'assinar/') === 0);
+    $is_rota_publica = (strpos($path, 'assinar/') === 0 || strpos($path, 'validar/') === 0);
     if ($path === 'portal' || strpos($path, 'portal/') === 0) {
+        $is_rota_publica = true;
+    }
+    if (strpos($path, 'api/campo/v1') === 0) {
+        // A API responde 401 em JSON; não deve ser convertida em HTML de login.
         $is_rota_publica = true;
     }
     
     // Verificar se é rota pública de visualização de PDF via token ou ID
-    if (!$is_rota_publica && (strpos($path, '/pdf') !== false || strpos($path, 'relatorio_pdf') !== false) && (!empty($_GET['token']) || !empty($_GET['id']))) {
+    if (!$is_rota_publica && (strpos($path, '/pdf') !== false || strpos($path, 'relatorio_pdf') !== false) && !empty($_GET['token'])) {
         $is_rota_publica = true;
     }
     
@@ -153,8 +179,41 @@ if (isset($_SESSION['usuario_logado']) && ($path === '' || $path === 'login')) {
 }
 
 // Verificar se a rota existe
-if (isset($rotas[$path])) {
+if (strpos($path, 'api/campo/v1') === 0) {
+    require_once __DIR__ . '/modules/campo/api.php';
+} elseif (isset($rotas[$path])) {
+    $permissoes_rota = [
+        'dashboard' => 'dashboard',
+        'armadores' => 'armadores', 'armadores/form' => 'armadores', 'armadores/actions' => 'armadores',
+        'proprietarios' => 'proprietarios', 'proprietarios/form' => 'proprietarios', 'proprietarios/actions' => 'proprietarios',
+        'despachantes' => 'despachantes', 'despachantes/form' => 'despachantes', 'despachantes/actions' => 'despachantes',
+        'embarcacoes' => 'embarcacoes', 'embarcacoes/form' => 'embarcacoes', 'embarcacoes/actions' => 'embarcacoes', 'embarcacoes/foto' => 'embarcacoes',
+        'vistorias' => 'vistorias', 'vistorias/nova' => 'vistorias', 'vistorias/detalhe' => 'vistorias', 'vistorias/actions' => 'vistorias', 'vistorias/relatorio' => 'vistorias',
+        'analises-planos' => 'analise_planos', 'analises-planos/form' => 'analise_planos', 'analises-planos/actions' => 'analise_planos', 'analises-planos/arquivo' => 'analise_planos', 'analises-planos/parecer-pdf' => 'analise_planos',
+        'financeiro' => 'financeiro', 'financeiro/form' => 'financeiro', 'financeiro/actions' => 'financeiro', 'financeiro/relatorios' => 'financeiro',
+        'usuarios' => 'usuarios', 'usuarios/form' => 'usuarios', 'usuarios/actions' => 'usuarios',
+        'agendamentos' => 'agendamentos', 'agendamentos/form' => 'agendamentos', 'agendamentos/actions' => 'agendamentos', 'agendamentos/os' => 'agendamentos',
+        'comercial' => 'comercial', 'comercial/nova' => 'comercial', 'comercial/pdf' => 'comercial', 'comercial/propostas' => 'comercial', 'comercial/propostas/actions' => 'comercial',
+        'comercial/servicos' => 'servicos', 'comercial/servicos/form' => 'servicos', 'comercial/servicos/actions' => 'servicos',
+        'relatorios' => 'relatorios', 'emails' => 'emails', 'portal-clientes' => 'portal_clientes', 'portal-clientes/actions' => 'portal_clientes',
+        'configuracoes' => 'configuracoes', 'configuracoes/geral' => 'configuracoes', 'configuracoes/basicas' => 'configuracoes', 'configuracoes/backup' => 'configuracoes', 'configuracoes/exportacoes' => 'configuracoes', 'configuracoes/exportacoes_actions' => 'configuracoes', 'configuracoes/exportacoes_download' => 'configuracoes', 'configuracoes/actions' => 'configuracoes',
+        'responsaveis_assinatura' => 'responsaveis_assinatura', 'responsaveis_assinatura/form' => 'responsaveis_assinatura', 'responsaveis_assinatura/actions' => 'responsaveis_assinatura', 'responsaveis_assinatura/assinatura' => 'responsaveis_assinatura',
+        'documentos/aprovar' => 'documentacao', 'documentos/cancelar' => 'documentacao',
+        'documentacao' => 'documentacao', 'documentacao/aprovacao_relatorios' => 'relatorios_aprovacao',
+        'certificados' => 'certificados',
+    ];
+    $permissao_rota = $permissoes_rota[$path] ?? null;
+    if (strpos($path, 'documentacao/') === 0 && $path !== 'documentacao/aprovacao_relatorios') $permissao_rota = 'documentacao';
+    if (strpos($path, 'certificados/') === 0) $permissao_rota = 'certificados';
+    if ($permissao_rota !== null && !podeAcessar($permissao_rota)) {
+        setMensagem('error', 'Acesso negado para este módulo.');
+        redirecionar(APP_URL . 'dashboard');
+    }
     require_once __DIR__ . '/' . $rotas[$path];
+} elseif (strpos($path, 'validar/') === 0) {
+    $_GET['token'] = substr($path, 8);
+    require_once __DIR__ . '/modules/documentos/validar.php';
+    exit;
 } elseif (strpos($path, 'assinar/') === 0) {
     // Rota pública de assinatura: assinar/{token_assinatura}
     $_GET['token'] = substr($path, 8); // Remover "assinar/"
@@ -167,6 +226,13 @@ if (isset($rotas[$path])) {
         exit;
     }
 
+    // O fluxo publico de assinatura permanece exclusivo das propostas.
+    // Certificados tecnicos agora sao aprovados por administradores autenticados.
+    http_response_code(410);
+    require_once __DIR__ . '/modules/documentos/assinatura_publica_desativada.php';
+    exit;
+
+    /* Fluxo legado mantido abaixo apenas como referencia historica.
     // Verificar se o token pertence ao CHT, LC, LP, CNBL, CNARQ ou CSN
     $stmt_check_cht = $pdo->prepare("SELECT COUNT(*) as total FROM certificados_cht WHERE token_assinatura = :token AND ativo = 1");
     $stmt_check_cht->execute([':token' => $_GET['token']]);
@@ -204,6 +270,7 @@ if (isset($rotas[$path])) {
             }
         }
     }
+    */
 } else {
     // 404 - Pagina nao encontrada
     http_response_code(404);

@@ -23,29 +23,38 @@ if ($action === 'enviar_acesso') {
     $senha = trim($_POST['senha_temporaria'] ?? '');
 
     if ($clienteId === '' || strlen($senha) < 8) {
-        setMensagem('error', 'Informe o proprietário e uma senha temporária com pelo menos 8 caracteres.');
+        setMensagem('error', 'Informe o cliente e uma senha temporária com pelo menos 8 caracteres.');
         redirecionar(APP_URL . 'portal-clientes');
     }
 
     try {
-        $stmt = $pdo->prepare("SELECT id, nome, email FROM clientes WHERE id = :id AND perfil = 'proprietario' AND status = 'ATIVO' LIMIT 1");
+        $stmt = $pdo->prepare("SELECT id, nome, email, perfil FROM clientes WHERE id = :id AND perfil IN ('proprietario','despachante') AND status = 'ATIVO' LIMIT 1");
         $stmt->execute([':id' => $clienteId]);
         $cliente = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$cliente || empty($cliente['email'])) {
-            setMensagem('error', 'Proprietário não encontrado ou sem e-mail cadastrado.');
+            setMensagem('error', 'Cliente não encontrado ou sem e-mail cadastrado.');
             redirecionar(APP_URL . 'portal-clientes');
+        }
+        $login = strtolower(trim($cliente['email']));
+        $stmtLogin = $pdo->prepare('SELECT cliente_id FROM cliente_portal_acessos WHERE login = :login AND cliente_id <> :cliente LIMIT 1');
+        $stmtLogin->execute([':login' => $login, ':cliente' => $clienteId]);
+        if ($stmtLogin->fetchColumn()) {
+            setMensagem('error', 'Este e-mail já é usado como login por outro acesso do portal.');
+            redirecionar(APP_URL . 'portal-clientes?id=' . urlencode($clienteId));
         }
 
         $pdo->prepare("
-            INSERT INTO cliente_portal_acessos (cliente_id, senha_hash, ativo, forcar_troca_senha, criado_por)
-            VALUES (:cliente_id, :senha_hash, 1, 1, :criado_por)
+            INSERT INTO cliente_portal_acessos (cliente_id, login, senha_hash, ativo, forcar_troca_senha, criado_por)
+            VALUES (:cliente_id, :login, :senha_hash, 1, 1, :criado_por)
             ON DUPLICATE KEY UPDATE
                 senha_hash = VALUES(senha_hash),
+                login = VALUES(login),
                 ativo = 1,
                 forcar_troca_senha = 1,
                 criado_por = VALUES(criado_por)
         ")->execute([
             ':cliente_id' => $clienteId,
+            ':login' => $login,
             ':senha_hash' => password_hash($senha, PASSWORD_DEFAULT),
             ':criado_por' => $_SESSION['usuario_id'] ?? null,
         ]);
@@ -75,7 +84,7 @@ if ($action === 'enviar_acesso') {
         ]);
 
         if ($resultado['success']) {
-            setMensagem('success', 'Acesso criado e enviado para o proprietário.');
+            setMensagem('success', 'Acesso criado e enviado para o cliente.');
         } else {
             setMensagem('warning', 'Acesso criado, mas o e-mail não foi enviado: ' . $resultado['message']);
         }

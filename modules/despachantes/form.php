@@ -41,7 +41,7 @@ if ($editando) {
         if ($dados) {
             $despachante = array_merge($despachante, $dados);
             // Carregar embarcacoes vinculadas
-            $stmtEmb = $pdo->prepare("SELECT embarcacao_id FROM clientes_embarcacoes WHERE cliente_id = :cliente_id");
+            $stmtEmb = $pdo->prepare("SELECT embarcacao_id FROM clientes_embarcacoes WHERE cliente_id = :cliente_id AND status = 'ATIVO'");
             $stmtEmb->execute([':cliente_id' => $id]);
             $despachante['embarcacoes_ids'] = array_column($stmtEmb->fetchAll(PDO::FETCH_ASSOC), 'embarcacao_id');
 
@@ -65,6 +65,13 @@ try {
     $tipos_embarcacao = $stmtTipos->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $tipos_embarcacao = [];
+}
+
+try {
+    $stmtEmbarcacoes = $pdo->query("SELECT id, nome, COALESCE(NULLIF(registro,''), numero_inscricao) AS registro FROM embarcacoes WHERE ativo = 1 ORDER BY nome ASC");
+    $embarcacoes = $stmtEmbarcacoes->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $embarcacoes = [];
 }
 
 $titulo_page = ($editando ? 'Editar' : 'Novo') . ' Despachante - ERP Sistema';
@@ -152,6 +159,25 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <label for="endereco">Endereço</label>
                     <textarea id="endereco" name="endereco" rows="2"
                               placeholder="Logradouro, numero, bairro, cidade/UF"><?php echo h($despachante['endereco']); ?></textarea>
+                </div>
+            </div>
+
+            <div class="form-row mt-4">
+                <div class="form-group col-12">
+                    <h4 style="border-bottom: 1px solid var(--cor-borda); padding-bottom: 10px;">
+                        <i class="fas fa-link"></i> Embarcações vinculadas ao portal
+                    </h4>
+                    <p class="text-muted" style="margin: 8px 0 14px;">Somente vínculos ativos dão acesso aos documentos no Portal do Cliente. Desmarcar preserva o histórico e revoga o acesso.</p>
+                    <div class="tipo-embarcacao-grid">
+                        <?php foreach ($embarcacoes as $emb): ?>
+                            <?php $marcado = in_array($emb['id'], $despachante['embarcacoes_ids'] ?? [], true); ?>
+                            <label class="tipo-embarcacao-chip<?php echo $marcado ? ' is-selected' : ''; ?>">
+                                <input type="checkbox" name="embarcacoes_ids[]" value="<?php echo h($emb['id']); ?>" <?php echo $marcado ? 'checked' : ''; ?> onchange="atualizarTipoChip(this)">
+                                <i class="fas fa-check"></i>
+                                <span><?php echo h($emb['nome']); ?><?php echo $emb['registro'] ? ' · ' . h($emb['registro']) : ''; ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
 

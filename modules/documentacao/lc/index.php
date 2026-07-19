@@ -9,6 +9,7 @@
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../includes/functions.php';
+require_once __DIR__ . '/../../../includes/aprovacao_ui.php';
 
 verificar_sessao();
 if (!podeAcessar('documentacao')) {
@@ -150,6 +151,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                 <div class="d-flex gap-1" style="flex-wrap: nowrap;">
                                     <a href="<?php echo APP_URL; ?>documentacao/lc/form?id=<?php echo h($c['id']); ?>" class="btn btn-sm btn-primary" title="Editar"><i class="fas fa-edit"></i></a>
                                     <a href="<?php echo APP_URL; ?>documentacao/lc/pdf?id=<?php echo h($c['id']); ?>" class="btn btn-sm btn-secondary" title="Gerar PDF" target="_blank"><i class="fas fa-file-pdf"></i></a>
+                                    <?php renderBotaoAprovacaoDocumento($pdo,'LC',$c['id'],$c['status'],(bool)$c['assinado']); ?>
                                     <form method="POST" action="<?php echo APP_URL; ?>documentacao/lc/actions" style="display:inline;" onsubmit="return confirm('Enviar licença <?php echo h(addslashes($c['numero_lc'])); ?> por e-mail?')">
                                         <input type="hidden" name="action" value="enviar_certificado">
                                         <input type="hidden" name="id" value="<?php echo h($c['id']); ?>">
@@ -168,12 +170,6 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                         <input type="hidden" name="id" value="<?php echo h($c['id']); ?>">
                                         <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
                                         <button type="submit" class="btn btn-sm btn-warning" title="Enviar Link de Assinatura"><i class="fas fa-file-signature"></i></button>
-                                    </form>
-                                    <form method="POST" action="<?php echo APP_URL; ?>documentacao/lc/actions" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta licença?');">
-                                        <input type="hidden" name="action" value="excluir">
-                                        <input type="hidden" name="id" value="<?php echo h($c['id']); ?>">
-                                        <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
                                     </form>
                                 </div>
                             </td>
@@ -209,4 +205,4 @@ function copiarLink(url, btn) {
 }
 </script>
 
-<?php require_once __DIR__ . '/../../../includes/footer.php'; ?>
+<?php renderAprovacaoUi($pdo); require_once __DIR__ . '/../../../includes/footer.php'; ?>

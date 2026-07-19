@@ -24,6 +24,7 @@ $cargo = getCargo();
 $id = $_GET['id'] ?? '';
 $vistoria = null;
 $exigencias = [];
+$anexos_campo = [];
 $os_info = null;
 
 if (empty($id)) {
@@ -75,6 +76,18 @@ try {
         ");
         $stmtE->execute([':vistoria_id' => $vistoria['id']]);
         $exigencias = $stmtE->fetchAll(PDO::FETCH_ASSOC);
+
+        try {
+            $stmtA = $pdo->prepare("SELECT va.*, ec.descricao AS item_descricao
+                                    FROM vistoria_anexos va
+                                    LEFT JOIN exigencias_catalogo ec ON ec.id = va.catalogo_id
+                                    WHERE va.vistoria_id = :vistoria_id
+                                    ORDER BY va.criado_em ASC");
+            $stmtA->execute([':vistoria_id' => $vistoria['id']]);
+            $anexos_campo = $stmtA->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            $anexos_campo = [];
+        }
     }
 
 } catch (Exception $e) {
@@ -87,8 +100,13 @@ if (!$vistoria) {
 }
 
 // Vistoriador so ve as proprias vistorias
-if ($cargo === 'VISTORIADOR' && !empty($vistoria['vistoriador_id']) && $vistoria['vistoriador_id'] !== $usuario_id) {
+if ($cargo === 'VISTORIADOR' && ($vistoria['vistoriador_id'] ?? '') !== $usuario_id) {
     setMensagem('error', 'Acesso negado. Esta vistoria nao esta atribuida a voce.');
+    redirecionar(APP_URL . 'vistorias');
+}
+
+if ($cargo === 'ANALISTA' && ($vistoria['status'] ?? '') !== 'AGUARDANDO_APROVACAO') {
+    setMensagem('error', 'O analista só pode acessar vistorias aguardando aprovação.');
     redirecionar(APP_URL . 'vistorias');
 }
 
@@ -297,6 +315,26 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
             <?php endif; ?>
 
+            <?php if (!empty($anexos_campo)): ?>
+            <div style="margin-bottom: 18px;">
+                <label class="text-muted" style="font-size: 0.8rem;">
+                    <i class="fas fa-camera"></i> Evidências de Campo (<?php echo count($anexos_campo); ?>)
+                </label>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:8px;">
+                    <?php foreach ($anexos_campo as $anexo): ?>
+                    <a href="<?php echo h($anexo['url_arquivo']); ?>" target="_blank" rel="noopener noreferrer"
+                       style="display:block;color:inherit;text-decoration:none;border:1px solid var(--cor-borda);border-radius:9px;overflow:hidden;background:var(--cor-sidebar);">
+                        <img src="<?php echo h($anexo['url_arquivo']); ?>" alt="Evidência da vistoria"
+                             style="width:100%;height:130px;display:block;object-fit:cover;">
+                        <span style="display:block;padding:8px;font-size:0.72rem;line-height:1.35;">
+                            <?php echo h(mb_strimwidth($anexo['item_descricao'] ?? 'Evidência geral', 0, 70, '...')); ?>
+                        </span>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- ===== TABELA DE EXIGENCIAS (DO RELATORIO TECNICO) ===== -->
             <?php if (!empty($exigencias)): ?>
             <div style="margin-bottom: 15px;">
@@ -445,6 +483,33 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </button>
                 </form>
             </div>
+            <?php endif; ?>
+
+            <!-- Revisão de relatório legado sem agendamento (ANALISTA) -->
+            <?php if ($cargo === 'ANALISTA' && $vistoria['status'] === 'AGUARDANDO_APROVACAO'): ?>
+            <div style="background:#f5fbf8;padding:18px 20px;border-radius:8px;margin-bottom:15px;border:1px solid #a8d9c5;border-left:4px solid #0aa36c;">
+                <h4 style="margin-bottom:8px;color:#08734f;"><i class="fas fa-clipboard-check"></i> Decisão da análise técnica</h4>
+                <p class="text-muted" style="margin-bottom:14px;">Este é um relatório antigo sem agendamento vinculado. A decisão pode ser registrada normalmente por esta tela.</p>
+                <form method="POST" action="<?php echo APP_URL; ?>vistorias/actions?action=aprovar_ou_reprovar">
+                    <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>">
+                    <input type="hidden" name="id" value="<?php echo h($vistoria['id']); ?>">
+                    <div class="form-group">
+                        <label for="observacao_analista"><i class="fas fa-comment"></i> Observação da análise</label>
+                        <textarea id="observacao_analista" name="observacao_admin" rows="4" maxlength="2000" placeholder="Obrigatória para reprovar; opcional para aprovar."></textarea>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="decisao" value="aprovar" class="btn btn-success" onclick="return confirm('Aprovar este relatório?')"><i class="fas fa-check"></i> Aprovar relatório</button>
+                        <button type="submit" name="decisao" value="reprovar" class="btn btn-danger" onclick="return confirmarReprovacaoLegada()"><i class="fas fa-times"></i> Reprovar relatório</button>
+                    </div>
+                </form>
+            </div>
+            <script>
+            function confirmarReprovacaoLegada() {
+                const observacao = document.getElementById('observacao_analista').value.trim();
+                if (!observacao) { alert('Informe uma observação para reprovar o relatório.'); return false; }
+                return confirm('Reprovar este relatório?');
+            }
+            </script>
             <?php endif; ?>
 
             <!-- Alterar Status (apenas ADMIN) -->

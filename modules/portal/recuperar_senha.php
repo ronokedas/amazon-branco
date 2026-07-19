@@ -14,8 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 SELECT c.id, c.nome, c.email
                 FROM clientes c
                 INNER JOIN cliente_portal_acessos a ON a.cliente_id = c.id AND a.ativo = 1
-                WHERE c.email = :email
-                  AND c.perfil = 'proprietario'
+                WHERE a.login = :email
+                  AND c.perfil IN ('proprietario','despachante')
                   AND c.status = 'ATIVO'
                 LIMIT 1
             ");

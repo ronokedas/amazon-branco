@@ -1,7 +1,7 @@
 -- Migration 011: Tabela certificados_cnarq
 -- Fase 4 - Documentação: Certificado CNARQ (Arqueação)
 -- Segue o padrão das tabelas certificados_csn e certificados_cnbl existentes
--- A tabela cert_convalidacoes já foi criada na migration 010 e atende CNARQ também
+-- CNARQ nao possui convalidacoes. A tabela cert_convalidacoes e exclusiva do CNBL.
 
 -- --------------------------------------------------------
 -- Tabela: certificados_cnarq

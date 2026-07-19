@@ -30,6 +30,15 @@ switch ($action) {
         }
 
         $vistoria_id = $_POST['vistoria_id'] ?? '';
+        $stmtRelatorio = $pdo->prepare("SELECT agendamento_id FROM vistorias WHERE id = :id");
+        $stmtRelatorio->execute([':id' => $vistoria_id]);
+        $agendamentoId = $stmtRelatorio->fetchColumn();
+        setMensagem('warning', 'A baixa direta foi substituída pelo Relatório de Verificação de Cumprimento de Exigências.');
+        redirecionar($agendamentoId
+            ? APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamentoId) . '&vistoria_id=' . urlencode($vistoria_id)
+            : APP_URL . 'vistorias');
+
+        $vistoria_id = $_POST['vistoria_id'] ?? '';
         $exigencia_id = $_POST['exigencia_id'] ?? '';
 
         if (!$vistoria_id || !$exigencia_id) {

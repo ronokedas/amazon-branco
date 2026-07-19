@@ -1,7 +1,7 @@
 <?php
 /**
  * MÓDULO: Documentação > Certificados CNARQ
- * Actions: Salvar, Excluir (soft delete)
+ * Actions: Salvar e enviar documentos
  * Numeração automática AM-CNARQ-{n}/{ano}
  */
 
@@ -30,6 +30,7 @@ if ($action === 'salvar') {
 
     $id = $_POST['id'] ?? null;
     $editando = !empty($id);
+    bloquearEdicaoDocumentoAssinado($pdo,'certificados_cnarq',$id,APP_URL.'documentacao/cnarq');
 
     // Dados principais
     $nome_embarcacao     = trim($_POST['nome_embarcacao'] ?? '');
@@ -90,6 +91,13 @@ if ($action === 'salvar') {
 
     // Validações
     $vistoria_id = $_POST['vistoria_id'] ?? null;
+    if ($vistoria_id) {
+        $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
+        if (empty($liberacao['permitido'])) {
+            setMensagem('error', $liberacao['mensagem']);
+            redirecionar(APP_URL . 'documentacao/cnarq/form' . ($editando ? "?id={$id}" : ''));
+        }
+    }
     if (empty($vistoria_id)) {
         setMensagem('error', 'É obrigatório selecionar um relatório aprovado para emitir o certificado.');
         redirecionar(APP_URL . 'documentacao/cnarq/form' . ($editando ? "?id={$id}" : ''));
@@ -185,10 +193,6 @@ if ($action === 'salvar') {
                 ':id'                 => $id,
             ]);
 
-            // Deletar convalidações antigas e reinserir
-            $stmt_del = $pdo->prepare("DELETE FROM cert_convalidacoes WHERE certificado_id = :cert_id AND tipo_certificado = 'CNARQ'");
-            $stmt_del->execute([':cert_id' => $id]);
-
         } else {
             // INSERIR - Gerar número e token
             $ano = date('y');
@@ -264,36 +268,6 @@ if ($action === 'salvar') {
             ]);
         }
 
-        // Salvar convalidações
-        $conv_numero      = $_POST['conv_numero'] ?? [];
-        $conv_data_inicio = $_POST['conv_data_inicio'] ?? [];
-        $conv_data_fim    = $_POST['conv_data_fim'] ?? [];
-        $conv_local_data  = $_POST['conv_local_data'] ?? [];
-        $conv_vistoriador = $_POST['conv_vistoriador'] ?? [];
-
-        $stmt_conv = $pdo->prepare("INSERT INTO cert_convalidacoes 
-                                    (id, tipo_certificado, certificado_id, numero_vistoria, data_inicio, data_fim, local_data, vistoriador) 
-                                    VALUES (:id, :tipo_certificado, :cert_id, :numero, :data_inicio, :data_fim, :local_data, :vistoriador)");
-
-        for ($i = 0; $i < count($conv_numero); $i++) {
-            $numero   = trim($conv_numero[$i] ?? '');
-            $dt_inicio = $conv_data_inicio[$i] ?: null;
-            $dt_fim    = $conv_data_fim[$i] ?: null;
-            $local_dt  = trim($conv_local_data[$i] ?? '');
-            $vist      = trim($conv_vistoriador[$i] ?? '');
-
-            $stmt_conv->execute([
-                ':id'                => gerarUUID(),
-                ':tipo_certificado'  => 'CNARQ',
-                ':cert_id'           => $id,
-                ':numero'            => $numero,
-                ':data_inicio'       => $dt_inicio,
-                ':data_fim'          => $dt_fim,
-                ':local_data'        => $local_dt,
-                ':vistoriador'       => $vist,
-            ]);
-        }
-
         $pdo->commit();
 
         // Log de atividade
@@ -309,36 +283,6 @@ if ($action === 'salvar') {
         setMensagem('error', 'Erro ao salvar certificado: ' . $e->getMessage());
         redirecionar(APP_URL . 'documentacao/cnarq/form' . ($editando ? "?id={$id}" : ''));
     }
-}
-
-// ============================================
-// EXCLUIR CERTIFICADO (Soft Delete)
-// ============================================
-if ($action === 'excluir') {
-    if (!verificarCSRF($_POST['csrf_token'] ?? '')) {
-        setMensagem('error', 'Token de segurança inválido.');
-        redirecionar(APP_URL . 'documentacao/cnarq');
-    }
-
-    $id = $_POST['id'] ?? '';
-
-    if (empty($id)) {
-        setMensagem('error', 'ID do certificado não informado.');
-        redirecionar(APP_URL . 'documentacao/cnarq');
-    }
-
-    try {
-        $stmt = $pdo->prepare("UPDATE certificados_cnarq SET ativo = 0 WHERE id = :id");
-        $stmt->execute([':id' => $id]);
-
-        log_atividade('certificado_cnarq_excluido', "Certificado CNARQ ID: {$id}");
-
-        setMensagem('success', 'Certificado excluído com sucesso.');
-    } catch (Exception $e) {
-        setMensagem('error', 'Erro ao excluir certificado: ' . $e->getMessage());
-    }
-
-    redirecionar(APP_URL . 'documentacao/cnarq');
 }
 
 // ============================================

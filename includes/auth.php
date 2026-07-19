@@ -15,8 +15,87 @@ function getCargo() {
     return $_SESSION['usuario_cargo'] ?? null;
 }
 
-// Verificar se usuario tem permissao para acessar determinado modulo
-function podeAcessar($modulo) {
+// Perfis múltiplos convivem com o campo legado `cargo` durante a migração.
+function getPerfisUsuario(?string $usuarioId = null): array {
+    global $pdo;
+    $usuarioId = $usuarioId ?: ($_SESSION['usuario_id'] ?? null);
+    if (!$usuarioId) return [];
+
+    $perfis = [];
+    try {
+        $stmt = $pdo->prepare("SELECT perfil FROM usuario_perfis WHERE usuario_id = :id ORDER BY perfil");
+        $stmt->execute([':id' => $usuarioId]);
+        $perfis = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    } catch (Throwable $e) {
+        // Compatibilidade antes da migration 057.
+    }
+
+    $cargo = getCargo();
+    if ($cargo && !in_array($cargo, $perfis, true)) $perfis[] = $cargo;
+    return array_values(array_unique($perfis));
+}
+
+function temPerfil(string $perfil, ?string $usuarioId = null): bool {
+    $perfis = getPerfisUsuario($usuarioId);
+    // Administradores podem operar qualquer perfil sem uma segunda conta.
+    return in_array('ADMIN', $perfis, true) || in_array($perfil, $perfis, true);
+}
+
+/** Módulos iniciais recomendados para cada cargo. O administrador pode personalizar depois. */
+function permissoesPadraoCargo(string $cargo): array {
+    return match ($cargo) {
+        'VENDEDOR' => ['dashboard', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'vistorias', 'agendamentos', 'comercial', 'servicos', 'emails'],
+        'VISTORIADOR' => ['dashboard', 'vistorias', 'embarcacoes', 'certificados', 'documentacao'],
+        'ANALISTA' => ['dashboard', 'vistorias', 'relatorios_aprovacao', 'analise_planos'],
+        default => [],
+    };
+}
+
+/** Ativa os padrões sem remover liberações adicionais feitas pelo administrador. */
+function aplicarPermissoesPadraoUsuario(PDO $pdo, string $usuarioId, string $cargo): void {
+    if ($cargo === 'ADMIN') return;
+    $stmt = $pdo->prepare('INSERT INTO usuario_permissoes (usuario_id, permissao, permitido) VALUES (:usuario_id, :permissao, 1) ON DUPLICATE KEY UPDATE permitido = 1');
+    foreach (permissoesPadraoCargo($cargo) as $permissao) {
+        $stmt->execute([':usuario_id' => $usuarioId, ':permissao' => $permissao]);
+    }
+}
+
+/** Permissões individuais definidas pelo administrador. */
+function podeAcessar(string $modulo): bool {
+    if (!estaLogado()) return false;
+    if (getCargo() === 'ADMIN') return true;
+
+    global $pdo;
+    $usuarioId = $_SESSION['usuario_id'] ?? '';
+    if ($usuarioId && $pdo) {
+        try {
+            $stmt = $pdo->prepare('SELECT permitido FROM usuario_permissoes WHERE usuario_id = :usuario_id AND permissao = :permissao LIMIT 1');
+            $stmt->execute([':usuario_id' => $usuarioId, ':permissao' => $modulo]);
+            $valor = $stmt->fetchColumn();
+            if ($valor !== false) return (int)$valor === 1;
+        } catch (Throwable $e) {
+            // Compatibilidade enquanto a tabela de permissões ainda não existe.
+        }
+    }
+
+    // Mantém as permissões atuais até o administrador salvar a matriz de acesso.
+    $cargo = getCargo();
+    if (in_array($modulo, ['documentacao', 'financeiro'], true)) {
+        try {
+            $coluna = 'acesso_' . $modulo;
+            $stmt = $pdo->prepare("SELECT {$coluna} FROM usuarios WHERE id = :id LIMIT 1");
+            $stmt->execute([':id' => $usuarioId]);
+            return (int)$stmt->fetchColumn() === 1;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    return in_array($modulo, permissoesPadraoCargo($cargo), true);
+}
+
+// Legado mantido abaixo por compatibilidade de leitura em instalações antigas.
+function podeAcessarLegado($modulo) {
     if (!estaLogado()) {
         return false;
     }
@@ -48,7 +127,7 @@ function podeAcessar($modulo) {
     }
 
     // Permissões por cargo (default deny: cargos desconhecidos não acessam nada).
-    // Cargos válidos do sistema: ADMIN, VENDEDOR, VISTORIADOR
+    // Cargos válidos do sistema: ADMIN, VENDEDOR, VISTORIADOR, ANALISTA
     // (ver modules/usuarios/actions.php).
     switch ($cargo) {
         case 'ADMIN':
@@ -63,7 +142,6 @@ function podeAcessar($modulo) {
                 'vistorias',
                 'agendamentos',
                 'comercial',
-                'contratos',
                 'emails'
             ];
             return in_array($modulo, $modulosPermitidos, true);
@@ -75,6 +153,14 @@ function podeAcessar($modulo) {
                 'embarcacoes',
                 'pessoas',
                 'vistorias'
+            ];
+            return in_array($modulo, $modulosPermitidos, true);
+
+        case 'ANALISTA':
+            $modulosPermitidos = [
+                'dashboard',
+                'vistorias',
+                'documentacao'
             ];
             return in_array($modulo, $modulosPermitidos, true);
 
@@ -138,6 +224,24 @@ function verificarSessao() {
         logout();
     }
 
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT ativo, excluido_em
+             FROM usuarios
+             WHERE id = :id
+             LIMIT 1"
+        );
+        $stmt->execute([':id' => $_SESSION['usuario_id'] ?? '']);
+        $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$usuario || (int)$usuario['ativo'] !== 1 || $usuario['excluido_em'] !== null) {
+            logout();
+        }
+    } catch (Throwable $e) {
+        error_log('Erro ao validar sessao do usuario: ' . $e->getMessage());
+        logout();
+    }
+
     // A expiracao e por inatividade, portanto uma requisicao valida renova o prazo.
     $_SESSION['login_time'] = time();
 }
@@ -162,7 +266,7 @@ function is_vendedor() {
 function getUsuarioLogado() {
     global $pdo;
     if (!estaLogado()) return null;
-    $stmt = $pdo->prepare("SELECT id, nome, email, cargo, ativo FROM usuarios WHERE id = :id LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id, nome, email, cargo, ativo FROM usuarios WHERE id = :id AND excluido_em IS NULL LIMIT 1");
     $stmt->execute([':id' => $_SESSION['usuario_id']]);
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }

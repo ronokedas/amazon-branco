@@ -31,7 +31,14 @@ if (!$c) {
     die("Certificado não encontrado.");
 }
 
-if (!isset($salvar_pdf_caminho) && (int)$c['assinado'] === 1 && !empty($c['caminho_arquivo_pdf'])) {
+$stmt_revisao_conv = $pdo->prepare("SELECT MAX(atualizado_em) FROM csn_convalidacoes WHERE certificado_id = :id");
+$stmt_revisao_conv->execute([':id' => $id]);
+$convalidacoes_revisadas_em = $stmt_revisao_conv->fetchColumn();
+$convalidacoes_revisadas = !empty($convalidacoes_revisadas_em)
+    && !empty($c['assinatura_em'])
+    && strtotime($convalidacoes_revisadas_em) > strtotime($c['assinatura_em']);
+
+if (!isset($salvar_pdf_caminho) && !$convalidacoes_revisadas && (int)$c['assinado'] === 1 && !empty($c['caminho_arquivo_pdf'])) {
     $caminho_fisico = __DIR__ . '/../../../' . $c['caminho_arquivo_pdf'];
     if (file_exists($caminho_fisico)) {
         header('Content-Type: application/pdf');
@@ -54,6 +61,8 @@ $origem = [];
 if (!empty($c['vistoria_id'])) {
     $stmt_origem = $pdo->prepare("
         SELECT e.tipo_servico, e.cnbl_area_navegacao, e.area_navegacao, e.tipo_navegacao,
+               e.possui_propulsao, e.fabricante_motor, e.modelo_motor, e.numero_motor, e.potencia_kw,
+               v.data_vistoria, v.prazo_exigencias_dias,
                e.tipo_embarcacao AS embarcacao_tipo, te.nome AS tipo_embarcacao_nome
         FROM vistorias v
         JOIN embarcacoes e ON e.id = v.embarcacao_id
@@ -70,6 +79,12 @@ if (!file_exists($autoload_path)) {
     die("Autoloader do Composer não encontrado.");
 }
 require_once $autoload_path;
+
+// O modelo visual solicitado é o Anexo 8-C da NORMAM-202/DPC, conforme
+// docs/exemplos/exemplo-pdf-CSN.pdf. O renderizador isolado abaixo preserva
+// este arquivo como compatibilidade para certificados antigos.
+require __DIR__ . '/pdf_modelo_referencia.php';
+return;
 
 function csnText($valor): string {
     return trim((string)($valor ?? ''));
@@ -334,28 +349,6 @@ $pdf->Cell(6, 5, 'de', 0, 0, 'L');
 $pdf->Line(141, 256.2, 154, 256.2);
 $pdf->SetXY(142, 251.8);
 $pdf->Cell(11, 5, $anoEmissao, 0, 0, 'C');
-
-$sigY = 257;
-if (!empty($c['assinatura_imagem'])) {
-    $imgData = $c['assinatura_imagem'];
-    if (preg_match('/^data:image\/(\w+);base64,/', $imgData)) {
-        $imgData = substr($imgData, strpos($imgData, ',') + 1);
-    }
-    $decoded = base64_decode($imgData);
-    if ($decoded !== false) {
-        $decoded = csnConverterImagemParaJpeg($decoded);
-        $tmp = tempnam(sys_get_temp_dir(), 'csn_sig_') . '.jpg';
-        file_put_contents($tmp, $decoded);
-        $pdf->Image($tmp, 118, $sigY - 5, 45, 12);
-        @unlink($tmp);
-    }
-}
-$pdf->Line(116, $sigY + 7, 196, $sigY + 7);
-$pdf->SetFont('helvetica', '', 8);
-$pdf->SetXY(116, $sigY + 8);
-$pdf->Cell(80, 4, 'Assinatura do responsável', 0, 1, 'C');
-$pdf->SetX(116);
-$pdf->Cell(80, 4, '(CP/DL/AG/Entidade Certificadora/Sociedade Classificadora)', 0, 1, 'C');
 
 $pdf->SetFont('helvetica', '', 6);
 $pdf->SetXY($left, 267);

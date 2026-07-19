@@ -136,7 +136,7 @@ try {
         $stmtCli = $pdo->prepare("
             SELECT c.nome AS cliente_nome, c.email AS cliente_email
             FROM clientes c
-            INNER JOIN clientes_embarcacoes ce ON ce.cliente_id = c.id
+            INNER JOIN clientes_embarcacoes ce ON ce.cliente_id = c.id AND ce.status='ATIVO'
             INNER JOIN embarcacoes e ON e.id = ce.embarcacao_id
             WHERE e.nome = :emb_nome AND c.status = 'ATIVO'
             LIMIT 1

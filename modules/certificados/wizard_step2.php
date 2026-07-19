@@ -16,6 +16,7 @@ $modelo_nome = $sessao_wizard['modelo_nome'] ?? $modelo;
 $tipo = $sessao_wizard['tipo'] ?? '';
 $agendamento_id = $sessao_wizard['agendamento_id'] ?? '';
 $modelos_sem_tipo = ['LP', 'LC', 'CHT'];
+$modelo_csn = $modelo === 'CSN' || $modelo === 'Certificado de Segurança da Navegação';
 
 if (!empty($modelo) && in_array($modelo, $modelos_sem_tipo, true) && empty($tipo)) {
     $tipo = 'Documento';
@@ -39,7 +40,8 @@ function buscarDadosVistoriaCertificado(PDO $pdo, string $vistoria_id): ?array
     }
 
     $stmtDados = $pdo->prepare("
-        SELECT v.numero as relatorio_numero, v.data_vistoria, v.status as relatorio_status,
+        SELECT v.numero as relatorio_numero, v.data_vistoria, v.prazo_exigencias_dias,
+               v.status as relatorio_status,
                a.local as local_vistoria,
                pc.nome as proprietario_nome_cadastro,
                pc.cpf_cnpj as proprietario_cpf_cnpj_cadastro,
@@ -61,6 +63,18 @@ function buscarDadosVistoriaCertificado(PDO $pdo, string $vistoria_id): ?array
     return $dados ?: null;
 }
 
+function calcularValidadeCsnDoRelatorio(array $dados): ?string
+{
+    $prazo = (int)($dados['prazo_exigencias_dias'] ?? 0);
+    $data = (string)($dados['data_vistoria'] ?? '');
+    if (!in_array($prazo, [60, 90], true) || $data === '') {
+        return null;
+    }
+
+    $dataBase = DateTimeImmutable::createFromFormat('!Y-m-d', $data);
+    return $dataBase ? $dataBase->modify('+' . $prazo . ' days')->format('Y-m-d') : null;
+}
+
 $stmtResponsaveis = $pdo->query("
     SELECT id, nome_completo as nome, cargo_titulo as cargo, registro_profissional as conselho_classe
     FROM responsaveis_assinatura
@@ -73,35 +87,48 @@ $erro = '';
 $sucesso = '';
 $vistoria_id = $_SERVER['REQUEST_METHOD'] === 'POST'
     ? ($_POST['vistoria_id'] ?? '')
-    : ($_GET['vistoria_id'] ?? '');
+    : ($_GET['vistoria_id'] ?? ($sessao_wizard['vistoria_id'] ?? ''));
 
 if (empty($vistoria_id) && !empty($agendamento_id)) {
-    $stmtVistoriaContexto = $pdo->prepare("
-        SELECT id
-        FROM vistorias
-        WHERE agendamento_id = :agendamento_id
-          AND status IN ('APROVADA', 'APROVADA_COM_EXIGENCIAS')
-        ORDER BY data_vistoria DESC
-        LIMIT 1
-    ");
-    $stmtVistoriaContexto->execute([':agendamento_id' => $agendamento_id]);
-    $vistoria_id = (string)($stmtVistoriaContexto->fetchColumn() ?: '');
+    $relatorioVigente = obterRelatorioVigenteAgendamento($pdo, $agendamento_id);
+    $vistoria_id = (string)($relatorioVigente['id'] ?? '');
 }
 
 $responsavel_id_selecionado = $_POST['responsavel_id'] ?? '';
 $data_validade_valor = $_POST['data_validade'] ?? '';
 $local_emissao_valor = $_POST['local_emissao'] ?? '';
-$emitente_valor = $_POST['emitente'] ?? '';
-$normam_aplicavel_valor = $_POST['normam_aplicavel'] ?? '';
+$emitente_valor = $modelo_csn ? 'AMAZON NAVAL' : ($_POST['emitente'] ?? '');
+$normam_aplicavel_valor = $modelo_csn ? 'NORMAM-202' : ($_POST['normam_aplicavel'] ?? '');
 $tipo_vistoria_certificado_valor = $_POST['tipo_vistoria_certificado'] ?? '';
 $observacoes_verso_valor = $_POST['observacoes_verso'] ?? '';
 $modalidade_lc = $_POST['modalidade_lc'] ?? 'LC';
 $data_termino_construcao = $_POST['data_termino_construcao'] ?? '';
 
+if ($responsavel_id_selecionado === '' && count($responsaveis) === 1) {
+    $responsavel_id_selecionado = (string)$responsaveis[0]['id'];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $vistoria_id_post = $_POST['vistoria_id'] ?? '';
+    if ($modelo_csn && $vistoria_id_post !== '') {
+        $dadosValidadeCsn = buscarDadosVistoriaCertificado($pdo, $vistoria_id_post);
+        $validadeCalculadaCsn = $dadosValidadeCsn ? calcularValidadeCsnDoRelatorio($dadosValidadeCsn) : null;
+        if ($validadeCalculadaCsn === null) {
+            $erro = 'O relatório precisa ter prazo de validade de 60 ou 90 dias antes de gerar o CSN.';
+        } else {
+            $data_validade_valor = $validadeCalculadaCsn;
+        }
+    }
+    if ($vistoria_id_post !== '') {
+        $liberacaoCertificacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id_post);
+        if (empty($liberacaoCertificacao['permitido'])) {
+            $erro = $liberacaoCertificacao['mensagem'];
+        }
+    }
 
-    if (!verificarCSRF($_POST['csrf_token'] ?? '')) {
+    if ($erro !== '') {
+        // A regra central ja bloqueou o relatorio selecionado.
+    } elseif (!verificarCSRF($_POST['csrf_token'] ?? '')) {
         $erro = 'Sessão expirada. Atualize a página e tente novamente.';
     } elseif (empty($vistoria_id_post)) {
         $erro = 'É obrigatório selecionar um relatório aprovado para emitir o certificado.';
@@ -111,17 +138,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erro = 'Informe a data de validade do certificado.';
     } elseif (empty($local_emissao_valor)) {
         $erro = 'Selecione o local de emissão.';
-    } elseif ($modelo === 'Certificado de Segurança da Navegação' || $modelo === 'CSN') {
+    } elseif ($modelo_csn) {
         $dados_emb = buscarDadosVistoriaCertificado($pdo, $vistoria_id_post);
 
         if (!$dados_emb) {
             $erro = 'Relatório não encontrado ou inválido.';
         } elseif (!in_array($dados_emb['relatorio_status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)) {
             $erro = 'Não é possível emitir certificado. O relatório selecionado não está aprovado.';
+        } elseif ($dados_emb['possui_propulsao'] === null) {
+            $erro = 'Atualize o cadastro da embarcação e informe se ela possui propulsão antes de gerar o CSN.';
+        } elseif ((int)$dados_emb['possui_propulsao'] === 1 && (
+            trim((string)($dados_emb['fabricante_motor'] ?? '')) === ''
+            || trim((string)($dados_emb['modelo_motor'] ?? '')) === ''
+            || trim((string)($dados_emb['numero_motor'] ?? '')) === ''
+            || trim((string)($dados_emb['potencia_kw'] ?? '')) === ''
+        )) {
+            $erro = 'A embarcação possui propulsão. Preencha fabricante, modelo, número do motor e potência antes de gerar o CSN.';
         } elseif ($tipo === 'Definitivo' && $dados_emb['relatorio_status'] === 'APROVADA_COM_EXIGENCIAS') {
             $erro = 'Não é possível emitir um Certificado Definitivo para um relatório aprovado com exigências. Use Provisório ou Condicional.';
         } else {
-            $stmtResp = $pdo->prepare("SELECT nome_completo, cargo_titulo, registro_profissional FROM responsaveis_assinatura WHERE id = :id");
+            $stmtResp = $pdo->prepare("SELECT nome_completo, cargo_titulo, registro_profissional FROM responsaveis_assinatura WHERE id = :id AND ativo = 1");
             $stmtResp->execute([':id' => $responsavel_id_selecionado]);
             $respData = $stmtResp->fetch(PDO::FETCH_ASSOC);
 
@@ -185,8 +221,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':arqueacao_bruta' => $dados_emb['arqueacao_bruta'] ?? '',
                         ':tipo_navegacao' => $dados_emb['tipo_navegacao'] ?? '',
                         ':area_navegacao' => $dados_emb['cnbl_area_navegacao'] ?? $dados_emb['area_navegacao'] ?? '',
-                        ':fabricante_motor' => $dados_emb['fabricante_motor'] ?? '',
-                        ':potencia_kw' => $dados_emb['potencia_kw'] ?? '',
+                        ':fabricante_motor' => (int)$dados_emb['possui_propulsao'] === 0 ? '' : implode(' - ', array_filter([
+                            trim((string)($dados_emb['fabricante_motor'] ?? '')),
+                            trim((string)($dados_emb['modelo_motor'] ?? '')),
+                            trim((string)($dados_emb['numero_motor'] ?? '')),
+                        ], static fn($valor) => $valor !== '')),
+                        ':potencia_kw' => (int)$dados_emb['possui_propulsao'] === 0 ? '' : ($dados_emb['potencia_kw'] ?? ''),
                         ':material_casco' => $dados_emb['material_casco'] ?? '',
                         ':autorizado_carga' => $dados_emb['autorizado_carga'] ?? 0,
                         ':qtd_passageiros' => $qtd_passageiros,
@@ -267,6 +307,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
 
+                    $pdo->prepare('UPDATE certificados_csn SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
                     $pdo->commit();
 
                     log_atividade('certificado_csn_criado', "Certificado {$numero_cert} ({$tipo}) - " . ($dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? ''));
@@ -415,6 +456,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
 
+                    $pdo->prepare('UPDATE certificados_cnbl SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
                     $pdo->commit();
 
                     log_atividade('certificado_cnbl_criado', "Certificado {$numero_cert} ({$tipo}) - " . ($dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? ''));
@@ -540,6 +582,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':vistoria_id' => $vistoria_id_post,
                     ]);
 
+                    $pdo->prepare('UPDATE certificados_cnarq SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
                     $pdo->commit();
 
                     log_atividade('certificado_cnarq_criado', "Certificado {$numero_cert} ({$tipo}) - " . ($dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? ''));
@@ -630,6 +673,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':vistoria_id' => $vistoria_id_post,
                     ]);
 
+                    $pdo->prepare('UPDATE certificados_lp SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
                     $pdo->commit();
 
                     log_atividade('licenca_lp_criada', "Licença {$numero_lp} - " . ($dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? ''));
@@ -741,6 +785,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':vistoria_id' => $vistoria_id_post,
                     ]);
 
+                    $pdo->prepare('UPDATE certificados_lc SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
                     $pdo->commit();
                     log_atividade('licenca_lc_criada', "{$numero_lc} ({$modalidade_lc}) - " . ($dados_emb['nome'] ?? ''));
                     setMensagem('success', "Licença {$modalidade_lc} criada com sucesso! Número: {$numero_lc}");
@@ -759,6 +804,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $dados_preenchidos = buscarDadosVistoriaCertificado($pdo, $vistoria_id);
+if ($modelo_csn && $dados_preenchidos && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $data_validade_valor = calcularValidadeCsnDoRelatorio($dados_preenchidos) ?? '';
+}
 $relatorio_label = '';
 $relatorio_vinculado = !empty($agendamento_id);
 
@@ -916,7 +964,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <select name="responsavel_id" id="responsavel_id" class="form-control" required>
                                 <option value="">Selecione o responsável...</option>
                                 <?php foreach ($responsaveis as $resp): ?>
-                                    <option value="<?= h($resp['id']) ?>" <?= $responsavel_id_selecionado === $resp['id'] ? 'selected' : '' ?>>
+                                    <option value="<?= h($resp['id']) ?>" <?= (string)$responsavel_id_selecionado === (string)$resp['id'] ? 'selected' : '' ?>>
                                         <?= h($resp['nome']) ?><?= !empty($resp['cargo']) ? ' · ' . h($resp['cargo']) : '' ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -926,7 +974,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <?php if ($modelo !== 'LC'): ?>
                             <div class="form-group col-3">
                                 <label for="data_validade"><i class="fas fa-calendar-check"></i> Validade <span class="text-danger">*</span></label>
-                                <input type="date" name="data_validade" id="data_validade" class="form-control" value="<?= h($data_validade_valor) ?>" required>
+                                <input type="date" name="data_validade" id="data_validade" class="form-control" value="<?= h($data_validade_valor) ?>" required <?= $modelo_csn ? 'readonly' : '' ?>>
+                                <?php if ($modelo_csn): ?>
+                                    <small>Calculada automaticamente pela data da vistoria.</small>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
 
@@ -942,22 +993,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </div>
 
                     <?php if ($modelo === 'CSN' || $modelo === 'Certificado de Segurança da Navegação'): ?>
+                        <input type="hidden" name="emitente" value="AMAZON NAVAL">
+                        <input type="hidden" name="normam_aplicavel" value="NORMAM-202">
                         <div class="form-row">
-                            <div class="form-group col-4">
-                                <label for="emitente"><i class="fas fa-building-columns"></i> Emitente</label>
-                                <input type="text" name="emitente" id="emitente" class="form-control"
-                                       placeholder="Capitania, Delegacia, Agência, Certificadora ou Sociedade Classificadora"
-                                       value="<?= h($emitente_valor) ?>">
-                            </div>
-                            <div class="form-group col-4">
-                                <label for="normam_aplicavel"><i class="fas fa-book"></i> NORMAM aplicável</label>
-                                <select name="normam_aplicavel" id="normam_aplicavel" class="form-control">
-                                    <option value="">Selecione...</option>
-                                    <option value="NORMAM-01" <?= $normam_aplicavel_valor === 'NORMAM-01' ? 'selected' : '' ?>>NORMAM-01</option>
-                                    <option value="NORMAM-02" <?= $normam_aplicavel_valor === 'NORMAM-02' ? 'selected' : '' ?>>NORMAM-02</option>
-                                </select>
-                            </div>
-                            <div class="form-group col-4">
+                            <div class="form-group col-6">
                                 <label for="tipo_vistoria_certificado"><i class="fas fa-clipboard-check"></i> Tipo de vistoria</label>
                                 <select name="tipo_vistoria_certificado" id="tipo_vistoria_certificado" class="form-control">
                                     <option value="">Selecione...</option>

@@ -104,7 +104,7 @@ if (!$editando && !empty($_GET['agendamento_id'])) {
             v.numero as relatorio_numero
         FROM agendamentos a
         JOIN embarcacoes e ON a.embarcacao_id = e.id
-        LEFT JOIN vistorias v ON v.agendamento_id = a.id
+        LEFT JOIN vistorias v ON v.id = (SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC, v2.id DESC LIMIT 1)
         WHERE a.id = :aid
     ");
     $stmtPre->execute([':aid' => $_GET['agendamento_id']]);
@@ -138,6 +138,14 @@ $embarcacoes = $stmt_emb->fetchAll(PDO::FETCH_ASSOC);
 $stmt_desp = $pdo->prepare("SELECT id, nome FROM clientes WHERE perfil = 'despachante' AND status = 'ATIVO' ORDER BY nome");
 $stmt_desp->execute();
 $despachantes_list = $stmt_desp->fetchAll(PDO::FETCH_ASSOC);
+
+$documento_bloqueado = documentoEstaAprovadoOuAssinado($pdo, 'certificados_cnbl', 'CNBL', $certificado['id'] ?? null);
+$vistoriadores_convalidacao = certificadoVistoriadoresAtivos($pdo);
+$locais_convalidacao = certificadoLocaisVistoria($pdo);
+$convalidacoes = certificadoAplicarUltimaVistoria(
+    $convalidacoes,
+    certificadoUltimaVistoriaParaConvalidacao($pdo, $certificado['vistoria_id'] ?? null)
+);
 
 $valorCampoCnbl = function (string $campo, string $padrao = '') use ($editando, $certificado, $preenchimento): string {
     if ($editando && isset($certificado[$campo]) && $certificado[$campo] !== null && $certificado[$campo] !== '') {
@@ -217,12 +225,13 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
     <div class="tab-content">
 
     <!-- Se já estiver assinado, mostrar aviso -->
-    <?php if ($editando && $certificado['assinado']): ?>
+    <?php if ($documento_bloqueado): ?>
         <div class="card mb-3" style="border-left: 4px solid var(--cor-destaque);">
             <div class="card-body">
                 <p style="margin:0;">
                     <i class="fas fa-lock" style="color: var(--cor-destaque);"></i>
-                    <strong>Este certificado já foi assinado digitalmente.</strong><br>
+                    <strong>Este certificado foi aprovado/assinado e seus dados estão bloqueados.</strong><br>
+                    Somente Lugar, data da realização e Vistoriador das Convalidações podem ser atualizados.<br>
                     Assinado por: <?php echo h($certificado['assinante_nome']); ?> em 
                     <?php echo formatarDataCompleta($certificado['assinatura_em']); ?> 
                     (IP: <?php echo h($certificado['assinatura_ip']); ?>)
@@ -232,7 +241,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
     <?php endif; ?>
 
     <form method="POST" action="<?php echo APP_URL; ?>documentacao/cnbl/actions" id="formCertificado">
-        <input type="hidden" name="action" value="salvar">
+        <input type="hidden" name="action" value="<?php echo $documento_bloqueado ? 'atualizar_convalidacoes' : 'salvar'; ?>">
         <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
         <?php if ($editando): ?>
             <input type="hidden" name="id" value="<?php echo h($certificado['id']); ?>">
@@ -599,9 +608,15 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                     $conv = $usar_mapa_convalidacoes
                                         ? ($convalidacoes_por_numero[$numero_vistoria] ?? null)
                                         : ($convalidacoes[$i] ?? null);
+                                    $realizacao = certificadoSepararLocalDataConvalidacao($conv['local_data'] ?? '');
+                                    $vistoriador_selecionado = '';
+                                    foreach ($vistoriadores_convalidacao as $vistoriador_opcao) {
+                                        if (($conv['vistoriador'] ?? '') === $vistoriador_opcao['nome']) $vistoriador_selecionado = $vistoriador_opcao['id'];
+                                    }
                                 ?>
                                     <tr>
                                         <td>
+                                            <input type="hidden" name="conv_id[]" value="<?php echo h($conv['id'] ?? ''); ?>">
                                             <input type="text" name="conv_numero[]" class="form-control" 
                                                    value="<?php echo h($nome_vistoria); ?>" readonly
                                                    style="background: var(--cor-sidebar);">
@@ -615,14 +630,21 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                                    value="<?php echo h($conv['data_fim'] ?? ''); ?>">
                                         </td>
                                         <td>
-                                            <input type="text" name="conv_local_data[]" class="form-control"
-                                                   placeholder="Lugar e data"
-                                                   value="<?php echo h($conv['local_data'] ?? ''); ?>">
+                                            <select name="conv_local[]" class="form-control">
+                                                <option value="">Selecione o local</option>
+                                                <?php foreach ($locais_convalidacao as $local_opcao): ?>
+                                                    <option value="<?php echo h($local_opcao); ?>" <?php echo $realizacao['local'] === $local_opcao ? 'selected' : ''; ?>><?php echo h($local_opcao); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <input type="date" name="conv_data_realizacao[]" class="form-control" style="margin-top:6px" value="<?php echo h($realizacao['data']); ?>">
                                         </td>
                                         <td>
-                                            <input type="text" name="conv_vistoriador[]" class="form-control"
-                                                   placeholder="Nome do vistoriador"
-                                                   value="<?php echo h($conv['vistoriador'] ?? ''); ?>">
+                                            <select name="conv_vistoriador_id[]" class="form-control">
+                                                <option value="">Selecione o vistoriador</option>
+                                                <?php foreach ($vistoriadores_convalidacao as $vistoriador_opcao): ?>
+                                                    <option value="<?php echo h($vistoriador_opcao['id']); ?>" <?php echo $vistoriador_selecionado === $vistoriador_opcao['id'] ? 'selected' : ''; ?>><?php echo h($vistoriador_opcao['nome']); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -709,14 +731,28 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <i class="fas fa-arrow-left"></i> Voltar
                 </button>
                 <button type="submit" class="btn btn-success" style="padding: 10px 20px;">
-                    <i class="fas fa-save"></i> <?php echo $editando ? 'Atualizar Certificado' : 'Salvar Certificado'; ?>
+                    <i class="fas fa-save"></i> <?php echo $documento_bloqueado ? 'Salvar Convalidações' : ($editando ? 'Atualizar Certificado' : 'Salvar Certificado'); ?>
                 </button>
             </div>
         </div>
     </div>
+</form>
 </div>
 
 <script>
+<?php if ($documento_bloqueado): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('formCertificado');
+    form.querySelectorAll('input, select, textarea').forEach(function(input) {
+        const name = input.getAttribute('name') || '';
+        const permitido = name.startsWith('conv_local') || name.startsWith('conv_data_realizacao') || name.startsWith('conv_vistoriador_id') || name === 'conv_id[]' || ['csrf_token','action','id'].includes(name);
+        if (!permitido) {
+            input.disabled = true;
+            input.style.background = '#f3f4f6';
+        }
+    });
+});
+<?php endif; ?>
 function carregarDadosEmbarcacao(embarcacaoId) {
     if (!embarcacaoId) return;
     

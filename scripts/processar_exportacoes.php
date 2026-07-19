@@ -1,0 +1,6 @@
+<?php
+require_once __DIR__ . '/../config.php'; require_once __DIR__ . '/../includes/functions.php'; require_once __DIR__ . '/../includes/exportacoes_documentos.php';
+$pdo->prepare("UPDATE exportacoes_documentos SET status='EXPIRADA' WHERE status='CONCLUIDA' AND expira_em<=NOW()")->execute();
+foreach(glob(BASE_PATH.'/storage/private/exportacoes/*.zip')?:[] as $arquivo)if(filemtime($arquivo)<time()-86400)@unlink($arquivo);
+$pdo->exec("DELETE FROM campo_login_tentativas WHERE criado_em<DATE_SUB(NOW(),INTERVAL 1 DAY)");$pdo->exec("DELETE FROM campo_sessoes WHERE expira_em<NOW() OR revogado_em<DATE_SUB(NOW(),INTERVAL 7 DAY)");
+while(true){$pdo->beginTransaction();$job=$pdo->query("SELECT * FROM exportacoes_documentos WHERE status='AGUARDANDO' ORDER BY solicitado_em LIMIT 1 FOR UPDATE SKIP LOCKED")->fetch();if(!$job){$pdo->commit();break;}$pdo->prepare("UPDATE exportacoes_documentos SET status='PROCESSANDO',iniciado_em=NOW(),erro=NULL WHERE id=:id")->execute([':id'=>$job['id']]);$pdo->commit();try{exportacaoProcessar($pdo,$job);echo "Concluída: {$job['id']}\n";}catch(Throwable $e){$pdo->prepare("UPDATE exportacoes_documentos SET status='FALHA',erro=:erro,concluido_em=NOW() WHERE id=:id")->execute([':erro'=>substr($e->getMessage(),0,2000),':id'=>$job['id']]);error_log('Exportação '.$job['id'].': '.$e->getMessage());echo "Falha: {$job['id']}\n";}}

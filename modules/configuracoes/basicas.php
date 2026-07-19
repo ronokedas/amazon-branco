@@ -1,176 +1,32 @@
 <?php
-/**
- * MODULO: CONFIGURACOES
- * Arquivo: basicas.php - Configurações Básicas do Sistema
- * Acesso: apenas ADMIN
- */
-
+/** Matriz de permissões individuais. Acesso exclusivo de administradores. */
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+verificar_sessao(); verificar_cargo('ADMIN');
 
-verificar_sessao();
-verificar_cargo('ADMIN');
-
-// Garantir que as colunas de acesso existam na tabela usuarios
+$permissoes = [
+ 'dashboard'=>['Dashboard','Visão geral'], 'vistorias'=>['Vistorias','Execução e consulta'], 'relatorios_aprovacao'=>['Relatórios aguardando aprovação','Aba específica para análise técnica'], 'agendamentos'=>['Agendamentos','Agenda e OS'], 'certificados'=>['Certificados','Emissão e consulta'], 'embarcacoes'=>['Embarcações','Cadastro'], 'armadores'=>['Armadores','Cadastro'], 'proprietarios'=>['Proprietários','Cadastro'], 'despachantes'=>['Despachantes','Cadastro'], 'comercial'=>['Comercial','Propostas'], 'servicos'=>['Serviços','Catálogo'], 'financeiro'=>['Financeiro','Lançamentos e relatórios'], 'documentacao'=>['Documentação','Workspace de documentos'], 'relatorios'=>['Relatórios gerenciais','Consultas do sistema'], 'emails'=>['E-mails','Central de e-mails'], 'portal_clientes'=>['Portal de clientes','Gestão de acessos'], 'usuarios'=>['Usuários','Gestão'], 'configuracoes'=>['Configurações','Parâmetros'], 'responsaveis_assinatura'=>['Responsáveis por assinatura','Cadastros para emissão'],
+];
 try {
-    $pdo->exec("ALTER TABLE usuarios ADD COLUMN acesso_documentacao TINYINT(1) DEFAULT 0");
-} catch (Exception $e) {}
+ $pdo->exec("CREATE TABLE IF NOT EXISTS usuario_permissoes (usuario_id CHAR(36) NOT NULL, permissao VARCHAR(80) NOT NULL, permitido TINYINT(1) NOT NULL DEFAULT 0, atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (usuario_id, permissao), CONSTRAINT fk_usuario_permissoes_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+} catch (Throwable $e) { setMensagem('error','Não foi possível preparar o controle de permissões.'); redirecionar(APP_URL.'configuracoes'); }
 
-try {
-    $pdo->exec("ALTER TABLE usuarios ADD COLUMN acesso_financeiro TINYINT(1) DEFAULT 0");
-} catch (Exception $e) {}
-
-// Salvar se for um POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['csrf_token']) || !verificarCSRF($_POST['csrf_token'])) {
-        setMensagem('error', 'Token de segurança inválido.');
-        redirecionar(APP_URL . 'configuracoes/basicas');
-    }
-
-    $usuarios_doc = isset($_POST['acesso_documentacao']) && is_array($_POST['acesso_documentacao']) ? $_POST['acesso_documentacao'] : [];
-    $usuarios_fin = isset($_POST['acesso_financeiro']) && is_array($_POST['acesso_financeiro']) ? $_POST['acesso_financeiro'] : [];
-    
-    // Filtrar strings válidas
-    $ids_doc = array_values(array_filter($usuarios_doc, function($val) { return is_string($val) && strlen($val) > 0; }));
-    $ids_fin = array_values(array_filter($usuarios_fin, function($val) { return is_string($val) && strlen($val) > 0; }));
-
-    try {
-        $pdo->beginTransaction();
-        
-        // Zera acessos primeiro
-        $pdo->exec("UPDATE usuarios SET acesso_documentacao = 0, acesso_financeiro = 0 WHERE cargo != 'ADMIN'");
-        
-        // Ativa Documentacao
-        if (!empty($ids_doc)) {
-            $in_doc = str_repeat('?,', count($ids_doc) - 1) . '?';
-            $stmt_doc = $pdo->prepare("UPDATE usuarios SET acesso_documentacao = 1 WHERE id IN ($in_doc)");
-            $stmt_doc->execute($ids_doc);
-        }
-
-        // Ativa Financeiro
-        if (!empty($ids_fin)) {
-            $in_fin = str_repeat('?,', count($ids_fin) - 1) . '?';
-            $stmt_fin = $pdo->prepare("UPDATE usuarios SET acesso_financeiro = 1 WHERE id IN ($in_fin)");
-            $stmt_fin->execute($ids_fin);
-        }
-        
-        $pdo->commit();
-        setMensagem('success', 'Configurações salvas com sucesso!');
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        setMensagem('error', 'Erro ao salvar permissões: ' . $e->getMessage());
-    }
-    redirecionar(APP_URL . 'configuracoes/basicas');
+ if (!verificarCSRF($_POST['csrf_token'] ?? '')) { setMensagem('error','Token de segurança inválido.'); redirecionar(APP_URL.'configuracoes/basicas'); }
+ $selecionadas = $_POST['permissoes'] ?? [];
+ try {
+  $ids = $pdo->query("SELECT id FROM usuarios WHERE cargo != 'ADMIN' AND excluido_em IS NULL")->fetchAll(PDO::FETCH_COLUMN); $pdo->beginTransaction();
+  $upsert = $pdo->prepare('INSERT INTO usuario_permissoes (usuario_id, permissao, permitido) VALUES (:usuario_id,:permissao,:permitido) ON DUPLICATE KEY UPDATE permitido=VALUES(permitido)');
+  foreach ($ids as $id) { $permitidas = array_flip(array_filter($selecionadas[$id] ?? [], fn($chave) => isset($permissoes[$chave]))); foreach (array_keys($permissoes) as $chave) $upsert->execute([':usuario_id'=>$id,':permissao'=>$chave,':permitido'=>isset($permitidas[$chave])?1:0]); }
+  $pdo->commit(); setMensagem('success','Permissões atualizadas com sucesso.');
+ } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); error_log('Erro ao salvar permissões: '.$e->getMessage()); setMensagem('error','Erro ao salvar permissões.'); }
+ redirecionar(APP_URL.'configuracoes/basicas');
 }
-
-// Buscar usuários (exceto ADMIN)
-try {
-    $stmt = $pdo->query("SELECT id, nome, email, cargo, ativo, acesso_documentacao, acesso_financeiro FROM usuarios WHERE cargo != 'ADMIN' ORDER BY nome ASC");
-    $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    $usuarios = [];
-}
-
-$titulo_page = 'Configurações Básicas - ERP Sistema';
-require_once __DIR__ . '/../../includes/header.php';
-require_once __DIR__ . '/../../includes/sidebar.php';
+try { $usuarios=$pdo->query("SELECT id,nome,email,cargo,acesso_documentacao,acesso_financeiro FROM usuarios WHERE cargo != 'ADMIN' AND excluido_em IS NULL ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC); $linhas=$pdo->query('SELECT usuario_id,permissao,permitido FROM usuario_permissoes')->fetchAll(PDO::FETCH_ASSOC); $acessos=[]; foreach($linhas as $linha) $acessos[$linha['usuario_id']][$linha['permissao']]=(int)$linha['permitido']===1; } catch(Throwable $e) {$usuarios=[];$acessos=[];}
+$titulo_page='Permissões de Usuários - ERP Sistema'; require_once __DIR__.'/../../includes/header.php'; require_once __DIR__.'/../../includes/sidebar.php';
 ?>
-
-<div class="conteudo-principal">
-    <div class="welcome-section" style="margin-bottom: 20px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-            <div>
-                <h1><i class="fas fa-users-cog"></i> Configurações Básicas</h1>
-                <p>Gerencie o acesso de usuários a módulos específicos.</p>
-            </div>
-            <a href="<?php echo APP_URL; ?>configuracoes" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Voltar
-            </a>
-        </div>
-    </div>
-
-    <div class="card" style="max-width: 900px;">
-        <div class="card-header">
-            <h3 style="color: var(--cor-destaque);"><i class="fas fa-shield-alt"></i> Controle de Acesso aos Módulos</h3>
-        </div>
-        <div class="card-body">
-            <p style="margin-bottom: 20px; color: var(--cor-texto-secundario);">
-                Selecione abaixo quais usuários terão acesso aos módulos restritos (Documentação e Financeiro). 
-                <br><small>Administradores têm acesso garantido a todos os módulos por padrão.</small>
-            </p>
-
-            <form method="POST" action="<?php echo APP_URL; ?>configuracoes/basicas">
-                <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
-
-                <div class="table-responsive" style="margin-bottom: 30px;">
-                    <table class="table table-hover table-bordered">
-                        <thead>
-                            <tr style="background: var(--bg-surface-2);">
-                                <th>Usuário</th>
-                                <th>Cargo</th>
-                                <th style="width: 130px; text-align: center;"><i class="fas fa-book-open"></i> Docs</th>
-                                <th style="width: 130px; text-align: center;"><i class="fas fa-dollar-sign"></i> Financeiro</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($usuarios)): ?>
-                                <tr>
-                                    <td colspan="4" class="text-center">Nenhum usuário encontrado.</td>
-                                </tr>
-                            <?php else: ?>
-                                <?php foreach ($usuarios as $u): ?>
-                                    <?php 
-                                        $tem_doc = (int)$u['acesso_documentacao'] === 1;
-                                        $chk_doc = $tem_doc ? 'checked' : ''; 
-                                        $tem_fin = (int)$u['acesso_financeiro'] === 1;
-                                        $chk_fin = $tem_fin ? 'checked' : ''; 
-                                    ?>
-                                    <tr>
-                                        <td style="vertical-align: middle;">
-                                            <strong><?php echo h($u['nome']); ?></strong><br>
-                                            <small class="text-muted"><?php echo h($u['email']); ?></small>
-                                        </td>
-                                        <td style="vertical-align: middle;"><span class="badge bg-secondary"><?php echo h($u['cargo']); ?></span></td>
-                                        
-                                        <!-- Documentação -->
-                                        <td style="text-align: center; vertical-align: middle; <?php echo $tem_doc ? 'background-color: rgba(40,167,69,0.1);' : ''; ?>">
-                                            <div style="margin-bottom: 5px;">
-                                                <input type="checkbox" name="acesso_documentacao[]" value="<?php echo $u['id']; ?>" <?php echo $chk_doc; ?> style="transform: scale(1.5); cursor: pointer;">
-                                            </div>
-                                            <?php if ($tem_doc): ?>
-                                                <span class="badge bg-success" style="font-size: 0.7rem;">Liberado</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-danger" style="font-size: 0.7rem;">Bloqueado</span>
-                                            <?php endif; ?>
-                                        </td>
-
-                                        <!-- Financeiro -->
-                                        <td style="text-align: center; vertical-align: middle; <?php echo $tem_fin ? 'background-color: rgba(40,167,69,0.1);' : ''; ?>">
-                                            <div style="margin-bottom: 5px;">
-                                                <input type="checkbox" name="acesso_financeiro[]" value="<?php echo $u['id']; ?>" <?php echo $chk_fin; ?> style="transform: scale(1.5); cursor: pointer;">
-                                            </div>
-                                            <?php if ($tem_fin): ?>
-                                                <span class="badge bg-success" style="font-size: 0.7rem;">Liberado</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-danger" style="font-size: 0.7rem;">Bloqueado</span>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fas fa-save"></i> Salvar Permissões
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<?php require_once __DIR__ . '/../../includes/footer.php'; ?>
+<div class="conteudo-principal"><div class="welcome-section" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;"><div><h1><i class="fas fa-shield-alt"></i> Permissões de usuários</h1><p>Defina exatamente quais módulos e telas cada usuário pode acessar.</p></div><a href="<?= APP_URL ?>configuracoes" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a></div><div class="card"><div class="card-body"><p class="text-muted">Administradores sempre têm acesso total. Ao salvar, as permissões marcadas passam a ser a regra do usuário, inclusive para acesso direto por URL.</p><form method="post" action="<?= APP_URL ?>configuracoes/basicas"><input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
+<?php foreach($usuarios as $usuario): $usuarioAcessos=$acessos[$usuario['id']]??[]; if(!$usuarioAcessos){foreach(permissoesPadraoCargo($usuario['cargo']) as $chave)$usuarioAcessos[$chave]=true; if(!empty($usuario['acesso_documentacao']))$usuarioAcessos['documentacao']=true; if(!empty($usuario['acesso_financeiro']))$usuarioAcessos['financeiro']=true;} ?><section style="border:1px solid var(--cor-borda,#ddd);border-radius:10px;padding:18px;margin:16px 0;"><header style="margin-bottom:14px;"><strong><?= h($usuario['nome']) ?></strong> <span class="badge bg-secondary"><?= h($usuario['cargo']) ?></span><br><small class="text-muted"><?= h($usuario['email']) ?></small></header><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;"><?php foreach($permissoes as $chave=>[$nome,$descricao]): ?><label style="display:flex;gap:9px;padding:10px;border:1px solid var(--cor-borda,#ddd);border-radius:7px;cursor:pointer;align-items:flex-start;"><input type="checkbox" name="permissoes[<?= h($usuario['id']) ?>][]" value="<?= h($chave) ?>" <?= !empty($usuarioAcessos[$chave])?'checked':'' ?> style="margin-top:3px;transform:scale(1.15);"><span><strong><?= h($nome) ?></strong><br><small class="text-muted"><?= h($descricao) ?></small></span></label><?php endforeach; ?></div></section><?php endforeach; ?>
+<?php if(!$usuarios): ?><p class="text-muted">Nenhum usuário não administrador encontrado.</p><?php endif; ?><button class="btn btn-primary btn-lg" type="submit"><i class="fas fa-save"></i> Salvar permissões</button></form></div></div></div>
+<?php require_once __DIR__.'/../../includes/footer.php'; ?>

@@ -25,6 +25,8 @@ try {
             JOIN embarcacoes e ON a.embarcacao_id = e.id
             WHERE v.id = :id
               AND v.status IN ('APROVADA', 'APROVADA_COM_EXIGENCIAS')
+              AND v.id = (SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id = v.agendamento_id ORDER BY v2.criado_em DESC, v2.id DESC LIMIT 1)
+              AND NOT EXISTS (SELECT 1 FROM vistoria_exigencias ve WHERE ve.vistoria_id = v.id AND ve.antes_de_suspender = 1 AND ve.conforme = 'nao' AND ve.status_item <> 'cumprida')
             LIMIT 1
         ");
         $stmt->execute([':id' => $id]);
@@ -65,6 +67,8 @@ try {
         JOIN agendamentos a ON v.agendamento_id = a.id
         JOIN embarcacoes e ON a.embarcacao_id = e.id
         WHERE v.status IN ('APROVADA', 'APROVADA_COM_EXIGENCIAS')
+          AND v.id = (SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id = v.agendamento_id ORDER BY v2.criado_em DESC, v2.id DESC LIMIT 1)
+          AND NOT EXISTS (SELECT 1 FROM vistoria_exigencias ve WHERE ve.vistoria_id = v.id AND ve.antes_de_suspender = 1 AND ve.conforme = 'nao' AND ve.status_item <> 'cumprida')
           {$whereBusca}
         ORDER BY v.data_vistoria DESC
         LIMIT " . ($recentes ? "10" : "20") . "

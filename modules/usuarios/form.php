@@ -20,7 +20,7 @@ $isEdicao = false;
 if (!empty($id)) {
     $isEdicao = true;
     try {
-        $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = :id LIMIT 1");
+        $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = :id AND excluido_em IS NULL LIMIT 1");
         $stmt->execute([':id' => $id]);
         $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -99,6 +99,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <select id="cargo" name="cargo" required>
                             <option value="VISTORIADOR" <?php echo ($usuario['cargo'] ?? '') === 'VISTORIADOR' ? 'selected' : ''; ?>>
                                 Vistoriador
+                            </option>
+                            <option value="ANALISTA" <?php echo ($usuario['cargo'] ?? '') === 'ANALISTA' ? 'selected' : ''; ?>>
+                                Analista
                             </option>
                             <option value="VENDEDOR" <?php echo ($usuario['cargo'] ?? '') === 'VENDEDOR' ? 'selected' : ''; ?>>
                                 Vendedor

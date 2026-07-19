@@ -11,7 +11,10 @@ if (getCargo() !== 'ADMIN') {
 }
 
 $busca = trim($_GET['busca'] ?? '');
+$perfil = in_array($_GET['perfil'] ?? '', ['proprietario', 'despachante'], true) ? $_GET['perfil'] : '';
 $selecionadoId = trim($_GET['id'] ?? '');
+$pagina = max(1, (int)($_GET['pagina'] ?? 1));
+$porPagina = 12;
 
 $params = [];
 $whereBusca = '';
@@ -21,27 +24,37 @@ if ($busca !== '') {
     $params[':busca_email'] = '%' . $busca . '%';
     $params[':busca_doc'] = '%' . $busca . '%';
 }
+$wherePerfil = $perfil ? ' AND c.perfil = :perfil' : " AND c.perfil IN ('proprietario','despachante')";
+if ($perfil) $params[':perfil'] = $perfil;
+
+$stmtTotal = $pdo->prepare("SELECT COUNT(*) FROM clientes c WHERE c.status = 'ATIVO' {$wherePerfil} {$whereBusca}");
+$stmtTotal->execute($params);
+$totalRegistros = (int)$stmtTotal->fetchColumn();
+$totalPaginas = max(1, (int)ceil($totalRegistros / $porPagina));
+$pagina = min($pagina, $totalPaginas);
+$offset = ($pagina - 1) * $porPagina;
 
 $stmt = $pdo->prepare("
-    SELECT c.id, c.nome, c.email, c.cpf_cnpj, c.telefone,
+    SELECT c.id, c.nome, c.email, c.cpf_cnpj, c.telefone, c.perfil,
            (
                SELECT COUNT(DISTINCT e.id)
                FROM embarcacoes e
-               LEFT JOIN clientes_embarcacoes ce2 ON ce2.embarcacao_id = e.id AND ce2.cliente_id = c.id
+               LEFT JOIN clientes_embarcacoes ce2 ON ce2.embarcacao_id = e.id AND ce2.cliente_id = c.id AND ce2.status = 'ATIVO'
                WHERE e.ativo = 1
                  AND (e.proprietario_id = c.id OR e.cliente_id = c.id OR ce2.cliente_id IS NOT NULL)
            ) AS total_embarcacoes,
-           a.ativo AS portal_ativo,
+           a.login, a.ativo AS portal_ativo,
            a.forcar_troca_senha,
            a.ultimo_login_em,
            a.atualizado_em AS portal_atualizado_em
     FROM clientes c
     LEFT JOIN cliente_portal_acessos a ON a.cliente_id = c.id
-    WHERE c.perfil = 'proprietario'
-      AND c.status = 'ATIVO'
+    WHERE c.status = 'ATIVO'
+      {$wherePerfil}
       {$whereBusca}
     GROUP BY c.id
     ORDER BY c.nome ASC
+    LIMIT {$porPagina} OFFSET {$offset}
 ");
 $stmt->execute($params);
 $proprietarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -53,13 +66,13 @@ if ($selecionadoId !== '') {
         SELECT c.*, a.ativo AS portal_ativo, a.forcar_troca_senha, a.ultimo_login_em
         FROM clientes c
         LEFT JOIN cliente_portal_acessos a ON a.cliente_id = c.id
-        WHERE c.id = :id AND c.perfil = 'proprietario' AND c.status = 'ATIVO'
+        WHERE c.id = :id AND c.perfil IN ('proprietario','despachante') AND c.status = 'ATIVO'
         LIMIT 1
     ");
     $stmtSel->execute([':id' => $selecionadoId]);
     $selecionado = $stmtSel->fetch(PDO::FETCH_ASSOC) ?: null;
     if ($selecionado) {
-        $embarcacoesSelecionado = clientePortalEmbarcacoes($pdo, $selecionado['id']);
+        $embarcacoesSelecionado = clientePortalEmbarcacoes($pdo, $selecionado['id'], $selecionado['perfil']);
     }
 }
 
@@ -79,17 +92,23 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <section class="portal-admin-list">
             <form method="GET" class="filtros">
                 <div class="form-group" style="flex:1; min-width:240px;">
-                    <label for="busca">Buscar proprietário</label>
+                    <label for="busca">Buscar cliente ou despachante</label>
                     <input type="text" id="busca" name="busca" value="<?php echo h($busca); ?>" placeholder="Nome, e-mail ou CPF/CNPJ">
                 </div>
                 <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> Buscar</button>
+                <select name="perfil" aria-label="Perfil do portal">
+                    <option value="">Todos</option>
+                    <option value="proprietario" <?php echo $perfil === 'proprietario' ? 'selected' : ''; ?>>Proprietários</option>
+                    <option value="despachante" <?php echo $perfil === 'despachante' ? 'selected' : ''; ?>>Despachantes</option>
+                </select>
                 <a class="btn btn-secondary" href="<?php echo APP_URL; ?>portal-clientes"><i class="fas fa-xmark"></i> Limpar</a>
             </form>
 
-            <div class="tabela-container portal-admin-table-container">
+            <div class="tabela-container portal-admin-table-container" data-testid="portal-clientes-lista">
                 <table class="tabela portal-admin-table">
                     <colgroup>
                         <col class="portal-admin-col-owner">
+                        <col class="portal-admin-col-profile">
                         <col class="portal-admin-col-email">
                         <col class="portal-admin-col-boats">
                         <col class="portal-admin-col-access">
@@ -97,7 +116,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>Proprietário</th>
+                            <th>Cliente</th>
+                            <th>Perfil</th>
                             <th>E-mail</th>
                             <th>Embarcações</th>
                             <th>Acesso</th>
@@ -106,8 +126,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </thead>
                     <tbody>
                     <?php foreach ($proprietarios as $p): ?>
-                        <tr>
-                            <td data-label="Proprietário"><strong><?php echo h($p['nome']); ?></strong></td>
+                        <tr class="<?php echo $selecionadoId === $p['id'] ? 'is-selected' : ''; ?>">
+                            <td data-label="Cliente"><strong><?php echo h($p['nome']); ?></strong></td>
+                            <td data-label="Perfil"><?php echo h(ucfirst($p['perfil'])); ?></td>
                             <td data-label="E-mail"><?php echo h($p['email']); ?></td>
                             <td data-label="Embarcações" class="text-center"><?php echo (int)$p['total_embarcacoes']; ?></td>
                             <td data-label="Acesso">
@@ -120,8 +141,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <?php endif; ?>
                             </td>
                             <td data-label="Ação" class="portal-admin-actions">
-                                <a class="btn btn-primary btn-sm" href="<?php echo APP_URL; ?>portal-clientes?id=<?php echo urlencode($p['id']); ?>&busca=<?php echo urlencode($busca); ?>">
-                                    <i class="fas fa-user-check"></i> Selecionar
+                                <a class="btn btn-primary btn-sm" title="Gerenciar acesso de <?php echo h($p['nome']); ?>" href="<?php echo APP_URL; ?>portal-clientes?id=<?php echo urlencode($p['id']); ?>&busca=<?php echo urlencode($busca); ?>&perfil=<?php echo urlencode($perfil); ?>&pagina=<?php echo $pagina; ?>">
+                                    <i class="fas fa-key"></i> Acesso
                                 </a>
                             </td>
                         </tr>
@@ -129,18 +150,28 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </tbody>
                 </table>
             </div>
+            <?php if ($totalPaginas > 1): ?>
+                <nav class="portal-admin-pagination" aria-label="Paginação de clientes">
+                    <span><?php echo $totalRegistros; ?> clientes</span>
+                    <div>
+                        <?php if ($pagina > 1): ?><a class="btn btn-secondary btn-sm" href="?busca=<?php echo urlencode($busca); ?>&perfil=<?php echo urlencode($perfil); ?>&pagina=<?php echo $pagina - 1; ?>"><i class="fas fa-chevron-left"></i> Anterior</a><?php endif; ?>
+                        <strong>Página <?php echo $pagina; ?> de <?php echo $totalPaginas; ?></strong>
+                        <?php if ($pagina < $totalPaginas): ?><a class="btn btn-secondary btn-sm" href="?busca=<?php echo urlencode($busca); ?>&perfil=<?php echo urlencode($perfil); ?>&pagina=<?php echo $pagina + 1; ?>">Próxima <i class="fas fa-chevron-right"></i></a><?php endif; ?>
+                    </div>
+                </nav>
+            <?php endif; ?>
         </section>
 
-        <aside class="portal-admin-detail">
+        <aside class="portal-admin-detail" data-testid="portal-clientes-detalhe">
             <?php if (!$selecionado): ?>
-                <div class="portal-empty">Selecione um proprietário para criar ou reenviar o acesso ao portal.</div>
+                <div class="portal-empty">Selecione um cliente ou despachante para criar ou reenviar o acesso ao portal.</div>
             <?php else: ?>
                 <h4><?php echo h($selecionado['nome']); ?></h4>
                 <p><?php echo h($selecionado['email']); ?></p>
 
                 <div class="portal-admin-summary">
-                    <span><strong><?php echo count($embarcacoesSelecionado); ?></strong> embarcação(ões)</span>
-                    <span><strong><?php echo !empty($selecionado['ultimo_login_em']) ? formatarDataCompleta($selecionado['ultimo_login_em']) : 'Nunca'; ?></strong> último login</span>
+                    <span><i class="fas fa-ship"></i> <strong><?php echo count($embarcacoesSelecionado); ?></strong> embarcação(ões)</span>
+                    <span><i class="fas fa-clock"></i> <strong><?php echo !empty($selecionado['ultimo_login_em']) ? formatarDataCompleta($selecionado['ultimo_login_em']) : 'Nunca'; ?></strong> último login</span>
                 </div>
 
                 <div class="portal-admin-boats">

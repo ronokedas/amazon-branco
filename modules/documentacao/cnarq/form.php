@@ -18,7 +18,6 @@ if (!podeAcessar('documentacao')) {
 
 $editando = false;
 $certificado = null;
-$convalidacoes = [];
 
 // Se tem ID, é edição
 if (isset($_GET['id']) && !empty($_GET['id'])) {
@@ -34,10 +33,6 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
         redirecionar(APP_URL . 'documentacao/cnarq');
     }
 
-    // Buscar convalidações (tabela genérica)
-    $stmt_conv = $pdo->prepare("SELECT * FROM cert_convalidacoes WHERE certificado_id = :cert_id AND tipo_certificado = 'CNARQ' ORDER BY id");
-    $stmt_conv->execute([':cert_id' => $id]);
-    $convalidacoes = $stmt_conv->fetchAll(PDO::FETCH_ASSOC);
 }
 
 if (!$editando) {
@@ -85,7 +80,7 @@ if (!$editando && !empty($_GET['agendamento_id'])) {
             v.numero as relatorio_numero
         FROM agendamentos a
         JOIN embarcacoes e ON a.embarcacao_id = e.id
-        LEFT JOIN vistorias v ON v.agendamento_id = a.id
+        LEFT JOIN vistorias v ON v.id = (SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC, v2.id DESC LIMIT 1)
         WHERE a.id = :aid
     ");
     $stmtPre->execute([':aid' => $_GET['agendamento_id']]);
@@ -418,62 +413,6 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
             </div>
         </div>
 
-        <!-- SEÇÃO 6: Convalidações -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <h3><i class="fas fa-calendar-check"></i> Convalidações</h3>
-            </div>
-            <div class="card-body">
-                <div class="tabela-container">
-                    <table class="tabela" id="tabelaConvalidacoes">
-                        <thead>
-                            <tr>
-                                <th>N° Vistoria</th>
-                                <th>A Realizar Entre</th>
-                                <th>E</th>
-                                <th>Lugar e Data da Realização</th>
-                                <th>Vistoriador</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            $vistorias_padrao = ['1ª VIST. ANUAL', '2ª VIST. ANUAL', '3ª VIST. ANUAL', '4ª VIST. ANUAL'];
-                            for ($i = 0; $i < 4; $i++):
-                                $conv = $convalidacoes[$i] ?? null;
-                            ?>
-                                <tr>
-                                    <td>
-                                        <input type="text" name="conv_numero[]" class="form-control" 
-                                               value="<?php echo h($conv['numero_vistoria'] ?? $vistorias_padrao[$i]); ?>" readonly
-                                               style="background: var(--cor-sidebar);">
-                                    </td>
-                                    <td>
-                                        <input type="date" name="conv_data_inicio[]" class="form-control"
-                                               value="<?php echo h($conv['data_inicio'] ?? ''); ?>">
-                                    </td>
-                                    <td>
-                                        <input type="date" name="conv_data_fim[]" class="form-control"
-                                               value="<?php echo h($conv['data_fim'] ?? ''); ?>">
-                                    </td>
-                                    <td>
-                                        <input type="text" name="conv_local_data[]" class="form-control"
-                                               placeholder="Lugar e data"
-                                               value="<?php echo h($conv['local_data'] ?? ''); ?>">
-                                    </td>
-                                    <td>
-                                        <input type="text" name="conv_vistoriador[]" class="form-control"
-                                               placeholder="Nome do vistoriador"
-                                               value="<?php echo h($conv['vistoriador'] ?? ''); ?>">
-                                    </td>
-                                </tr>
-                            <?php endfor; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        
         <!-- SEÇÃO: Despachante -->
         <div class="card mb-3">
             <div class="card-header">

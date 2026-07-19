@@ -99,6 +99,9 @@ APP_URL=https://seudominio.com/
 ## 6. Subir os containers
 
 ```bash
+
+
+cd /opt/sistema-amazon
 docker compose up -d --build
 ```
 
@@ -160,42 +163,11 @@ Se o arquivo for maior que o limite do phpMyAdmin, aumente temporariamente o `UP
 Se quiser importar um dump completo pelo terminal, coloque o arquivo no servidor e rode:
 
 ```bash
-docker compose exec -T db mysql -u root -p erp_sistema < db.sql
+docker compose exec -T db mysql -u root -p erp_sistema < arquivo-db.sql
 ```
 
 O terminal vai pedir a senha definida em `MYSQL_ROOT_PASSWORD`.
 
-### Se o phpMyAdmin der erro na FK `fk_vistoria_exig_catalogo`
-
-Se ao importar um dump antigo aparecer erro parecido com:
-
-```text
-#1452 - Cannot add or update a child row:
-CONSTRAINT `fk_vistoria_exig_catalogo`
-```
-
-Isso significa que existem registros antigos em `vistoria_exigencias.catalogo_id` apontando para itens que nao existem mais em `exigencias_catalogo.id`.
-
-O `db.sql` atual ja contem essa limpeza antes da criacao da FK. Entao a forma mais simples e baixar a versao atualizada do repositorio, limpar o banco e importar novamente.
-
-Se quiser corrigir sem reiniciar a importacao, execute no phpMyAdmin:
-
-```sql
-UPDATE `vistoria_exigencias` ve
-LEFT JOIN `exigencias_catalogo` ec ON ec.`id` = ve.`catalogo_id`
-SET ve.`catalogo_id` = NULL
-WHERE ve.`catalogo_id` IS NOT NULL
-  AND ec.`id` IS NULL;
-```
-
-Depois rode novamente o bloco que falhou:
-
-```sql
-ALTER TABLE `vistoria_exigencias`
-  ADD CONSTRAINT `fk_vistoria_exig_catalogo` FOREIGN KEY (`catalogo_id`) REFERENCES `exigencias_catalogo` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `fk_vistoria_exig_origem` FOREIGN KEY (`exigencia_origem_id`) REFERENCES `vistoria_exigencias` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `vistoria_exigencias_ibfk_1` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE CASCADE;
-```
 
 ## 8. Permissões das pastas de runtime
 
@@ -286,13 +258,13 @@ Use estes comandos no computador local, dentro da pasta do sistema:
 cd C:\sistema
 git status
 git add .
-git commit -m "muita coisa"
+git commit -m "botoes"
 git push
 ```
 
 
 
-
+======
 
 depois no vps:
 
@@ -305,9 +277,18 @@ git pull origin main
 cd /opt/sistema-amazon
 git pull
 docker compose up -d --build
-ou
+
+ou sem db
 docker compose up -d --force-recreate app
 
+
+manunteção: 
+
+git gc
+git prune
+
+
+========
 34.132.186.4:8083
 
    - usuario: `root`
@@ -316,6 +297,54 @@ docker compose up -d --force-recreate app
 
 
 nano .env
+
+
+
+
+fluxo 
+
+01
+Proposta
+02
+Agendamento
+03
+Vistoria
+04
+Aprovação
+05
+Certificados
+
+
+
+
+Servidor SMTP	smtp-relay.brevo.com
+Porta	587
+Fazer login	b157d8001@smtp-brevo.com
+Senha	6zPdnrCTtUQGZ2cM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

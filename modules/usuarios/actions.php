@@ -60,7 +60,7 @@ switch ($action) {
             $errosCampos['email'] = 'Informe um e-mail valido.';
         }
 
-        if (!in_array($cargo, ['ADMIN', 'VENDEDOR', 'VISTORIADOR'])) {
+        if (!in_array($cargo, ['ADMIN', 'VENDEDOR', 'VISTORIADOR', 'ANALISTA'])) {
             $erros[] = 'Cargo invalido.';
             $errosCampos['cargo'] = 'Selecione um cargo valido.';
         }
@@ -122,12 +122,28 @@ switch ($action) {
             redirecionar($url);
         }
 
+        $cargoAnterior = null;
+        if ($isEdicao) {
+            try {
+                $stmtCargo = $pdo->prepare('SELECT cargo FROM usuarios WHERE id = :id AND excluido_em IS NULL LIMIT 1');
+                $stmtCargo->execute([':id' => $id]);
+                $cargoAnterior = $stmtCargo->fetchColumn() ?: null;
+            } catch (Throwable $e) {
+                $cargoAnterior = null;
+            }
+        }
+
+        if ($isEdicao && $cargoAnterior === null) {
+            setMensagem('error', 'Usuario nao encontrado ou ja excluido.');
+            redirecionar(APP_URL . 'usuarios');
+        }
+
         try {
             if ($isEdicao) {
                 // Atualizar
                 if (!empty($senha)) {
                     $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, senha_hash = :senha, ativo = :ativo WHERE id = :id");
+                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, senha_hash = :senha, ativo = :ativo WHERE id = :id AND excluido_em IS NULL");
                     $stmt->execute([
                         ':nome'   => $nome,
                         ':email'  => $email,
@@ -137,7 +153,7 @@ switch ($action) {
                         ':id'     => $id
                     ]);
                 } else {
-                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, ativo = :ativo WHERE id = :id");
+                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, ativo = :ativo WHERE id = :id AND excluido_em IS NULL");
                     $stmt->execute([
                         ':nome'   => $nome,
                         ':email'  => $email,
@@ -146,19 +162,36 @@ switch ($action) {
                         ':id'     => $id
                     ]);
                 }
+                try {
+                    $stmtPerfil = $pdo->prepare("INSERT IGNORE INTO usuario_perfis (usuario_id, perfil) VALUES (:usuario_id, :perfil)");
+                    $stmtPerfil->execute([':usuario_id' => $id, ':perfil' => $cargo]);
+                } catch (Throwable $e) {
+                    // Compatibilidade quando a migration de perfis ainda nao foi aplicada.
+                }
+                if ($cargoAnterior !== $cargo) {
+                    try { aplicarPermissoesPadraoUsuario($pdo, $id, $cargo); } catch (Throwable $e) { error_log('Erro ao aplicar permissoes padrao: '.$e->getMessage()); }
+                }
                 setMensagem('success', 'Usuario atualizado com sucesso!');
             } else {
                 // Criar
                 $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
+                $novoUsuarioId = gerarUUID();
                 $stmt = $pdo->prepare("INSERT INTO usuarios (id, nome, email, senha_hash, cargo, ativo) VALUES (:id, :nome, :email, :senha, :cargo, :ativo)");
                 $stmt->execute([
-                    ':id'     => gerarUUID(),
+                    ':id'     => $novoUsuarioId,
                     ':nome'   => $nome,
                     ':email'  => $email,
                     ':senha'  => $senhaHash,
                     ':cargo'  => $cargo,
                     ':ativo'  => $ativo
                 ]);
+                try {
+                    $stmtPerfil = $pdo->prepare("INSERT IGNORE INTO usuario_perfis (usuario_id, perfil) VALUES (:usuario_id, :perfil)");
+                    $stmtPerfil->execute([':usuario_id' => $novoUsuarioId, ':perfil' => $cargo]);
+                } catch (Throwable $e) {
+                    // Compatibilidade quando a migration de perfis ainda nao foi aplicada.
+                }
+                try { aplicarPermissoesPadraoUsuario($pdo, $novoUsuarioId, $cargo); } catch (Throwable $e) { error_log('Erro ao aplicar permissoes padrao: '.$e->getMessage()); }
                 setMensagem('success', 'Usuario criado com sucesso!');
             }
         } catch (Exception $e) {
@@ -186,7 +219,7 @@ switch ($action) {
         }
 
         try {
-            $stmt = $pdo->prepare("SELECT id, ativo FROM usuarios WHERE id = :id");
+            $stmt = $pdo->prepare("SELECT id, ativo FROM usuarios WHERE id = :id AND excluido_em IS NULL");
             $stmt->execute([':id' => $id]);
             $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -210,28 +243,102 @@ switch ($action) {
         break;
 
     // ==============================
-    // EXCLUIR (PERMANENTE)
+    // EXCLUIR ACESSO, PRESERVANDO O HISTORICO
     // ==============================
     case 'excluir':
-        $id = $_GET['id'] ?? '';
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            setMensagem('error', 'Requisicao invalida.');
+            redirecionar(APP_URL . 'usuarios');
+        }
+
+        if (!verificarCSRF($_POST['csrf_token'] ?? '')) {
+            setMensagem('error', 'Token de seguranca invalido.');
+            redirecionar(APP_URL . 'usuarios');
+        }
+
+        $id = trim($_POST['id'] ?? '');
         if (empty($id)) {
             setMensagem('error', 'ID invalido.');
             redirecionar(APP_URL . 'usuarios');
         }
 
-        // Nao permitir excluir a si mesmo
-        if ($id === $_SESSION['usuario_id']) {
-            setMensagem('error', 'Voce nao pode excluir seu proprio usuario.');
-            redirecionar(APP_URL . 'usuarios');
-        }
-
         try {
-            $stmt = $pdo->prepare("UPDATE usuarios SET ativo = 0 WHERE id = :id");
+            $pdo->beginTransaction();
+
+            $stmt = $pdo->prepare(
+                "SELECT id, nome, email, cargo, ativo
+                 FROM usuarios
+                 WHERE id = :id AND excluido_em IS NULL
+                 LIMIT 1
+                 FOR UPDATE"
+            );
             $stmt->execute([':id' => $id]);
-            setMensagem('success', 'Usuario desativado com sucesso!');
-        } catch (Exception $e) {
-            error_log('Erro ao desativar usuario: ' . $e->getMessage());
-            setMensagem('error', 'Erro ao desativar usuario. Tente novamente.');
+            $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$usuario) {
+                $pdo->rollBack();
+                setMensagem('error', 'Usuario nao encontrado ou ja excluido.');
+                redirecionar(APP_URL . 'usuarios');
+            }
+
+            $autoExclusao = hash_equals((string)$_SESSION['usuario_id'], (string)$id);
+            if ($autoExclusao && $usuario['cargo'] === 'ADMIN') {
+                $stmtAdministradores = $pdo->query(
+                    "SELECT id FROM usuarios
+                     WHERE cargo = 'ADMIN' AND excluido_em IS NULL
+                     FOR UPDATE"
+                );
+                $totalAdministradores = count($stmtAdministradores->fetchAll(PDO::FETCH_COLUMN));
+
+                if (!podeExcluirProprioAdministrador($totalAdministradores)) {
+                    $pdo->rollBack();
+                    setMensagem('error', 'O unico administrador do sistema nao pode excluir a propria conta.');
+                    redirecionar(APP_URL . 'usuarios');
+                }
+            }
+
+            $emailExcluido = 'excluido.' . str_replace('-', '', $id) . '@local.invalid';
+            $senhaInutilizavel = password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare(
+                "UPDATE usuarios
+                 SET ativo = 0,
+                     email = :email,
+                     senha_hash = :senha,
+                     excluido_em = NOW()
+                 WHERE id = :id"
+            );
+            $stmt->execute([
+                ':email' => $emailExcluido,
+                ':senha' => $senhaInutilizavel,
+                ':id' => $id,
+            ]);
+
+            $pdo->prepare("DELETE FROM usuario_permissoes WHERE usuario_id = :id")->execute([':id' => $id]);
+            $pdo->prepare("DELETE FROM usuario_perfis WHERE usuario_id = :id")->execute([':id' => $id]);
+
+            if (function_exists('log_atividade')) {
+                log_atividade('usuario_excluido', 'Acesso do usuario ' . $usuario['nome'] . ' excluido.');
+            }
+
+            $pdo->commit();
+
+            if ($autoExclusao) {
+                $_SESSION = [];
+                if (ini_get('session.use_cookies')) {
+                    $params = session_get_cookie_params();
+                    setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+                }
+                session_destroy();
+                redirecionar(APP_URL . 'login');
+            }
+
+            setMensagem('success', 'Usuario excluido com sucesso!');
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Erro ao excluir usuario: ' . $e->getMessage());
+            setMensagem('error', 'Erro ao excluir usuario. Tente novamente.');
         }
 
         redirecionar(APP_URL . 'usuarios');

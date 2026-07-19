@@ -12,6 +12,7 @@ $portalDocumentosAtivo = strpos($portalRequestUri, '/portal/documentos') !== fal
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo h($titulo_page); ?></title>
     <link rel="stylesheet" href="<?php echo APP_URL; ?>assets/css/style.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="<?php echo APP_URL; ?>assets/css/erp-v2.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/erp-v2.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

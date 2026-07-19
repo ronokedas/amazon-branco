@@ -35,9 +35,21 @@ if (empty($configs)) {
 }
 
 try {
-    $stmt = $pdo->prepare("UPDATE configuracoes SET valor = :valor WHERE chave = :chave");
+    $descricoes = [
+        'meta_mensal' => 'Meta mensal de faturamento comercial em R$',
+        'meta_mensagem' => 'Mensagem da meta mensal exibida para a equipe',
+        'dados_teste_embarcacoes' => 'Exibe o preenchimento rápido com dados fictícios no cadastro de embarcações',
+    ];
+    $stmt = $pdo->prepare(
+        "INSERT INTO configuracoes (chave, valor, descricao)
+         VALUES (:chave, :valor, :descricao)
+         ON DUPLICATE KEY UPDATE valor = VALUES(valor)"
+    );
 
     foreach ($configs as $chave => $valor) {
+        if (!array_key_exists($chave, $descricoes)) {
+            continue;
+        }
         $valor = trim((string)$valor);
 
         // Validar meta_mensal
@@ -59,7 +71,19 @@ try {
             $valor = number_format($valor, 2, '.', '');
         }
 
-        $stmt->execute([':valor' => $valor, ':chave' => $chave]);
+        if ($chave === 'meta_mensagem') {
+            $valor = mb_substr(strip_tags($valor), 0, 500, 'UTF-8');
+        }
+
+        if ($chave === 'dados_teste_embarcacoes') {
+            $valor = $valor === '1' ? '1' : '0';
+        }
+
+        $stmt->execute([
+            ':valor' => $valor,
+            ':chave' => $chave,
+            ':descricao' => $descricoes[$chave],
+        ]);
     }
 
     setMensagem('success', 'Configurações salvas com sucesso!');

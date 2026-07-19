@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/cliente_vinculos.php';
 
 verificar_sessao();
 $cargo = getCargo();
@@ -88,19 +89,7 @@ switch ($action) {
                 ':criado_por' => $_SESSION['usuario_id'],
             ]);
 
-            // Vincular embarcacoes
-            if (!empty($embarcacoes_ids)) {
-                $stmtEmb = $pdo->prepare("
-                    INSERT INTO clientes_embarcacoes (id, cliente_id, embarcacao_id) 
-                    VALUES (UUID(), :cliente_id, :embarcacao_id)
-                ");
-                foreach ($embarcacoes_ids as $emb_id) {
-                    $stmtEmb->execute([
-                        ':cliente_id'    => $cliente_id,
-                        ':embarcacao_id' => $emb_id,
-                    ]);
-                }
-            }
+            sincronizarClienteEmbarcacoes($pdo, $cliente_id, is_array($embarcacoes_ids) ? $embarcacoes_ids : [], $_SESSION['usuario_id'] ?? null);
 
             $pdo->commit();
 
@@ -164,22 +153,7 @@ switch ($action) {
                 ':id'         => $id,
             ]);
 
-            // Atualizar vinculos: remover todos e reinserir
-            $stmtDel = $pdo->prepare("DELETE FROM clientes_embarcacoes WHERE cliente_id = :cliente_id");
-            $stmtDel->execute([':cliente_id' => $id]);
-
-            if (!empty($embarcacoes_ids)) {
-                $stmtEmb = $pdo->prepare("
-                    INSERT INTO clientes_embarcacoes (id, cliente_id, embarcacao_id) 
-                    VALUES (UUID(), :cliente_id, :embarcacao_id)
-                ");
-                foreach ($embarcacoes_ids as $emb_id) {
-                    $stmtEmb->execute([
-                        ':cliente_id'    => $id,
-                        ':embarcacao_id' => $emb_id,
-                    ]);
-                }
-            }
+            sincronizarClienteEmbarcacoes($pdo, $id, is_array($embarcacoes_ids) ? $embarcacoes_ids : [], $_SESSION['usuario_id'] ?? null);
 
             $pdo->commit();
 

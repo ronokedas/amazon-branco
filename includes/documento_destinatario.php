@@ -31,7 +31,7 @@ function resolverDestinatarioDocumento(PDO $pdo, array $documento, string $tabel
             OR c.id IN (
                 SELECT ce.cliente_id
                 FROM clientes_embarcacoes ce
-                WHERE ce.embarcacao_id = e.id
+                WHERE ce.embarcacao_id = e.id AND ce.status='ATIVO'
             )
         )
         WHERE e.nome = :emb_nome

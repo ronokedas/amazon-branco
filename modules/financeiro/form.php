@@ -54,7 +54,7 @@ $csrf = gerarCSRF();
 // Valor formatado para exibicao no form
 $valorFormatado = '';
 if ($lancamento) {
-    $valorFormatado = number_format($lancamento['valor'], 2, ',', '.');
+    $valorFormatado = number_format($lancamento['valor_original'] ?? $lancamento['valor'], 2, ',', '.');
 }
 
 $titulo_page = ($isEdicao ? 'Editar' : 'Novo') . ' Lancamento - ERP Sistema';
@@ -156,12 +156,15 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <i class="fas fa-check-circle"></i> Status *
                         </label>
                         <select id="status" name="status" required>
-                            <option value="PAGO" <?php echo ($lancamento['status'] ?? 'PAGO') === 'PAGO' ? 'selected' : ''; ?>>
+                            <option value="PAGO" <?php echo ($lancamento['status'] ?? '') === 'PAGO' ? 'selected' : ''; ?>>
                                 Pago / Recebido
                             </option>
-                            <option value="PENDENTE" <?php echo ($lancamento['status'] ?? '') === 'PENDENTE' ? 'selected' : ''; ?>>
+                            <option value="PENDENTE" <?php echo ($lancamento['status'] ?? 'PENDENTE') === 'PENDENTE' ? 'selected' : ''; ?>>
                                 Pendente
                             </option>
+                            <?php if (($lancamento['status'] ?? '') === 'PARCIAL'): ?>
+                            <option value="PARCIAL" selected>Parcial (controlado pelas baixas)</option>
+                            <?php endif; ?>
                             <option value="CANCELADO" <?php echo ($lancamento['status'] ?? '') === 'CANCELADO' ? 'selected' : ''; ?>>
                                 Cancelado
                             </option>

@@ -110,12 +110,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
 
         // GATILHO 1: Lançamento no Financeiro
         $stmtFin = $pdo->prepare("INSERT INTO financeiro_lancamentos 
-            (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, data, categoria, observacoes, criado_por) 
-            VALUES (UUID(), 'RECEITA', 'unica', 'PENDENTE', DATE_ADD(CURDATE(), INTERVAL 15 DAY), :cliente_id, :descricao, :valor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por)");
+            (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por)
+            VALUES (UUID(), 'RECEITA', 'unica', 'PENDENTE', DATE_ADD(CURDATE(), INTERVAL 15 DAY), :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por)");
         $stmtFin->execute([
             ':cliente_id'  => $prop['cliente_id'],
             ':descricao'   => 'Referente à Proposta Comercial nº ' . $prop['numero'],
             ':valor'       => $prop['valor_total'],
+            ':valor_original' => $prop['valor_total'],
+            ':saldo_devedor' => $prop['valor_total'],
             ':observacoes' => 'Lançamento gerado automaticamente após assinatura da proposta.',
             ':criado_por'  => $prop['criado_por'] ?? null
         ]);
@@ -134,11 +136,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
 
         $stmtAgendamento = $pdo->prepare("
             INSERT INTO agendamentos (
-                id, proposta_id, embarcacao_id, cliente_id, armador_id, operador_nome, vendedor_id,
-                tipo_vistoria, status, observacoes, criado_por, data_vistoria, hora_vistoria
+                id, proposta_id, embarcacao_id, cliente_id, vendedor_id,
+                tipo_vistoria, contato_nome, contato_telefone, status, observacoes, criado_por, data_vistoria, hora_vistoria
             ) VALUES (
-                :id, :proposta_id, :embarcacao_id, :cliente_id, :armador_id, :operador_nome, :vendedor_id,
-                :tipo_vistoria, 'pendente', :observacoes, :criado_por, NULL, NULL
+                :id, :proposta_id, :embarcacao_id, :cliente_id, :vendedor_id,
+                :tipo_vistoria, :contato_nome, :contato_telefone, 'pendente', :observacoes, :criado_por, NULL, NULL
             )
         ");
 
@@ -149,10 +151,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
                 ':proposta_id'   => $prop['id'],
                 ':embarcacao_id' => $emb['embarcacao_id'],
                 ':cliente_id'    => $prop['cliente_id'],
-                ':armador_id'    => $prop['armador_id'] ?? null,
-                ':operador_nome' => $prop['operador_nome'] ?? null,
                 ':vendedor_id'   => $prop['criado_por'] ?? null,
                 ':tipo_vistoria' => !empty($emb['servicos_nomes']) ? $emb['servicos_nomes'] : 'Vistoria Geral',
+                ':contato_nome'  => $prop['responsavel_fechamento_nome'] ?? null,
+                ':contato_telefone' => $prop['responsavel_fechamento_telefone'] ?? null,
                 ':observacoes'   => 'Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data e vistoriador.',
                 ':criado_por'    => $prop['criado_por'] ?? null
             ]);

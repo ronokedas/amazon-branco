@@ -32,20 +32,30 @@ $erro = '';
 $tipo_selecionado = $_POST['tipo'] ?? ($_SESSION['wizard_certificado']['tipo'] ?? '');
 $modelos_sem_tipo = ['LP', 'LC', 'CHT'];
 $relatorio_status = '';
+$vistoria_id = '';
 
 if (!empty($agendamento_id)) {
     try {
         $stmtRelatorioStatus = $pdo->prepare("
-            SELECT status
+            SELECT id, status
             FROM vistorias
             WHERE agendamento_id = :agendamento_id
             ORDER BY criado_em DESC
             LIMIT 1
         ");
         $stmtRelatorioStatus->execute([':agendamento_id' => $agendamento_id]);
-        $relatorio_status = (string)($stmtRelatorioStatus->fetchColumn() ?: '');
+        $relatorioVigente = $stmtRelatorioStatus->fetch(PDO::FETCH_ASSOC) ?: [];
+        $vistoria_id = (string)($relatorioVigente['id'] ?? '');
+        $relatorio_status = (string)($relatorioVigente['status'] ?? '');
     } catch (Exception $e) {
         error_log('Erro ao buscar status do relatorio no wizard: ' . $e->getMessage());
+    }
+}
+
+if (!empty($vistoria_id)) {
+    $liberacaoCertificacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
+    if (empty($liberacaoCertificacao['permitido'])) {
+        $erro = $liberacaoCertificacao['mensagem'];
     }
 }
 
@@ -54,12 +64,13 @@ if ($bloquear_definitivo && $tipo_selecionado === 'Definitivo') {
     $tipo_selecionado = '';
 }
 
-if (in_array($modelo, $modelos_sem_tipo, true) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (in_array($modelo, $modelos_sem_tipo, true) && $_SERVER['REQUEST_METHOD'] !== 'POST' && $erro === '') {
     $_SESSION['wizard_certificado'] = [
         'modelo' => $modelo,
         'modelo_nome' => $modelo_nome,
         'tipo' => 'Documento',
         'agendamento_id' => $agendamento_id,
+        'vistoria_id' => $vistoria_id,
     ];
 
     header('Location: ' . APP_URL . 'certificados/wizard_step2');
@@ -69,7 +80,9 @@ if (in_array($modelo, $modelos_sem_tipo, true) && $_SERVER['REQUEST_METHOD'] !==
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tipo = $_POST['tipo'] ?? '';
 
-    if (!verificarCSRF($_POST['csrf_token'] ?? '')) {
+    if ($erro !== '') {
+        // Mantem a mensagem da regra central de certificacao.
+    } elseif (!verificarCSRF($_POST['csrf_token'] ?? '')) {
         $erro = 'Sessão expirada. Atualize a página e tente novamente.';
     } elseif (empty($tipo)) {
         $erro = 'Selecione o tipo do certificado antes de avançar.';
@@ -81,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'modelo_nome' => $modelo_nome,
             'tipo' => $tipo,
             'agendamento_id' => $agendamento_id,
+            'vistoria_id' => $vistoria_id,
         ];
 
         header('Location: ' . APP_URL . 'certificados/wizard_step2');

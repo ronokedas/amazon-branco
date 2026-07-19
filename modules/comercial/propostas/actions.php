@@ -31,7 +31,7 @@ if ($action === 'embarcacoes_cliente') {
         $stmt = $pdo->prepare("
             SELECT e.id, e.nome, e.registro
             FROM embarcacoes e
-            INNER JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id
+            INNER JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND ce.status='ATIVO'
             WHERE ce.cliente_id = :cliente_id AND e.ativo = 1
             ORDER BY e.nome ASC
         ");
@@ -108,12 +108,14 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
 
     if ((int)$stmtFinExiste->fetchColumn() === 0) {
         $stmtFin = $pdo->prepare("INSERT INTO financeiro_lancamentos
-            (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, data, categoria, observacoes, criado_por)
-            VALUES (UUID(), 'RECEITA', 'unica', 'PENDENTE', DATE_ADD(CURDATE(), INTERVAL 15 DAY), :cliente_id, :descricao, :valor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por)");
+            (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por)
+            VALUES (UUID(), 'RECEITA', 'unica', 'PENDENTE', DATE_ADD(CURDATE(), INTERVAL 15 DAY), :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por)");
         $stmtFin->execute([
             ':cliente_id' => $prop['cliente_id'],
             ':descricao' => $descricaoFinanceiro,
             ':valor' => $prop['valor_total'],
+            ':valor_original' => $prop['valor_total'],
+            ':saldo_devedor' => $prop['valor_total'],
             ':observacoes' => $manual
                 ? 'Lançamento gerado automaticamente após aprovação interna da proposta.'
                 : 'Lançamento gerado automaticamente após assinatura da proposta.',
@@ -140,11 +142,11 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
     ");
     $stmtAgendamento = $pdo->prepare("
         INSERT INTO agendamentos (
-            id, proposta_id, embarcacao_id, cliente_id, armador_id, operador_nome, vendedor_id,
-            tipo_vistoria, status, observacoes, criado_por, data_vistoria, hora_vistoria
+            id, proposta_id, embarcacao_id, cliente_id, vendedor_id,
+            tipo_vistoria, contato_nome, contato_telefone, status, observacoes, criado_por, data_vistoria, hora_vistoria
         ) VALUES (
-            UUID(), :proposta_id, :embarcacao_id, :cliente_id, :armador_id, :operador_nome, :vendedor_id,
-            :tipo_vistoria, 'pendente', :observacoes, :criado_por, NULL, NULL
+            UUID(), :proposta_id, :embarcacao_id, :cliente_id, :vendedor_id,
+            :tipo_vistoria, :contato_nome, :contato_telefone, 'pendente', :observacoes, :criado_por, NULL, NULL
         )
     ");
 
@@ -161,10 +163,10 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
             ':proposta_id' => $prop['id'],
             ':embarcacao_id' => $emb['embarcacao_id'],
             ':cliente_id' => $prop['cliente_id'],
-            ':armador_id' => $prop['armador_id'] ?? null,
-            ':operador_nome' => $prop['operador_nome'] ?? null,
             ':vendedor_id' => $prop['criado_por'] ?? null,
             ':tipo_vistoria' => !empty($emb['servicos_nomes']) ? $emb['servicos_nomes'] : 'Vistoria Geral',
+            ':contato_nome' => $prop['responsavel_fechamento_nome'] ?? null,
+            ':contato_telefone' => $prop['responsavel_fechamento_telefone'] ?? null,
             ':observacoes' => $manual
                 ? 'Agendamento gerado automaticamente a partir da aprovação interna da proposta. Favor definir data e vistoriador.'
                 : 'Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data e vistoriador.',
@@ -181,8 +183,8 @@ switch ($action) {
             $clienteData  = json_decode($cliente_json, true);
             $cliente_id   = $clienteData['id'] ?? '';
             $cliente_nome = $clienteData['nome'] ?? 'Desconhecido';
-            $armador_id   = trim($_POST['armador_id'] ?? '');
-            $operador_nome = trim(sanitizar($_POST['operador_nome'] ?? ''));
+            $responsavel_fechamento_nome = trim(sanitizar($_POST['responsavel_fechamento_nome'] ?? ''));
+            $responsavel_fechamento_telefone = trim(sanitizar($_POST['responsavel_fechamento_telefone'] ?? ''));
 
             // Novo formato: serviços por embarcação via JSON
             $dados_servicos_json = $_POST['dados_servicos_json'] ?? '[]';
@@ -197,15 +199,6 @@ switch ($action) {
             if (empty($cliente_id)) {
                 setMensagem('error', 'Cliente não selecionado.');
                 redirecionar(APP_URL . 'comercial/nova');
-            }
-
-            if (!empty($armador_id)) {
-                $stmtArmador = $pdo->prepare("SELECT id FROM clientes WHERE id = :id AND perfil = 'armador' AND status = 'ATIVO'");
-                $stmtArmador->execute([':id' => $armador_id]);
-                if (!$stmtArmador->fetchColumn()) {
-                    setMensagem('error', 'Armador selecionado nao encontrado ou inativo.');
-                    redirecionar(APP_URL . 'comercial/nova');
-                }
             }
 
             if (empty($dadosServicos)) {
@@ -278,14 +271,14 @@ switch ($action) {
             $token_assinatura = md5(uniqid(rand(), true)) . uniqid();
             
             $stmtProp = $pdo->prepare("
-                INSERT INTO propostas (id, numero, cliente_id, armador_id, operador_nome, data_emissao, data_validade, parcelas, forma_pagamento, valor_total, valor_entrada, desconto_percentual, desconto_valor, observacoes, status, criado_por, token_assinatura)
-                VALUES (UUID(), :numero, :cliente_id, :armador_id, :operador_nome, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), :parcelas, :forma_pagamento, :valor_total, :valor_entrada, :desconto_percentual, :desconto_valor, :observacoes, 'rascunho', :criado_por, :token_assinatura)
+                INSERT INTO propostas (id, numero, cliente_id, responsavel_fechamento_nome, responsavel_fechamento_telefone, data_emissao, data_validade, parcelas, forma_pagamento, valor_total, valor_entrada, desconto_percentual, desconto_valor, observacoes, status, criado_por, token_assinatura)
+                VALUES (UUID(), :numero, :cliente_id, :responsavel_fechamento_nome, :responsavel_fechamento_telefone, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), :parcelas, :forma_pagamento, :valor_total, :valor_entrada, :desconto_percentual, :desconto_valor, :observacoes, 'rascunho', :criado_por, :token_assinatura)
             ");
             $stmtProp->execute([
                 ':numero'              => $numero,
                 ':cliente_id'          => $cliente_id,
-                ':armador_id'          => $armador_id ?: null,
-                ':operador_nome'       => $operador_nome ?: null,
+                ':responsavel_fechamento_nome' => $responsavel_fechamento_nome ?: null,
+                ':responsavel_fechamento_telefone' => $responsavel_fechamento_telefone ?: null,
                 ':parcelas'            => $parcelas,
                 ':forma_pagamento'     => $forma_pagamento,
                 ':valor_total'         => $valor_total,

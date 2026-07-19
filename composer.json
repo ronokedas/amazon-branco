@@ -6,6 +6,7 @@
         "tecnickcom/tcpdf": "^6.6",
         "phpmailer/phpmailer": "^7.1",
         "endroid/qr-code": "^5.0",
-        "aws/aws-sdk-php": "^3.0"
+        "aws/aws-sdk-php": "^3.0",
+        "setasign/fpdi": "^2.6.8"
     }
 }

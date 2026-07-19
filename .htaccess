@@ -47,6 +47,6 @@ RewriteRule ^(?:docker|migrations|scripts|docs|DOCUMENTACAO)/ - [F,L,NC]
 
 # Limitar upload de arquivos
 <IfModule mod_php.c>
-    php_value upload_max_filesize "10M"
-    php_value post_max_size "12M"
+    php_value upload_max_filesize "20M"
+    php_value post_max_size "22M"
 </IfModule>

@@ -1,4 +1,4 @@
-FROM php:8.2-apache
+FROM php:8.2-apache@sha256:2a195673289c069f54a07c83353768df8930d1ee0a0e03faebe7b5aa51dabbcd
 
 # Instalar extensoes PHP necessarias
 RUN docker-php-ext-install pdo pdo_mysql mysqli && \
@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
 RUN a2enmod rewrite
 
 # Instalar Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.8@sha256:5248900ab8b5f7f880c2d62180e40960cd87f60149ec9a1abfd62ac72a02577c /usr/bin/composer /usr/bin/composer
 
 # Instalar dependencias do Composer (se composer.json existir)
 WORKDIR /var/www/html

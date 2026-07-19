@@ -12,8 +12,8 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-if (getCargo() !== 'ADMIN') {
-    setMensagem('error', 'Acesso negado. Apenas Administradores podem criar propostas.');
+if (!in_array(getCargo(), ['ADMIN', 'VENDEDOR'], true)) {
+    setMensagem('error', 'Acesso negado.');
     redirecionar(APP_URL . 'dashboard');
 }
 
@@ -25,18 +25,8 @@ try {
     $clientes = [];
 }
 
-// Buscar armadores ativos
-try {
-    $stmtArmadores = $pdo->query("SELECT id, nome, cpf_cnpj FROM clientes WHERE status = 'ATIVO' AND perfil = 'armador' ORDER BY nome ASC");
-    $armadores = $stmtArmadores->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    $armadores = [];
-}
-
 $clientePreSelecionadoId = $_GET['cliente_id'] ?? '';
 $clientePreSelecionadoEncontrado = false;
-$armadorPreSelecionadoId = $_GET['armador_id'] ?? '';
-$armadorPreSelecionadoEncontrado = false;
 
 if (!empty($clientes)) {
     foreach ($clientes as $cliente) {
@@ -49,20 +39,6 @@ if (!empty($clientes)) {
     if (!$clientePreSelecionadoEncontrado && count($clientes) === 1) {
         $clientePreSelecionadoId = $clientes[0]['id'];
         $clientePreSelecionadoEncontrado = true;
-    }
-}
-
-if (!empty($armadores)) {
-    foreach ($armadores as $armador) {
-        if (!empty($armadorPreSelecionadoId) && $armador['id'] === $armadorPreSelecionadoId) {
-            $armadorPreSelecionadoEncontrado = true;
-            break;
-        }
-    }
-
-    if (!$armadorPreSelecionadoEncontrado && count($armadores) === 1) {
-        $armadorPreSelecionadoId = $armadores[0]['id'];
-        $armadorPreSelecionadoEncontrado = true;
     }
 }
 
@@ -86,7 +62,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <div>
             <span class="flow-eyebrow"><i class="fas fa-route"></i> Etapa 1 do fluxo</span>
             <h1><i class="fas fa-file-invoice"></i> Nova Proposta</h1>
-            <p>Escolha o proprietário, informe o armador responsável e revise os valores antes de enviar para assinatura.</p>
+            <p>Escolha o proprietário, adicione o contato do fechamento se desejar e revise os valores antes de enviar para assinatura.</p>
         </div>
         <div class="flow-actions">
             <a href="<?php echo APP_URL; ?>comercial/propostas" class="btn btn-secondary btn-sm">
@@ -130,12 +106,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <div class="wizard-panel active" id="passo1">
             <div class="card">
                 <div class="card-header">
-                    <h3><i class="fas fa-user-tie"></i> Passo 1: Proprietário e Armador</h3>
+                    <h3><i class="fas fa-user-tie"></i> Passo 1: Proprietário e responsável pelo fechamento</h3>
                 </div>
                 <div class="card-body">
                     <div class="wizard-helper">
                         <i class="fas fa-info-circle"></i>
-                        <span>Primeiro escolha o proprietário da embarcação. Em seguida informe o armador, que é a pessoa responsável pela operação no dia da vistoria.</span>
+                        <span>Primeiro escolha o proprietário da embarcação. Se desejar, informe quem foi o responsável pelo fechamento da proposta e seu telefone.</span>
                     </div>
                     <?php if (empty($clientes)): ?>
                         <div class="tabela-vazia">
@@ -175,33 +151,22 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <?php endforeach; ?>
                         </div>
 
-                        <div class="armador-box">
+                        <div class="armador-box responsavel-box">
                             <div>
-                                <label for="armador_id"><i class="fas fa-hard-hat"></i> Armador responsável pela vistoria</label>
-                                <small>Informe quem estará responsável pela embarcação no dia da vistoria. Pode ser diferente do proprietário.</small>
+                                <label for="responsavel_fechamento_nome"><i class="fas fa-user-check"></i> Responsável pelo fechamento da proposta</label>
+                                <small>Campo opcional. Quando informado, ficará visível para o vistoriador durante a vistoria.</small>
                             </div>
-                            <?php if (empty($armadores)): ?>
-                                <div class="wizard-warning">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <span>Nenhum armador ativo cadastrado. Cadastre um armador para concluir a proposta.</span>
-                                </div>
-                            <?php else: ?>
-                                <select id="armador_id" name="armador_id" onchange="atualizarPasso1()">
-                                    <option value="">Selecione o armador responsável...</option>
-                                    <?php foreach ($armadores as $a): ?>
-                                        <option value="<?php echo h($a['id']); ?>" <?php echo ($armadorPreSelecionadoEncontrado && $armadorPreSelecionadoId === $a['id']) ? 'selected' : ''; ?>>
-                                            <?php echo h($a['nome']); ?><?php echo !empty($a['cpf_cnpj']) ? ' - ' . h($a['cpf_cnpj']) : ''; ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            <?php endif; ?>
+                            <input type="text" id="responsavel_fechamento_nome" name="responsavel_fechamento_nome" maxlength="255"
+                                   placeholder="Ex.: João da Silva" autocomplete="name" oninput="atualizarPasso1()">
                         </div>
                         <div class="armador-box responsavel-box">
                             <div>
-                                <label for="operador_nome"><i class="fas fa-user-check"></i> Nome do respons&aacute;vel presente na vistoria</label>
-                                <small>Use quando o respons&aacute;vel for funcion&aacute;rio, operador ou outra pessoa indicada pelo armador.</small>
+                                <label for="responsavel_fechamento_telefone"><i class="fas fa-phone"></i> Telefone do responsável</label>
+                                <small>Campo opcional para facilitar o contato do vistoriador.</small>
                             </div>
-                            <input type="text" id="operador_nome" name="operador_nome" maxlength="255" placeholder="Ex.: Jo&atilde;o da Silva" oninput="atualizarPasso1()">
+                            <input type="tel" id="responsavel_fechamento_telefone" name="responsavel_fechamento_telefone" maxlength="15"
+                                   placeholder="Ex.: (91) 99999-9999" inputmode="numeric" autocomplete="tel"
+                                   oninput="formatarTelefoneResponsavel(this); atualizarPasso1()">
                         </div>
                     <?php endif; ?>
                 </div>
@@ -298,10 +263,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <button type="button" class="btn btn-secondary" onclick="irParaPasso(1)">
                     <i class="fas fa-arrow-left"></i> Voltar
                 </button>
-                <button type="button" class="btn btn-primary" onclick="irParaPasso(3)" id="btnPasso2">
+                <button type="button" class="btn btn-primary" onclick="irParaPasso(3)" id="btnPasso2" disabled
+                        title="Selecione pelo menos um serviço para continuar">
                     Próximo <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
+            <small id="avisoServicosObrigatorios" style="display: block; margin-top: 8px; text-align: right; color: var(--cor-erro);">
+                Selecione pelo menos um serviço para avançar.
+            </small>
         </div>
 
         <!-- ===== PASSO 3: REVISÃO E CONFIRMAÇÃO ===== -->
@@ -322,8 +291,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <div id="reviewCliente" style="padding: 12px 16px; background: var(--cor-fundo); border-radius: 8px; border: 1px solid var(--cor-borda);"></div>
                         </div>
                         <div class="review-section" style="margin-bottom: 20px;">
-                            <h4 style="color: var(--cor-destaque); margin-bottom: 10px;"><i class="fas fa-hard-hat"></i> Armador responsável</h4>
-                            <div id="reviewArmador" style="padding: 12px 16px; background: var(--cor-fundo); border-radius: 8px; border: 1px solid var(--cor-borda);"></div>
+                            <h4 style="color: var(--cor-destaque); margin-bottom: 10px;"><i class="fas fa-user-check"></i> Responsável pelo fechamento</h4>
+                            <div id="reviewResponsavelFechamento" style="padding: 12px 16px; background: var(--cor-fundo); border-radius: 8px; border: 1px solid var(--cor-borda);"></div>
                         </div>
                         <!-- Serviços por Embarcação -->
                         <div class="review-section" style="margin-bottom: 20px;">
@@ -444,15 +413,35 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 // ============ DADOS GLOBAIS ============
 const ALL_SERVICOS = <?php echo json_encode($servicos, JSON_UNESCAPED_UNICODE); ?>;
 let clienteSelecionadoData = null;
-let armadorSelecionadoData = null;
-let operadorNomeData = '';
+let responsavelFechamentoNomeData = '';
+let responsavelFechamentoTelefoneData = '';
 let embarcacoesCarregadas = []; // { id, nome, registro }
 let embarcacaoSelecionadaId = null;
 let servicosSelecionadosPorEmbarcacao = {};
 let clientePasso2CarregadoId = null;
 
 // ============ NAVEGAÇÃO DO WIZARD ============
+function temServicoSelecionado() {
+    return Object.values(servicosSelecionadosPorEmbarcacao).some(servicos => Object.keys(servicos).length > 0);
+}
+
+function atualizarEstadoAvancoServicos() {
+    const possuiServico = temServicoSelecionado();
+    const botao = document.getElementById('btnPasso2');
+    const aviso = document.getElementById('avisoServicosObrigatorios');
+    if (botao) {
+        botao.disabled = !possuiServico;
+        botao.title = possuiServico ? '' : 'Selecione pelo menos um serviço para continuar';
+    }
+    if (aviso) aviso.style.display = possuiServico ? 'none' : 'block';
+}
+
 function irParaPasso(numero) {
+    if (numero === 3 && !temServicoSelecionado()) {
+        atualizarEstadoAvancoServicos();
+        return;
+    }
+
     document.querySelectorAll('.wizard-panel').forEach(p => p.style.display = 'none');
     document.getElementById('passo' + numero).style.display = 'block';
 
@@ -520,19 +509,33 @@ function clienteSelecionado(radio) {
     embarcacaoSelecionadaId = null;
     servicosSelecionadosPorEmbarcacao = {};
     clientePasso2CarregadoId = null;
+    atualizarEstadoAvancoServicos();
 }
 
 function atualizarPasso1() {
-    const armadorSelect = document.getElementById('armador_id');
-    const armadorOption = armadorSelect?.selectedOptions?.[0] || null;
-    const operadorInput = document.getElementById('operador_nome');
-    operadorNomeData = operadorInput?.value?.trim() || '';
-    armadorSelecionadoData = armadorSelect?.value ? {
-        id: armadorSelect.value,
-        nome: armadorOption ? armadorOption.textContent.trim() : ''
-    } : null;
-
+    responsavelFechamentoNomeData = document.getElementById('responsavel_fechamento_nome')?.value?.trim() || '';
+    responsavelFechamentoTelefoneData = document.getElementById('responsavel_fechamento_telefone')?.value?.trim() || '';
     document.getElementById('btnPasso1').disabled = !clienteSelecionadoData;
+}
+
+function formatarTelefoneResponsavel(input) {
+    const numeros = input.value.replace(/\D/g, '').slice(0, 11);
+    if (!numeros) {
+        input.value = '';
+        return;
+    }
+
+    if (numeros.length <= 2) {
+        input.value = `(${numeros}`;
+        return;
+    }
+
+    const ddd = numeros.slice(0, 2);
+    const telefone = numeros.slice(2);
+    const tamanhoPrefixo = numeros.length === 11 ? 5 : 4;
+    const prefixo = telefone.slice(0, tamanhoPrefixo);
+    const sufixo = telefone.slice(tamanhoPrefixo);
+    input.value = `(${ddd}) ${prefixo}${sufixo ? '-' + sufixo : ''}`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -909,9 +912,9 @@ function montarRevisao() {
     document.getElementById('reviewCliente').innerHTML = `
         <strong>${clienteSelecionadoData?.nome || ''}</strong><br>
         <small class="text-muted">Perfil: ${clienteSelecionadoData?.perfil || ''} &middot; CPF/CNPJ: ${clienteSelecionadoData?.cpfcnpj || ''}</small>`;
-    document.getElementById('reviewArmador').innerHTML = `
-        <strong>${armadorSelecionadoData?.nome || 'Armador não selecionado'}</strong><br>
-        <small class="text-muted">Responsável operacional no dia da vistoria.</small>`;
+    document.getElementById('reviewResponsavelFechamento').innerHTML = `
+        <strong>${esc(responsavelFechamentoNomeData) || 'Não informado'}</strong><br>
+        <small class="text-muted">Telefone: ${esc(responsavelFechamentoTelefoneData) || 'Não informado'}</small>`;
 
     let revEmbHtml = '';
     dadosServicos.forEach(ds => {
@@ -959,10 +962,6 @@ function montarRevisao() {
     document.getElementById('rParcelas').innerHTML = rph;
 
     // Mostra conteúdo, esconde loading
-    if (operadorNomeData) {
-        const reviewArmador = document.getElementById('reviewArmador');
-        reviewArmador.innerHTML += `<br><small class="text-muted">Respons&aacute;vel informado: ${esc(operadorNomeData)}</small>`;
-    }
     document.getElementById('reviewLoading').style.display = 'none';
     document.getElementById('reviewContent').style.display = 'block';
 }
@@ -1119,6 +1118,7 @@ function salvarServicoSelecionado(embId, servId, qtdValor) {
     servicosSelecionadosPorEmbarcacao[embId][servId] = {
         qtd: Math.max(1, parseInt(qtdValor) || 1)
     };
+    atualizarEstadoAvancoServicos();
 }
 
 function removerServicoSelecionado(embId, servId) {
@@ -1127,6 +1127,7 @@ function removerServicoSelecionado(embId, servId) {
     if (Object.keys(servicosSelecionadosPorEmbarcacao[embId]).length === 0) {
         delete servicosSelecionadosPorEmbarcacao[embId];
     }
+    atualizarEstadoAvancoServicos();
 }
 
 function obterResumoEmbarcacao(embId) {
@@ -1258,9 +1259,9 @@ function montarRevisao() {
     document.getElementById('reviewCliente').innerHTML = `
         <strong>${clienteSelecionadoData?.nome || ''}</strong><br>
         <small class="text-muted">Perfil: ${clienteSelecionadoData?.perfil || ''} &middot; CPF/CNPJ: ${clienteSelecionadoData?.cpfcnpj || ''}</small>`;
-    document.getElementById('reviewArmador').innerHTML = `
-        <strong>${armadorSelecionadoData?.nome || 'Armador não selecionado'}</strong><br>
-        <small class="text-muted">Responsável operacional no dia da vistoria.</small>`;
+    document.getElementById('reviewResponsavelFechamento').innerHTML = `
+        <strong>${esc(responsavelFechamentoNomeData) || 'Não informado'}</strong><br>
+        <small class="text-muted">Telefone: ${esc(responsavelFechamentoTelefoneData) || 'Não informado'}</small>`;
 
     let revEmbHtml = '';
     dadosServicos.forEach(ds => {
@@ -1306,10 +1307,6 @@ function montarRevisao() {
     }
     document.getElementById('rParcelas').innerHTML = rph;
 
-    if (operadorNomeData) {
-        const reviewArmador = document.getElementById('reviewArmador');
-        reviewArmador.innerHTML += `<br><small class="text-muted">Respons&aacute;vel informado: ${esc(operadorNomeData)}</small>`;
-    }
     document.getElementById('reviewLoading').style.display = 'none';
     document.getElementById('reviewContent').style.display = 'block';
 }

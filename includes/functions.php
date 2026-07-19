@@ -81,6 +81,147 @@ function verificarCSRF($token) {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
 }
 
+/**
+ * Registra um envio mutavel e rejeita a reutilizacao do mesmo identificador.
+ *
+ * O token e criado no navegador para cada formulario POST. Como a sessao PHP
+ * permanece bloqueada durante a requisicao, dois cliques simultaneos sao
+ * serializados e apenas o primeiro consegue registrar o token.
+ */
+function aceitarEnvioUnico(): bool {
+    if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST') {
+        return true;
+    }
+
+    $token = trim((string)($_POST['_submission_token'] ?? ''));
+    if ($token === '') {
+        // Formularios antigos continuam protegidos pela assinatura do payload.
+        // APIs sem CSRF ficam fora desta regra para preservar sincronizacoes e
+        // integracoes que possuem sua propria estrategia de idempotencia.
+        if (empty($_POST['csrf_token'])) {
+            return true;
+        }
+
+        $normalizar = static function ($valor) use (&$normalizar) {
+            if (!is_array($valor)) {
+                return is_string($valor) ? trim($valor) : $valor;
+            }
+            if (!array_is_list($valor)) {
+                ksort($valor);
+            }
+            foreach ($valor as $chave => $item) {
+                $valor[$chave] = $normalizar($item);
+            }
+            return $valor;
+        };
+
+        $payload = $_POST;
+        unset($payload['csrf_token'], $payload['_submission_token']);
+        $arquivos = [];
+        foreach ($_FILES as $campo => $arquivo) {
+            $arquivos[$campo] = [
+                'name' => $arquivo['name'] ?? null,
+                'size' => $arquivo['size'] ?? null,
+                'error' => $arquivo['error'] ?? null,
+            ];
+        }
+
+        $assinatura = hash('sha256', serialize([
+            'rota' => (string)($_SERVER['REQUEST_URI'] ?? ''),
+            'payload' => $normalizar($payload),
+            'arquivos' => $normalizar($arquivos),
+        ]));
+        $agora = time();
+        $janelaRepeticao = 2 * 60;
+        $assinaturas = $_SESSION['_envios_recentes'] ?? [];
+
+        foreach ($assinaturas as $assinaturaRegistrada => $registradaEm) {
+            if (!is_int($registradaEm) || ($agora - $registradaEm) > $janelaRepeticao) {
+                unset($assinaturas[$assinaturaRegistrada]);
+            }
+        }
+
+        if (isset($assinaturas[$assinatura])) {
+            $_SESSION['_envios_recentes'] = $assinaturas;
+            return false;
+        }
+
+        $assinaturas[$assinatura] = $agora;
+        if (count($assinaturas) > 100) {
+            asort($assinaturas);
+            $assinaturas = array_slice($assinaturas, -100, null, true);
+        }
+        $_SESSION['_envios_recentes'] = $assinaturas;
+        return true;
+    }
+
+    if (!preg_match('/^[A-Za-z0-9_-]{16,100}$/', $token)) {
+        return false;
+    }
+
+    $agora = time();
+    $validade = 6 * 60 * 60;
+    $envios = $_SESSION['_envios_processados'] ?? [];
+
+    foreach ($envios as $tokenRegistrado => $registradoEm) {
+        if (!is_int($registradoEm) || ($agora - $registradoEm) > $validade) {
+            unset($envios[$tokenRegistrado]);
+        }
+    }
+
+    if (isset($envios[$token])) {
+        $_SESSION['_envios_processados'] = $envios;
+        return false;
+    }
+
+    $envios[$token] = $agora;
+    if (count($envios) > 200) {
+        asort($envios);
+        $envios = array_slice($envios, -200, null, true);
+    }
+    $_SESSION['_envios_processados'] = $envios;
+    return true;
+}
+
+/**
+ * Encerra uma repeticao sem executar novamente a acao de gravacao.
+ */
+function responderEnvioDuplicado(): never {
+    $mensagem = 'Este envio ja esta sendo processado ou foi concluido. Nenhum registro duplicado foi criado.';
+    $aceitaJson = str_contains(strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? '')), 'application/json')
+        || strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
+
+    if ($aceitaJson) {
+        http_response_code(409);
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode([
+            'success' => false,
+            'duplicate' => true,
+            'message' => $mensagem,
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    setMensagem('warning', $mensagem);
+
+    $destino = APP_URL . 'dashboard';
+    $referer = (string)($_SERVER['HTTP_REFERER'] ?? '');
+    if ($referer !== '') {
+        $hostApp = parse_url(APP_URL, PHP_URL_HOST);
+        $hostReferer = parse_url($referer, PHP_URL_HOST);
+        if ($hostApp && $hostReferer && strcasecmp($hostApp, $hostReferer) === 0) {
+            $destino = $referer;
+        }
+    }
+
+    header('Location: ' . $destino, true, 303);
+    exit;
+}
+
+function podeExcluirProprioAdministrador(int $totalAdministradores): bool {
+    return $totalAdministradores > 1;
+}
+
 // Redirecionar
 function redirecionar($url) {
     header('Location: ' . $url);
@@ -456,5 +597,194 @@ function paginar($tabela, $por_pagina, $pagina_atual) {
         'atual' => $pagina_atual,
         'inicio' => $inicio,
         'por_pagina' => $por_pagina
+    ];
+}
+
+function certificadoSepararLocalDataConvalidacao(?string $valor): array {
+    $valor = trim((string)$valor);
+    if ($valor === '') {
+        return ['local' => '', 'data' => ''];
+    }
+
+    if (preg_match('/^(.*?)\s*[,-]\s*(\d{2})\/(\d{2})\/(\d{4})$/u', $valor, $m)) {
+        return ['local' => trim($m[1]), 'data' => "{$m[4]}-{$m[3]}-{$m[2]}"];
+    }
+
+    return ['local' => $valor, 'data' => ''];
+}
+
+function certificadoComporLocalDataConvalidacao(string $local, ?string $data): string {
+    $local = trim($local);
+    $data = trim((string)$data);
+    if ($local === '' && $data === '') {
+        return '';
+    }
+    if ($data === '') {
+        return $local;
+    }
+    $dt = DateTime::createFromFormat('!Y-m-d', $data);
+    if (!$dt || $dt->format('Y-m-d') !== $data) {
+        throw new InvalidArgumentException('Data de realização da convalidação inválida.');
+    }
+    return ($local !== '' ? $local . ', ' : '') . $dt->format('d/m/Y');
+}
+
+function certificadoVistoriadoresAtivos(PDO $pdo): array {
+    $stmt = $pdo->query("SELECT id, nome FROM usuarios WHERE cargo = 'VISTORIADOR' AND excluido_em IS NULL ORDER BY ativo DESC, nome");
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function certificadoLocaisVistoria(PDO $pdo): array {
+    $stmt = $pdo->query("SELECT DISTINCT TRIM(local) AS local FROM agendamentos WHERE local IS NOT NULL AND TRIM(local) <> '' ORDER BY local");
+    return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'local');
+}
+
+function certificadoUltimaVistoriaParaConvalidacao(PDO $pdo, ?string $vistoriaBaseId): ?array {
+    if (empty($vistoriaBaseId)) {
+        return null;
+    }
+    $stmt = $pdo->prepare("SELECT v2.data_vistoria, TRIM(a2.local) AS local, u.nome AS vistoriador
+        FROM vistorias base
+        JOIN vistorias v2 ON v2.embarcacao_id = base.embarcacao_id AND v2.id <> base.id
+        LEFT JOIN agendamentos a2 ON a2.id = v2.agendamento_id
+        LEFT JOIN usuarios u ON u.id = a2.vistoriador_id AND u.cargo = 'VISTORIADOR'
+        WHERE base.id = :base
+          AND v2.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')
+          AND v2.data_vistoria >= base.data_vistoria
+          AND a2.local IS NOT NULL AND TRIM(a2.local) <> ''
+          AND u.id IS NOT NULL
+        ORDER BY v2.data_vistoria DESC, v2.criado_em DESC
+        LIMIT 1");
+    $stmt->execute([':base' => $vistoriaBaseId]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+function certificadoAplicarUltimaVistoria(array $convalidacoes, ?array $vistoria): array {
+    if (!$vistoria || empty($vistoria['data_vistoria'])) {
+        return $convalidacoes;
+    }
+    foreach ($convalidacoes as &$conv) {
+        $inicio = (string)($conv['data_inicio'] ?? '');
+        $fim = (string)($conv['data_fim'] ?? '');
+        $data = (string)$vistoria['data_vistoria'];
+        if ($inicio !== '' && $fim !== '' && $data >= $inicio && $data <= $fim) {
+            if (trim((string)($conv['local_data'] ?? '')) === '') {
+                $conv['local_data'] = certificadoComporLocalDataConvalidacao((string)$vistoria['local'], $data);
+            }
+            if (trim((string)($conv['vistoriador'] ?? '')) === '') {
+                $conv['vistoriador'] = (string)$vistoria['vistoriador'];
+            }
+            break;
+        }
+    }
+    unset($conv);
+    return $convalidacoes;
+}
+
+function bloquearEdicaoDocumentoAssinado(PDO $pdo, string $tabela, ?string $id, string $destino): void
+{
+    $permitidas=['certificados_csn','certificados_cnbl','certificados_cnarq','certificados_lp','certificados_lc','certificados_cht'];
+    if(empty($id)||!in_array($tabela,$permitidas,true))return;
+    $stmt=$pdo->prepare("SELECT assinado,status FROM {$tabela} WHERE id=:id");$stmt->execute([':id'=>$id]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
+    $tipos=['certificados_csn'=>'CSN','certificados_cnbl'=>'CNBL','certificados_cnarq'=>'CNARQ','certificados_lp'=>'LP','certificados_lc'=>'LC','certificados_cht'=>'CHT'];
+    $aprovado=false;
+    try {
+        $audit=$pdo->prepare("SELECT 1 FROM documento_aprovacoes WHERE documento_tipo=:tipo AND documento_id=:id AND status='APROVADO' LIMIT 1");
+        $audit->execute([':tipo'=>$tipos[$tabela],':id'=>$id]);
+        $aprovado=(bool)$audit->fetchColumn();
+    } catch (PDOException $e) {
+        $aprovado=false;
+    }
+    if($row&&(!empty($row['assinado'])||($row['status']??'')==='assinado'||$aprovado)){setMensagem('error','Documento aprovado ou assinado é imutável. Cancele e reemita para fazer correções.');redirecionar($destino);}
+}
+
+function documentoEstaAprovadoOuAssinado(PDO $pdo, string $tabela, string $tipo, ?string $id): bool
+{
+    if (empty($id)) return false;
+    $stmt=$pdo->prepare("SELECT assinado,status FROM {$tabela} WHERE id=:id");
+    $stmt->execute([':id'=>$id]);
+    $row=$stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) return false;
+    if (!empty($row['assinado']) || ($row['status'] ?? '') === 'assinado') return true;
+    try {
+        $audit=$pdo->prepare("SELECT 1 FROM documento_aprovacoes WHERE documento_tipo=:tipo AND documento_id=:id AND status='APROVADO' LIMIT 1");
+        $audit->execute([':tipo'=>$tipo,':id'=>$id]);
+        return (bool)$audit->fetchColumn();
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+/** Retorna o ultimo relatorio do agendamento, que e o unico vigente para certificacao. */
+function obterRelatorioVigenteAgendamento(PDO $pdo, string $agendamentoId): ?array
+{
+    $stmt = $pdo->prepare("SELECT * FROM vistorias WHERE agendamento_id = :agendamento_id ORDER BY criado_em DESC, id DESC LIMIT 1");
+    $stmt->execute([':agendamento_id' => $agendamentoId]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+/** Uma A/S deixa de bloquear apenas quando foi efetivamente marcada como cumprida. */
+function relatorioPossuiASPendente(PDO $pdo, string $vistoriaId): bool
+{
+    $stmt = $pdo->prepare("SELECT EXISTS(
+        SELECT 1 FROM vistoria_exigencias
+         WHERE vistoria_id = :vistoria_id
+           AND antes_de_suspender = 1
+           AND conforme = 'nao'
+           AND status_item <> 'cumprida'
+    )");
+    $stmt->execute([':vistoria_id' => $vistoriaId]);
+    return (bool)$stmt->fetchColumn();
+}
+
+/**
+ * Decisao unica de dominio para todos os modelos de certificado.
+ * Resolve sempre o relatorio vigente para impedir uso manual de relatorio substituido.
+ */
+function avaliarLiberacaoCertificacao(PDO $pdo, string $vistoriaId): array
+{
+    $stmt = $pdo->prepare("SELECT id, agendamento_id FROM vistorias WHERE id = :id LIMIT 1");
+    $stmt->execute([':id' => $vistoriaId]);
+    $selecionado = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$selecionado || empty($selecionado['agendamento_id'])) {
+        return ['permitido' => false, 'mensagem' => 'Relatorio invalido ou sem agendamento vinculado.', 'vistoria_id' => null];
+    }
+
+    $vigente = obterRelatorioVigenteAgendamento($pdo, $selecionado['agendamento_id']);
+    if (!$vigente) {
+        return ['permitido' => false, 'mensagem' => 'Nenhum relatorio vigente foi encontrado.', 'vistoria_id' => null];
+    }
+    if ($vigente['id'] !== $vistoriaId) {
+        return [
+            'permitido' => false,
+            'mensagem' => 'O relatorio selecionado foi substituido. Selecione o relatorio vigente da cadeia.',
+            'vistoria_id' => $vigente['id'],
+            'status' => $vigente['status'],
+        ];
+    }
+    if (!in_array($vigente['status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)) {
+        return [
+            'permitido' => false,
+            'mensagem' => 'A certificacao aguarda a aprovacao do relatorio vigente.',
+            'vistoria_id' => $vigente['id'],
+            'status' => $vigente['status'],
+        ];
+    }
+    if (relatorioPossuiASPendente($pdo, $vigente['id'])) {
+        return [
+            'permitido' => false,
+            'mensagem' => 'Certificacao bloqueada por exigencia A/S - Antes de suspender.',
+            'vistoria_id' => $vigente['id'],
+            'status' => $vigente['status'],
+            'possui_as' => true,
+        ];
+    }
+
+    return [
+        'permitido' => true,
+        'mensagem' => '',
+        'vistoria_id' => $vigente['id'],
+        'status' => $vigente['status'],
+        'possui_as' => false,
     ];
 }

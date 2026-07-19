@@ -18,6 +18,11 @@ function clientePortalNome(): string
     return $_SESSION['cliente_nome'] ?? 'Cliente';
 }
 
+function clientePortalPerfil(): string
+{
+    return $_SESSION['cliente_perfil'] ?? 'proprietario';
+}
+
 function clientePortalForcarTrocaSenha(): bool
 {
     return !empty($_SESSION['cliente_forcar_troca_senha']);
@@ -29,6 +34,7 @@ function loginCliente(array $cliente, array $acesso): void
     $_SESSION['cliente_id'] = $cliente['id'];
     $_SESSION['cliente_nome'] = $cliente['nome'];
     $_SESSION['cliente_email'] = $cliente['email'];
+    $_SESSION['cliente_perfil'] = $cliente['perfil'] ?? 'proprietario';
     $_SESSION['cliente_logado'] = true;
     $_SESSION['cliente_login_time'] = time();
     $_SESSION['cliente_forcar_troca_senha'] = (int)($acesso['forcar_troca_senha'] ?? 0) === 1;
@@ -40,12 +46,21 @@ function logoutCliente(): void
         $_SESSION['cliente_id'],
         $_SESSION['cliente_nome'],
         $_SESSION['cliente_email'],
+        $_SESSION['cliente_perfil'],
         $_SESSION['cliente_logado'],
         $_SESSION['cliente_login_time'],
         $_SESSION['cliente_forcar_troca_senha']
     );
     header('Location: ' . APP_URL . 'portal/login');
     exit;
+}
+
+function clientePortalAuditar(PDO $pdo, string $evento, ?string $clienteId = null, ?string $embarcacaoId = null, ?string $documentoTipo = null, ?string $documentoId = null, bool $sucesso = true, string $detalhe = ''): void
+{
+    try {
+        $stmt=$pdo->prepare('INSERT INTO portal_auditoria (cliente_id,perfil,evento,embarcacao_id,documento_tipo,documento_id,sucesso,detalhe,ip,user_agent) VALUES (:cliente,:perfil,:evento,:embarcacao,:tipo,:documento,:sucesso,:detalhe,:ip,:ua)');
+        $stmt->execute([':cliente'=>$clienteId ?: clientePortalId(), ':perfil'=>$clienteId ? null : clientePortalPerfil(), ':evento'=>$evento, ':embarcacao'=>$embarcacaoId, ':tipo'=>$documentoTipo, ':documento'=>$documentoId, ':sucesso'=>$sucesso?1:0, ':detalhe'=>$detalhe?substr($detalhe,0,500):null, ':ip'=>substr($_SERVER['REMOTE_ADDR']??'',0,45), ':ua'=>substr($_SERVER['HTTP_USER_AGENT']??'',0,500)]);
+    } catch (Throwable $e) { error_log('Falha na auditoria do portal: '.$e->getMessage()); }
 }
 
 function verificarSessaoCliente(): void
@@ -127,12 +142,17 @@ function clientePortalConfigDocumentos(): array
     ];
 }
 
-function clientePortalEmbarcacoes(PDO $pdo, string $clienteId): array
+function clientePortalEmbarcacoes(PDO $pdo, string $clienteId, ?string $perfil = null): array
 {
+    if (($perfil ?: clientePortalPerfil()) === 'despachante') {
+        $stmt=$pdo->prepare("SELECT DISTINCT e.id,e.nome,e.registro,e.numero_inscricao,e.tipo_embarcacao FROM embarcacoes e INNER JOIN clientes_embarcacoes ce ON ce.embarcacao_id=e.id AND ce.cliente_id=:cliente AND ce.status='ATIVO' WHERE e.ativo=1 ORDER BY e.nome");
+        $stmt->execute([':cliente'=>$clienteId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
     $stmt = $pdo->prepare("
         SELECT DISTINCT e.id, e.nome, e.registro, e.numero_inscricao, e.tipo_embarcacao
         FROM embarcacoes e
-        LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND ce.cliente_id = :cliente_ce
+        LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND ce.cliente_id = :cliente_ce AND ce.status = 'ATIVO'
         WHERE e.ativo = 1
           AND (
             e.proprietario_id = :cliente_prop
@@ -173,8 +193,9 @@ function clientePortalSelectDocumentos(PDO $pdo, string $clienteId, array $filtr
     }
 
     $configs = clientePortalConfigDocumentos();
-    $tipos = !empty($filtros['tipo']) && isset($configs[$filtros['tipo']])
-        ? [$filtros['tipo'] => $configs[$filtros['tipo']]]
+    $tipoSolicitado = trim((string)($filtros['tipo'] ?? ''));
+    $tipos = $tipoSolicitado !== ''
+        ? (isset($configs[$tipoSolicitado]) ? [$tipoSolicitado => $configs[$tipoSolicitado]] : [])
         : $configs;
 
     $documentos = [];
@@ -218,6 +239,7 @@ function clientePortalSelectDocumentos(PDO $pdo, string $clienteId, array $filtr
                 {$fallbackInscricao}
             WHERE c.ativo = 1
               AND c.status IN ('emitido', 'assinado')
+              AND (c.{$validadeCampo} IS NULL OR c.{$validadeCampo} >= CURDATE())
               AND COALESCE(ed.id, ev.id, en.id) IN ({$in})
         ";
 
@@ -247,11 +269,32 @@ function clientePortalSelectDocumentos(PDO $pdo, string $clienteId, array $filtr
         $documentos = array_merge($documentos, $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
+    $tipoFiltro=$filtros['tipo']??'';$params=[];$in=clientePortalSqlIn($embarcacaoIds,'extra_emb_',$params);
+    if($tipoFiltro===''||$tipoFiltro==='rel_vistoria'){
+        $sql="SELECT v.id,'rel_vistoria' tipo,'Relatório de Vistoria' tipo_label,v.numero,v.data_vistoria data_emissao,NULL data_validade,v.status,1 assinado,v.criado_em,v.embarcacao_id,e.nome embarcacao_nome FROM vistorias v INNER JOIN embarcacoes e ON e.id=v.embarcacao_id WHERE v.embarcacao_id IN ({$in}) AND v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')";
+        if(!empty($filtros['embarcacao_id'])){$sql.=' AND v.embarcacao_id=:extra_vist_emb';$params[':extra_vist_emb']=$filtros['embarcacao_id'];}
+        if(!empty($filtros['busca'])){$sql.=' AND (v.numero LIKE :extra_vist_busca OR e.nome LIKE :extra_vist_busca)';$params[':extra_vist_busca']='%'.$filtros['busca'].'%';}
+        $st=$pdo->prepare($sql);$st->execute($params);$documentos=array_merge($documentos,$st->fetchAll(PDO::FETCH_ASSOC));
+    }
+    if($tipoFiltro===''||$tipoFiltro==='parecer_planos'){
+        $params2=[];$in2=clientePortalSqlIn($embarcacaoIds,'plan_emb_',$params2);
+        $sql="SELECT p.id,'parecer_planos' tipo,'Análise de Planos' tipo_label,CONCAT(ap.numero,' v',p.versao) numero,p.publicado_em data_emissao,NULL data_validade,p.resultado status,1 assinado,p.criado_em,ap.embarcacao_id,e.nome embarcacao_nome FROM analise_planos_pareceres p INNER JOIN analises_planos ap ON ap.id=p.analise_id INNER JOIN embarcacoes e ON e.id=ap.embarcacao_id WHERE ap.embarcacao_id IN ({$in2}) AND p.status='PUBLICADO'";
+        if(!empty($filtros['embarcacao_id'])){$sql.=' AND ap.embarcacao_id=:plan_filtro_emb';$params2[':plan_filtro_emb']=$filtros['embarcacao_id'];}
+        if(!empty($filtros['busca'])){$sql.=' AND (ap.numero LIKE :plan_busca OR e.nome LIKE :plan_busca)';$params2[':plan_busca']='%'.$filtros['busca'].'%';}
+        $st=$pdo->prepare($sql);$st->execute($params2);$documentos=array_merge($documentos,$st->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     usort($documentos, function ($a, $b) {
         return strcmp((string)($b['data_validade'] ?? ''), (string)($a['data_validade'] ?? ''));
     });
 
     return $documentos;
+}
+
+function clientePortalTiposDocumentos(): array
+{
+    $tipos=[];foreach(clientePortalConfigDocumentos() as $tipo=>$cfg)$tipos[$tipo]=$cfg['label'];
+    $tipos['rel_vistoria']='Relatório de Vistoria';$tipos['parecer_planos']='Análise de Planos';return $tipos;
 }
 
 function clientePortalDocumento(PDO $pdo, string $clienteId, string $tipo, string $documentoId): ?array

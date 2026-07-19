@@ -1,0 +1,14 @@
+{
+  "name": "Amazon Campo",
+  "short_name": "Campo",
+  "description": "Vistorias navais em campo, mesmo sem conexão.",
+  "start_url": "/campo/",
+  "scope": "/campo/",
+  "display": "standalone",
+  "background_color": "#f4f6f5",
+  "theme_color": "#006b4f",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/campo/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

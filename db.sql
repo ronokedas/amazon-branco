@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: db:3306
--- Tempo de geração: 04/07/2026 às 06:13
+-- Tempo de geração: 19/07/2026 às 16:25
 -- Versão do servidor: 8.0.46
 -- Versão do PHP: 8.2.27
 
@@ -20,8 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Banco de dados: `erp_sistema`
 --
-CREATE DATABASE IF NOT EXISTS `erp_sistema` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE `erp_sistema`;
 
 -- --------------------------------------------------------
 
@@ -30,37 +28,201 @@ USE `erp_sistema`;
 --
 
 CREATE TABLE `agendamentos` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `proposta_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `armador_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `operador_nome` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `vistoriador_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `vendedor_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo_vistoria` text COLLATE utf8mb4_general_ci NOT NULL,
-  `data_vistoria` date NOT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `proposta_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `embarcacao_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `armador_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `operador_nome` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vistoriador_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vendedor_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_vistoria` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `data_vistoria` date DEFAULT NULL,
   `hora_vistoria` time DEFAULT NULL,
-  `local` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `contato_nome` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `contato_telefone` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `status` enum('pendente','confirmado','em_andamento','concluido','cancelado') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pendente',
-  `observacoes` text COLLATE utf8mb4_general_ci,
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `contato_nome` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `contato_telefone` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('pendente','confirmado','em_andamento','concluido','cancelado') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pendente',
+  `observacoes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
 --
--- Despejando dados para a tabela `agendamentos`
+-- Estrutura para tabela `analises_planos`
 --
 
-INSERT INTO `agendamentos` (`id`, `proposta_id`, `embarcacao_id`, `cliente_id`, `vistoriador_id`, `vendedor_id`, `tipo_vistoria`, `data_vistoria`, `hora_vistoria`, `local`, `contato_nome`, `contato_telefone`, `status`, `observacoes`, `criado_por`, `created_at`, `updated_at`) VALUES
-('6206e36e-7628-11f1-85ad-621c498e207c', NULL, '6205b1f7-7628-11f1-85ad-621c498e207c', '620624f7-7628-11f1-85ad-621c498e207c', '11111111-1111-1111-1111-111111111111', NULL, 'Vistoria Inicial - Seco e Flutuando', '2026-07-10', '08:00:00', 'Estaleiro Rio Maguari - BelÃ©m-PA', 'JoÃ£o Silva', '(91) 98765-4321', 'concluido', NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 15:12:04'),
-('620bf6aa-7628-11f1-85ad-621c498e207c', NULL, '620a9dfa-7628-11f1-85ad-621c498e207c', '620b1381-7628-11f1-85ad-621c498e207c', '22222222-2222-2222-2222-222222222222', NULL, 'Vistoria Inicial - ArqueaÃ§Ã£o e Borda Livre', '2026-07-15', '09:00:00', 'Porto de SantarÃ©m - PA', 'Maria Oliveira', '(93) 98888-1111', 'concluido', NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 15:12:04'),
-('620f7603-7628-11f1-85ad-621c498e207c', NULL, '620e4464-7628-11f1-85ad-621c498e207c', '620ebfc8-7628-11f1-85ad-621c498e207c', '33333333-3333-3333-3333-333333333333', NULL, 'Vistoria Inicial - Completa', '2026-07-20', '07:30:00', 'Porto de BelÃ©m - Terminal de Carga', 'Pedro Almeida', '(91) 97777-2222', 'concluido', NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 15:12:04'),
-('83ad9b48-7666-11f1-9eb5-0a1b2af87b16', '733dc145-7657-11f1-9eb5-0a1b2af87b16', '05a94606-59fe-4371-afbc-b7b094df2676', '64e60ad7-3a78-4db0-9e03-cc529d935325', 'e5c68a85-c920-4b11-bc93-9343d9d94f14', NULL, 'Vistoria Inicial Seco', '2026-07-03', '19:36:00', 'belem', 'Rosano Souza', '91989340275', 'concluido', NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 22:36:49', '2026-07-02 23:30:55'),
-('9c4e5534-76e1-11f1-9eb5-0a1b2af87b16', '733dc145-7657-11f1-9eb5-0a1b2af87b16', '05a94606-59fe-4371-afbc-b7b094df2676', '64e60ad7-3a78-4db0-9e03-cc529d935325', '3774d80c-2574-470e-88a9-9781936c6de3', NULL, 'Vistoria Inicial Seco', '2026-07-06', '15:39:00', 'belem', 'Rosano Souza', '91989340275', 'concluido', NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-03 13:17:58', '2026-07-04 04:59:52');
+CREATE TABLE `analises_planos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `numero` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `solicitante_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_processo` enum('LC','LCEC','LA','LR','OUTRO') COLLATE utf8mb4_general_ci NOT NULL,
+  `enquadramento` enum('NORMAM-201','NORMAM-202','OUTRO') COLLATE utf8mb4_general_ci NOT NULL,
+  `objeto` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `estaleiro` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_projeto_nome` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_projeto_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `art_numero` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `analista_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `responsavel_assinatura_id` int DEFAULT NULL,
+  `status` enum('RASCUNHO','EM_ANALISE','AGUARDANDO_CORRECAO','AGUARDANDO_APROVACAO','CONCLUIDA','REPROVADA','CANCELADA') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'RASCUNHO',
+  `observacoes` text COLLATE utf8mb4_general_ci,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `analise_planos_arquivos`
+--
+
+CREATE TABLE `analise_planos_arquivos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `submissao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `categoria` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `nome_original` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `extensao` varchar(10) COLLATE utf8mb4_general_ci NOT NULL,
+  `mime_type` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `tamanho_bytes` bigint UNSIGNED NOT NULL,
+  `sha256` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `chave_arquivo` varchar(500) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `analise_planos_exigencias`
+--
+
+CREATE TABLE `analise_planos_exigencias` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `analise_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `item_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ordem` int UNSIGNED NOT NULL,
+  `descricao` text COLLATE utf8mb4_general_ci NOT NULL,
+  `referencia_normativa` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `prazo` date DEFAULT NULL,
+  `status` enum('PENDENTE','CUMPRIDA','PARCIAL','TRANSCRITA') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PENDENTE',
+  `observacao_cumprimento` text COLLATE utf8mb4_general_ci,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `analise_planos_historico`
+--
+
+CREATE TABLE `analise_planos_historico` (
+  `id` bigint UNSIGNED NOT NULL,
+  `analise_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `evento` varchar(60) COLLATE utf8mb4_general_ci NOT NULL,
+  `status_anterior` varchar(40) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status_novo` varchar(40) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `detalhe` text COLLATE utf8mb4_general_ci,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `analise_planos_itens`
+--
+
+CREATE TABLE `analise_planos_itens` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `analise_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `submissao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ordem` int UNSIGNED NOT NULL,
+  `documento` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `revisao_documento` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `referencia_normativa` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `resultado` enum('PENDENTE','CONFORME','EXIGENCIA','NAO_APLICA') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PENDENTE',
+  `observacao` text COLLATE utf8mb4_general_ci,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `analise_planos_pareceres`
+--
+
+CREATE TABLE `analise_planos_pareceres` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `analise_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `versao` int UNSIGNED NOT NULL,
+  `resultado` enum('EXIGENCIAS','APROVADO','APROVADO_COM_EXIGENCIAS','REPROVADO') COLLATE utf8mb4_general_ci NOT NULL,
+  `resumo` text COLLATE utf8mb4_general_ci NOT NULL,
+  `conclusao` text COLLATE utf8mb4_general_ci NOT NULL,
+  `status` enum('MINUTA','AGUARDANDO_APROVACAO','PUBLICADO','CANCELADO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'MINUTA',
+  `responsavel_assinatura_id` int DEFAULT NULL,
+  `publicado_em` datetime DEFAULT NULL,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `analise_planos_submissoes`
+--
+
+CREATE TABLE `analise_planos_submissoes` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `analise_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `revisao` int UNSIGNED NOT NULL,
+  `descricao` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `recebido_em` date NOT NULL,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `campo_login_tentativas`
+--
+
+CREATE TABLE `campo_login_tentativas` (
+  `id` bigint UNSIGNED NOT NULL,
+  `email_hash` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ip_hash` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sucesso` tinyint(1) NOT NULL DEFAULT '0',
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `campo_sessoes`
+--
+
+CREATE TABLE `campo_sessoes` (
+  `id` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ultimo_acesso_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `expira_em` datetime NOT NULL,
+  `revogado_em` datetime DEFAULT NULL,
+  `ip_hash` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `user_agent_hash` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -69,31 +231,37 @@ INSERT INTO `agendamentos` (`id`, `proposta_id`, `embarcacao_id`, `cliente_id`, 
 --
 
 CREATE TABLE `certificados_cht` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `numero_relatorio_ht` varchar(30) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'N??mero do relat??rio (AM-REL-HT:{n}/{ano})',
-  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
-  `profissional_empresa` varchar(200) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Nome do profissional ou empresa homologada',
-  `cpf_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `atividade_homologada` text COLLATE utf8mb4_general_ci COMMENT 'Atividade t??cnica homologada',
-  `observacoes` text COLLATE utf8mb4_general_ci,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero_certificado` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_relatorio_ht` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'N??mero do relat??rio (AM-REL-HT:{n}/{ano})',
+  `token_assinatura` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `profissional_empresa` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Nome do profissional ou empresa homologada',
+  `cpf_cnpj` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `email_destinatario` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `atividade_homologada` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT 'Atividade t??cnica homologada',
+  `relatorio_homologacao_numero` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `observacoes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `data_emissao` date NOT NULL,
-  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
-  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_validade` date DEFAULT NULL,
+  `local_emissao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'Bel??m-PA',
+  `assinante_nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_assinatura_id` int DEFAULT NULL,
+  `assinatura_imagem` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `assinatura_em` datetime DEFAULT NULL,
   `assinado` tinyint(1) DEFAULT '0',
-  `dados_json` longtext COLLATE utf8mb4_general_ci,
-  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
-  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `dados_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `status` enum('rascunho','emitido','assinado','cancelado') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `caminho_arquivo_pdf` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `despachante_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL
+  `vistoria_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `despachante_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ;
 
 -- --------------------------------------------------------
@@ -103,17 +271,19 @@ CREATE TABLE `certificados_cht` (
 --
 
 CREATE TABLE `certificados_cnarq` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `numero` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
-  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
-  `nome_embarcacao` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
-  `numero_inscricao` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `indicativo_chamada` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo_embarcacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `ano_construcao` varchar(10) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `porto_inscricao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `local_construcao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'Condicional',
+  `token_assinatura` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `nome_embarcacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `numero_inscricao` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `indicativo_chamada` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_embarcacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ano_construcao` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `material_casco` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `porto_inscricao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_construcao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_quilha` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `comprimento_total` decimal(8,2) DEFAULT NULL,
   `comprimento_casco` decimal(8,2) DEFAULT NULL,
   `comprimento_lpp` decimal(8,2) DEFAULT NULL COMMENT 'Comprimento entre perpendiculares',
@@ -122,29 +292,38 @@ CREATE TABLE `certificados_cnarq` (
   `pontal_moldado` decimal(8,2) DEFAULT NULL,
   `arqueacao_bruta` decimal(10,2) DEFAULT NULL COMMENT 'ArqueaÃ§Ã£o bruta (AB)',
   `arqueacao_liquida` decimal(10,2) DEFAULT NULL COMMENT 'ArqueaÃ§Ã£o lÃ­quida (AL)',
-  `metodo_arqueacao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'MÃ©todo utilizado (NORMAM, ConvenÃ§Ã£o, etc)',
-  `relatorio_numero` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `metodo_arqueacao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'MÃ©todo utilizado (NORMAM, ConvenÃ§Ã£o, etc)',
+  `calado_moldado_m` decimal(8,3) DEFAULT NULL,
+  `passageiros_camarotes` int DEFAULT '0',
+  `passageiros_outros` int DEFAULT '0',
+  `espacos_incluidos_ab` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `espacos_incluidos_al` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `espacos_excluidos_m3` decimal(10,2) DEFAULT '0.00',
+  `data_local_arqueacao_original` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_local_ultima_rearqueacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `relatorio_numero` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `data_vistoria` date DEFAULT NULL,
-  `local_vistoria` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_vistoria` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `data_emissao` date NOT NULL,
   `data_validade` date NOT NULL,
-  `local_emissao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'BelÃ©m-PA',
-  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
-  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_emissao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'BelÃ©m-PA',
+  `assinante_nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_assinatura_id` int DEFAULT NULL,
+  `assinatura_imagem` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `assinatura_em` datetime DEFAULT NULL,
   `assinado` tinyint(1) DEFAULT '0',
-  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `caminho_arquivo_pdf` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('rascunho','emitido','assinado','cancelado') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `despachante_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL
+  `vistoria_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `despachante_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -154,55 +333,58 @@ CREATE TABLE `certificados_cnarq` (
 --
 
 CREATE TABLE `certificados_cnbl` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `numero` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
-  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
-  `nome_embarcacao` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
-  `numero_inscricao` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `indicativo_chamada` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `atividades_servicos` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo_embarcacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `ano_construcao` varchar(10) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Condicional',
+  `token_assinatura` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `nome_embarcacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `numero_inscricao` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `porto_inscricao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `indicativo_chamada` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `atividades_servicos` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_embarcacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ano_construcao` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `comprimento_total` decimal(8,2) DEFAULT NULL,
   `comprimento_casco` decimal(8,2) DEFAULT NULL,
   `boca_moldada` decimal(8,2) DEFAULT NULL,
   `pontal_moldado` decimal(8,2) DEFAULT NULL,
-  `arqueacao_bruta` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `area_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `arqueacao_bruta` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_navegacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `area_navegacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `material_casco` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `borda_livre_mm` int DEFAULT NULL,
-  `borda_livre_tipo` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Tipo de borda livre (verÃ£o, tropical, etc)',
+  `borda_livre_tipo` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Tipo de borda livre (verÃ£o, tropical, etc)',
   `calado_maximo_m` decimal(8,2) DEFAULT NULL,
-  `relatorio_numero` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `relatorio_numero` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `data_vistoria` date DEFAULT NULL,
-  `local_vistoria` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_vistoria` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `data_emissao` date NOT NULL,
   `data_validade` date NOT NULL,
-  `local_emissao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'BelÃ©m-PA',
-  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
-  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_emissao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'BelÃ©m-PA',
+  `assinante_nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_assinatura_id` int DEFAULT NULL,
+  `assinatura_imagem` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `assinatura_em` datetime DEFAULT NULL,
   `assinado` tinyint(1) DEFAULT '0',
-  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `caminho_arquivo_pdf` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('rascunho','emitido','assinado','cancelado') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `aresta_superior_linha_conves` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '0 mm',
-  `centro_disco_situado` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '0 mm',
-  `dist_linha_conves_bico_proa` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '',
-  `dist_linha_conves_abaixo_disco` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '',
-  `marca_linha_carga_area1` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '0 mm',
-  `marca_linha_carga_area2` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '0 mm',
-  `acrescimo_agua_salgada` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '0 mm',
-  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `despachante_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL
+  `aresta_superior_linha_conves` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT '0 mm',
+  `centro_disco_situado` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT '0 mm',
+  `dist_linha_conves_bico_proa` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT '',
+  `dist_linha_conves_abaixo_disco` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT '',
+  `marca_linha_carga_area1` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT '0 mm',
+  `marca_linha_carga_area2` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT '0 mm',
+  `acrescimo_agua_salgada` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT '0 mm',
+  `vistoria_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `despachante_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -212,67 +394,56 @@ CREATE TABLE `certificados_cnbl` (
 --
 
 CREATE TABLE `certificados_csn` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `numero` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
-  `tipo` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Definitivo',
-  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
-  `nome_embarcacao` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
-  `numero_inscricao` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `indicativo_chamada` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `atividades_servicos` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo_embarcacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `ano_construcao` varchar(10) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'Definitivo',
+  `token_assinatura` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `emitente` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `nome_embarcacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `numero_inscricao` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `indicativo_chamada` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `atividades_servicos` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_embarcacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ano_construcao` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `comprimento_m` decimal(8,2) DEFAULT NULL,
-  `arqueacao_bruta` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `area_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `fabricante_motor` varchar(300) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `potencia_kw` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `arqueacao_bruta` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_navegacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `area_navegacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `fabricante_motor` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `potencia_kw` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `material_casco` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `autorizado_carga` tinyint(1) DEFAULT '0',
   `qtd_passageiros` int DEFAULT '0',
-  `obs_passageiros` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `relatorio_numero` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `obs_passageiros` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `observacoes_verso` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `relatorio_numero` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `data_vistoria_seco` date DEFAULT NULL,
   `data_vistoria_flutuando` date DEFAULT NULL,
-  `local_vistoria` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_vistoria` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `normam_aplicavel` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_vistoria_certificado` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `acessibilidade_sim` tinyint(1) DEFAULT '0',
   `acessibilidade_nao` tinyint(1) DEFAULT '1',
   `data_emissao` date NOT NULL,
   `data_validade` date NOT NULL,
-  `local_emissao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'BelÃ©m-PA',
-  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
-  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_emissao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'BelÃ©m-PA',
+  `assinante_nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_assinatura_id` int DEFAULT NULL,
+  `assinatura_imagem` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `assinatura_em` datetime DEFAULT NULL,
   `assinado` tinyint(1) DEFAULT '0',
-  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `caminho_arquivo_pdf` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('rascunho','emitido','assinado','cancelado') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL
+  `vistoria_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `certificados_csn`
---
-
-INSERT INTO `certificados_csn` (`id`, `numero`, `tipo`, `token_assinatura`, `nome_embarcacao`, `numero_inscricao`, `indicativo_chamada`, `atividades_servicos`, `tipo_embarcacao`, `ano_construcao`, `comprimento_m`, `arqueacao_bruta`, `tipo_navegacao`, `area_navegacao`, `fabricante_motor`, `potencia_kw`, `material_casco`, `autorizado_carga`, `qtd_passageiros`, `obs_passageiros`, `relatorio_numero`, `data_vistoria_seco`, `data_vistoria_flutuando`, `local_vistoria`, `acessibilidade_sim`, `acessibilidade_nao`, `data_emissao`, `data_validade`, `local_emissao`, `assinante_nome`, `assinante_titulo`, `assinante_registro`, `assinatura_imagem`, `assinatura_ip`, `assinatura_em`, `assinado`, `caminho_arquivo_pdf`, `hash_arquivo_pdf`, `status`, `ativo`, `criado_por`, `criado_em`, `atualizado_em`, `vistoria_id`) VALUES
-('01087135-1331-464f-a498-b1e9ee998faa', 'AM-CSN-10/26', 'Definitivo', '76dfae41b50fb368844271fd47696ffe9d3d9b1d3ac710fee555262458c92dac', 'Barco kds', 'BAL-00632-PA', 'PW3463', '', 'Balsa', '2023', 30.00, '120', 'Interior', 'Cabotagem', '', '', 'Aço', 1, 44, 'veiculo leva passageiros', 'AM-REL-V-5/26', '2026-07-06', '2026-07-06', 'belem', 0, 1, '2026-07-04', '2026-08-04', 'Santarém-PA', 'João Responsável', 'Engenheiro Naval', '123456', NULL, NULL, NULL, 0, NULL, NULL, 'emitido', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-04 05:02:50', '2026-07-04 05:02:50', '8f85d9b9-4606-49ac-8a9e-ce3943829467'),
-('19fc6e8b-2e56-4953-9594-7ba7c8e5ae1f', 'AM-CSN-8/26', 'Provisório', '139477b7049b491084b8acd556b4d135c2941536a2c47a626ab450df3a9a602e', 'Barco kds', 'BAL-00632-PA', 'PW3463', '', 'Balsa', '2023', 30.00, '120', 'Interior', 'Cabotagem', '', '', 'Aço', 1, 44, 'veiculo leva passageiros', 'AM-REL-V-4/26', '2026-07-03', '2026-07-03', 'belem', 0, 1, '2026-07-03', '2026-08-10', 'Manaus-AM', 'João Responsável', 'Engenheiro Naval', '123456', NULL, NULL, NULL, 0, NULL, NULL, 'emitido', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-03 03:38:07', '2026-07-03 03:38:07', '3b14c7df-5078-470a-afd1-41da3958260a'),
-('20b9c99e-3121-4790-bcaf-9c22151be3bd', 'AM-CSN-4/26', 'Definitivo', '2a2f384c2780228d7706693ba244adc85b82bd5f225454db296631a01bf5fffc', 'Barco kds', 'BAL-00632-PA', 'PW3463', '', 'Balsa', '2023', 30.00, '120', 'Interior', 'Cabotagem', '', '', 'Aço', 1, 44, 'veiculo leva passageiros', 'AM-REL-V-4/26', '2026-07-03', '2026-07-03', 'belem', 0, 1, '2026-07-02', '2026-08-02', 'Belém-PA', 'João Responsável', 'Engenheiro Naval', '123456', NULL, NULL, NULL, 0, NULL, NULL, 'emitido', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-03 02:15:58', '2026-07-03 02:15:58', '3b14c7df-5078-470a-afd1-41da3958260a'),
-('6209a5ce-7628-11f1-85ad-621c498e207c', 'CSN-2026-001', 'Definitivo', 'd0c5970cfbf0c3b7e23f0cebb80614dc', 'EMPURADOR VALENTE', 'EMP-001-PA', 'PW1234', 'Rebocagem/Empurra', 'Empurrador', '2018', 18.50, '45', 'Interior', 'Bacia AmazÃ´nica', 'MWM 6.12TCA', '300', 'AÃ§o Naval', 0, 0, NULL, 'VST-2026-001', '2026-07-10', '2026-07-10', 'Estaleiro Rio Maguari - BelÃ©m-PA', 0, 1, '2026-07-10', '2027-07-10', 'BelÃ©m-PA', 'Rosano Silva De Souza', 'Programador', '383034', 'data:image/png;base64,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', '172.23.0.1', '2026-07-02 16:25:10', 1, 'storage/certificados/2026/csn/CSN_CSN-2026-001.pdf', '07553bb010286ddcf9ba7c382dc80b608d8479bf022524b4adbee224cab5499d', 'assinado', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 19:25:10', '620765e4-7628-11f1-85ad-621c498e207c'),
-('620d8e83-7628-11f1-85ad-621c498e207c', 'CSN-2026-002', 'Definitivo', 'e5ec81e1e1cbef4525a9082b6bc167f3', 'BALSA RIO MAR', 'BAL-002-PA', 'PW5678', 'Transporte de Carga', 'Balsa', '2020', 30.00, '120', 'Interior', 'Rio Amazonas e afluentes', NULL, NULL, 'AÃ§o Carbono', 1, 60, NULL, 'VST-2026-002', NULL, '2026-07-15', 'Porto de SantarÃ©m - PA', 1, 0, '2026-07-15', '2027-07-15', 'BelÃ©m-PA', 'Rosano Silva De Souza', 'Programador', '383034', NULL, NULL, NULL, 0, NULL, NULL, 'emitido', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 15:12:04', '620c6b1a-7628-11f1-85ad-621c498e207c'),
-('62120e49-7628-11f1-85ad-621c498e207c', 'CSN-2026-003', 'Definitivo', '013532d2c80badd4757030623f222e3b', 'REBOCADOR FORÃ‡A NAVAL', 'REB-003-PA', 'PW9012', 'Rebocagem portuÃ¡ria e oceÃ¢nica', 'Rebocador', '2022', 22.00, '85', 'Costeiro', 'Costa Norte do Brasil', 'Cummins QSK19', '600', 'AÃ§o Naval', 0, 0, NULL, 'VST-2026-003', '2026-07-20', '2026-07-20', 'Porto de BelÃ©m - Terminal de Carga', 0, 1, '2026-07-20', '2027-07-20', 'BelÃ©m-PA', 'Rosano Silva De Souza', 'Programador', '383034', NULL, NULL, NULL, 0, NULL, NULL, 'emitido', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 15:12:04', '620fefdc-7628-11f1-85ad-621c498e207c'),
-('73bd5dea-d344-4852-83af-a7bb8f1ef629', 'AM-CSN-7/26', 'Definitivo', 'f5e659c7445785c56cdfba3dacc5ce80ad78e3b4aaa34434d08f5e9f4e388787', 'Barco kds', 'BAL-00632-PA', 'PW3463', '', 'Balsa', '2023', 30.00, '120', 'Interior', 'Cabotagem', '', '', 'Aço', 1, 44, 'veiculo leva passageiros', 'AM-REL-V-4/26', '2026-07-03', '2026-07-03', 'belem', 0, 1, '2026-07-03', '2026-08-03', 'Manaus-AM', 'João Responsável', 'Engenheiro Naval', '123456', NULL, NULL, NULL, 0, NULL, NULL, 'emitido', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-03 03:08:27', '2026-07-03 03:08:27', '3b14c7df-5078-470a-afd1-41da3958260a'),
-('8b6582c8-f102-4aa2-bc2d-76d78a258361', 'AM-CSN-9/26', 'Provisório', '7e54b7a137e70ccd18f189b7499c784d6fdcdf6ddecab9f8f67219f6ace437c1', 'Barco kds', 'BAL-00632-PA', 'PW3463', '', 'Balsa', '2023', 30.00, '120', 'Interior', 'Cabotagem', '', '', 'Aço', 1, 44, 'veiculo leva passageiros', 'AM-REL-V-4/26', '2026-07-03', '2026-07-03', 'belem', 0, 1, '2026-07-03', '2026-08-04', 'Santarém-PA', 'João Responsável', 'Engenheiro Naval', '123456', NULL, NULL, NULL, 0, NULL, NULL, 'emitido', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-03 03:40:10', '2026-07-03 03:40:10', '3b14c7df-5078-470a-afd1-41da3958260a'),
-('b6f85830-c806-4e85-913a-e5502c189f73', 'AM-CSN-6/26', 'Definitivo', '2020657c8d7b79011771f6b7329da798ff0ed1dd7ce64e9caf35e69919748c20', 'Barco kds', 'BAL-00632-PA', 'PW3463', '', 'Balsa', '2023', 30.00, '120', 'Interior', 'Cabotagem', '', '', 'Aço', 1, 44, 'veiculo leva passageiros', 'AM-REL-V-4/26', '2026-07-03', '2026-07-03', 'belem', 0, 1, '2026-07-02', '2026-08-02', 'Belém-PA', 'João Responsável', 'Engenheiro Naval', '123456', 'data:image/png;base64,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', '172.23.0.1', '2026-07-03 00:00:16', 1, 'storage/certificados/2026/csn/CSN_AM-CSN-6-26.pdf', '725c4624408298fe63c026b59322987f27bca0a063105c9d76fccba6a5d27ab2', 'assinado', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-03 02:17:09', '2026-07-03 03:00:16', '3b14c7df-5078-470a-afd1-41da3958260a'),
-('d701806a-b045-4d7e-aab6-ad29ef5b7157', 'AM-CSN-5/26', 'Definitivo', '85981cc959f02f6d61d4f4ae6effcbf2406e41127650d2179c40358365e29a59', 'Barco kds', 'BAL-00632-PA', 'PW3463', '', 'Balsa', '2023', 30.00, '120', 'Interior', 'Cabotagem', '', '', 'Aço', 1, 44, 'veiculo leva passageiros', 'AM-REL-V-4/26', '2026-07-03', '2026-07-03', 'belem', 0, 1, '2026-07-02', '2026-08-02', 'Belém-PA', 'João Responsável', 'Engenheiro Naval', '123456', NULL, NULL, NULL, 0, NULL, NULL, 'emitido', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-03 02:16:37', '2026-07-03 02:16:37', '3b14c7df-5078-470a-afd1-41da3958260a');
 
 -- --------------------------------------------------------
 
@@ -281,17 +452,17 @@ INSERT INTO `certificados_csn` (`id`, `numero`, `tipo`, `token_assinatura`, `nom
 --
 
 CREATE TABLE `certificados_lc` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `numero_lc` varchar(30) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'N??mero da licen??a (AM-LC:{n}/{ano} ou AM-EC:{n}/{ano})',
-  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'ID da embarca????o no cadastro',
-  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
-  `tipo_licenca` enum('LC','LA','LR','LCEC') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'LC',
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero_lc` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'N??mero da licen??a (AM-LC:{n}/{ano} ou AM-EC:{n}/{ano})',
+  `embarcacao_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'ID da embarca????o no cadastro',
+  `token_assinatura` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_licenca` enum('LC','LA','LR','LCEC') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'LC',
   `data_termino_construcao` date DEFAULT NULL,
-  `nome_embarcacao` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
-  `tipo_embarcacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `numero_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `sociedade_classificadora` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `nome_embarcacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_embarcacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_casco` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `material_casco` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `sociedade_classificadora` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `comprimento_total` decimal(8,2) DEFAULT NULL,
   `comprimento_pp` decimal(8,2) DEFAULT NULL COMMENT 'Comprimento entre perpendiculares',
   `boca_moldada` decimal(8,2) DEFAULT NULL,
@@ -300,36 +471,38 @@ CREATE TABLE `certificados_lc` (
   `porte_bruto` decimal(10,2) DEFAULT NULL,
   `numero_tripulantes` int DEFAULT NULL,
   `numero_passageiros` int DEFAULT NULL,
-  `tipo_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `area_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `atividade_servico` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `propulsao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `proprietario_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `proprietario_cpf_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `proprietario_endereco` text COLLATE utf8mb4_general_ci,
-  `estaleiro_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `estaleiro_cpf_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `estaleiro_endereco` text COLLATE utf8mb4_general_ci,
+  `tipo_navegacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `area_navegacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `atividade_servico` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `propulsao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario_nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario_cpf_cnpj` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario_endereco` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `estaleiro_nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_cpf_cnpj` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_endereco` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `data_emissao` date NOT NULL,
   `data_validade` date DEFAULT NULL,
-  `local_emissao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'Bel??m-PA',
-  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
-  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_emissao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'Bel??m-PA',
+  `relatorio_numero` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_assinatura_id` int DEFAULT NULL,
+  `assinatura_imagem` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `assinatura_em` datetime DEFAULT NULL,
   `assinado` tinyint(1) DEFAULT '0',
-  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `dados_json` longtext COLLATE utf8mb4_general_ci,
-  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `caminho_arquivo_pdf` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `dados_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `status` enum('rascunho','emitido','assinado','cancelado') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `despachante_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL
+  `vistoria_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `despachante_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ;
 
 -- --------------------------------------------------------
@@ -339,45 +512,47 @@ CREATE TABLE `certificados_lc` (
 --
 
 CREATE TABLE `certificados_lp` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `numero_lp` varchar(30) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'N??mero da licen??a (AM-LP:{n}/{ano})',
-  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'ID da embarca????o no cadastro',
-  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
-  `tipo_licenca` enum('construcao','alteracao','reclassificacao','lcec') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'construcao',
-  `nome_embarcacao` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
-  `tipo_embarcacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `numero_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero_lp` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'N??mero da licen??a (AM-LP:{n}/{ano})',
+  `embarcacao_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'ID da embarca????o no cadastro',
+  `token_assinatura` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_licenca` enum('construcao','alteracao','reclassificacao','lcec') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'construcao',
+  `nome_embarcacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_embarcacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_casco` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `material_casco` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `comprimento_total` decimal(8,2) DEFAULT NULL,
   `boca_moldada` decimal(8,2) DEFAULT NULL,
   `pontal_moldado` decimal(8,2) DEFAULT NULL,
-  `proprietario_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `proprietario_cpf_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `proprietario_endereco` text COLLATE utf8mb4_general_ci,
-  `estaleiro_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `estaleiro_cpf_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `estaleiro_endereco` text COLLATE utf8mb4_general_ci,
-  `observacoes_exigencias` text COLLATE utf8mb4_general_ci,
+  `proprietario_nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario_cpf_cnpj` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario_endereco` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `estaleiro_nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_cpf_cnpj` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_endereco` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `observacoes_exigencias` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `data_emissao` date NOT NULL,
   `validade_dias` int DEFAULT NULL COMMENT 'Validade em dias',
   `validade_data` date DEFAULT NULL COMMENT 'Data de validade calculada',
-  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
-  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_requerimento` date DEFAULT NULL,
+  `assinante_nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_assinatura_id` int DEFAULT NULL,
+  `assinatura_imagem` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `assinatura_em` datetime DEFAULT NULL,
   `assinado` tinyint(1) DEFAULT '0',
-  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `dados_json` longtext COLLATE utf8mb4_general_ci,
-  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `caminho_arquivo_pdf` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `dados_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `status` enum('rascunho','emitido','assinado','cancelado') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `despachante_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL
+  `vistoria_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `despachante_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ;
 
 -- --------------------------------------------------------
@@ -387,14 +562,15 @@ CREATE TABLE `certificados_lp` (
 --
 
 CREATE TABLE `cert_convalidacoes` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `tipo_certificado` enum('CNBL','CNARQ') COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Tipo de certificado ao qual a convalidaÃ§Ã£o pertence',
-  `certificado_id` char(36) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'ID do certificado (certificados_cnbl ou certificados_cnarq)',
-  `numero_vistoria` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Ex: 1Âª VIST. ANUAL, 2Âª VIST. ANUAL, etc',
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `tipo_certificado` enum('CNBL') COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Convalidacoes exclusivas do certificado CNBL',
+  `certificado_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'ID do certificado (certificados_cnbl ou certificados_cnarq)',
+  `numero_vistoria` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Ex: 1Âª VIST. ANUAL, 2Âª VIST. ANUAL, etc',
   `data_inicio` date DEFAULT NULL,
   `data_fim` date DEFAULT NULL,
-  `local_data` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `vistoriador` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL
+  `local_data` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vistoriador` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `atualizado_em` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -404,45 +580,24 @@ CREATE TABLE `cert_convalidacoes` (
 --
 
 CREATE TABLE `clientes` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `nome` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
-  `tipo_pessoa` enum('PF','PJ') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PF',
-  `cpf_cnpj` varchar(18) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `perfil` enum('armador','proprietario','despachante') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'proprietario',
-  `telefone` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `email` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `endereco` text COLLATE utf8mb4_general_ci,
-  `status` enum('ATIVO','INATIVO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ATIVO',
-  `tipo_recebimento` enum('pix','cc') COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `chave_pix` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `banco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `agencia` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `conta` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_pessoa` enum('PF','PJ') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PF',
+  `cpf_cnpj` varchar(18) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `perfil` enum('armador','proprietario','despachante') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'proprietario',
+  `telefone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `email` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `endereco` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `status` enum('ATIVO','INATIVO') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ATIVO',
+  `tipo_recebimento` enum('pix','cc') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `chave_pix` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `banco` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `agencia` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `conta` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `clientes`
---
-
-INSERT INTO `clientes` (`id`, `nome`, `tipo_pessoa`, `cpf_cnpj`, `perfil`, `telefone`, `email`, `endereco`, `status`, `tipo_recebimento`, `chave_pix`, `banco`, `agencia`, `conta`, `criado_por`, `criado_em`, `atualizado_em`) VALUES
-('18aa7dc6-9623-4bdf-8bb9-e73b9d449100', 'Marcelo Augusto Pereira', 'PF', '18219822821', 'despachante', '(91) 98934-0244', NULL, 'Passagem Monte Crist\r\nCasa 44', 'ATIVO', 'pix', '9193982348', NULL, NULL, NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 22:17:48', '2026-07-02 22:17:48'),
-('60977320-a7d1-49a7-8471-4909c5530d79', 'Armador Souza', 'PF', '12345678900', 'armador', NULL, 'ronoktert020@gmail.com', NULL, 'ATIVO', NULL, NULL, NULL, NULL, NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 22:14:12', '2026-07-02 22:35:25'),
-('620624f7-7628-11f1-85ad-621c498e207c', 'Transportes Amaz?nia Ltda', 'PJ', '12.345.678/0001-90', 'armador', '(91) 3222-1000', 'contato@transportesamazonia.com.br', 'Av. Presidente Vargas, 500 - Belém-PA', 'INATIVO', 'pix', '12.345.678/0001-90', NULL, NULL, NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-04 04:56:27'),
-('62062969-7628-11f1-85ad-621c498e207c', 'Jo?o Batista da Silva', 'PF', '123.456.789-00', 'proprietario', '(91) 98765-4321', 'joao.silva@email.com', 'Rua dos navegantes, 150 - Belém-PA', 'INATIVO', 'cc', NULL, 'Banco do Brasil', '1234-5', '67890-1', '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-04 04:56:48'),
-('62062e07-7628-11f1-85ad-621c498e207c', 'Despachos Ribeiro Ltda', 'PJ', '98.765.432/0001-10', 'despachante', '(91) 3223-2000', 'despachos@ribeiro.com.br', 'Travessa 14 de Março, 200 - Belém-PA', 'ATIVO', 'pix', 'despachos@ribeiro.com.br', NULL, NULL, NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 18:19:05'),
-('620b1381-7628-11f1-85ad-621c498e207c', 'Navega??o Rio Mar S/A', 'PJ', '23.456.789/0001-01', 'armador', '(93) 3522-3000', 'contato@riomar.com.br', 'Rua do Comércio, 100 - Santarém-PA', 'INATIVO', 'pix', '23.456.789/0001-01', NULL, NULL, NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-04 04:56:32'),
-('620b1780-7628-11f1-85ad-621c498e207c', 'Maria dos Santos Oliveira', 'PF', '234.567.890-00', 'proprietario', '(93) 98888-1111', 'maria.oliveira@email.com', 'Av. Tapajós, 500 - Santarém-PA', 'ATIVO', 'cc', NULL, 'Caixa EconÃ´mica', '0123-4', '54321-0', '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 18:19:05'),
-('620b1c1e-7628-11f1-85ad-621c498e207c', 'Santos Despachos Mar?timos', 'PJ', '87.654.321/0001-00', 'despachante', '(93) 3522-4000', 'despachos@santosmar.com.br', 'Travessa do Porto, 50 - Santarém-PA', 'ATIVO', 'cc', NULL, 'Bradesco', '7890-1', '12345-6', '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 18:19:50'),
-('620ebfc8-7628-11f1-85ad-621c498e207c', 'Marinha Mercante do Par? Ltda', 'PJ', '34.567.890/0001-02', 'armador', '(91) 3244-5000', 'contato@marinhamercantepa.com.br', 'Av. Almirante Barroso, 800 - Belém-PA', 'INATIVO', 'pix', '34.567.890/0001-02', NULL, NULL, NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-04 04:56:34'),
-('620ec3a6-7628-11f1-85ad-621c498e207c', 'Pedro Henrique Almeida', 'PF', '345.678.901-00', 'proprietario', '(91) 97777-2222', 'pedro.almeida@email.com', 'Rua dos Caripunas, 300 - Belém-PA', 'ATIVO', 'pix', 'pedro.almeida@email.com', NULL, NULL, NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 18:19:05'),
-('620ec773-7628-11f1-85ad-621c498e207c', 'Bel?m Despachos Navais', 'PJ', '76.543.210/0001-99', 'despachante', '(91) 3244-6000', 'contato@belemdespachos.com.br', 'Travessa Padre Eutíquio, 180 - Belém-PA', 'ATIVO', 'cc', NULL, 'ItaÃº', '5678-9', '98765-4', '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 18:19:50'),
-('64e60ad7-3a78-4db0-9e03-cc529d935325', 'Rosano Silva de Souza', 'PF', '38303451863', 'proprietario', '(91) 98934-0275', 'ronokedas2021@gmail.com', 'Rua presidente costa e silva', 'ATIVO', NULL, NULL, NULL, NULL, NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 19:37:22', '2026-07-03 13:16:09'),
-('97e777dd-763d-11f1-85ad-621c498e207c', 'Propriet?rio Teste', 'PF', '11111111111', 'proprietario', NULL, 'prop@teste.com', NULL, 'INATIVO', NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-02 17:43:53', '2026-07-04 04:56:53'),
-('97e7d8c6-763d-11f1-85ad-621c498e207c', 'Armador Teste', 'PF', '22222222222', 'armador', NULL, 'arm@teste.com', NULL, 'ATIVO', NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-02 17:43:53', '2026-07-02 17:43:53'),
-('97e84847-763d-11f1-85ad-621c498e207c', 'Despachante Teste', 'PF', '33333333333', 'despachante', NULL, 'desp@teste.com', NULL, 'ATIVO', NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-02 17:43:53', '2026-07-02 17:43:53');
 
 -- --------------------------------------------------------
 
@@ -451,22 +606,17 @@ INSERT INTO `clientes` (`id`, `nome`, `tipo_pessoa`, `cpf_cnpj`, `perfil`, `tele
 --
 
 CREATE TABLE `clientes_embarcacoes` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `embarcacao_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `status` enum('ATIVO','INATIVO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ATIVO',
+  `vinculado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `desvinculado_em` datetime DEFAULT NULL,
+  `vinculado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `desvinculado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vinculo_ativo_chave` varchar(73) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `clientes_embarcacoes`
---
-
-INSERT INTO `clientes_embarcacoes` (`id`, `cliente_id`, `embarcacao_id`, `criado_em`) VALUES
-('5b4549e8-76e1-11f1-9eb5-0a1b2af87b16', '64e60ad7-3a78-4db0-9e03-cc529d935325', '05a94606-59fe-4371-afbc-b7b094df2676', '2026-07-03 13:16:09'),
-('5dd6b338-7666-11f1-9eb5-0a1b2af87b16', '60977320-a7d1-49a7-8471-4909c5530d79', '05a94606-59fe-4371-afbc-b7b094df2676', '2026-07-02 22:35:45'),
-('620693c4-7628-11f1-85ad-621c498e207c', '62062969-7628-11f1-85ad-621c498e207c', '6205b1f7-7628-11f1-85ad-621c498e207c', '2026-07-02 15:12:04'),
-('620b8d58-7628-11f1-85ad-621c498e207c', '620b1780-7628-11f1-85ad-621c498e207c', '620a9dfa-7628-11f1-85ad-621c498e207c', '2026-07-02 15:12:04'),
-('620f2d75-7628-11f1-85ad-621c498e207c', '620ec3a6-7628-11f1-85ad-621c498e207c', '620e4464-7628-11f1-85ad-621c498e207c', '2026-07-02 15:12:04');
 
 -- --------------------------------------------------------
 
@@ -475,9 +625,42 @@ INSERT INTO `clientes_embarcacoes` (`id`, `cliente_id`, `embarcacao_id`, `criado
 --
 
 CREATE TABLE `clientes_tipos_embarcacao` (
-  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `tipo_embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_embarcacao_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `cliente_password_resets`
+--
+
+CREATE TABLE `cliente_password_resets` (
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `token_hash` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `expira_em` datetime NOT NULL,
+  `usado_em` datetime DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `cliente_portal_acessos`
+--
+
+CREATE TABLE `cliente_portal_acessos` (
+  `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `login` varchar(190) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `senha_hash` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `forcar_troca_senha` tinyint(1) NOT NULL DEFAULT '1',
+  `ultimo_login_em` datetime DEFAULT NULL,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -487,9 +670,9 @@ CREATE TABLE `clientes_tipos_embarcacao` (
 --
 
 CREATE TABLE `configuracoes` (
-  `chave` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `valor` text COLLATE utf8mb4_general_ci NOT NULL,
-  `descricao` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `chave` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `valor` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `descricao` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -500,7 +683,9 @@ CREATE TABLE `configuracoes` (
 INSERT INTO `configuracoes` (`chave`, `valor`, `descricao`, `atualizado_em`) VALUES
 ('acesso_documentacao_usuarios', '[3774]', 'IDs dos usuários com acesso à documentação', '2026-06-29 06:38:14'),
 ('backup_email', 'ronokedas2020@gmail.com', 'E-mail para receber backups do banco de dados', '2026-06-29 05:22:15'),
-('meta_mensal', '80000.00', 'Meta mensal de faturamento comercial em R$', '2026-06-29 05:21:47'),
+('dados_teste_embarcacoes', '1', 'Exibe o preenchimento rápido com dados fictícios no cadastro de embarcações', '2026-07-19 02:29:40'),
+('meta_mensagem', 'Ao bater a meta, teremos um dia especial com toda a equipe.', 'Mensagem da meta mensal exibida para a equipe', '2026-07-16 17:48:32'),
+('meta_mensal', '180000.00', 'Meta mensal de faturamento comercial em R$', '2026-07-06 22:49:46'),
 ('responsavel_assinatura_cargo', 'Engenheiro Naval', NULL, '2026-07-02 17:34:06'),
 ('responsavel_assinatura_nome', 'João Responsável', NULL, '2026-07-02 17:34:06'),
 ('responsavel_assinatura_registro', 'CREA 123456', NULL, '2026-07-02 17:34:06');
@@ -512,26 +697,26 @@ INSERT INTO `configuracoes` (`chave`, `valor`, `descricao`, `atualizado_em`) VAL
 --
 
 CREATE TABLE `contratos` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `proposta_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `numero` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `status` enum('MINUTA','AGUARDANDO_ASSINATURA','ASSINADO','CANCELADO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'MINUTA',
-  `frequencia` enum('ÃšNICA','MENSAL','TRIMESTRAL','SEMESTRAL','ANUAL') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ÃšNICA',
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `proposta_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `numero` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('MINUTA','AGUARDANDO_ASSINATURA','ASSINADO','CANCELADO') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'MINUTA',
+  `frequencia` enum('ÃšNICA','MENSAL','TRIMESTRAL','SEMESTRAL','ANUAL') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ÃšNICA',
   `dia_vencimento` tinyint DEFAULT NULL,
   `proximo_faturamento` date DEFAULT NULL,
   `renovacao_automatica` tinyint(1) NOT NULL DEFAULT '1',
   `data_emissao` date DEFAULT NULL,
   `data_vencimento` date DEFAULT NULL,
   `valor_total` decimal(10,2) DEFAULT NULL,
-  `conteudo` longtext COLLATE utf8mb4_general_ci,
-  `assinado_por` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinado_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `conteudo` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `assinado_por` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinado_ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `assinado_em` datetime DEFAULT NULL,
-  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `caminho_arquivo_pdf` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -543,61 +728,15 @@ CREATE TABLE `contratos` (
 --
 
 CREATE TABLE `csn_convalidacoes` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `certificado_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `numero_vistoria` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `certificado_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `numero_vistoria` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `data_inicio` date DEFAULT NULL,
   `data_fim` date DEFAULT NULL,
-  `local_data` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `vistoriador` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL
+  `local_data` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vistoriador` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `atualizado_em` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `csn_convalidacoes`
---
-
-INSERT INTO `csn_convalidacoes` (`id`, `certificado_id`, `numero_vistoria`, `data_inicio`, `data_fim`, `local_data`, `vistoriador`) VALUES
-('019112dd-ad23-4764-b6ab-de7f6e7aeaf2', 'd701806a-b045-4d7e-aab6-ad29ef5b7157', '8ª VIST. ANUAL', '2034-04-03', '2034-10-03', '', ''),
-('09853871-8d06-4d63-a1a5-bfa20a86d704', 'd701806a-b045-4d7e-aab6-ad29ef5b7157', '2ª VIST. ANUAL', '2028-04-03', '2028-10-03', '', ''),
-('0a8b8b61-cb8f-4910-ab76-d8f14dac4680', 'b6f85830-c806-4e85-913a-e5502c189f73', '6ª VIST. ANUAL', '2032-04-03', '2032-10-03', '', ''),
-('18621452-b089-45b0-adff-ed78d495e69d', '01087135-1331-464f-a498-b1e9ee998faa', '1ª VIST. ANUAL', '2027-04-06', '2027-10-06', '', ''),
-('1a1ad8b2-4396-4f95-b1fc-d0adf75d8fac', '20b9c99e-3121-4790-bcaf-9c22151be3bd', '6ª VIST. ANUAL', '2032-04-03', '2032-10-03', '', ''),
-('1b876786-56f9-4ec1-b323-1d00a44e30d4', 'd701806a-b045-4d7e-aab6-ad29ef5b7157', '9ª VIST. ANUAL', '2035-04-03', '2035-10-03', '', ''),
-('234d1c72-9b15-45b7-b1d1-ba804d06de76', '01087135-1331-464f-a498-b1e9ee998faa', '4ª VIST. ANUAL', '2030-04-06', '2030-10-06', '', ''),
-('2f169c9f-4206-4720-8523-f4926c31b470', 'b6f85830-c806-4e85-913a-e5502c189f73', '4ª VIST. ANUAL', '2030-04-03', '2030-10-03', '', ''),
-('3aff2e02-8f29-4331-9bf2-012cf4a0490f', 'b6f85830-c806-4e85-913a-e5502c189f73', '1ª VIST. ANUAL', '2027-04-03', '2027-10-03', '', ''),
-('3fcc295f-2818-477c-82e0-ec07b7a64ca0', '01087135-1331-464f-a498-b1e9ee998faa', '6ª VIST. ANUAL', '2032-04-06', '2032-10-06', '', ''),
-('4742173a-7317-44d1-a594-0d684448ebca', '20b9c99e-3121-4790-bcaf-9c22151be3bd', '7ª VIST. ANUAL', '2033-04-03', '2033-10-03', '', ''),
-('620a1fa6-7628-11f1-85ad-621c498e207c', '6209a5ce-7628-11f1-85ad-621c498e207c', 'VST-2026-001', '2026-07-10', '2026-07-10', 'BelÃ©m-PA', 'Carlos Mendes'),
-('620a2125-7628-11f1-85ad-621c498e207c', '6209a5ce-7628-11f1-85ad-621c498e207c', 'VST-2026-001', '2026-07-10', '2027-01-10', 'BelÃ©m-PA', 'Carlos Mendes'),
-('620e0215-7628-11f1-85ad-621c498e207c', '620d8e83-7628-11f1-85ad-621c498e207c', 'VST-2026-002', '2026-07-15', '2026-07-15', 'SantarÃ©m-PA', 'Ana Paula Silva'),
-('62127a80-7628-11f1-85ad-621c498e207c', '62120e49-7628-11f1-85ad-621c498e207c', 'VST-2026-003', '2026-07-20', '2026-07-20', 'BelÃ©m-PA', 'Roberto Lima'),
-('62127c95-7628-11f1-85ad-621c498e207c', '62120e49-7628-11f1-85ad-621c498e207c', 'VST-2026-003', '2026-07-20', '2027-01-20', 'BelÃ©m-PA', 'Roberto Lima'),
-('6502c6c6-4f1f-4c3e-8c45-dc57ed985bcd', '20b9c99e-3121-4790-bcaf-9c22151be3bd', '2ª VIST. ANUAL', '2028-04-03', '2028-10-03', '', ''),
-('67996c41-76ca-4335-a454-0cdf9f3b9216', 'd701806a-b045-4d7e-aab6-ad29ef5b7157', '4ª VIST. ANUAL', '2030-04-03', '2030-10-03', '', ''),
-('69611336-d208-46d7-a382-f00b0d2905d2', 'b6f85830-c806-4e85-913a-e5502c189f73', '3ª VIST. ANUAL', '2029-04-03', '2029-10-03', '', ''),
-('6c377849-d3eb-4085-917f-cbdf66378cef', 'b6f85830-c806-4e85-913a-e5502c189f73', '7ª VIST. ANUAL', '2033-04-03', '2033-10-03', '', ''),
-('79f6b83b-3784-4429-a0a6-3b6d126fbafb', '01087135-1331-464f-a498-b1e9ee998faa', '2ª VIST. ANUAL', '2028-04-06', '2028-10-06', '', ''),
-('7aa6be26-92df-4f23-b90c-0ffd50dd4c5e', 'b6f85830-c806-4e85-913a-e5502c189f73', '5ª VIST. ANUAL', '2031-04-03', '2031-10-03', '', ''),
-('7b6ece00-b960-4d49-b6d1-8c56d08c6733', '01087135-1331-464f-a498-b1e9ee998faa', '7ª VIST. ANUAL', '2033-04-06', '2033-10-06', '', ''),
-('7d646703-b353-4438-9433-68c75cf44f7c', '20b9c99e-3121-4790-bcaf-9c22151be3bd', '5ª VIST. ANUAL', '2031-04-03', '2031-10-03', '', ''),
-('7f3e4871-8a7f-450b-b74b-aa6dc28aa198', '20b9c99e-3121-4790-bcaf-9c22151be3bd', '9ª VIST. ANUAL', '2035-04-03', '2035-10-03', '', ''),
-('868d537c-bafb-421f-bdca-1fa62e9f394a', '01087135-1331-464f-a498-b1e9ee998faa', '8ª VIST. ANUAL', '2034-04-06', '2034-10-06', '', ''),
-('8ffaf9b3-d64f-415b-b56b-bae0b62eedd4', 'd701806a-b045-4d7e-aab6-ad29ef5b7157', '7ª VIST. ANUAL', '2033-04-03', '2033-10-03', '', ''),
-('b3ced32b-9399-4ab2-91b9-0f299652f62c', '01087135-1331-464f-a498-b1e9ee998faa', '3ª VIST. ANUAL', '2029-04-06', '2029-10-06', '', ''),
-('ba47fd12-ef9c-42e3-a887-957c551bfb37', '20b9c99e-3121-4790-bcaf-9c22151be3bd', '4ª VIST. ANUAL', '2030-04-03', '2030-10-03', '', ''),
-('bdb0ad75-3f7a-44f6-84b6-4db465f4c5e7', 'b6f85830-c806-4e85-913a-e5502c189f73', '2ª VIST. ANUAL', '2028-04-03', '2028-10-03', '', ''),
-('c074507c-d0ab-4f48-9693-aaea7355e1e5', 'd701806a-b045-4d7e-aab6-ad29ef5b7157', '1ª VIST. ANUAL', '2027-04-03', '2027-10-03', '', ''),
-('c91283f3-a839-4378-b6b5-0cf84cc61b2e', '20b9c99e-3121-4790-bcaf-9c22151be3bd', '3ª VIST. ANUAL', '2029-04-03', '2029-10-03', '', ''),
-('d2b0a36b-ca65-4ca5-a914-867a9f10e353', 'd701806a-b045-4d7e-aab6-ad29ef5b7157', '6ª VIST. ANUAL', '2032-04-03', '2032-10-03', '', ''),
-('d44d6e38-e699-4fec-92b1-bb2099e745f5', 'b6f85830-c806-4e85-913a-e5502c189f73', '9ª VIST. ANUAL', '2035-04-03', '2035-10-03', '', ''),
-('dc40df84-769d-4f51-bce3-a08d79ecb456', 'd701806a-b045-4d7e-aab6-ad29ef5b7157', '5ª VIST. ANUAL', '2031-04-03', '2031-10-03', '', ''),
-('dc4854e3-e684-41ea-8fd1-9107e8a90458', '01087135-1331-464f-a498-b1e9ee998faa', '9ª VIST. ANUAL', '2035-04-06', '2035-10-06', '', ''),
-('dd9e9f5a-54ec-4b15-9b74-6738f58f83a5', 'd701806a-b045-4d7e-aab6-ad29ef5b7157', '3ª VIST. ANUAL', '2029-04-03', '2029-10-03', '', ''),
-('e2c33fd6-5408-4f5f-bbae-8c089f303e5a', '20b9c99e-3121-4790-bcaf-9c22151be3bd', '1ª VIST. ANUAL', '2027-04-03', '2027-10-03', '', ''),
-('e30f012d-1734-42b3-bacf-67408d904ce8', 'b6f85830-c806-4e85-913a-e5502c189f73', '8ª VIST. ANUAL', '2034-04-03', '2034-10-03', '', ''),
-('e4998384-a822-4b04-af64-f6a2ced0591d', '01087135-1331-464f-a498-b1e9ee998faa', '5ª VIST. ANUAL', '2031-04-06', '2031-10-06', '', ''),
-('e7f66af8-a8f2-4ea1-b514-6bc7290a001b', '20b9c99e-3121-4790-bcaf-9c22151be3bd', '8ª VIST. ANUAL', '2034-04-03', '2034-10-03', '', '');
 
 -- --------------------------------------------------------
 
@@ -606,10 +745,101 @@ INSERT INTO `csn_convalidacoes` (`id`, `certificado_id`, `numero_vistoria`, `dat
 --
 
 CREATE TABLE `csn_distribuicao_passageiros` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `certificado_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `local_nome` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `quantidade` int DEFAULT '0'
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `certificado_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `item_codigo` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_nome` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `quantidade` int DEFAULT '0',
+  `conves_principal` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `conves_superior` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `area_lazer` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `unidade` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `documento_aprovacoes`
+--
+
+CREATE TABLE `documento_aprovacoes` (
+  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `documento_tipo` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `documento_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `versao` int UNSIGNED NOT NULL DEFAULT '1',
+  `responsavel_id` int NOT NULL,
+  `aprovador_usuario_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `responsavel_nome` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `responsavel_cpf_cnpj` varchar(18) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `responsavel_cargo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `responsavel_registro` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `aprovador_nome` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `assinatura_arquivo` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `assinatura_hash` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `aprovado_em_utc` datetime NOT NULL,
+  `aprovado_em_local` datetime NOT NULL,
+  `fuso_horario` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'America/Sao_Paulo',
+  `utc_offset` varchar(6) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `latitude` decimal(10,8) NOT NULL,
+  `longitude` decimal(11,8) NOT NULL,
+  `geo_precisao_m` decimal(10,2) DEFAULT NULL,
+  `ip` varchar(45) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_agent` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `hash_pdf_original` char(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `hash_pdf_final` char(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `caminho_pdf_original` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `caminho_pdf_final` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `token_validacao` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('PROCESSANDO','APROVADO','FALHA','CANCELADO') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PROCESSANDO',
+  `padrao_assinatura` enum('AUDIT_ONLY','PADES_ICP_BRASIL') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'AUDIT_ONLY',
+  `status_pades` enum('NAO_APLICADO','APLICADO','INVALIDO') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NAO_APLICADO',
+  `provedor_assinatura` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `certificado_titular` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `certificado_serial` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `certificado_valido_de` datetime DEFAULT NULL,
+  `certificado_valido_ate` datetime DEFAULT NULL,
+  `erro_processamento` varchar(1000) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `documento_artefatos`
+--
+
+CREATE TABLE `documento_artefatos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `documento_tipo` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `documento_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `versao` int UNSIGNED NOT NULL DEFAULT '1',
+  `status_documento` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `caminho_arquivo` varchar(500) COLLATE utf8mb4_general_ci NOT NULL,
+  `nome_arquivo` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `mime_type` varchar(100) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'application/pdf',
+  `tamanho_bytes` bigint UNSIGNED NOT NULL,
+  `sha256` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `email_logs`
+--
+
+CREATE TABLE `email_logs` (
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `destinatario` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'E-mail do destinat??rio',
+  `assunto` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Assunto do e-mail enviado',
+  `tipo` enum('proposta','agendamento','certificado','assinatura','alerta_vencimento','portal_acesso','portal_recuperacao_senha') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `referencia_tipo` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Tipo da entidade referenciada (ex: propostas, certificados_cnbl)',
+  `referencia_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'ID da entidade referenciada',
+  `status` enum('enviado','erro') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'enviado' COMMENT 'Status do envio',
+  `mensagem_erro` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT 'Mensagem de erro se o envio falhou',
+  `enviado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'ID do usu??rio que enviou',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT 'Data/hora do envio'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -619,68 +849,82 @@ CREATE TABLE `csn_distribuicao_passageiros` (
 --
 
 CREATE TABLE `embarcacoes` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `proprietario_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `nome` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
-  `tipo` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo_embarcacao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo_embarcacao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `proprietario_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `nome` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_embarcacao_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_embarcacao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cnbl_tipo_embarcacao` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `possui_propulsao` tinyint(1) DEFAULT NULL,
-  `fabricante_motor` varchar(300) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `potencia_kw` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `registro` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `proprietario` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `fabricante_motor` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `modelo_motor` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_motor` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `potencia_kw` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `registro` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `ano` int DEFAULT NULL,
-  `cliente_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `comprimento_total` decimal(8,2) DEFAULT NULL,
   `comprimento_casco` decimal(8,2) DEFAULT NULL,
   `comprimento_lpp` decimal(8,2) DEFAULT NULL,
   `pontal_moldado` decimal(8,2) DEFAULT NULL,
   `boca_moldada` decimal(8,2) DEFAULT NULL,
   `boca_maxima` decimal(8,2) DEFAULT NULL,
-  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo_servico` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `area_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `arqueacao_bruta` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `numero_inscricao` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `porto_inscricao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `indicativo_chamada` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `material_casco` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_servico` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_navegacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `area_navegacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cnbl_area_navegacao` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `arqueacao_bruta` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_inscricao` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `porto_inscricao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `indicativo_chamada` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `numero_tripulantes` int DEFAULT '0',
   `numero_passageiros_n1` int DEFAULT '0',
   `numero_passageiros_n2` int DEFAULT '0',
-  `observacoes` text COLLATE utf8mb4_general_ci,
+  `observacoes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `foto_chave` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `foto_url` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `foto_nome_original` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `foto_mime_type` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `foto_tamanho_bytes` bigint UNSIGNED DEFAULT NULL,
+  `foto_sha256` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `foto_atualizada_em` datetime DEFAULT NULL,
+  `foto_atualizada_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `autorizado_carga` tinyint(1) DEFAULT NULL,
-  `obs_passageiros` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `obs_passageiros` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `acessibilidade` tinyint(1) DEFAULT NULL,
-  `local_construcao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_construcao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_casco` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `porte_bruto` decimal(10,2) DEFAULT NULL,
+  `estaleiro_nome` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_cpf_cnpj` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_endereco` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `arqueacao_liquida` decimal(10,2) DEFAULT NULL,
-  `metodo_arqueacao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `metodo_arqueacao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cnarq_data_quilha` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cnarq_calado_moldado_m` decimal(8,3) DEFAULT NULL,
+  `cnarq_espacos_incluidos_ab` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `cnarq_espacos_incluidos_al` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `cnarq_espacos_excluidos_m3` decimal(10,2) DEFAULT NULL,
+  `cnarq_data_local_arqueacao_original` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cnarq_data_local_ultima_rearqueacao` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `borda_livre_mm` int DEFAULT NULL,
-  `borda_livre_tipo` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `borda_livre_tipo` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `calado_maximo_m` decimal(8,2) DEFAULT NULL,
-  `aresta_superior_linha_conves` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `centro_disco_situado` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `dist_linha_conves_bico_proa` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `dist_linha_conves_abaixo_disco` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `marca_linha_carga_area1` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `marca_linha_carga_area2` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `acrescimo_agua_salgada` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL
+  `aresta_superior_linha_conves` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `centro_disco_situado` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `dist_linha_conves_bico_proa` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `dist_linha_conves_abaixo_disco` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `marca_linha_carga_area1` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `marca_linha_carga_area2` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `acrescimo_agua_salgada` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `embarcacoes`
---
-
-INSERT INTO `embarcacoes` (`id`, `proprietario_id`, `nome`, `tipo`, `tipo_embarcacao_id`, `tipo_embarcacao`, `possui_propulsao`, `fabricante_motor`, `potencia_kw`, `registro`, `proprietario`, `ano`, `cliente_id`, `comprimento_total`, `comprimento_casco`, `comprimento_lpp`, `pontal_moldado`, `boca_moldada`, `boca_maxima`, `material_casco`, `tipo_servico`, `tipo_navegacao`, `area_navegacao`, `arqueacao_bruta`, `numero_inscricao`, `porto_inscricao`, `indicativo_chamada`, `numero_tripulantes`, `numero_passageiros_n1`, `numero_passageiros_n2`, `observacoes`, `ativo`, `criado_por`, `criado_em`, `atualizado_em`, `autorizado_carga`, `obs_passageiros`, `acessibilidade`, `local_construcao`, `arqueacao_liquida`, `metodo_arqueacao`, `borda_livre_mm`, `borda_livre_tipo`, `calado_maximo_m`, `aresta_superior_linha_conves`, `centro_disco_situado`, `dist_linha_conves_bico_proa`, `dist_linha_conves_abaixo_disco`, `marca_linha_carga_area1`, `marca_linha_carga_area2`, `acrescimo_agua_salgada`) VALUES
-('05a94606-59fe-4371-afbc-b7b094df2676', '64e60ad7-3a78-4db0-9e03-cc529d935325', 'Barco kds', NULL, '06a95b60-75d0-11f1-98f0-5ed0db5eacb7', 'Balsa', 0, NULL, NULL, 'BAL-00632', 'Rosano Silva de Souza', 2023, NULL, 30.00, 29.00, 26.50, 2.80, 9.00, 9.50, 'Aço', 'Transporte de Passageiros', 'Interior', 'Cabotagem', '120', 'BAL-00632-PA', 'Santarém - PA', 'PW3463', 44, 33, 11, NULL, 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 20:05:12', '2026-07-02 20:05:12', 1, 'veiculo leva passageiros', 1, 'Estaleiro Belem', 85.00, 'Regra II', 280, 'Tipo B', 1.80, NULL, 'A meia nau', NULL, NULL, 'IAN', 'V', NULL),
-('6205b1f7-7628-11f1-85ad-621c498e207c', NULL, 'EMPURADOR VALENTE', 'Empurrador', '06a95eb2-75d0-11f1-98f0-5ed0db5eacb7', NULL, 1, 'MWM 6.12TCA', '300', 'EMP-001', 'João da Silva', 2018, NULL, 18.50, 16.80, 15.20, 3.20, 6.50, 7.00, 'AÃ§o Naval', 'Rebocagem/Empurra', 'Interior', 'Bacia AmazÃ´nica', '45', 'EMP-001-PA', 'Belém-PA', 'PW1234', 6, 0, 0, 'Embarcação para serviço de empurra no Rio Amazonas.', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 18:19:05', 0, NULL, 0, 'Estaleiro Rio Maguari', 22.50, 'MÃ©todo de Ulysses', 350, 'Tipo A', 2.50, 'Linha d\'Ã¡gua', 'Centro', '2.0m', '1.5m', 'Plimsoll A1', 'Plimsoll A2', '25mm'),
-('620a9dfa-7628-11f1-85ad-621c498e207c', NULL, 'BALSA RIO MAR', 'Balsa', '06a95b60-75d0-11f1-98f0-5ed0db5eacb7', NULL, 0, NULL, NULL, 'BAL-002', 'Maria dos Santos', 2020, NULL, 30.00, 28.00, 26.50, 2.80, 9.00, 9.50, 'AÃ§o Carbono', 'Transporte de Carga', 'Interior', 'Rio Amazonas e afluentes', '120', 'BAL-002-PA', 'Santarém-PA', 'PW5678', 4, 40, 20, 'Balsa para transporte de veículos e passageiros na região de Santarém.', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 18:19:05', 1, 'VeÃ­culos e passageiros', 1, 'Estaleiro SantarÃ©m', 85.00, 'MÃ©todo de Ulysses', 280, 'Tipo B', 1.80, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-('620e4464-7628-11f1-85ad-621c498e207c', NULL, 'REBOCADOR FORÇA NAVAL', 'Rebocador', '06a96069-75d0-11f1-98f0-5ed0db5eacb7', NULL, 1, 'Cummins QSK19', '600', 'REB-003', 'Pedro Almeida', 2022, NULL, 22.00, 20.00, 18.50, 4.00, 7.50, 8.00, 'AÃ§o Naval', 'Rebocagem portuÃ¡ria e oceÃ¢nica', 'Costeiro', 'Costa Norte do Brasil', '85', 'REB-003-PA', 'Belém-PA', 'PW9012', 8, 0, 0, 'Rebocador para manobras portuárias no Porto de Belém.', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', '2026-07-02 18:19:05', 0, NULL, 0, 'Estaleiro EISA', 50.00, 'MÃ©todo de Ulysses', 420, 'Tipo A', 3.20, 'Linha d\'Ã¡gua', 'Centro', '2.5m', '1.8m', 'Plimsoll C1', 'Plimsoll C2', '30mm');
 
 -- --------------------------------------------------------
 
@@ -689,13 +933,13 @@ INSERT INTO `embarcacoes` (`id`, `proprietario_id`, `nome`, `tipo`, `tipo_embarc
 --
 
 CREATE TABLE `exigencias_catalogo` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `codigo_interno` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `categoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `descricao` text COLLATE utf8mb4_general_ci NOT NULL,
-  `item_normam` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `bloco_vistoria` enum('seco','flutuando','borda_livre','arqueacao') COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo_vistoria` enum('seco','flutuando','borda_livre','arqueacao') COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `codigo_interno` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `categoria_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `descricao` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `item_normam` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `bloco_vistoria` enum('seco','flutuando','borda_livre','arqueacao') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_vistoria` enum('seco','flutuando','borda_livre','arqueacao') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `prazo_padrao_dias` int DEFAULT NULL,
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
@@ -998,8 +1242,8 @@ INSERT INTO `exigencias_catalogo` (`id`, `codigo_interno`, `categoria_id`, `desc
 --
 
 CREATE TABLE `exigencias_categorias` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `nome` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `nome` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -1023,34 +1267,105 @@ INSERT INTO `exigencias_categorias` (`id`, `nome`, `criado_em`, `atualizado_em`)
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `exportacoes_documentos`
+--
+
+CREATE TABLE `exportacoes_documentos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `solicitado_por` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `status` enum('AGUARDANDO','PROCESSANDO','CONCLUIDA','FALHA','EXPIRADA') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'AGUARDANDO',
+  `categorias_json` json NOT NULL,
+  `filtros_json` json DEFAULT NULL,
+  `caminho_arquivo` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `nome_arquivo` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tamanho_bytes` bigint UNSIGNED DEFAULT NULL,
+  `quantidade_arquivos` int UNSIGNED NOT NULL DEFAULT '0',
+  `sha256` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `erro` text COLLATE utf8mb4_general_ci,
+  `solicitado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `iniciado_em` datetime DEFAULT NULL,
+  `concluido_em` datetime DEFAULT NULL,
+  `expira_em` datetime DEFAULT NULL,
+  `baixado_em` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `financeiro_comprovantes`
+--
+
+CREATE TABLE `financeiro_comprovantes` (
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `lancamento_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `nome_original` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `nome_arquivo` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `caminho` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `mime_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tamanho` int UNSIGNED NOT NULL DEFAULT '0',
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `financeiro_contas_bancarias`
+--
+
+CREATE TABLE `financeiro_contas_bancarias` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `nome` varchar(120) COLLATE utf8mb4_general_ci NOT NULL,
+  `banco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `agencia` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `conta` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `financeiro_historico_baixas`
+--
+
+CREATE TABLE `financeiro_historico_baixas` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `lancamento_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `valor_pago` decimal(10,2) NOT NULL,
+  `data_pagamento` date NOT NULL,
+  `forma_pagamento` enum('a_vista','parcelado','boleto','pix') COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `conta_bancaria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ;
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `financeiro_lancamentos`
 --
 
 CREATE TABLE `financeiro_lancamentos` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `cliente_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo` enum('RECEITA','DESPESA') COLLATE utf8mb4_general_ci NOT NULL,
-  `descricao` varchar(300) COLLATE utf8mb4_general_ci NOT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo` enum('RECEITA','DESPESA') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `descricao` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `valor` decimal(10,2) NOT NULL,
-  `status` enum('PENDENTE','PAGO','CANCELADO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PAGO',
-  `frequencia` enum('unica','mensal','trimestral','anual') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'unica',
+  `valor_original` decimal(10,2) NOT NULL,
+  `saldo_devedor` decimal(10,2) NOT NULL,
+  `status` enum('PENDENTE','PARCIAL','PAGO','CANCELADO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PENDENTE',
+  `frequencia` enum('unica','mensal','trimestral','anual') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'unica',
   `data_vencimento` date DEFAULT NULL,
   `data` date DEFAULT NULL,
-  `categoria` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `observacoes` text COLLATE utf8mb4_general_ci,
+  `categoria` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `observacoes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `financeiro_lancamentos`
---
-
-INSERT INTO `financeiro_lancamentos` (`id`, `cliente_id`, `tipo`, `descricao`, `valor`, `status`, `frequencia`, `data_vencimento`, `data`, `categoria`, `observacoes`, `ativo`, `criado_por`, `criado_em`, `atualizado_em`) VALUES
-('1f80cfdf-2531-4617-969b-a4fcfe88bdec', '18aa7dc6-9623-4bdf-8bb9-e73b9d449100', 'RECEITA', 'aluguel casa arquimedes ataides', 550.00, 'PENDENTE', 'mensal', '2026-08-04', '2026-07-06', 'Operacional', '', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-04 05:17:11', '2026-07-04 05:17:11'),
-('b89d1420-7a1b-4153-bd76-d80637263dff', NULL, 'DESPESA', 'energia', 200.00, 'PENDENTE', 'mensal', '2026-07-04', '2026-07-06', 'Administrativo', 'pago quando vencer', 1, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-04 05:22:00', '2026-07-04 05:22:00');
 
 -- --------------------------------------------------------
 
@@ -1060,157 +1375,12 @@ INSERT INTO `financeiro_lancamentos` (`id`, `cliente_id`, `tipo`, `descricao`, `
 
 CREATE TABLE `logs_atividade` (
   `id` int NOT NULL,
-  `usuario_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `acao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `descricao` text COLLATE utf8mb4_general_ci,
-  `ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `usuario_id` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `acao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `descricao` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `logs_atividade`
---
-
-INSERT INTO `logs_atividade` (`id`, `usuario_id`, `acao`, `descricao`, `ip`, `criado_em`) VALUES
-(1, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cnbl_criado', 'Certificado 4ª VIST. ANUAL - navio do guama', '172.23.0.1', '2026-06-23 12:42:32'),
-(2, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cnbl_assinado', 'Certificado AM-CNBL-1/26 assinado por Rosano Souza Capitao OK via link público', '172.23.0.1', '2026-06-23 12:43:13'),
-(3, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'erro_sequencial', 'Erro ao gerar número documento: There is already an active transaction', '172.23.0.1', '2026-06-24 12:46:57'),
-(4, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'erro_sequencial', 'Erro ao gerar número documento: There is already an active transaction', '172.23.0.1', '2026-06-24 12:49:40'),
-(5, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'erro_sequencial', 'Erro ao gerar número documento: There is already an active transaction', '172.23.0.1', '2026-06-24 12:51:13'),
-(6, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'erro_sequencial', 'Erro ao gerar número documento: There is already an active transaction', '172.23.0.1', '2026-06-24 12:53:39'),
-(7, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'erro_sequencial', 'Erro ao gerar número documento: There is already an active transaction', '172.23.0.1', '2026-06-24 12:55:49'),
-(8, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'erro_sequencial', 'Erro ao gerar número documento: There is already an active transaction', '172.23.0.1', '2026-06-24 13:04:08'),
-(9, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'erro_sequencial', 'Erro ao gerar número documento: There is already an active transaction', '172.23.0.1', '2026-06-24 13:06:34'),
-(10, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'erro_sequencial', 'Erro ao gerar número documento: There is already an active transaction', '172.23.0.1', '2026-06-24 13:13:27'),
-(11, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'erro_sequencial', 'Erro ao gerar número documento: There is already an active transaction', '172.23.0.1', '2026-06-24 13:36:25'),
-(12, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'licenca_lp_excluida', 'Licença LP ID: c0da9f43-20c5-4703-a8a4-833894cfc594', '172.23.0.1', '2026-06-24 13:44:28'),
-(13, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'embarcacao_criada', 'Embarcação criada: Rio Amazonas', '::1', '2026-06-24 17:33:03'),
-(14, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'embarcacao_criada', 'Embarcação criada: Boa Esperança', '::1', '2026-06-24 17:33:03'),
-(15, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'vistoria_criada', 'Vistoria criada: VIST-2026-001', '::1', '2026-06-24 17:33:03'),
-(16, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'vistoria_criada', 'Vistoria criada: VIST-2026-002', '::1', '2026-06-24 17:33:03'),
-(17, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'agendamento_criado', 'Agendamento criado: OS-2026-001', '::1', '2026-06-24 17:33:03'),
-(18, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'agendamento_criado', 'Agendamento criado: OS-2026-002', '::1', '2026-06-24 17:33:03'),
-(19, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_criado', 'Certificado AM-CSN-7/26 criado', '::1', '2026-06-24 17:33:03'),
-(20, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_criado', 'Certificado AM-CSN-8/26 criado', '::1', '2026-06-24 17:33:03'),
-(21, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cnbl_criado', 'Certificado AM-CNBL-1/26 criado', '::1', '2026-06-24 17:33:03'),
-(22, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cnarq_criado', 'Certificado AM-CNARQ-1/26 criado', '::1', '2026-06-24 17:33:03'),
-(23, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_lp_criado', 'Certificado AM-LP-1/26 criado', '::1', '2026-06-24 17:33:03'),
-(24, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_lc_criado', 'Certificado AM-LC-1/26 criado', '::1', '2026-06-24 17:33:03'),
-(25, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cht_criado', 'Certificado AM-REL-HT-1/26 criado', '::1', '2026-06-24 17:33:03'),
-(26, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'financeiro_lancamento', 'Lançamento financeiro: Taxa de vistoria', '::1', '2026-06-24 17:33:03'),
-(27, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'financeiro_lancamento', 'Lançamento financeiro: Taxa de certificação', '::1', '2026-06-24 17:33:03'),
-(28, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'cliente_editado', 'Cliente \'João Pedro Almeida\' editado.', '172.23.0.1', '2026-06-24 16:22:29'),
-(29, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'licenca_lp_excluida', 'Licença LP ID: c10309f1-6ff2-11f1-b0cf-b2d3c685df9e', '172.23.0.1', '2026-06-24 16:25:43'),
-(30, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'licenca_lp_assinada', 'Licença LP AM-LP-1/26 assinada por Rosano', '172.23.0.1', '2026-06-24 16:26:40'),
-(31, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'cliente_editado', 'Cliente \'José Maria Oliveira\' editado.', '172.23.0.1', '2026-06-24 16:30:48'),
-(32, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'cliente_editado', 'Cliente \'João Pedro Almeida\' editado.', '172.23.0.1', '2026-06-24 16:31:18'),
-(33, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'cliente_editado', 'Cliente \'Navegação Amazônica S/A\' editado.', '172.23.0.1', '2026-06-24 16:31:59'),
-(34, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'cliente_editado', 'Cliente \'Navegação Amazônica S/A\' editado.', '172.23.0.1', '2026-06-24 16:32:04'),
-(35, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'cliente_editado', 'Cliente \'Transportes Marí­timos Ltda\' editado.', '172.23.0.1', '2026-06-24 16:32:42'),
-(36, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'vistoria_criada', 'Vistoria criada para embarcacao ID: 44444444-4444-4444-4444-444444444444.', '172.23.0.1', '2026-06-24 16:43:11'),
-(37, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'erro_sequencial', 'Erro ao gerar número documento: There is already an active transaction', '172.23.0.1', '2026-06-24 16:43:58'),
-(38, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'cliente_editado', 'Cliente \'Maria Fernanda Costa\' editado.', '172.23.0.1', '2026-06-24 16:58:34'),
-(39, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'erro_sequencial', 'Erro ao gerar número documento: There is already an active transaction', '172.23.0.1', '2026-06-24 17:00:33'),
-(40, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proposta_criada', 'Proposta AM-ORC-1/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 6.300,00 | Desconto: 5% | Total: R$ 5.985,00', '172.23.0.1', '2026-06-24 17:24:03'),
-(41, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'licenca_lp_excluida', 'Licença LP ID: c103039e-6ff2-11f1-b0cf-b2d3c685df9e', '172.23.0.1', '2026-06-27 12:48:24'),
-(42, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proposta_criada', 'Proposta AM-ORC-2/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 2.500,00 | Desconto: 5% | Total: R$ 2.375,00', '172.23.0.1', '2026-06-27 12:50:37'),
-(43, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proposta_criada', 'Proposta AM-ORC-3/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 3.700,00 | Desconto: 0% | Total: R$ 3.700,00', '172.23.0.1', '2026-06-27 13:41:11'),
-(44, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proposta_aprovada', 'Proposta ID: 0138dd8c-7247-11f1-b965-76474b9feea2 marcada como aprovada.', '172.23.0.1', '2026-06-27 13:41:19'),
-(45, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'agendamento_criado', 'Agendamento de Licença Provisória criado para data 2026-12-12.', '172.23.0.1', '2026-06-27 13:42:47'),
-(46, '3774d80c-2574-470e-88a9-9781936c6de3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-1/26 salvo para agendamento ID: 3a7ded21-7247-11f1-b965-76474b9feea2. Status: APROVADA_COM_EXIGENCIAS.', '172.23.0.1', '2026-06-27 16:30:07'),
-(47, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_salvo', 'Relatorio tecnico  salvo para agendamento ID: 3a7ded21-7247-11f1-b965-76474b9feea2. Status: APROVADA_COM_EXIGENCIAS.', '172.23.0.1', '2026-06-27 20:20:58'),
-(48, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_salvo', 'Relatorio tecnico  salvo para agendamento ID: 3a7ded21-7247-11f1-b965-76474b9feea2. Status: APROVADA.', '172.23.0.1', '2026-06-27 22:09:34'),
-(49, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-1/26 salvo para agendamento ID: 3a7ded21-7247-11f1-b965-76474b9feea2. Status: APROVADA.', '172.23.0.1', '2026-06-27 22:18:49'),
-(50, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-1/26 salvo para agendamento ID: 3a7ded21-7247-11f1-b965-76474b9feea2. Status: APROVADA.', '172.23.0.1', '2026-06-27 22:19:12'),
-(51, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_criado', 'Certificado 4ª VIST. ANUAL - Estrela do Mar', '172.23.0.1', '2026-06-28 01:44:27'),
-(52, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_assinado', 'Certificado AM-CSN-5/26 assinado por  via link público', '172.23.0.1', '2026-06-28 01:45:43'),
-(53, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cnbl_criado', 'Certificado 4ª VIST. ANUAL - Estrela do Mar', '172.23.0.1', '2026-06-28 14:40:40'),
-(54, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'agendamento_criado', 'Agendamento de Vistoria Anual criado para data 2026-06-30.', '172.23.0.1', '2026-06-28 14:59:06'),
-(55, '3774d80c-2574-470e-88a9-9781936c6de3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-2/26 salvo para agendamento ID: 0df1021b-731b-11f1-a2a5-5a560304b7f4. Status: AGUARDANDO_APROVACAO.', '172.23.0.1', '2026-06-28 15:00:52'),
-(56, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_aprovado', 'Relatorio ID 7299419c-c9a7-408a-aba2-a4a6fe4b0b51 aprovado. Status: APROVADA_COM_EXIGENCIAS.', '172.23.0.1', '2026-06-28 15:07:03'),
-(57, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-2/26 salvo para agendamento ID: 0df1021b-731b-11f1-a2a5-5a560304b7f4. Status: APROVADA.', '172.23.0.1', '2026-06-28 15:16:12'),
-(58, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cnbl_criado', 'Certificado 4ª VIST. ANUAL - Estrela do Mar', '172.23.0.1', '2026-06-28 15:52:41'),
-(59, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cnbl_editado', 'Certificado 1ª VIST. ANUAL - Estrela do Mar', '172.23.0.1', '2026-06-28 16:45:42'),
-(60, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cnbl_editado', 'Certificado 3ª VIST. ANUAL - Estrela do Mar', '172.23.0.1', '2026-06-28 17:45:27'),
-(61, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cnbl_criado', 'Certificado 4ª VIST. ANUAL - Estrela do Mar', '172.23.0.1', '2026-06-28 18:29:56'),
-(62, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cnbl_assinado', 'Certificado AM-CNBL-6/26 assinado por Neto via link público', '172.23.0.1', '2026-06-28 18:33:36'),
-(63, 'sistema', 'pdf_backfill', 'Gerado PDF retroativo (snapshot) para certificados_csn (AM-CSN-5/26)', '0.0.0.0', '2026-06-29 01:51:51'),
-(64, 'sistema', 'pdf_backfill', 'Gerado PDF retroativo (snapshot) para certificados_cnbl (AM-CNBL-5/26)', '0.0.0.0', '2026-06-29 01:54:56'),
-(65, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_editado', 'Certificado 4ª VIST. ANUAL - Estrela do Mar', '172.23.0.1', '2026-06-29 01:55:24'),
-(66, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_editado', 'Certificado 2ª VIST. ANUAL - Estrela do Mar', '172.23.0.1', '2026-06-29 01:55:43'),
-(67, 'sistema', 'pdf_backfill', 'Gerado PDF retroativo (snapshot) para certificados_csn (AM-CSN-7/26)', '0.0.0.0', '2026-06-29 01:56:23'),
-(68, 'sistema', 'pdf_backfill', 'Gerado PDF retroativo (snapshot) para certificados_csn (AM-CSN-1/26)', '0.0.0.0', '2026-06-29 01:56:23'),
-(69, 'sistema', 'pdf_backfill', 'Gerado PDF retroativo (snapshot) para certificados_cnbl (AM-CNBL-6/26)', '0.0.0.0', '2026-06-29 01:56:24'),
-(70, 'sistema', 'pdf_backfill', 'Gerado PDF retroativo (snapshot) para certificados_cnbl (AM-CNBL-1/26)', '0.0.0.0', '2026-06-29 01:56:24'),
-(71, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_cnbl_criado', 'Certificado 4ª VIST. ANUAL - Estrela do Mar', '172.23.0.1', '2026-06-29 02:36:35'),
-(72, 'sistema', 'certificado_cnbl_assinado', 'Certificado AM-CNBL-7/26 assinado por Neto via link público', '172.23.0.1', '2026-06-29 02:48:43'),
-(73, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proposta_criada', 'Proposta AM-ORC-4/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 1.500,00 | Desconto: 0% | Total: R$ 1.500,00', '172.23.0.1', '2026-06-29 03:07:53'),
-(74, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proposta_assinada', 'Proposta AM-ORC-4/26 assinada por Maria Fernanda Costa via link público', '172.23.0.1', '2026-06-29 03:10:06'),
-(75, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Acompanhamento de Ultrassom\' editado.', '172.23.0.1', '2026-06-29 03:13:07'),
-(76, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Análise de Planos Ec1\' editado.', '172.23.0.1', '2026-06-29 03:13:39'),
-(77, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Análise de Planos Ec2\' editado.', '172.23.0.1', '2026-06-29 03:14:16'),
-(78, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Análise de Planos Ec2\' editado.', '172.23.0.1', '2026-06-29 03:14:18'),
-(79, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Licença Provisória\' editado.', '172.23.0.1', '2026-06-29 03:14:47'),
-(80, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Licença Provisória\' editado.', '172.23.0.1', '2026-06-29 03:14:48'),
-(81, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Vistoria Anual\' editado.', '172.23.0.1', '2026-06-29 03:15:13'),
-(82, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Vistoria Anual\' editado.', '172.23.0.1', '2026-06-29 03:15:23'),
-(83, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Vistoria Anual Periódica\' editado.', '172.23.0.1', '2026-06-29 03:15:41'),
-(84, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Vistoria Anual Periódica\' editado.', '172.23.0.1', '2026-06-29 03:15:50'),
-(85, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Vistoria Inicial de Arqueação\' editado.', '172.23.0.1', '2026-06-29 03:16:14'),
-(86, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Vistoria Inicial de Borda Livre\' editado.', '172.23.0.1', '2026-06-29 03:16:31'),
-(87, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Vistoria Inicial Flutuando\' editado.', '172.23.0.1', '2026-06-29 03:16:44'),
-(88, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Vistoria Inicial Seco\' editado.', '172.23.0.1', '2026-06-29 03:16:55'),
-(89, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'servico_editado', 'Serviço \'Vistoria Intermediária\' editado.', '172.23.0.1', '2026-06-29 03:17:26'),
-(90, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'vistoria_status', 'Vistoria ID: 33333333-3333-3333-3333-333333333333 alterada para status CANCELADA.', '172.23.0.1', '2026-06-29 03:54:10'),
-(91, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proposta_criada', 'Proposta AM-ORC-5/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 1.500,00 | Desconto: 0% | Total: R$ 1.500,00', '172.23.0.1', '2026-06-29 04:13:22'),
-(92, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proposta_criada', 'Proposta AM-ORC-6/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 5.300,00 | Desconto: 10% | Total: R$ 4.770,00', '172.23.0.1', '2026-06-29 11:30:05'),
-(93, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'agendamento_criado', 'Agendamento de Licença Provisória criado para data 2026-07-16.', '172.23.0.1', '2026-06-29 11:37:04'),
-(94, '3774d80c-2574-470e-88a9-9781936c6de3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-3/26 salvo para agendamento ID: ffa49acf-73c7-11f1-b509-2675ac0d9653. Status: AGUARDANDO_APROVACAO.', '172.23.0.1', '2026-06-29 11:38:32'),
-(95, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'agendamento_criado', 'Agendamento de Vistoria Inicial Seco criado para data 2026-08-01.', '172.23.0.1', '2026-07-01 20:29:27'),
-(96, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_assinado', 'Certificado CSN-2026-001 assinado por Rosano Silva De Souza via link público', '172.23.0.1', '2026-07-02 16:25:10'),
-(97, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proprietario_criado', 'Proprietário \'Rosano Silva de Souza\' criado.', '172.23.0.1', '2026-07-02 16:37:22'),
-(98, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proprietario_editado', 'Proprietário \'Rosano Silva de Souza\' editado.', '172.23.0.1', '2026-07-02 17:24:42'),
-(99, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proprietario_editado', 'Proprietário \'Rosano Silva de Souza\' editado.', '172.23.0.1', '2026-07-02 17:25:13'),
-(100, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proprietario_editado', 'Proprietário \'Rosano Silva de Souza\' editado.', '172.23.0.1', '2026-07-02 17:25:40'),
-(101, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proposta_criada', 'Proposta AM-ORC-7/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 3.500,00 | Desconto: 10% | Total: R$ 3.150,00', '172.23.0.1', '2026-07-02 17:48:59'),
-(102, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proposta_assinada', 'Proposta AM-ORC-7/26 assinada por Rosano Silva de Souza via link público', '172.23.0.1', '2026-07-02 17:53:26'),
-(103, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_salvo', 'Relatorio tecnico VST-2026-001 salvo para agendamento ID: 6206e36e-7628-11f1-85ad-621c498e207c. Status: CANCELADA.', '172.23.0.1', '2026-07-02 19:04:41'),
-(104, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_salvo', 'Relatorio tecnico VST-2026-002 salvo para agendamento ID: 620bf6aa-7628-11f1-85ad-621c498e207c. Status: REPROVADA.', '172.23.0.1', '2026-07-02 19:05:18'),
-(105, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_salvo', 'Relatorio tecnico VST-2026-002 salvo para agendamento ID: 620bf6aa-7628-11f1-85ad-621c498e207c. Status: CANCELADA.', '172.23.0.1', '2026-07-02 19:05:40'),
-(106, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_salvo', 'Relatorio tecnico VST-2026-003 salvo para agendamento ID: 620f7603-7628-11f1-85ad-621c498e207c. Status: CANCELADA.', '172.23.0.1', '2026-07-02 19:05:54'),
-(107, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'armadore_criado', 'Armadore \'Rosano Souza\' criado.', '172.23.0.1', '2026-07-02 19:14:12'),
-(108, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'despachante_criado', 'Despachante \'Marcelo Augusto Pereira\' criado.', '172.23.0.1', '2026-07-02 19:17:48'),
-(109, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'armadore_editado', 'Armadore \'Rosano Souza\' editado.', '172.23.0.1', '2026-07-02 19:34:43'),
-(110, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'armadore_editado', 'Armadore \'Armador Souza\' editado.', '172.23.0.1', '2026-07-02 19:35:25'),
-(111, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'armadore_editado', 'Armadore \'Armador Souza\' editado.', '172.23.0.1', '2026-07-02 19:35:45'),
-(112, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'agendamento_criado', 'Agendamento de Vistoria Inicial Seco criado para data 2026-07-03.', '172.23.0.1', '2026-07-02 19:36:49'),
-(113, 'e5c68a85-c920-4b11-bc93-9343d9d94f14', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-4/26 salvo para agendamento ID: 83ad9b48-7666-11f1-9eb5-0a1b2af87b16. Status: AGUARDANDO_APROVACAO.', '172.23.0.1', '2026-07-02 20:03:15'),
-(114, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_aprovado', 'Relatorio ID 3b14c7df-5078-470a-afd1-41da3958260a aprovado. Status: APROVADA_COM_EXIGENCIAS.', '172.23.0.1', '2026-07-02 20:30:55'),
-(115, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_criado', 'Certificado AM-CSN-4/26 - ', '172.23.0.1', '2026-07-02 23:15:58'),
-(116, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_criado', 'Certificado AM-CSN-5/26 - Barco kds', '172.23.0.1', '2026-07-02 23:16:37'),
-(117, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_criado', 'Certificado AM-CSN-6/26 - Barco kds', '172.23.0.1', '2026-07-02 23:17:09'),
-(118, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_assinado', 'Certificado AM-CSN-6/26 assinado por João Responsável via link público', '172.23.0.1', '2026-07-03 00:00:16'),
-(119, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_criado', 'Certificado AM-CSN-7/26 - Barco kds', '172.23.0.1', '2026-07-03 00:08:27'),
-(120, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_criado', 'Certificado AM-CSN-8/26 (Provisório) - Barco kds', '172.23.0.1', '2026-07-03 00:38:07'),
-(121, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_criado', 'Certificado AM-CSN-9/26 (Provisório) - Barco kds', '172.23.0.1', '2026-07-03 00:40:10'),
-(122, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'proprietario_editado', 'Proprietário \'Rosano Silva de Souza\' editado.', '172.23.0.1', '2026-07-03 10:16:09'),
-(123, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'agendamento_criado', 'Agendamento de Vistoria Inicial Seco criado para data 2026-07-06.', '172.23.0.1', '2026-07-03 10:17:58'),
-(124, '3774d80c-2574-470e-88a9-9781936c6de3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: PENDENTE.', '172.23.0.1', '2026-07-03 10:30:32'),
-(125, '3774d80c-2574-470e-88a9-9781936c6de3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: PENDENTE.', '172.23.0.1', '2026-07-03 10:56:26'),
-(126, '3774d80c-2574-470e-88a9-9781936c6de3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: PENDENTE.', '172.23.0.1', '2026-07-03 11:01:28'),
-(127, '3774d80c-2574-470e-88a9-9781936c6de3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: PENDENTE.', '172.23.0.1', '2026-07-03 11:02:05'),
-(128, '3774d80c-2574-470e-88a9-9781936c6de3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: AGUARDANDO_APROVACAO.', '172.23.0.1', '2026-07-04 01:55:12'),
-(129, '3774d80c-2574-470e-88a9-9781936c6de3', 'armadore_desativado', 'Armadore ID: 620624f7-7628-11f1-85ad-621c498e207c desativado.', '172.23.0.1', '2026-07-04 01:56:27'),
-(130, '3774d80c-2574-470e-88a9-9781936c6de3', 'armadore_desativado', 'Armadore ID: 620b1381-7628-11f1-85ad-621c498e207c desativado.', '172.23.0.1', '2026-07-04 01:56:32'),
-(131, '3774d80c-2574-470e-88a9-9781936c6de3', 'armadore_desativado', 'Armadore ID: 620ebfc8-7628-11f1-85ad-621c498e207c desativado.', '172.23.0.1', '2026-07-04 01:56:34'),
-(132, '3774d80c-2574-470e-88a9-9781936c6de3', 'proprietario_desativado', 'Proprietário ID: 62062969-7628-11f1-85ad-621c498e207c desativado.', '172.23.0.1', '2026-07-04 01:56:48'),
-(133, '3774d80c-2574-470e-88a9-9781936c6de3', 'proprietario_desativado', 'Proprietário ID: 97e777dd-763d-11f1-85ad-621c498e207c desativado.', '172.23.0.1', '2026-07-04 01:56:53'),
-(134, '3774d80c-2574-470e-88a9-9781936c6de3', 'proprietario_desativado', 'Proprietário ID: 62062969-7628-11f1-85ad-621c498e207c desativado.', '172.23.0.1', '2026-07-04 01:57:11'),
-(135, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_aprovado', 'Relatorio ID 8f85d9b9-4606-49ac-8a9e-ce3943829467 aprovado. Status: APROVADA_COM_EXIGENCIAS.', '172.23.0.1', '2026-07-04 01:59:52'),
-(136, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: APROVADA.', '172.23.0.1', '2026-07-04 02:00:22'),
-(137, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'certificado_csn_criado', 'Certificado AM-CSN-10/26 (Definitivo) - Barco kds', '172.23.0.1', '2026-07-04 02:02:50'),
-(138, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'relatorio_salvo', 'Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: APROVADA.', '172.23.0.1', '2026-07-04 02:07:01'),
-(139, '95eb5557-65e8-11f1-85ef-047c16b568a3', 'vistoria_criada', 'Vistoria criada para embarcacao ID: 05a94606-59fe-4371-afbc-b7b094df2676.', '172.23.0.1', '2026-07-04 02:53:04');
 
 -- --------------------------------------------------------
 
@@ -1219,24 +1389,45 @@ INSERT INTO `logs_atividade` (`id`, `usuario_id`, `acao`, `descricao`, `ip`, `cr
 --
 
 CREATE TABLE `ordens_servico` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `numero` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
-  `agendamento_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `proposta_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `vistoriador_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `tipo_vistoria` text COLLATE utf8mb4_general_ci NOT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `agendamento_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `proposta_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `embarcacao_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `vistoriador_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_vistoria` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `data_vistoria` date NOT NULL,
   `hora_vistoria` time DEFAULT NULL,
-  `local` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `contato_nome` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `contato_telefone` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `status` enum('pendente','em_andamento','executado','cancelado') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pendente',
-  `observacoes` text COLLATE utf8mb4_general_ci,
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `contato_nome` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `contato_telefone` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('pendente','em_andamento','executado','cancelado') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pendente',
+  `observacoes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `portal_auditoria`
+--
+
+CREATE TABLE `portal_auditoria` (
+  `id` bigint UNSIGNED NOT NULL,
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `perfil` enum('proprietario','despachante') COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `evento` enum('LOGIN_SUCESSO','LOGIN_FALHA','VISUALIZACAO','DOWNLOAD') COLLATE utf8mb4_general_ci NOT NULL,
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `documento_tipo` varchar(40) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `documento_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `sucesso` tinyint(1) NOT NULL DEFAULT '1',
+  `detalhe` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `user_agent` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -1246,39 +1437,35 @@ CREATE TABLE `ordens_servico` (
 --
 
 CREATE TABLE `propostas` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `numero` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
-  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `armador_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `operador_nome` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `armador_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `operador_nome` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_fechamento_nome` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_fechamento_telefone` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `data_emissao` date NOT NULL,
   `data_validade` date DEFAULT NULL,
   `parcelas` tinyint UNSIGNED NOT NULL DEFAULT '3',
-  `forma_pagamento` enum('a_vista','parcelado','boleto','pix') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'parcelado',
+  `forma_pagamento` enum('a_vista','parcelado','boleto','pix') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'parcelado',
   `valor_total` decimal(12,2) NOT NULL DEFAULT '0.00',
   `valor_entrada` decimal(12,2) NOT NULL DEFAULT '0.00',
   `desconto_percentual` decimal(5,2) NOT NULL DEFAULT '0.00',
   `desconto_valor` decimal(12,2) NOT NULL DEFAULT '0.00',
-  `observacoes` text COLLATE utf8mb4_general_ci,
-  `status` enum('rascunho','enviada','aprovada','recusada','cancelada','assinada') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'rascunho',
-  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `observacoes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `status` enum('rascunho','enviada','aprovada','recusada','cancelada','assinada') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'rascunho',
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-  `token_assinatura` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `token_assinatura` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `assinado` tinyint(1) DEFAULT '0',
-  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
+  `assinatura_imagem` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `assinatura_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `assinatura_em` datetime DEFAULT NULL,
-  `assinante_nome` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinante_documento` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `propostas`
---
-
-INSERT INTO `propostas` (`id`, `numero`, `cliente_id`, `data_emissao`, `data_validade`, `parcelas`, `forma_pagamento`, `valor_total`, `valor_entrada`, `desconto_percentual`, `desconto_valor`, `observacoes`, `status`, `criado_por`, `created_at`, `updated_at`, `token_assinatura`, `assinado`, `assinatura_imagem`, `assinatura_em`, `assinante_nome`, `assinante_documento`, `assinatura_ip`) VALUES
-('733dc145-7657-11f1-9eb5-0a1b2af87b16', 'AM-ORC-7/26', '64e60ad7-3a78-4db0-9e03-cc529d935325', '2026-07-02', '2026-08-01', 3, 'parcelado', 3150.00, 0.00, 10.00, 350.00, NULL, 'aprovada', '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 20:48:59', '2026-07-02 20:53:26', 'd18ad70a117e3c1854f36d8d73d28adc6a46cebb45946', 1, 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAACWCAYAAADwkd5lAAAHaklEQVR4Xu3dW6htVR3H8Z+ZaBcKtYtFd7tYVEZFUVEZEfXUQ0SREFGZEUmhWaEgJFQYpQgVdKWXIgqiXnooMhKCgiLTogvZ/abd6Z5d+W/HXKw2y+1e/7PO3nN5Ph+QM9c+h3OGnMP+MseYY8zjAgANxy2uAGANAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAgJAi4AA0CIgALQICAAtAnK4vprkcSuGcFmSixafAGZIQA7Xv5PcbsUQ/pDk5MUngBkSkMN1dpILk5ya5HdJzly6K3xTkktvYXgVnRcmefc+QvPhJC9efALYEAGZl+cl+XiS45P8Jsk9k/xnzWCsck2Sc5OdKTOAjRCQ+Tk/yRVjWHUXcnmSbye5z4qh3pTk80l+muS+SX6d5PQk/0jyoyQv2TVFJiTAxgjI/JyQ5E9JThx3Ib9M8qgxzL8n+UKS60cwLkjygz3+Fx6d5Mokz1h85WY1NVZxAmgTkHm6OMlbdg3tV0nOSPL7xVf274kjJPVj/Z3X73WvMT0G0CIg81R3Ib9IcrcxvHpa6yFJfniEw33jeER4cnWSsxafANYgIPNz5xVrHjeMO4YjVWH621ikn7w9yRsWnwD2SUDm57qlNY9JBeURi09H5rlJLkny+PH5xiSnjWuAfROQeXlYku+MIdU6xV2SnJTks0meveGh/nf8+M/xZ1gPAdYiIPNRU1ffGk9XTWse3x3TThWT2hOySe9L8opxbRoLWJuAzMdvk5wyhvOVJE9I8t6xAbDcP8lPxvUmVJhqv0j9G6h9JPdb/AzAPgjIPCwfqlhTSXW0SZ2H9fBxV1LevxSTTZnO4qq9JLUBEWDfBGQelg9V/EuyM501+WuSOyT52Zje2qSaGru787KADgGZh+kbeR2o+IIkVy0N651JzhvXm57Gqh3vFaujsUgP3MYJyDw8NsnTknxsHF2ybHka64NJzhnXm1DTZfVvwKO8wNoEZDvUo7a3T/LNFXtEuu4xwlGuTfKYcQ2wLwKyHeobfX3D3+QdyKuTvGtcPyfJZ8Y1wL4IyHY4GmsV9eTVA4/SHhPgGCAg22F6Suv7SR68gSEv73iv94k8c1wD7JuAHK7l/R+TOnH3QYtPN6sDEOu4kU18s1/e8V6L6HXGVu14B1iLgByu5f0fq3wtySuTfGksotdbBmvaqWN6Le57xhlbZdrxDrA2ATlcZ483A9bR7bWBcHr/x261TlGL6PUyqfo16x58uOqI+HrbYZ23VTveAdYmIPNShxu+ecRiP74xNhp+cgRhld3xqJ3tn0ry8vGKXIAWAZmneof5h8bO802qyDy0+VpcgP8jIPNVaxavS/K2XX9PdYLuB5I8fUxBnbj4mb3VVNU0VQZwxARk/p6a5Mpk57iTSa2bXJrkTklem+z8mlpwrx3r9erbR47Q1NfqxVH3Hu9DrwMZATZCQLbH7ie2rk/yomTnUWCAAycg22M61r3uKJb/3j6a7DzNBXCgBGR7TCfn1kJ4PX1VC+2TaUoL4MAIyPaYprB+nOQBY0d6HYB4/IhKnWe17v4QgDYB2R7TFNbVSc4awz4/yRXj2l0IcKAEZHtMU1g3jCetygnjrYL1KK+7EOBACcj2WF4DqdffTi5K8tZxfU2Scz2ZBRwEAdkOdYT798ZQr0ty5tKw6y6kNgfWj5N3JHn94hPAUSAg26GeuqrNgXUX8pQkX9417CePaDxpfD6SU3uXXZ7kZUleOs7PAlgQkO3wr/G0Vb1F8PQ9hjxNc5XLxvTWuurwxa/v+nO+OHa7AywIyHaoKao7JvlckmftMeTdu9XLfkOyKhyTTb0JEbgNEZDtMN1Z3JjktD2GXDvSP7L4tNonkjx/XO8VjYpWrbf8cZyjde3iZwDcgWyFvRbQV6mIXJLkjMVX1vPnJJ9OcqHDF4G9uAOZv1tbQL8lFyc5J8lNSe56K3cutZekjoiv3exO7QX2RUDmrZ6CumAMcXkDYUfdmbwqyclJTh3rJT8f/73G3QawLgGZt2nxvNRbBE+Z93CBY4mAzNvyU1V1Fla9QApgFgRk3mraqXaUn5TkvCRXzXu4wLFEQABoERAAWgQEgBYBAaBFQABoERAAWgQEgBYBAaBFQABoERAAWv4H34n4l1UWHIsAAAAQZGVCR0JBNDY5NTk3QUY3MUQxNkXBI7DUAAAAAElFTkSuQmCC', '2026-07-02 17:53:26', 'Rosano Silva de Souza', '', '172.23.0.1');
+  `assinante_nome` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_documento` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
+) ;
 
 -- --------------------------------------------------------
 
@@ -1287,17 +1474,10 @@ INSERT INTO `propostas` (`id`, `numero`, `cliente_id`, `data_emissao`, `data_val
 --
 
 CREATE TABLE `propostas_embarcacoes` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `proposta_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `proposta_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `embarcacao_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `propostas_embarcacoes`
---
-
-INSERT INTO `propostas_embarcacoes` (`id`, `proposta_id`, `embarcacao_id`) VALUES
-('733de9c5-7657-11f1-9eb5-0a1b2af87b16', '733dc145-7657-11f1-9eb5-0a1b2af87b16', '05a94606-59fe-4371-afbc-b7b094df2676');
 
 -- --------------------------------------------------------
 
@@ -1306,21 +1486,14 @@ INSERT INTO `propostas_embarcacoes` (`id`, `proposta_id`, `embarcacao_id`) VALUE
 --
 
 CREATE TABLE `propostas_servicos` (
-  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
-  `proposta_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `servico_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `proposta_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `servico_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `embarcacao_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `preco_aplicado` decimal(12,2) NOT NULL DEFAULT '0.00',
   `quantidade` tinyint UNSIGNED NOT NULL DEFAULT '1',
   `subtotal` decimal(12,2) GENERATED ALWAYS AS ((`preco_aplicado` * `quantidade`)) STORED
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `propostas_servicos`
---
-
-INSERT INTO `propostas_servicos` (`id`, `proposta_id`, `servico_id`, `embarcacao_id`, `preco_aplicado`, `quantidade`) VALUES
-('733e1fcc-7657-11f1-9eb5-0a1b2af87b16', '733dc145-7657-11f1-9eb5-0a1b2af87b16', 'a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf', '05a94606-59fe-4371-afbc-b7b094df2676', 3500.00, 1);
 
 -- --------------------------------------------------------
 
@@ -1331,8 +1504,12 @@ INSERT INTO `propostas_servicos` (`id`, `proposta_id`, `servico_id`, `embarcacao
 CREATE TABLE `responsaveis_assinatura` (
   `id` int NOT NULL,
   `nome_completo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `cpf_cnpj` varchar(18) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `cargo_titulo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `registro_profissional` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `assinatura_arquivo` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `assinatura_hash` char(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `assinatura_atualizada_em` datetime DEFAULT NULL,
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -1342,10 +1519,10 @@ CREATE TABLE `responsaveis_assinatura` (
 -- Despejando dados para a tabela `responsaveis_assinatura`
 --
 
-INSERT INTO `responsaveis_assinatura` (`id`, `nome_completo`, `cargo_titulo`, `registro_profissional`, `ativo`, `created_at`, `updated_at`) VALUES
-(2, 'Rosano Silva De Souza', 'Programador', '383034', 1, '2026-07-02 04:58:28', '2026-07-02 04:58:28'),
-(5, 'João Responsável', 'Engenheiro Naval', '123456', 1, '2026-07-02 17:39:46', '2026-07-02 17:39:46'),
-(6, 'João Responsável', 'Engenheiro Naval', '123456', 1, '2026-07-02 17:43:53', '2026-07-02 17:43:53');
+INSERT INTO `responsaveis_assinatura` (`id`, `nome_completo`, `cpf_cnpj`, `cargo_titulo`, `registro_profissional`, `assinatura_arquivo`, `assinatura_hash`, `assinatura_atualizada_em`, `ativo`, `created_at`, `updated_at`) VALUES
+(2, 'Victal Donanzan', '383.034.518-63', 'Engenheiro Naval', 'CREA: 22.537', 'storage/private/assinaturas_responsaveis/2/20260717_080718_dbbb62d5b83faa0a.png', '09da23f7c13fbfbf42c88f65ff2208903086c13f3ed5022813784e45a94bdd13', '2026-07-17 11:07:18', 1, '2026-07-02 04:58:28', '2026-07-17 11:07:18'),
+(5, 'João Responsável', NULL, 'Engenheiro Naval', '123456', NULL, NULL, NULL, 0, '2026-07-02 17:39:46', '2026-07-17 06:33:34'),
+(6, 'João Responsável', NULL, 'Engenheiro Naval', '123456', NULL, NULL, NULL, 0, '2026-07-02 17:43:53', '2026-07-07 21:13:57');
 
 -- --------------------------------------------------------
 
@@ -1358,23 +1535,6 @@ CREATE TABLE `sequenciais_documentos` (
   `ano` int NOT NULL,
   `ultimo_numero` int NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `sequenciais_documentos`
---
-
-INSERT INTO `sequenciais_documentos` (`tipo_documento`, `ano`, `ultimo_numero`) VALUES
-('CNARQ', 2026, 0),
-('CNBL', 2026, 0),
-('CSN', 2026, 0),
-('EC', 2026, 0),
-('LC', 2026, 2),
-('LP', 2026, 1),
-('ORC', 2026, 7),
-('OS', 2026, 0),
-('REL-AP', 2026, 0),
-('REL-HT', 2026, 2),
-('REL-V', 2026, 5);
 
 -- --------------------------------------------------------
 
@@ -1452,8 +1612,9 @@ CREATE TABLE `usuarios` (
   `nome` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
   `email` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
   `senha_hash` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
-  `cargo` enum('ADMIN','VENDEDOR','VISTORIADOR') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'VISTORIADOR',
+  `cargo` enum('ADMIN','VENDEDOR','VISTORIADOR','ANALISTA') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'VISTORIADOR',
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `excluido_em` datetime DEFAULT NULL,
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `acesso_documentacao` tinyint(1) DEFAULT '0',
@@ -1464,15 +1625,98 @@ CREATE TABLE `usuarios` (
 -- Despejando dados para a tabela `usuarios`
 --
 
-INSERT INTO `usuarios` (`id`, `nome`, `email`, `senha_hash`, `cargo`, `ativo`, `criado_em`, `atualizado_em`, `acesso_documentacao`, `acesso_financeiro`) VALUES
-('11111111-1111-1111-1111-111111111111', 'Carlos Mendes', 'carlos@sistema.com', '$2y$10$WkA/uXzt0FgkNZSgpV5IXuwgOYrjultBGwQMszFKOofoXqqTvG1aO', 'VISTORIADOR', 1, '2026-06-24 17:33:03', '2026-07-02 15:07:16', 0, 0),
-('1c015cb0-3187-4068-bc6d-06585521e165', 'anabe', 'anabe@sistema.com', '$2y$10$UDkK9DefzbW7w92/ZzIhxetdeZdzCBTnE/ddncjkXHavkb4hI.KdW', 'VENDEDOR', 1, '2026-06-27 03:51:48', '2026-06-29 07:44:37', 1, 1),
-('22222222-2222-2222-2222-222222222222', 'Ana Paula Silva', 'ana@sistema.com', '$2y$10$WkA/uXzt0FgkNZSgpV5IXuwgOYrjultBGwQMszFKOofoXqqTvG1aO', 'VISTORIADOR', 1, '2026-06-24 17:33:03', '2026-06-29 06:48:36', 0, 0),
-('33333333-3333-3333-3333-333333333333', 'Roberto Lima', 'roberto@sistema.com', '$2y$10$WkA/uXzt0FgkNZSgpV5IXuwgOYrjultBGwQMszFKOofoXqqTvG1aO', 'VISTORIADOR', 1, '2026-06-24 17:33:03', '2026-06-29 06:48:36', 0, 0),
-('3774d80c-2574-470e-88a9-9781936c6de3', 'Any', 'ronokedas1@sistema.com', '$2y$10$1nLg0u9FnsJqkE3ha9XPz.yrqrIJPiS5W77xGcbJIerWNBcsPO3Jq', 'VISTORIADOR', 1, '2026-06-23 22:51:43', '2026-06-29 07:44:37', 1, 0),
-('74e02f95-fbe6-42f3-bedf-f8535e4d13aa', 'Rosano Souza', 'ronokedas@sistema.com', '$2y$10$GqsuS7U0TFTRQFRxJQF0puCxJbh65ABLEovfH4kQ0tpxtMi7zrD3W', 'VISTORIADOR', 1, '2026-06-11 21:44:56', '2026-06-29 06:48:36', 0, 0),
-('95eb5557-65e8-11f1-85ef-047c16b568a3', 'Administrador', 'admin@sistema.com', '$2y$10$me4J46xJEQ9k/UEKfdlRBeWtGclStZKVFSH.HxqVjmsX/8ur8b.GC', 'ADMIN', 1, '2026-06-11 19:55:04', '2026-06-29 03:01:57', 0, 0),
-('e5c68a85-c920-4b11-bc93-9343d9d94f14', 'vistoriador teste', 'vistoriador@sistema.com', '$2y$10$PP4U57OhH0vNWBgjS2Fd.e51GcxjDg/QytGmyrfo6djZUl0M6svqW', 'VISTORIADOR', 1, '2026-07-02 15:06:59', '2026-07-02 15:06:59', 0, 0);
+INSERT INTO `usuarios` (`id`, `nome`, `email`, `senha_hash`, `cargo`, `ativo`, `excluido_em`, `criado_em`, `atualizado_em`, `acesso_documentacao`, `acesso_financeiro`) VALUES
+('11111111-1111-1111-1111-111111111111', 'Carlos Mendes', 'excluido.11111111111111111111111111111111@local.invalid', '$2y$10$SjdkE2qA2s5C1UHZo/V4yOaIYQ1RWLsybsGP7Vf1cLmGJYmeflMFi', 'VISTORIADOR', 0, '2026-07-19 02:27:38', '2026-06-24 17:33:03', '2026-07-19 02:27:38', 0, 0),
+('1c015cb0-3187-4068-bc6d-06585521e165', 'anabe', 'excluido.1c015cb031874068bc6d06585521e165@local.invalid', '$2y$10$YTFhG9EMyJrdZssxn5aXuelGURp2nULigmFHIKVGdqFiQxbzAXIBu', 'VENDEDOR', 0, '2026-07-19 02:27:32', '2026-06-27 03:51:48', '2026-07-19 02:27:32', 1, 1),
+('22222222-2222-2222-2222-222222222222', 'Ana Paula Silva', 'excluido.22222222222222222222222222222222@local.invalid', '$2y$10$t5EgpXiQyTOM/NZjPcdREep5XsL.u.y8OztQGiCY1EF55VlLklvvO', 'VISTORIADOR', 0, '2026-07-19 02:27:28', '2026-06-24 17:33:03', '2026-07-19 02:27:28', 0, 0),
+('33333333-3333-3333-3333-333333333333', 'Roberto Lima', 'excluido.33333333333333333333333333333333@local.invalid', '$2y$10$lH9jpywZL4ueeCNV1kxUXe4Ayl51gRcqjTqNLiU0S5aW0DA4IqD1y', 'VISTORIADOR', 0, '2026-07-19 02:27:48', '2026-06-24 17:33:03', '2026-07-19 02:27:48', 0, 0),
+('3774d80c-2574-470e-88a9-9781936c6de3', 'Any', 'excluido.3774d80c2574470e88a99781936c6de3@local.invalid', '$2y$10$TzfH61SflMPiQpW4MFIP5OTf2/khZ51Q66XX1HiNl3SjgtruZj8au', 'VISTORIADOR', 0, '2026-07-19 02:27:35', '2026-06-23 22:51:43', '2026-07-19 02:27:35', 1, 0),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa', 'Rosano Souza', 'excluido.74e02f95fbe642f3bedff8535e4d13aa@local.invalid', '$2y$10$pEGJqFBciTy5Zm4.xv1CTOi9eF29nXW4NWRaifY/h4f74SWAJd0EG', 'VISTORIADOR', 0, '2026-07-19 02:27:52', '2026-06-11 21:44:56', '2026-07-19 02:27:52', 0, 0),
+('95eb5557-65e8-11f1-85ef-047c16b568a3', 'Administrador', 'excluido.95eb555765e811f185ef047c16b568a3@local.invalid', '$2y$10$WDtKPgD44yf3STmx0SPfOuiy2AgKuWi5EEFozzSOfvZ3vLGGLW7Pq', 'ADMIN', 0, '2026-07-19 02:28:49', '2026-06-11 19:55:04', '2026-07-19 02:28:49', 0, 0),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'itamar', 'analista@teste.com', '$2y$10$PftOdZbu7u.NZ65.r1NpO.s4jBDtysUHLwrLVH0jxALGB/VlWvn.2', 'ANALISTA', 1, NULL, '2026-07-16 15:38:12', '2026-07-16 15:38:12', 0, 0),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'Neto', 'teste1@teste.com', '$2y$10$nho8g81ikeWtP9U7G3Ft7uHZOARhHcfD.oVRW5/hMKQnZ7MRsLxOy', 'VISTORIADOR', 1, NULL, '2026-07-07 21:10:28', '2026-07-07 22:24:42', 1, 0),
+('dd121661-feb4-42f6-895a-68eb0608d1e4', 'teste admin', 'teste@teste.com', '$2y$10$eK05TTRWPQmp7ldYEALHrOMRSVKUGMo6yqVv3kCU0yYiOz5KzBWw6', 'ADMIN', 1, NULL, '2026-07-05 13:39:17', '2026-07-15 23:52:54', 0, 0),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14', 'vistoriador teste', 'excluido.e5c68a85c9204b11bc939343d9d94f14@local.invalid', '$2y$10$LdMu1ZxZP.ysBC10FSV/TeWm5yuEeZkyenLH5fxHKx4QA6MbAPGeW', 'VISTORIADOR', 0, '2026-07-19 02:28:20', '2026-07-02 15:06:59', '2026-07-19 02:28:20', 0, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `usuario_perfis`
+--
+
+CREATE TABLE `usuario_perfis` (
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `perfil` enum('ADMIN','VENDEDOR','VISTORIADOR','ANALISTA') COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Despejando dados para a tabela `usuario_perfis`
+--
+
+INSERT INTO `usuario_perfis` (`usuario_id`, `perfil`, `criado_em`) VALUES
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'ANALISTA', '2026-07-16 15:38:12'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'VISTORIADOR', '2026-07-14 22:05:44'),
+('dd121661-feb4-42f6-895a-68eb0608d1e4', 'ADMIN', '2026-07-14 22:05:44');
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `usuario_permissoes`
+--
+
+CREATE TABLE `usuario_permissoes` (
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `permissao` varchar(80) COLLATE utf8mb4_general_ci NOT NULL,
+  `permitido` tinyint(1) NOT NULL DEFAULT '0',
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Despejando dados para a tabela `usuario_permissoes`
+--
+
+INSERT INTO `usuario_permissoes` (`usuario_id`, `permissao`, `permitido`, `atualizado_em`) VALUES
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'agendamentos', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'analise_planos', 1, '2026-07-18 14:27:15'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'armadores', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'certificados', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'comercial', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'configuracoes', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'dashboard', 1, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'despachantes', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'documentacao', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'emails', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'embarcacoes', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'financeiro', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'portal_clientes', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'proprietarios', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'relatorios', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'relatorios_aprovacao', 1, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'responsaveis_assinatura', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'servicos', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'usuarios', 0, '2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'vistorias', 1, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'agendamentos', 1, '2026-07-17 01:38:21'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'armadores', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'certificados', 1, '2026-07-16 16:39:29'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'comercial', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'configuracoes', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'dashboard', 1, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'despachantes', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'documentacao', 1, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'emails', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'embarcacoes', 1, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'financeiro', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'portal_clientes', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'proprietarios', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'relatorios', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'relatorios_aprovacao', 1, '2026-07-17 01:38:21'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'responsaveis_assinatura', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'servicos', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'usuarios', 0, '2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'vistorias', 1, '2026-07-16 16:15:33'),
+('dd121661-feb4-42f6-895a-68eb0608d1e4', 'analise_planos', 1, '2026-07-18 14:27:15');
 
 -- --------------------------------------------------------
 
@@ -1486,12 +1730,18 @@ CREATE TABLE `vistorias` (
   `embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
   `pessoa_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `armador_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `operador_nome` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `agendamento_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `relatorio_anterior_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `finalidade` enum('VISTORIA','CUMPRIMENTO_EXIGENCIAS') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'VISTORIA',
   `data_vistoria` date NOT NULL,
+  `prazo_exigencias_dias` smallint UNSIGNED DEFAULT NULL,
   `data_emissao` date DEFAULT NULL,
   `status` enum('PENDENTE','AGUARDANDO_APROVACAO','APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA','CANCELADA') COLLATE utf8mb4_general_ci DEFAULT 'PENDENTE',
+  `mobile_versao` int UNSIGNED NOT NULL DEFAULT '0',
+  `mobile_finalizada_em` datetime DEFAULT NULL,
   `aprovado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_assinatura_id` int DEFAULT NULL,
   `data_aprovacao` datetime DEFAULT NULL,
   `observacao_admin` text COLLATE utf8mb4_general_ci,
   `observacoes` text COLLATE utf8mb4_general_ci,
@@ -1503,18 +1753,28 @@ CREATE TABLE `vistorias` (
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
 --
--- Despejando dados para a tabela `vistorias`
+-- Estrutura para tabela `vistoria_anexos`
 --
 
-INSERT INTO `vistorias` (`id`, `numero`, `embarcacao_id`, `pessoa_id`, `armador_id`, `agendamento_id`, `relatorio_anterior_id`, `data_vistoria`, `data_emissao`, `status`, `aprovado_por`, `data_aprovacao`, `observacao_admin`, `observacoes`, `resultado`, `observacoes_tecnicas`, `texto_observacoes_geradas`, `criado_por`, `criado_em`, `atualizado_em`) VALUES
-('3617dcbd-7640-11f1-85ad-621c498e207c', NULL, '6205b1f7-7628-11f1-85ad-621c498e207c', NULL, NULL, NULL, NULL, '2026-07-02', NULL, 'AGUARDANDO_APROVACAO', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-02 18:02:38', '2026-07-02 18:02:38'),
-('3b14c7df-5078-470a-afd1-41da3958260a', 'AM-REL-V-4/26', '05a94606-59fe-4371-afbc-b7b094df2676', '64e60ad7-3a78-4db0-9e03-cc529d935325', '60977320-a7d1-49a7-8471-4909c5530d79', '83ad9b48-7666-11f1-9eb5-0a1b2af87b16', NULL, '2026-07-03', NULL, 'APROVADA_COM_EXIGENCIAS', '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 23:30:55', NULL, NULL, NULL, 'organizar', NULL, 'e5c68a85-c920-4b11-bc93-9343d9d94f14', '2026-07-02 23:03:15', '2026-07-02 23:30:55'),
-('620765e4-7628-11f1-85ad-621c498e207c', 'VST-2026-001', '6205b1f7-7628-11f1-85ad-621c498e207c', '620624f7-7628-11f1-85ad-621c498e207c', NULL, '6206e36e-7628-11f1-85ad-621c498e207c', '620765e4-7628-11f1-85ad-621c498e207c', '2026-07-10', '2026-07-10', 'CANCELADA', '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', NULL, 'Vistoria aprovada. EmbarcaÃ§Ã£o em condiÃ§Ãµes.', 'Aprovado', 'Casco em bom estado. Motor funcionando adequadamente.', 'As exigências n.º 1, 2, 3, 4 foram CUMPRIDAS.\n', '11111111-1111-1111-1111-111111111111', '2026-07-02 15:12:04', '2026-07-02 22:04:41'),
-('620c6b1a-7628-11f1-85ad-621c498e207c', 'VST-2026-002', '620a9dfa-7628-11f1-85ad-621c498e207c', '620b1381-7628-11f1-85ad-621c498e207c', NULL, '620bf6aa-7628-11f1-85ad-621c498e207c', NULL, '2026-07-15', '2026-07-15', 'CANCELADA', '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 22:05:18', NULL, 'Aprovada com exigÃªncias de borda livre.', 'Aprovado com ExigÃªncias', 'Marcas de borda livre precisam ser repintadas.', 'As exigências n.º 2 foram CUMPRIDAS.\n', '22222222-2222-2222-2222-222222222222', '2026-07-02 15:12:04', '2026-07-02 22:05:40'),
-('620fefdc-7628-11f1-85ad-621c498e207c', 'VST-2026-003', '620e4464-7628-11f1-85ad-621c498e207c', '620ebfc8-7628-11f1-85ad-621c498e207c', NULL, '620f7603-7628-11f1-85ad-621c498e207c', '620fefdc-7628-11f1-85ad-621c498e207c', '2026-07-20', '2026-07-20', 'CANCELADA', '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-02 15:12:04', NULL, 'Vistoria aprovada sem restriÃ§Ãµes.', 'Aprovado', 'EmbarcaÃ§Ã£o nova em perfeitas condiÃ§Ãµes. Motor Cummins operando dentro dos parÃ¢metros.', 'As exigências n.º 1, 2, 3, 4 foram CUMPRIDAS.\n', '33333333-3333-3333-3333-333333333333', '2026-07-02 15:12:04', '2026-07-02 22:05:54'),
-('8f85d9b9-4606-49ac-8a9e-ce3943829467', 'AM-REL-V-5/26', '05a94606-59fe-4371-afbc-b7b094df2676', '64e60ad7-3a78-4db0-9e03-cc529d935325', '60977320-a7d1-49a7-8471-4909c5530d79', '9c4e5534-76e1-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '2026-07-17', NULL, 'APROVADA', '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-04 05:07:01', NULL, NULL, NULL, NULL, NULL, '3774d80c-2574-470e-88a9-9781936c6de3', '2026-07-03 13:30:32', '2026-07-04 05:07:01'),
-('c274f2cf-9445-423e-8e5e-f91b21d4a0bc', NULL, '05a94606-59fe-4371-afbc-b7b094df2676', '64e60ad7-3a78-4db0-9e03-cc529d935325', '60977320-a7d1-49a7-8471-4909c5530d79', NULL, NULL, '2026-07-05', NULL, 'PENDENTE', NULL, NULL, NULL, '', NULL, NULL, NULL, '95eb5557-65e8-11f1-85ef-047c16b568a3', '2026-07-04 05:53:04', '2026-07-04 05:53:04');
+CREATE TABLE `vistoria_anexos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `catalogo_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `url_arquivo` varchar(1000) COLLATE utf8mb4_general_ci NOT NULL,
+  `chave_arquivo` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `nome_original` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `mime_type` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `tamanho_bytes` int UNSIGNED NOT NULL,
+  `sha256` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `capturado_em` datetime DEFAULT NULL,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `excluido_em` datetime DEFAULT NULL,
+  `excluido_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -1530,87 +1790,10 @@ CREATE TABLE `vistoria_checklist_respostas` (
   `observacao` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `item_normam` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `vencimento` date DEFAULT NULL,
+  `sem_prazo` tinyint(1) NOT NULL DEFAULT '0',
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `vistoria_checklist_respostas`
---
-
-INSERT INTO `vistoria_checklist_respostas` (`id`, `vistoria_id`, `catalogo_id`, `status`, `observacao`, `item_normam`, `vencimento`, `criado_em`, `atualizado_em`) VALUES
-('30f84e9a-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '415b0057-acb3-4884-a57f-e8c3473b0e6f', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 04, Item 4.14', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f86949-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '22f45a4b-749e-4340-93bb-4c18b3a8273b', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 08, Item 8.5', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f87e14-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'be414d13-fba6-478b-b244-8cae54e7532e', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção II.', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f89590-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '4f0cca2c-efa9-40d3-a863-0488fea72d05', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção II.', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f8adc5-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '3443b027-7b7e-4275-bdf3-a916184578f9', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 04, Item 4.29', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f8c19c-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'b8b68324-6f6c-48d4-af7f-84d98d71eca7', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 09, Item 9.2', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f8d85b-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '99be0275-f74e-49e6-aac2-fce3b372fecf', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 09, Item 9.2', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f8ed3e-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'af6b1cb2-e94a-452c-a083-9b7e2f41ff69', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f90377-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f917ed-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'e2dc9cdc-437a-4c3a-8710-ce6bb9d4c3f6', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção IV.', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f92c54-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '45f242ee-96c4-4558-8a4f-86bdac810e1a', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f93fd3-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '1de8358a-fa6e-4cef-876d-6784f605e96d', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 04, Item 4.2', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f955e1-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '83c0e7f6-6a1a-4383-ba22-9544c2018930', 'CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('30f960a3-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cad656d0-6125-4f9c-be76-9d9ce5e03c99', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 05:07:01', '2026-07-04 05:07:01'),
-('42f352fe-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '415b0057-acb3-4884-a57f-e8c3473b0e6f', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 04, Item 4.14', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f36bdc-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '22f45a4b-749e-4340-93bb-4c18b3a8273b', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 08, Item 8.5', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f38154-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'be414d13-fba6-478b-b244-8cae54e7532e', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção II.', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f3967a-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '4f0cca2c-efa9-40d3-a863-0488fea72d05', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção II.', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f3abb2-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '3443b027-7b7e-4275-bdf3-a916184578f9', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 04, Item 4.29', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f3bff4-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'b8b68324-6f6c-48d4-af7f-84d98d71eca7', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 09, Item 9.2', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f3d5cf-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '99be0275-f74e-49e6-aac2-fce3b372fecf', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 09, Item 9.2', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f3eb45-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'af6b1cb2-e94a-452c-a083-9b7e2f41ff69', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f4010e-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f414c6-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'e2dc9cdc-437a-4c3a-8710-ce6bb9d4c3f6', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção IV.', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f42b3d-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '45f242ee-96c4-4558-8a4f-86bdac810e1a', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f4405b-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '1de8358a-fa6e-4cef-876d-6784f605e96d', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 04, Item 4.2', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f45649-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '83c0e7f6-6a1a-4383-ba22-9544c2018930', 'CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('42f45d1e-7765-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cad656d0-6125-4f9c-be76-9d9ce5e03c99', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 05:00:22', '2026-07-04 05:00:22'),
-('8a6c847c-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '415b0057-acb3-4884-a57f-e8c3473b0e6f', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 04, Item 4.14', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6ca799-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '22f45a4b-749e-4340-93bb-4c18b3a8273b', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 08, Item 8.5', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6cbcd4-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'be414d13-fba6-478b-b244-8cae54e7532e', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção II.', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6cd339-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '4f0cca2c-efa9-40d3-a863-0488fea72d05', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção II.', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6ce830-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '3443b027-7b7e-4275-bdf3-a916184578f9', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 04, Item 4.29', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6cff67-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'b8b68324-6f6c-48d4-af7f-84d98d71eca7', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 09, Item 9.2', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6d13e7-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '99be0275-f74e-49e6-aac2-fce3b372fecf', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 09, Item 9.2', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6d2b15-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'af6b1cb2-e94a-452c-a083-9b7e2f41ff69', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6d40aa-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6d56a9-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'e2dc9cdc-437a-4c3a-8710-ce6bb9d4c3f6', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção IV.', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6d6cc5-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '45f242ee-96c4-4558-8a4f-86bdac810e1a', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6d8081-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '1de8358a-fa6e-4cef-876d-6784f605e96d', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 04, Item 4.2', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6d92a2-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '83c0e7f6-6a1a-4383-ba22-9544c2018930', 'CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('8a6d99ca-7764-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cad656d0-6125-4f9c-be76-9d9ce5e03c99', 'NAO_CONFORME', NULL, 'NORMAM-202/DPC, Cap. 03, Seção III.', NULL, '2026-07-04 04:55:12', '2026-07-04 04:55:12'),
-('af8d752d-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '415b0057-acb3-4884-a57f-e8c3473b0e6f', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:01:28', '2026-07-03 14:01:28'),
-('af8d8dfb-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '22f45a4b-749e-4340-93bb-4c18b3a8273b', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:01:28', '2026-07-03 14:01:28'),
-('af8da4b1-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'af6b1cb2-e94a-452c-a083-9b7e2f41ff69', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:01:28', '2026-07-03 14:01:28'),
-('af8dbb60-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:01:28', '2026-07-03 14:01:28'),
-('af8dd0ea-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'e2dc9cdc-437a-4c3a-8710-ce6bb9d4c3f6', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:01:28', '2026-07-03 14:01:28'),
-('af8de4d7-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '45f242ee-96c4-4558-8a4f-86bdac810e1a', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:01:28', '2026-07-03 14:01:28'),
-('af8df82e-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '1de8358a-fa6e-4cef-876d-6784f605e96d', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:01:28', '2026-07-03 14:01:28'),
-('af8e0c27-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '83c0e7f6-6a1a-4383-ba22-9544c2018930', 'CONFORME', NULL, NULL, NULL, '2026-07-03 14:01:28', '2026-07-03 14:01:28'),
-('af8e131d-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cad656d0-6125-4f9c-be76-9d9ce5e03c99', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:01:28', '2026-07-03 14:01:28'),
-('c5bbcbfe-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '415b0057-acb3-4884-a57f-e8c3473b0e6f', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bbe98d-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '22f45a4b-749e-4340-93bb-4c18b3a8273b', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bbfddc-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'be414d13-fba6-478b-b244-8cae54e7532e', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bc1253-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '4f0cca2c-efa9-40d3-a863-0488fea72d05', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bc2a9f-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '3443b027-7b7e-4275-bdf3-a916184578f9', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bc3f88-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'b8b68324-6f6c-48d4-af7f-84d98d71eca7', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bc57aa-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '99be0275-f74e-49e6-aac2-fce3b372fecf', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bc6a5d-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'af6b1cb2-e94a-452c-a083-9b7e2f41ff69', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bc7e8a-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bc93c1-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'e2dc9cdc-437a-4c3a-8710-ce6bb9d4c3f6', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bca744-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '45f242ee-96c4-4558-8a4f-86bdac810e1a', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bcbde9-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '1de8358a-fa6e-4cef-876d-6784f605e96d', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bcd264-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '83c0e7f6-6a1a-4383-ba22-9544c2018930', 'CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('c5bcd89d-76e7-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cad656d0-6125-4f9c-be76-9d9ce5e03c99', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 14:02:05', '2026-07-03 14:02:05'),
-('fc0a79c0-76e6-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '415b0057-acb3-4884-a57f-e8c3473b0e6f', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 13:56:26', '2026-07-03 13:56:26'),
-('fc0a963f-76e6-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '22f45a4b-749e-4340-93bb-4c18b3a8273b', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 13:56:26', '2026-07-03 13:56:26'),
-('fc0aad3d-76e6-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'af6b1cb2-e94a-452c-a083-9b7e2f41ff69', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 13:56:26', '2026-07-03 13:56:26'),
-('fc0ac3c6-76e6-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 13:56:26', '2026-07-03 13:56:26'),
-('fc0adbad-76e6-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'e2dc9cdc-437a-4c3a-8710-ce6bb9d4c3f6', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 13:56:26', '2026-07-03 13:56:26'),
-('fc0af283-76e6-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '45f242ee-96c4-4558-8a4f-86bdac810e1a', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 13:56:26', '2026-07-03 13:56:26'),
-('fc0b0747-76e6-11f1-9eb5-0a1b2af87b16', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '1de8358a-fa6e-4cef-876d-6784f605e96d', 'NAO_CONFORME', NULL, NULL, NULL, '2026-07-03 13:56:26', '2026-07-03 13:56:26');
 
 -- --------------------------------------------------------
 
@@ -1630,40 +1813,26 @@ CREATE TABLE `vistoria_exigencias` (
   `observacao` text COLLATE utf8mb4_general_ci,
   `item_normam` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `vencimento` date DEFAULT NULL,
+  `antes_de_suspender` tinyint(1) NOT NULL DEFAULT '0',
   `status_item` enum('pendente','cumprida','nao_cumprida_transcrita','cumprida_parcial_reescrita','inserida') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'inserida',
   `exigencia_origem_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
 --
--- Despejando dados para a tabela `vistoria_exigencias`
+-- Estrutura para tabela `vistoria_mobile_sync`
 --
 
-INSERT INTO `vistoria_exigencias` (`id`, `vistoria_id`, `catalogo_id`, `bloco_vistoria`, `ordem`, `item`, `descricao`, `conforme`, `observacao`, `item_normam`, `vencimento`, `status_item`, `exigencia_origem_id`) VALUES
-('06cfd8af-7662-11f1-9eb5-0a1b2af87b16', '620765e4-7628-11f1-85ad-621c498e207c', '6204f717-7628-11f1-85ad-621c498e207c', NULL, 1, 'Casco e Estruturas', 'Verificar condiÃ§Ã£o geral do casco.', 'sim', 'Casco em bom estado, sem corrosÃ£o.', NULL, NULL, 'cumprida', NULL),
-('06cfdf93-7662-11f1-9eb5-0a1b2af87b16', '620765e4-7628-11f1-85ad-621c498e207c', '6204fab7-7628-11f1-85ad-621c498e207c', NULL, 2, 'Governo e Leme', 'Verificar sistema de governo.', 'sim', 'Sistema de governo operacional.', NULL, NULL, 'cumprida', NULL),
-('06cfe751-7662-11f1-9eb5-0a1b2af87b16', '620765e4-7628-11f1-85ad-621c498e207c', '6204fc07-7628-11f1-85ad-621c498e207c', NULL, 3, 'Combate a IncÃªndio', 'Testar sistema de combate a incÃªndio.', 'sim', 'Extintores vÃ¡lidos e sistema pressurizado.', NULL, NULL, 'cumprida', NULL),
-('06cfedcb-7662-11f1-9eb5-0a1b2af87b16', '620765e4-7628-11f1-85ad-621c498e207c', '6204fc9a-7628-11f1-85ad-621c498e207c', NULL, 4, 'Salvatagem', 'Verificar equipamentos salvatagem.', 'sim', 'Balsas e coletes em ordem.', NULL, NULL, 'cumprida', NULL),
-('2a0c0ed8-7662-11f1-9eb5-0a1b2af87b16', '620c6b1a-7628-11f1-85ad-621c498e207c', '6204fcdc-7628-11f1-85ad-621c498e207c', NULL, 1, 'Marcas de Borda Livre', 'Aferir marcas de borda livre.', 'nao', 'Marcas apagadas, necessita repintura.', NULL, NULL, 'pendente', NULL),
-('2a0c171c-7662-11f1-9eb5-0a1b2af87b16', '620c6b1a-7628-11f1-85ad-621c498e207c', '6204fe5e-7628-11f1-85ad-621c498e207c', NULL, 2, 'CÃ¡lculo de ArqueaÃ§Ã£o', 'Calcular arqueaÃ§Ã£o bruta e lÃ­quida.', 'sim', 'ArqueaÃ§Ã£o calculada conforme normas.', NULL, NULL, 'cumprida', NULL),
-('30f86013-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '415b0057-acb3-4884-a57f-e8c3473b0e6f', NULL, 1, 'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.14', 'O sistema de bomba(s) consegue manter, pelo menos, duas tomadas de incêndio distintas com jatos d\'água nunca inferior a 15 m de alcance', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f876b6-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '22f45a4b-749e-4340-93bb-4c18b3a8273b', NULL, 2, 'Item Normam: NORMAM-202/DPC, Cap. 08, Item 8.5', 'Relatório de medição de espessura (cinco pontos por chapa), assinado por profissional qualificado e certificado, com reconhecimento no Sistema Nacional de Qualificação e Certificação de Pessoal em Ensaios Não Destrutivos (SNQC/END), acompanhado de documento que comprove a validade da citada habilitação na data de execução do serviço', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f88cef-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'be414d13-fba6-478b-b244-8cae54e7532e', NULL, 3, 'Item Normam: NORMAM-202/DPC, Cap. 03, Seção II.', 'Verificar o estado físico de conservação, higiene e limpeza dos colchões fornecidos nos camarotes.', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f8a26e-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '4f0cca2c-efa9-40d3-a863-0488fea72d05', NULL, 4, 'Item Normam: NORMAM-202/DPC, Cap. 03, Seção II.', 'Verificar se as tomadas elétricas instaladas nos camarotes estão em perfeito estado físico, com espelhos protetores e energizadas corretamente.', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f8bac4-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '3443b027-7b7e-4275-bdf3-a916184578f9', NULL, 5, 'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.29', 'Verificar a conformidade e a data de validade de cerca de 5 anos da mangueira de gás regulamentada pela ABNT e da válvula reguladora de pressão na cozinha.', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f8d1be-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'b8b68324-6f6c-48d4-af7f-84d98d71eca7', NULL, 6, 'Item Normam: NORMAM-202/DPC, Cap. 09, Item 9.2', 'Verificar a afixação de placa educativa em local visível no convés com os dizeres: \'Não jogue lixo no rio, deposite seu lixo aqui\'.', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f8e482-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '99be0275-f74e-49e6-aac2-fce3b372fecf', NULL, 7, 'Item Normam: NORMAM-202/DPC, Cap. 09, Item 9.2', 'Verificar a existência físico-documental e o correto preenchimento do livro de registro de lixo a bordo.', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f8fc67-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'af6b1cb2-e94a-452c-a083-9b7e2f41ff69', NULL, 8, 'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.', 'Motores cujo sistema de arrefecimento seja constituído por ventiladores deverão ter os mesmos providos de proteção', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f91063-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2', NULL, 9, 'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.', 'Motores providos de sistema de abertura das válvulas de admissão e descarga, por intermédio de balancins, deverão ter seus tuchos de acionamento protegidos', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f924b3-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'e2dc9cdc-437a-4c3a-8710-ce6bb9d4c3f6', NULL, 10, 'Item Normam: NORMAM-202/DPC, Cap. 03, Seção IV.', 'Qualquer sistema de monitoramento e ou controle de equipamentos instalado no passadiço deverá ser dotado de placas identificadoras, assim como provido de uma iluminação apropriada', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f93977-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '45f242ee-96c4-4558-8a4f-86bdac810e1a', NULL, 11, 'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.', 'A fonte de energia elétrica principal foi dimensionada de forma que a potência aparente fornecida ao sistema seja suficiente para evitar quedas de tensões que resultem em desligamento ou oscilação de consumidores em operação devido a partida de motores elétricos de alta corrente', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f94de0-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', '1de8358a-fa6e-4cef-876d-6784f605e96d', NULL, 12, 'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.2', 'Verificar a presença e o pleno funcionamento do sistema regulamentar \'Sistran\' no comando da embarcação.', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f97022-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', 'cad656d0-6125-4f9c-be76-9d9ce5e03c99', NULL, 13, 'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.', 'Realizar verificação física detalhada de todo o hélice, leme, bucha e eixo propulsor da embarcação em seco, buscando desgastes, trincas ou folgas anômalas.', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('30f97789-7766-11f1-8a63-ca7cdd5873bb', '8f85d9b9-4606-49ac-8a9e-ce3943829467', NULL, NULL, 14, 'Equipamentos de Salvamento', 'nao tem segurança', 'nao', NULL, NULL, NULL, 'pendente', NULL),
-('3241545d-7662-11f1-9eb5-0a1b2af87b16', '620fefdc-7628-11f1-85ad-621c498e207c', '6204f717-7628-11f1-85ad-621c498e207c', NULL, 1, 'Casco e Estruturas', 'Verificar condiÃ§Ã£o geral do casco.', 'sim', 'Casco em excelente estado, pintura nova.', NULL, NULL, 'cumprida', NULL),
-('32415be2-7662-11f1-9eb5-0a1b2af87b16', '620fefdc-7628-11f1-85ad-621c498e207c', '6204fe98-7628-11f1-85ad-621c498e207c', NULL, 2, 'Estabilidade', 'Verificar estabilidade intacta.', 'sim', 'Estabilidade dentro dos parÃ¢metros.', NULL, NULL, 'cumprida', NULL),
-('32416409-7662-11f1-9eb5-0a1b2af87b16', '620fefdc-7628-11f1-85ad-621c498e207c', '6204fc07-7628-11f1-85ad-621c498e207c', NULL, 3, 'Combate a IncÃªndio', 'Testar sistema de combate a incÃªndio.', 'sim', 'Sistema pressurizado e extintores OK.', NULL, NULL, 'cumprida', NULL),
-('32416cc1-7662-11f1-9eb5-0a1b2af87b16', '620fefdc-7628-11f1-85ad-621c498e207c', 'e18ac408-9008-48cb-9488-022a517a1130', NULL, 4, 'CTS', 'Apresentar CTS (CartÃ£o de TripulaÃ§Ã£o de SeguranÃ§a).', 'sim', 'CTS do comandante OK.', NULL, NULL, 'cumprida', NULL),
-('34f82eb9-766a-11f1-9eb5-0a1b2af87b16', '3b14c7df-5078-470a-afd1-41da3958260a', NULL, NULL, 1, 'Equipamentos de Salvamento', 'nao tem segurança', 'nao', NULL, NULL, NULL, 'pendente', NULL);
+CREATE TABLE `vistoria_mobile_sync` (
+  `operacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo` enum('RASCUNHO','ANEXO','FOTO_EMBARCACAO','FINALIZACAO') COLLATE utf8mb4_general_ci NOT NULL,
+  `payload_hash` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `resposta_json` json DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Índices para tabelas despejadas
@@ -1677,17 +1846,97 @@ ALTER TABLE `agendamentos`
   ADD KEY `proposta_id` (`proposta_id`),
   ADD KEY `embarcacao_id` (`embarcacao_id`),
   ADD KEY `cliente_id` (`cliente_id`),
-  ADD KEY `idx_agendamentos_armador_id` (`armador_id`),
   ADD KEY `vistoriador_id` (`vistoriador_id`),
   ADD KEY `status` (`status`),
   ADD KEY `data_vistoria` (`data_vistoria`),
-  ADD KEY `criado_por` (`criado_por`);
+  ADD KEY `criado_por` (`criado_por`),
+  ADD KEY `idx_agendamentos_armador_id` (`armador_id`);
+
+--
+-- Índices de tabela `analises_planos`
+--
+ALTER TABLE `analises_planos`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_analise_planos_numero` (`numero`),
+  ADD KEY `idx_analise_planos_embarcacao` (`embarcacao_id`,`status`),
+  ADD KEY `idx_analise_planos_analista` (`analista_id`,`status`),
+  ADD KEY `fk_analise_planos_solicitante` (`solicitante_id`),
+  ADD KEY `fk_analise_planos_responsavel` (`responsavel_assinatura_id`),
+  ADD KEY `fk_analise_planos_criador` (`criado_por`);
+
+--
+-- Índices de tabela `analise_planos_arquivos`
+--
+ALTER TABLE `analise_planos_arquivos`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_analise_arquivo_hash` (`submissao_id`,`sha256`),
+  ADD KEY `idx_analise_arquivo_submissao` (`submissao_id`,`criado_em`),
+  ADD KEY `fk_analise_arquivo_usuario` (`criado_por`);
+
+--
+-- Índices de tabela `analise_planos_exigencias`
+--
+ALTER TABLE `analise_planos_exigencias`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_analise_exigencia` (`analise_id`,`status`,`ordem`),
+  ADD KEY `fk_analise_exigencia_item` (`item_id`),
+  ADD KEY `fk_analise_exigencia_usuario` (`criado_por`);
+
+--
+-- Índices de tabela `analise_planos_historico`
+--
+ALTER TABLE `analise_planos_historico`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_analise_historico` (`analise_id`,`criado_em`),
+  ADD KEY `fk_analise_historico_usuario` (`usuario_id`);
+
+--
+-- Índices de tabela `analise_planos_itens`
+--
+ALTER TABLE `analise_planos_itens`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_analise_item_ordem` (`analise_id`,`ordem`),
+  ADD KEY `fk_analise_item_submissao` (`submissao_id`),
+  ADD KEY `fk_analise_item_usuario` (`criado_por`);
+
+--
+-- Índices de tabela `analise_planos_pareceres`
+--
+ALTER TABLE `analise_planos_pareceres`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_analise_parecer_versao` (`analise_id`,`versao`),
+  ADD KEY `idx_analise_parecer_publicado` (`analise_id`,`status`,`publicado_em`),
+  ADD KEY `fk_analise_parecer_responsavel` (`responsavel_assinatura_id`),
+  ADD KEY `fk_analise_parecer_usuario` (`criado_por`);
+
+--
+-- Índices de tabela `analise_planos_submissoes`
+--
+ALTER TABLE `analise_planos_submissoes`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_analise_submissao_revisao` (`analise_id`,`revisao`),
+  ADD KEY `fk_analise_submissao_usuario` (`criado_por`);
+
+--
+-- Índices de tabela `campo_login_tentativas`
+--
+ALTER TABLE `campo_login_tentativas`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_campo_login_bloqueio` (`email_hash`,`ip_hash`,`criado_em`);
+
+--
+-- Índices de tabela `campo_sessoes`
+--
+ALTER TABLE `campo_sessoes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_campo_sessoes_usuario` (`usuario_id`,`expira_em`);
 
 --
 -- Índices de tabela `certificados_cht`
 --
 ALTER TABLE `certificados_cht`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_certificados_cht_numero` (`numero_certificado`),
   ADD KEY `idx_certificados_cht_numero` (`numero_relatorio_ht`),
   ADD KEY `idx_certificados_cht_status` (`status`),
   ADD KEY `idx_certificados_cht_ativo` (`ativo`),
@@ -1769,15 +2018,34 @@ ALTER TABLE `clientes`
 --
 ALTER TABLE `clientes_embarcacoes`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `cliente_embarcacao` (`cliente_id`,`embarcacao_id`),
-  ADD KEY `embarcacao_id` (`embarcacao_id`);
+  ADD UNIQUE KEY `uk_cliente_embarcacao_ativa` (`vinculo_ativo_chave`),
+  ADD KEY `embarcacao_id` (`embarcacao_id`),
+  ADD KEY `idx_cliente_embarcacao_historico` (`cliente_id`,`embarcacao_id`,`vinculado_em`),
+  ADD KEY `idx_cliente_embarcacao_status` (`cliente_id`,`status`);
 
 --
--- Ãndices de tabela `clientes_tipos_embarcacao`
+-- Índices de tabela `clientes_tipos_embarcacao`
 --
 ALTER TABLE `clientes_tipos_embarcacao`
   ADD PRIMARY KEY (`cliente_id`,`tipo_embarcacao_id`),
   ADD KEY `idx_cte_tipo_embarcacao` (`tipo_embarcacao_id`);
+
+--
+-- Índices de tabela `cliente_password_resets`
+--
+ALTER TABLE `cliente_password_resets`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_cliente_reset_token` (`token_hash`),
+  ADD KEY `idx_cliente_reset_cliente` (`cliente_id`),
+  ADD KEY `idx_cliente_reset_expira` (`expira_em`);
+
+--
+-- Índices de tabela `cliente_portal_acessos`
+--
+ALTER TABLE `cliente_portal_acessos`
+  ADD PRIMARY KEY (`cliente_id`),
+  ADD UNIQUE KEY `uk_cliente_portal_login` (`login`),
+  ADD KEY `idx_cliente_portal_ativo` (`ativo`);
 
 --
 -- Índices de tabela `configuracoes`
@@ -1809,6 +2077,36 @@ ALTER TABLE `csn_distribuicao_passageiros`
   ADD KEY `certificado_id` (`certificado_id`);
 
 --
+-- Índices de tabela `documento_aprovacoes`
+--
+ALTER TABLE `documento_aprovacoes`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_documento_aprovacao_versao` (`documento_tipo`,`documento_id`,`versao`),
+  ADD UNIQUE KEY `uk_documento_aprovacao_token` (`token_validacao`),
+  ADD KEY `idx_documento_aprovacao_documento` (`documento_tipo`,`documento_id`,`status`),
+  ADD KEY `idx_documento_aprovacao_responsavel` (`responsavel_id`),
+  ADD KEY `idx_documento_aprovacao_usuario` (`aprovador_usuario_id`);
+
+--
+-- Índices de tabela `documento_artefatos`
+--
+ALTER TABLE `documento_artefatos`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_documento_artefato` (`documento_tipo`,`documento_id`,`versao`),
+  ADD KEY `idx_documento_artefatos_tipo` (`documento_tipo`,`criado_em`);
+
+--
+-- Índices de tabela `email_logs`
+--
+ALTER TABLE `email_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_email_logs_tipo` (`tipo`),
+  ADD KEY `idx_email_logs_status` (`status`),
+  ADD KEY `idx_email_logs_referencia` (`referencia_tipo`,`referencia_id`),
+  ADD KEY `idx_email_logs_enviado_por` (`enviado_por`),
+  ADD KEY `idx_email_logs_created_at` (`created_at`);
+
+--
 -- Índices de tabela `embarcacoes`
 --
 ALTER TABLE `embarcacoes`
@@ -1817,7 +2115,8 @@ ALTER TABLE `embarcacoes`
   ADD KEY `criado_por` (`criado_por`),
   ADD KEY `idx_cliente_id` (`cliente_id`),
   ADD KEY `fk_embarcacoes_tipo` (`tipo_embarcacao_id`),
-  ADD KEY `fk_embarcacoes_proprietario` (`proprietario_id`);
+  ADD KEY `fk_embarcacoes_proprietario` (`proprietario_id`),
+  ADD KEY `idx_embarcacoes_foto_atualizada` (`foto_atualizada_em`);
 
 --
 -- Índices de tabela `exigencias_catalogo`
@@ -1832,6 +2131,38 @@ ALTER TABLE `exigencias_catalogo`
 ALTER TABLE `exigencias_categorias`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `idx_categoria_nome` (`nome`);
+
+--
+-- Índices de tabela `exportacoes_documentos`
+--
+ALTER TABLE `exportacoes_documentos`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_exportacoes_status` (`status`,`solicitado_em`),
+  ADD KEY `idx_exportacoes_usuario` (`solicitado_por`,`solicitado_em`);
+
+--
+-- Índices de tabela `financeiro_comprovantes`
+--
+ALTER TABLE `financeiro_comprovantes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_financeiro_comprovantes_lancamento` (`lancamento_id`);
+
+--
+-- Índices de tabela `financeiro_contas_bancarias`
+--
+ALTER TABLE `financeiro_contas_bancarias`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_financeiro_contas_ativo` (`ativo`);
+
+--
+-- Índices de tabela `financeiro_historico_baixas`
+--
+ALTER TABLE `financeiro_historico_baixas`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_financeiro_baixas_lancamento` (`lancamento_id`),
+  ADD KEY `idx_financeiro_baixas_data` (`data_pagamento`),
+  ADD KEY `idx_financeiro_baixas_conta` (`conta_bancaria_id`),
+  ADD KEY `fk_financeiro_baixas_usuario` (`criado_por`);
 
 --
 -- Índices de tabela `financeiro_lancamentos`
@@ -1863,15 +2194,24 @@ ALTER TABLE `ordens_servico`
   ADD KEY `criado_por` (`criado_por`);
 
 --
+-- Índices de tabela `portal_auditoria`
+--
+ALTER TABLE `portal_auditoria`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_portal_auditoria_cliente` (`cliente_id`,`criado_em`),
+  ADD KEY `idx_portal_auditoria_documento` (`documento_tipo`,`documento_id`,`criado_em`),
+  ADD KEY `fk_portal_auditoria_embarcacao` (`embarcacao_id`);
+
+--
 -- Índices de tabela `propostas`
 --
 ALTER TABLE `propostas`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `numero` (`numero`),
   ADD KEY `cliente_id` (`cliente_id`),
-  ADD KEY `idx_propostas_armador_id` (`armador_id`),
   ADD KEY `status` (`status`),
-  ADD KEY `criado_por` (`criado_por`);
+  ADD KEY `criado_por` (`criado_por`),
+  ADD KEY `idx_propostas_armador_id` (`armador_id`);
 
 --
 -- Índices de tabela `propostas_embarcacoes`
@@ -1886,7 +2226,7 @@ ALTER TABLE `propostas_embarcacoes`
 --
 ALTER TABLE `propostas_servicos`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `proposta_servico` (`proposta_id`,`servico_id`),
+  ADD UNIQUE KEY `proposta_embarcacao_servico` (`proposta_id`,`embarcacao_id`,`servico_id`),
   ADD KEY `servico_id` (`servico_id`),
   ADD KEY `idx_propserv_emb` (`embarcacao_id`);
 
@@ -1920,7 +2260,20 @@ ALTER TABLE `tipos_embarcacao`
 --
 ALTER TABLE `usuarios`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `email` (`email`);
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `idx_usuarios_excluido_em` (`excluido_em`);
+
+--
+-- Índices de tabela `usuario_perfis`
+--
+ALTER TABLE `usuario_perfis`
+  ADD PRIMARY KEY (`usuario_id`,`perfil`);
+
+--
+-- Índices de tabela `usuario_permissoes`
+--
+ALTER TABLE `usuario_permissoes`
+  ADD PRIMARY KEY (`usuario_id`,`permissao`);
 
 --
 -- Índices de tabela `vistorias`
@@ -1934,14 +2287,24 @@ ALTER TABLE `vistorias`
   ADD KEY `agendamento_id` (`agendamento_id`),
   ADD KEY `vistorias_ibfk_aprovado_por` (`aprovado_por`),
   ADD KEY `fk_vistoria_anterior` (`relatorio_anterior_id`),
-  ADD KEY `fk_vistorias_armador` (`armador_id`);
+  ADD KEY `fk_vistorias_armador` (`armador_id`),
+  ADD KEY `idx_vistorias_agendamento_vigente` (`agendamento_id`,`criado_em`,`id`);
+
+--
+-- Índices de tabela `vistoria_anexos`
+--
+ALTER TABLE `vistoria_anexos`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_vistoria_anexo_hash` (`vistoria_id`,`sha256`),
+  ADD KEY `idx_vistoria_anexos_catalogo` (`catalogo_id`),
+  ADD KEY `idx_vistoria_anexos_criado_por` (`criado_por`);
 
 --
 -- Índices de tabela `vistoria_checklist_respostas`
 --
 ALTER TABLE `vistoria_checklist_respostas`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `vistoria_id` (`vistoria_id`),
+  ADD UNIQUE KEY `uniq_vistoria_catalogo` (`vistoria_id`,`catalogo_id`),
   ADD KEY `catalogo_id` (`catalogo_id`);
 
 --
@@ -1952,17 +2315,44 @@ ALTER TABLE `vistoria_exigencias`
   ADD KEY `vistoria_id` (`vistoria_id`),
   ADD KEY `ordem` (`ordem`),
   ADD KEY `fk_vistoria_exig_catalogo` (`catalogo_id`),
-  ADD KEY `fk_vistoria_exig_origem` (`exigencia_origem_id`);
+  ADD KEY `fk_vistoria_exig_origem` (`exigencia_origem_id`),
+  ADD KEY `idx_exigencias_as_pendentes` (`vistoria_id`,`antes_de_suspender`,`conforme`,`status_item`);
+
+--
+-- Índices de tabela `vistoria_mobile_sync`
+--
+ALTER TABLE `vistoria_mobile_sync`
+  ADD PRIMARY KEY (`operacao_id`),
+  ADD KEY `idx_mobile_sync_vistoria` (`vistoria_id`,`criado_em`),
+  ADD KEY `fk_mobile_sync_usuario` (`usuario_id`);
 
 --
 -- AUTO_INCREMENT para tabelas despejadas
 --
 
 --
+-- AUTO_INCREMENT de tabela `analise_planos_historico`
+--
+ALTER TABLE `analise_planos_historico`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `campo_login_tentativas`
+--
+ALTER TABLE `campo_login_tentativas`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `logs_atividade`
 --
 ALTER TABLE `logs_atividade`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=140;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `portal_auditoria`
+--
+ALTER TABLE `portal_auditoria`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de tabela `responsaveis_assinatura`
@@ -1981,9 +2371,70 @@ ALTER TABLE `agendamentos`
   ADD CONSTRAINT `agendamentos_ibfk_1` FOREIGN KEY (`proposta_id`) REFERENCES `propostas` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `agendamentos_ibfk_2` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE RESTRICT,
   ADD CONSTRAINT `agendamentos_ibfk_3` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE RESTRICT,
-  ADD CONSTRAINT `fk_agendamentos_armador` FOREIGN KEY (`armador_id`) REFERENCES `clientes` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `agendamentos_ibfk_4` FOREIGN KEY (`vistoriador_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `agendamentos_ibfk_5` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `agendamentos_ibfk_5` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_agendamentos_armador` FOREIGN KEY (`armador_id`) REFERENCES `clientes` (`id`) ON DELETE SET NULL;
+
+--
+-- Restrições para tabelas `analises_planos`
+--
+ALTER TABLE `analises_planos`
+  ADD CONSTRAINT `fk_analise_planos_analista` FOREIGN KEY (`analista_id`) REFERENCES `usuarios` (`id`),
+  ADD CONSTRAINT `fk_analise_planos_criador` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`),
+  ADD CONSTRAINT `fk_analise_planos_embarcacao` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`),
+  ADD CONSTRAINT `fk_analise_planos_responsavel` FOREIGN KEY (`responsavel_assinatura_id`) REFERENCES `responsaveis_assinatura` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_analise_planos_solicitante` FOREIGN KEY (`solicitante_id`) REFERENCES `clientes` (`id`) ON DELETE SET NULL;
+
+--
+-- Restrições para tabelas `analise_planos_arquivos`
+--
+ALTER TABLE `analise_planos_arquivos`
+  ADD CONSTRAINT `fk_analise_arquivo_submissao` FOREIGN KEY (`submissao_id`) REFERENCES `analise_planos_submissoes` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_analise_arquivo_usuario` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`);
+
+--
+-- Restrições para tabelas `analise_planos_exigencias`
+--
+ALTER TABLE `analise_planos_exigencias`
+  ADD CONSTRAINT `fk_analise_exigencia` FOREIGN KEY (`analise_id`) REFERENCES `analises_planos` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_analise_exigencia_item` FOREIGN KEY (`item_id`) REFERENCES `analise_planos_itens` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_analise_exigencia_usuario` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`);
+
+--
+-- Restrições para tabelas `analise_planos_historico`
+--
+ALTER TABLE `analise_planos_historico`
+  ADD CONSTRAINT `fk_analise_historico` FOREIGN KEY (`analise_id`) REFERENCES `analises_planos` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_analise_historico_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`);
+
+--
+-- Restrições para tabelas `analise_planos_itens`
+--
+ALTER TABLE `analise_planos_itens`
+  ADD CONSTRAINT `fk_analise_item` FOREIGN KEY (`analise_id`) REFERENCES `analises_planos` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_analise_item_submissao` FOREIGN KEY (`submissao_id`) REFERENCES `analise_planos_submissoes` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_analise_item_usuario` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`);
+
+--
+-- Restrições para tabelas `analise_planos_pareceres`
+--
+ALTER TABLE `analise_planos_pareceres`
+  ADD CONSTRAINT `fk_analise_parecer` FOREIGN KEY (`analise_id`) REFERENCES `analises_planos` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_analise_parecer_responsavel` FOREIGN KEY (`responsavel_assinatura_id`) REFERENCES `responsaveis_assinatura` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_analise_parecer_usuario` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`);
+
+--
+-- Restrições para tabelas `analise_planos_submissoes`
+--
+ALTER TABLE `analise_planos_submissoes`
+  ADD CONSTRAINT `fk_analise_submissao` FOREIGN KEY (`analise_id`) REFERENCES `analises_planos` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_analise_submissao_usuario` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`);
+
+--
+-- Restrições para tabelas `campo_sessoes`
+--
+ALTER TABLE `campo_sessoes`
+  ADD CONSTRAINT `fk_campo_sessoes_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
 
 --
 -- Restrições para tabelas `certificados_cht`
@@ -2036,11 +2487,23 @@ ALTER TABLE `clientes_embarcacoes`
   ADD CONSTRAINT `clientes_embarcacoes_ibfk_2` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE CASCADE;
 
 --
--- RestriÃ§Ãµes para tabelas `clientes_tipos_embarcacao`
+-- Restrições para tabelas `clientes_tipos_embarcacao`
 --
 ALTER TABLE `clientes_tipos_embarcacao`
   ADD CONSTRAINT `fk_cte_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_cte_tipo_embarcacao` FOREIGN KEY (`tipo_embarcacao_id`) REFERENCES `tipos_embarcacao` (`id`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `cliente_password_resets`
+--
+ALTER TABLE `cliente_password_resets`
+  ADD CONSTRAINT `fk_cliente_reset_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `cliente_portal_acessos`
+--
+ALTER TABLE `cliente_portal_acessos`
+  ADD CONSTRAINT `fk_cliente_portal_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE CASCADE;
 
 --
 -- Restrições para tabelas `contratos`
@@ -2077,6 +2540,26 @@ ALTER TABLE `exigencias_catalogo`
   ADD CONSTRAINT `fk_catalogo_categoria` FOREIGN KEY (`categoria_id`) REFERENCES `exigencias_categorias` (`id`) ON DELETE SET NULL;
 
 --
+-- Restrições para tabelas `exportacoes_documentos`
+--
+ALTER TABLE `exportacoes_documentos`
+  ADD CONSTRAINT `fk_exportacoes_usuario` FOREIGN KEY (`solicitado_por`) REFERENCES `usuarios` (`id`);
+
+--
+-- Restrições para tabelas `financeiro_comprovantes`
+--
+ALTER TABLE `financeiro_comprovantes`
+  ADD CONSTRAINT `fk_financeiro_comprovantes_lancamento` FOREIGN KEY (`lancamento_id`) REFERENCES `financeiro_lancamentos` (`id`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `financeiro_historico_baixas`
+--
+ALTER TABLE `financeiro_historico_baixas`
+  ADD CONSTRAINT `fk_financeiro_baixas_conta` FOREIGN KEY (`conta_bancaria_id`) REFERENCES `financeiro_contas_bancarias` (`id`) ON DELETE RESTRICT,
+  ADD CONSTRAINT `fk_financeiro_baixas_lancamento` FOREIGN KEY (`lancamento_id`) REFERENCES `financeiro_lancamentos` (`id`) ON DELETE RESTRICT,
+  ADD CONSTRAINT `fk_financeiro_baixas_usuario` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL;
+
+--
 -- Restrições para tabelas `financeiro_lancamentos`
 --
 ALTER TABLE `financeiro_lancamentos`
@@ -2095,11 +2578,18 @@ ALTER TABLE `ordens_servico`
   ADD CONSTRAINT `ordens_servico_ibfk_6` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL;
 
 --
+-- Restrições para tabelas `portal_auditoria`
+--
+ALTER TABLE `portal_auditoria`
+  ADD CONSTRAINT `fk_portal_auditoria_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_portal_auditoria_embarcacao` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE SET NULL;
+
+--
 -- Restrições para tabelas `propostas`
 --
 ALTER TABLE `propostas`
-  ADD CONSTRAINT `propostas_ibfk_1` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE RESTRICT,
   ADD CONSTRAINT `fk_propostas_armador` FOREIGN KEY (`armador_id`) REFERENCES `clientes` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `propostas_ibfk_1` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE RESTRICT,
   ADD CONSTRAINT `propostas_ibfk_2` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL;
 
 --
@@ -2118,6 +2608,18 @@ ALTER TABLE `propostas_servicos`
   ADD CONSTRAINT `propostas_servicos_ibfk_3` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE SET NULL;
 
 --
+-- Restrições para tabelas `usuario_perfis`
+--
+ALTER TABLE `usuario_perfis`
+  ADD CONSTRAINT `fk_usuario_perfis_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `usuario_permissoes`
+--
+ALTER TABLE `usuario_permissoes`
+  ADD CONSTRAINT `fk_usuario_permissoes_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
+
+--
 -- Restrições para tabelas `vistorias`
 --
 ALTER TABLE `vistorias`
@@ -2129,6 +2631,14 @@ ALTER TABLE `vistorias`
   ADD CONSTRAINT `vistorias_ibfk_aprovado_por` FOREIGN KEY (`aprovado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL;
 
 --
+-- Restrições para tabelas `vistoria_anexos`
+--
+ALTER TABLE `vistoria_anexos`
+  ADD CONSTRAINT `fk_vistoria_anexos_catalogo` FOREIGN KEY (`catalogo_id`) REFERENCES `exigencias_catalogo` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_vistoria_anexos_usuario` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_vistoria_anexos_vistoria` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE CASCADE;
+
+--
 -- Restrições para tabelas `vistoria_checklist_respostas`
 --
 ALTER TABLE `vistoria_checklist_respostas`
@@ -2138,19 +2648,17 @@ ALTER TABLE `vistoria_checklist_respostas`
 --
 -- Restrições para tabelas `vistoria_exigencias`
 --
--- Limpeza de dados orfaos antes de criar FKs.
--- Alguns registros antigos podem apontar para catalogo_id que nao existe mais em exigencias_catalogo.
--- Como a regra da FK e ON DELETE SET NULL, a correcao segura e manter a exigencia e remover so o vinculo antigo.
-UPDATE `vistoria_exigencias` ve
-LEFT JOIN `exigencias_catalogo` ec ON ec.`id` = ve.`catalogo_id`
-SET ve.`catalogo_id` = NULL
-WHERE ve.`catalogo_id` IS NOT NULL
-  AND ec.`id` IS NULL;
-
 ALTER TABLE `vistoria_exigencias`
   ADD CONSTRAINT `fk_vistoria_exig_catalogo` FOREIGN KEY (`catalogo_id`) REFERENCES `exigencias_catalogo` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_vistoria_exig_origem` FOREIGN KEY (`exigencia_origem_id`) REFERENCES `vistoria_exigencias` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `vistoria_exigencias_ibfk_1` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `vistoria_mobile_sync`
+--
+ALTER TABLE `vistoria_mobile_sync`
+  ADD CONSTRAINT `fk_mobile_sync_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_mobile_sync_vistoria` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -190,22 +190,6 @@ $pdf->Ln(4);
 $pdf->SetFont('helvetica', 'B', 8.5);
 $pdf->Cell(190, 5, 'Expedido em ' . ($c['local_emissao'] ?: 'Belém-PA') . ', em ' . lcDataExtenso($c['data_emissao']), 0, 1, 'C');
 
-// Quadro da assinatura
-$yAss = min(max($pdf->GetY() + 3, 215), 247);
-$pdf->Rect(28, $yAss, 154, 38);
-if (lcImagemValida($logo)) {
-    $pdf->Image($logo, 37, $yAss + 7, 24, 24, '', '', '', true, 300);
-}
-$pdf->Line(78, $yAss + 22, 169, $yAss + 22);
-$pdf->SetXY(78, $yAss + 24);
-$pdf->SetFont('helvetica', 'B', 8.5);
-$pdf->Cell(91, 4, h($c['assinante_nome']), 0, 1, 'C');
-$pdf->SetX(78);
-$pdf->SetFont('helvetica', '', 8);
-$pdf->Cell(91, 4, h($c['assinante_titulo']), 0, 1, 'C');
-$pdf->SetX(78);
-$pdf->Cell(91, 4, h($c['assinante_registro']), 0, 1, 'C');
-
 $nomeArquivo = $c['tipo_licenca'] . '_' . preg_replace('/[^A-Za-z0-9_-]+/', '-', $c['numero_lc']) . '.pdf';
 if (isset($salvar_pdf_caminho) && $salvar_pdf_caminho) {
     $pdf->Output($salvar_pdf_caminho, 'F');

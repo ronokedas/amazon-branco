@@ -1,7 +1,7 @@
 <?php
 /**
  * MÓDULO: Documentação > LC (Licença de Construção / LCEC)
- * Actions: Salvar, Excluir (soft delete)
+ * Actions: Salvar e enviar documentos
  * Numeração: AM-LC:{n}/{ano} ou AM-EC:{n}/{ano}
  */
 
@@ -28,6 +28,7 @@ if ($action === 'salvar') {
 
     $id = $_POST['id'] ?? null;
     $editando = !empty($id);
+    bloquearEdicaoDocumentoAssinado($pdo,'certificados_lc',$id,APP_URL.'documentacao/lc');
 
     $tipo_licenca = $_POST['tipo_licenca'] ?? 'LC';
     $nome_embarcacao = trim($_POST['nome_embarcacao'] ?? '');
@@ -81,6 +82,13 @@ if ($action === 'salvar') {
     }
 
     $vistoria_id = $_POST['vistoria_id'] ?? null;
+    if ($vistoria_id) {
+        $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
+        if (empty($liberacao['permitido'])) {
+            setMensagem('error', $liberacao['mensagem']);
+            redirecionar(APP_URL . 'documentacao/lc/form' . ($editando ? "?id={$id}" : ''));
+        }
+    }
     if (empty($vistoria_id)) {
         setMensagem('error', 'É obrigatório selecionar um relatório aprovado para emitir o certificado.');
         redirecionar(APP_URL . 'documentacao/lc/form' . ($editando ? "?id={$id}" : ''));
@@ -253,29 +261,6 @@ if ($action === 'salvar') {
         setMensagem('error', 'Erro ao salvar: ' . $e->getMessage());
         redirecionar(APP_URL . 'documentacao/lc/form' . ($editando ? "?id={$id}" : ''));
     }
-}
-
-// ============================================
-// EXCLUIR (Soft Delete)
-// ============================================
-if ($action === 'excluir') {
-    if (!verificarCSRF($_POST['csrf_token'] ?? '')) {
-        setMensagem('error', 'Token inválido.');
-        redirecionar(APP_URL . 'documentacao/lc');
-    }
-    $id = $_POST['id'] ?? '';
-    if (empty($id)) {
-        setMensagem('error', 'ID não informado.');
-        redirecionar(APP_URL . 'documentacao/lc');
-    }
-    try {
-        $pdo->prepare("UPDATE certificados_lc SET ativo = 0 WHERE id = :id")->execute([':id' => $id]);
-        log_atividade('licenca_lc_excluida', "Licença LC ID: {$id}");
-        setMensagem('success', 'Licença excluída.');
-    } catch (Exception $e) {
-        setMensagem('error', 'Erro: ' . $e->getMessage());
-    }
-    redirecionar(APP_URL . 'documentacao/lc');
 }
 
 // ============================================

@@ -14,7 +14,8 @@ verificar_cargo('ADMIN');
 
 // Buscar configuracoes gerais (exclui backup_email)
 try {
-    $stmt = $pdo->query("SELECT chave, valor, descricao FROM configuracoes WHERE chave IN ('meta_mensal') ORDER BY chave ASC");
+    $pdo->exec("INSERT IGNORE INTO configuracoes (chave, valor, descricao) VALUES ('meta_mensagem', '', 'Mensagem da meta mensal exibida para a equipe')");
+    $stmt = $pdo->query("SELECT chave, valor, descricao FROM configuracoes WHERE chave IN ('meta_mensal', 'meta_mensagem') ORDER BY FIELD(chave, 'meta_mensal', 'meta_mensagem')");
     $configuracoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $configMap = [];
     foreach ($configuracoes as $c) {
@@ -65,6 +66,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <?php
                                     $labels = [
                                         'meta_mensal' => 'Meta Mensal (R$)',
+                                        'meta_mensagem' => 'Mensagem da meta para a equipe',
                                     ];
                                     echo $labels[$chave] ?? h($cfg['descricao'] ?: $chave);
                                 ?>
@@ -72,7 +74,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <?php if ($chave === 'meta_mensal'): ?>
                                 <div style="display: flex; gap: 10px; align-items: center;">
                                     <span style="font-size: 1.1rem; font-weight: 600; color: var(--cor-destaque);">R$</span>
-                                    <input type="number" step="0.01" min="0" id="cfg_<?php echo h($chave); ?>"
+                                    <input type="number" step="0.01" min="0.01" id="cfg_<?php echo h($chave); ?>"
                                            name="cfg[<?php echo h($chave); ?>]"
                                            value="<?php echo h($cfg['valor']); ?>"
                                            style="flex: 1; padding: 10px 14px; font-size: 1.1rem; font-weight: 600;">
@@ -81,11 +83,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <i class="fas fa-info-circle"></i> 
                                     Valor utilizado para calcular o percentual de meta atingida no Dashboard.
                                 </small>
+                            <?php elseif ($chave === 'meta_mensagem'): ?>
+                                <textarea id="cfg_meta_mensagem" name="cfg[meta_mensagem]" rows="3" maxlength="500"
+                                          placeholder="Ex.: Ao batermos a meta, teremos um dia especial com toda a equipe."
+                                          style="width: 100%; padding: 10px 14px;"><?php echo h($cfg['valor']); ?></textarea>
+                                <small style="display:block;color:var(--cor-texto-secundario);margin-top:4px;"><i class="fas fa-bullhorn"></i> Opcional. Se ficar vazio, nenhuma mensagem será mostrada.</small>
                             <?php else: ?>
-                                <input type="text" id="cfg_<?php echo h($chave); ?>"
-                                       name="cfg[<?php echo h($chave); ?>]"
-                                       value="<?php echo h($cfg['valor']); ?>"
-                                       style="width: 100%; padding: 10px 14px;">
+                                <input type="text" id="cfg_<?php echo h($chave); ?>" name="cfg[<?php echo h($chave); ?>]" value="<?php echo h($cfg['valor']); ?>">
                                 <?php if (!empty($cfg['descricao'])): ?>
                                     <small style="display: block; color: var(--cor-texto-secundario); margin-top: 4px;">
                                         <?php echo h($cfg['descricao']); ?>

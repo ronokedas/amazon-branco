@@ -153,6 +153,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;display:flex;jus
 <p><strong>Embarcação:</strong> <?php echo h($licenca['nome_embarcacao']); ?></p>
 <a href="<?php echo APP_URL; ?>documentacao/lc/pdf?token=<?php echo h($token); ?>" target="_blank" style="display:inline-block;margin-top:8px;color:#0891b2;text-decoration:none;font-weight:600"><i class="fas fa-file-pdf"></i> Visualizar documento</a></div>
 <form method="POST" id="formAssinatura" onsubmit="return validarForm()">
+<input type="hidden" name="_submission_token" value="<?= h(bin2hex(random_bytes(24))) ?>">
 <div class="form-group"><label for="nome">Nome Completo *</label><input type="text" id="nome" name="nome" required placeholder="Digite seu nome completo" value="<?php echo h($_POST['nome'] ?? ''); ?>"></div>
 <div class="form-group"><label for="cpf">CPF *</label><input type="text" id="cpf" name="cpf" required placeholder="000.000.000-00" maxlength="14" oninput="mascararCPF(this)" value="<?php echo h($_POST['cpf'] ?? ''); ?>"></div>
 <div class="form-group"><label>Desenhe sua Assinatura *</label>

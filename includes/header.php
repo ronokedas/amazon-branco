@@ -19,6 +19,7 @@ header('Content-Type: text/html; charset=UTF-8');
     
     <!-- CSS do Sistema -->
     <link rel="stylesheet" href="<?php echo APP_URL; ?>assets/css/style.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="<?php echo APP_URL; ?>assets/css/erp-v2.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/erp-v2.css'); ?>">
     
     <!-- Font Awesome para icones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -97,14 +98,20 @@ header('Content-Type: text/html; charset=UTF-8');
         
         <div class="main-area">
             <!-- Header Superior (Topbar) -->
-            <header class="topbar">
+            <?php $isAdminDashboard = getCargo() === 'ADMIN' && preg_match('#/dashboard/?(?:\?.*)?$#', $_SERVER['REQUEST_URI'] ?? ''); ?>
+            <header class="topbar<?= $isAdminDashboard ? ' topbar--admin-dashboard' : '' ?>">
+                <?php if ($isAdminDashboard): ?>
+                <div class="topbar-page-title"><i class="fa-solid fa-bars"></i><strong>Dashboard Administrativo</strong></div>
+                <?php else: ?>
                 <div class="topbar-search" style="position: relative;">
                     <i class="fa-solid fa-magnifying-glass"></i>
                     <input type="text" id="buscaGlobal" placeholder="Buscar cliente, embarcacao, certificado..." autocomplete="off">
                     <span class="search-shortcut">Ctrl K</span>
                     <div class="search-results" id="searchResults"></div>
                 </div>
+                <?php endif; ?>
                 <div class="topbar-right">
+                    <?php if ($isAdminDashboard): ?><time class="topbar-current-date"><i class="fa-regular fa-calendar"></i><?= date('d/m/Y') ?></time><div class="topbar-separator"></div><?php endif; ?>
                     <button class="btn-notification" title="Notificações" onclick="showToast('Nenhuma notificação no momento.', 'info')">
                         <i class="fa-regular fa-bell"></i>
                     </button>

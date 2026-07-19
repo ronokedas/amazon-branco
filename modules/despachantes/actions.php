@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/cliente_vinculos.php';
 
 verificar_sessao();
 $cargo = getCargo();
@@ -73,6 +74,7 @@ switch ($action) {
             $agencia          = sanitizar($_POST['agencia'] ?? '');
             $conta            = sanitizar($_POST['conta'] ?? '');
             $tipos_embarcacao = $_POST['tipos_embarcacao'] ?? [];
+            $embarcacoes_ids = $_POST['embarcacoes_ids'] ?? [];
 
             if (empty($nome)) {
                 setMensagem('error', 'O nome do despachante é obrigatório.', [
@@ -130,6 +132,7 @@ switch ($action) {
             ]);
 
             salvarTiposEmbarcacaoDespachante($pdo, $cliente_id, is_array($tipos_embarcacao) ? $tipos_embarcacao : []);
+            sincronizarClienteEmbarcacoes($pdo, $cliente_id, is_array($embarcacoes_ids) ? $embarcacoes_ids : [], $_SESSION['usuario_id'] ?? null);
 
             $pdo->commit();
 
@@ -169,6 +172,7 @@ switch ($action) {
             $agencia          = sanitizar($_POST['agencia'] ?? '');
             $conta            = sanitizar($_POST['conta'] ?? '');
             $tipos_embarcacao = $_POST['tipos_embarcacao'] ?? [];
+            $embarcacoes_ids = $_POST['embarcacoes_ids'] ?? [];
 
             if (empty($id) || empty($nome)) {
                 setMensagem('error', 'Dados inválidos.');
@@ -210,6 +214,8 @@ switch ($action) {
             ]);
 
             salvarTiposEmbarcacaoDespachante($pdo, $id, is_array($tipos_embarcacao) ? $tipos_embarcacao : []);
+            sincronizarClienteEmbarcacoes($pdo, $id, is_array($embarcacoes_ids) ? $embarcacoes_ids : [], $_SESSION['usuario_id'] ?? null);
+            sincronizarLoginPortalCliente($pdo, $id);
 
             $pdo->commit();
 

@@ -23,7 +23,7 @@ try {
                COUNT(DISTINCT ce.id) AS total_embarcacoes,
                GROUP_CONCAT(DISTINCT te.nome ORDER BY te.nome SEPARATOR ', ') AS tipos_atendidos
         FROM clientes c
-        LEFT JOIN clientes_embarcacoes ce ON ce.cliente_id = c.id
+        LEFT JOIN clientes_embarcacoes ce ON ce.cliente_id = c.id AND ce.status='ATIVO'
         LEFT JOIN clientes_tipos_embarcacao cte ON cte.cliente_id = c.id
         LEFT JOIN tipos_embarcacao te ON te.id = cte.tipo_embarcacao_id
         WHERE c.perfil = 'despachante' AND c.status = 'ATIVO'

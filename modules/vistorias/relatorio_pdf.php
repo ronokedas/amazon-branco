@@ -43,6 +43,23 @@ if (!$v) {
     die("Relatório não encontrado.");
 }
 
+// Depois da aprovacao, o relatorio e imutavel e sempre deve servir o artefato auditado.
+if (!isset($salvar_pdf_caminho)) {
+    $stmtAudit = $pdo->prepare("SELECT caminho_pdf_final, hash_pdf_final FROM documento_aprovacoes WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='APROVADO' ORDER BY versao DESC LIMIT 1");
+    $stmtAudit->execute([':id'=>$id]);
+    $auditPdf = $stmtAudit->fetch(PDO::FETCH_ASSOC);
+    if ($auditPdf && !empty($auditPdf['caminho_pdf_final'])) {
+        $arquivoAuditado = __DIR__ . '/../../' . ltrim(str_replace(['../','..\\'], '', $auditPdf['caminho_pdf_final']), '/\\');
+        if (is_file($arquivoAuditado) && hash_equals((string)$auditPdf['hash_pdf_final'], hash_file('sha256',$arquivoAuditado))) {
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: inline; filename="Relatorio-aprovado.pdf"');
+            header('Content-Length: '.filesize($arquivoAuditado));
+            readfile($arquivoAuditado);
+            exit;
+        }
+    }
+}
+
 // Buscar exigências
 $stmtE = $pdo->prepare("
     SELECT ex.*, COALESCE(ex.item_normam, c.item_normam) AS item_normam
@@ -114,7 +131,12 @@ $assinante_nome = $v['assinante_nome'] ?? 'RESPONSÁVEL TÉCNICO';
 $assinante_titulo = 'Engenheiro Naval';
 $assinante_registro = '';
 
-try {
+if (!empty($GLOBALS['APROVACAO_RESPONSAVEL_PDF']) && is_array($GLOBALS['APROVACAO_RESPONSAVEL_PDF'])) {
+    $respRow = $GLOBALS['APROVACAO_RESPONSAVEL_PDF'];
+    $assinante_nome = $respRow['nome_completo'] ?? $assinante_nome;
+    $assinante_titulo = $respRow['cargo_titulo'] ?? $assinante_titulo;
+    $assinante_registro = $respRow['registro_profissional'] ?? '';
+} else try {
     $stmtResp = $pdo->query("SELECT nome_completo, cargo_titulo, registro_profissional FROM responsaveis_assinatura WHERE ativo = 1 ORDER BY id ASC LIMIT 1");
     $respRow = $stmtResp->fetch(PDO::FETCH_ASSOC);
     if ($respRow) {
@@ -240,12 +262,25 @@ if (!class_exists('RelatorioVistoriaPDF')) {
 $pdf = new RelatorioVistoriaPDF(h($v['numero']));
 $pdf->SetCreator(APP_NAME);
 $pdf->SetAuthor('Amazon Naval Ltda');
-$pdf->SetTitle('Relatório de Vistoria - ' . $v['numero']);
+$tituloDocumento = (($v['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS')
+    ? 'Relatório de Verificação de Cumprimento de Exigências'
+    : 'Relatório de Vistoria';
+$pdf->SetTitle($tituloDocumento . ' - ' . $v['numero']);
 $pdf->SetMargins(15, 28, 15);
 $pdf->SetAutoPageBreak(true, 18);
 
 $pdf->AddPage();
 $pdf->SetTextColor(0, 0, 0);
+
+if (($v['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS') {
+    $pdf->SetFont('helvetica', 'B', 11);
+    $pdf->SetTextColor(153, 83, 0);
+    $pdf->Cell(0, 7, mb_strtoupper('Verificação de cumprimento de exigências'), 0, 1, 'C');
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->Cell(0, 5, 'Relatório anterior: ' . ($v['relatorio_anterior_numero'] ?: $v['relatorio_anterior_id']), 0, 1, 'C');
+    $pdf->SetTextColor(0, 0, 0);
+    $pdf->Ln(2);
+}
 
 // Informações básicas (Embarcação, Armador, etc) formatadas em duas colunas (rótulo e valor)
 $pdf->Ln(5);
@@ -320,7 +355,9 @@ foreach ($blocos as $bloco_id => $bloco_nome) {
         $pdf->Cell(array_sum($col_w), 6, 'Sem Exigências', 1, 1, 'C');
     } else {
         foreach ($itens_bloco as $item) {
-            $vencimento = empty($item['vencimento']) ? "AS\nSem Prazo\nVer Obs. 2" : formatarDataBR($item['vencimento']);
+            $vencimento = !empty($item['antes_de_suspender'])
+                ? "A/S\nVer Obs. 2"
+                : (empty($item['vencimento']) ? '-' : formatarDataBR($item['vencimento']));
             $descricao = trim((string)($item['descricao'] ?? '')) ?: ($item['item'] ?? '');
             $normam = trim((string)($item['item_normam'] ?? '')) ?: ($item['item'] ?? '');
             
@@ -430,7 +467,7 @@ if (!empty($v['texto_observacoes_geradas'])) {
 }
 
 // Observação fixa (Obs. 2)
-$obs_2 = "Em função da data de realização da vistoria essas exigências não possuem mais prazo para o cumprimento e, portanto, o armador fica ciente que deverá cumpri-las prontamente para a obtenção dos respectivos Certificados Estatutários ou receber as convalidações pertinentes.";
+$obs_2 = "As exigências identificadas como A/S (Antes de suspender) devem ser cumpridas antes da continuidade da certificação e bloqueiam a emissão ou convalidação dos respectivos Certificados Estatutários enquanto permanecerem pendentes.";
 $pdf->MultiCell(0, 4.5, "Obs. 2: " . $obs_2, 0, 'L');
 $pdf->Ln(8);
 
@@ -445,47 +482,6 @@ $texto_responsabilidade = "A aprovação das vistorias realizadas para a emissã
 $pdf->SetFont('helvetica', '', 8);
 $pdf->SetTextColor(0, 0, 0);
 $pdf->MultiCell(0, 4, $texto_responsabilidade, 0, 'J');
-
-$pdf->Ln(12);
-
-// Assinatura Responsável
-$pdf->SetFont('helvetica', 'B', 10);
-$pdf->Cell(0, 5, h($assinante_nome), 0, 1, 'C');
-$pdf->SetFont('helvetica', '', 9);
-$pdf->Cell(0, 4, h($assinante_titulo), 0, 1, 'C');
-if (!empty($assinante_registro)) {
-    $pdf->Cell(0, 4, h($assinante_registro), 0, 1, 'C');
-}
-
-$pdf->Ln(8);
-
-// QRCode de Validação
-$link_validacao = APP_URL . 'vistorias/relatorio_pdf.php?id=' . $v['id'];
-$qr_y = $pdf->GetY();
-
-// Verifica quebra de página
-if ($qr_y > $pdf->getPageHeight() - $pdf->getBreakMargin() - 20) {
-    $pdf->AddPage();
-    $qr_y = $pdf->GetY();
-}
-
-try {
-    $qr = new TCPDF2DBarcode($link_validacao, 'QRCODE,M');
-    $qr_png = $qr->getBarcodePngData(3, 3, array(0, 0, 0));
-    $f = tempnam(sys_get_temp_dir(), 'qr_') . '.png';
-    file_put_contents($f, $qr_png);
-    $pdf->Image($f, 15, $qr_y, 18, 18);
-    @unlink($f);
-    $pdf->SetXY(35, $qr_y + 6);
-} catch (Exception $e) {
-    $pdf->SetXY(15, $qr_y);
-}
-
-$pdf->SetFont('helvetica', 'I', 7);
-$pdf->Cell(0, 4, 'Para validar este documento acesse:', 0, 1, 'L');
-$pdf->SetX(35);
-$pdf->SetFont('helvetica', '', 7);
-$pdf->Cell(0, 4, $link_validacao, 0, 1, 'L');
 
 $nome_arquivo_amigavel = 'Relatorio-' . str_replace('/', '-', h($v['numero'])) . '.pdf';
 

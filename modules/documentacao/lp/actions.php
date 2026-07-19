@@ -1,7 +1,7 @@
 <?php
 /**
  * MÓDULO: Documentação > Licença Provisória (LP)
- * Actions: Salvar, Excluir (soft delete)
+ * Actions: Salvar e enviar documentos
  * Numeração automática AM-LP:{n}/{ano}
  */
 
@@ -28,6 +28,7 @@ if ($action === 'salvar') {
 
     $id = $_POST['id'] ?? null;
     $editando = !empty($id);
+    bloquearEdicaoDocumentoAssinado($pdo,'certificados_lp',$id,APP_URL.'documentacao/lp');
 
     $tipo_licenca = $_POST['tipo_licenca'] ?? 'construcao';
     $nome_embarcacao = trim($_POST['nome_embarcacao'] ?? '');
@@ -74,6 +75,13 @@ if ($action === 'salvar') {
     }
 
     $vistoria_id = $_POST['vistoria_id'] ?? null;
+    if ($vistoria_id) {
+        $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
+        if (empty($liberacao['permitido'])) {
+            setMensagem('error', $liberacao['mensagem']);
+            redirecionar(APP_URL . 'documentacao/lp/form' . ($editando ? "?id={$id}" : ''));
+        }
+    }
     if (empty($vistoria_id)) {
         setMensagem('error', 'É obrigatório selecionar um relatório aprovado para emitir o certificado.');
         redirecionar(APP_URL . 'documentacao/lp/form' . ($editando ? "?id={$id}" : ''));
@@ -213,36 +221,6 @@ if ($action === 'salvar') {
         setMensagem('error', 'Erro ao salvar licença: ' . $e->getMessage());
         redirecionar(APP_URL . 'documentacao/lp/form' . ($editando ? "?id={$id}" : ''));
     }
-}
-
-// ============================================
-// EXCLUIR LICENÇA (Soft Delete)
-// ============================================
-if ($action === 'excluir') {
-    if (!verificarCSRF($_POST['csrf_token'] ?? '')) {
-        setMensagem('error', 'Token de segurança inválido.');
-        redirecionar(APP_URL . 'documentacao/lp');
-    }
-
-    $id = $_POST['id'] ?? '';
-
-    if (empty($id)) {
-        setMensagem('error', 'ID da licença não informado.');
-        redirecionar(APP_URL . 'documentacao/lp');
-    }
-
-    try {
-        $stmt = $pdo->prepare("UPDATE certificados_lp SET ativo = 0 WHERE id = :id");
-        $stmt->execute([':id' => $id]);
-
-        log_atividade('licenca_lp_excluida', "Licença LP ID: {$id}");
-
-        setMensagem('success', 'Licença excluída com sucesso.');
-    } catch (Exception $e) {
-        setMensagem('error', 'Erro ao excluir licença: ' . $e->getMessage());
-    }
-
-    redirecionar(APP_URL . 'documentacao/lp');
 }
 
 // ============================================

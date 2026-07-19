@@ -10,16 +10,18 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/aprovacao_ui.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VISTORIADOR'])) {
+if (!in_array($cargo, ['ADMIN', 'VISTORIADOR', 'ANALISTA'])) {
     setMensagem('error', 'Acesso negado.');
     redirecionar(APP_URL . 'dashboard');
 }
 
 $usuario_id = $_SESSION['usuario_id'];
 $agendamento_id = $_GET['agendamento_id'] ?? '';
+$vistoria_solicitada_id = trim($_GET['vistoria_id'] ?? '');
 
 if (empty($agendamento_id)) {
     setMensagem('error', 'ID do agendamento nao informado.');
@@ -66,14 +68,20 @@ try {
     }
 
     // Se estiver aprovada, vistoriador não pode mais editar
-    $stmtV_check = $pdo->prepare("SELECT status FROM vistorias WHERE agendamento_id = :id LIMIT 1");
-    $stmtV_check->execute([':id' => $agendamento_id]);
-    $vistoria_check = $stmtV_check->fetch(PDO::FETCH_ASSOC);
-    if ($vistoria_check && in_array($vistoria_check['status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS']) && $cargo === 'VISTORIADOR') {
-        setMensagem('error', 'Este relatório já foi aprovado e não pode mais ser modificado.');
-        redirecionar(APP_URL . 'agendamentos');
+    $sqlVCheck = "SELECT status FROM vistorias WHERE agendamento_id = :id";
+    $paramsVCheck = [':id' => $agendamento_id];
+    if ($vistoria_solicitada_id !== '') {
+        $sqlVCheck .= " AND id = :vistoria_id";
+        $paramsVCheck[':vistoria_id'] = $vistoria_solicitada_id;
     }
-
+    $sqlVCheck .= " ORDER BY criado_em DESC, id DESC LIMIT 1";
+    $stmtV_check = $pdo->prepare($sqlVCheck);
+    $stmtV_check->execute($paramsVCheck);
+    $vistoria_check = $stmtV_check->fetch(PDO::FETCH_ASSOC);
+    if ($cargo === 'ANALISTA' && $vistoria_solicitada_id === '' && (!$vistoria_check || $vistoria_check['status'] !== 'AGUARDANDO_APROVACAO')) {
+        setMensagem('error', 'O analista só pode acessar relatórios aguardando aprovação.');
+        redirecionar(APP_URL . 'vistorias');
+    }
 } catch (Exception $e) {
     error_log('Erro ao carregar agendamento relatorio: ' . $e->getMessage());
     setMensagem('error', 'Erro ao carregar dados do agendamento.');
@@ -87,16 +95,35 @@ $vistoria = null;
 $exigencias_avulsas = [];
 $checklist_respostas = [];
 $prazo_padrao_exigencias = '';
+$prazo_exigencias_dias = '';
 
 try {
-    $stmtV = $pdo->prepare("SELECT * FROM vistorias WHERE agendamento_id = :agendamento_id LIMIT 1");
-    $stmtV->execute([':agendamento_id' => $agendamento_id]);
+    $sqlVistoria = "SELECT * FROM vistorias WHERE agendamento_id = :agendamento_id";
+    $paramsVistoria = [':agendamento_id' => $agendamento_id];
+    if ($vistoria_solicitada_id !== '') {
+        $sqlVistoria .= " AND id = :vistoria_id";
+        $paramsVistoria[':vistoria_id'] = $vistoria_solicitada_id;
+    }
+    $sqlVistoria .= " ORDER BY criado_em DESC, id DESC LIMIT 1";
+    $stmtV = $pdo->prepare($sqlVistoria);
+    $stmtV->execute($paramsVistoria);
     $vistoria = $stmtV->fetch(PDO::FETCH_ASSOC);
 
+    if ($vistoria_solicitada_id !== '' && !$vistoria) {
+        throw new Exception('O relatorio solicitado nao pertence a este agendamento.');
+    }
+
     if ($vistoria) {
+        if (in_array((int)($vistoria['prazo_exigencias_dias'] ?? 0), [60, 90], true)) {
+            $prazo_exigencias_dias = (string)(int)$vistoria['prazo_exigencias_dias'];
+        }
+
         // Carregar exigencias da vistoria (Avulsas são as que não tem catalogo_id OU tratadas diferente,
         // mas para manter compatibilidade, vamos tratar itens manuais como avulsos e itens do catalogo pelo checklist)
-        $stmtE = $pdo->prepare("SELECT * FROM vistoria_exigencias WHERE vistoria_id = :vistoria_id AND (catalogo_id IS NULL OR catalogo_id = '') ORDER BY ordem ASC");
+        $filtroExigencias = (($vistoria['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS')
+            ? ''
+            : " AND (catalogo_id IS NULL OR catalogo_id = '')";
+        $stmtE = $pdo->prepare("SELECT * FROM vistoria_exigencias WHERE vistoria_id = :vistoria_id{$filtroExigencias} ORDER BY ordem ASC");
         $stmtE->execute([':vistoria_id' => $vistoria['id']]);
         $exigencias_avulsas = $stmtE->fetchAll(PDO::FETCH_ASSOC);
 
@@ -109,13 +136,27 @@ try {
                 $prazo_padrao_exigencias = $r['vencimento'];
             }
         }
+
+        if ($prazo_exigencias_dias === '' && $prazo_padrao_exigencias !== '') {
+            $dataBasePrazo = $vistoria['data_vistoria'] ?? $ag['data_vistoria'] ?? '';
+            $dataBase = DateTimeImmutable::createFromFormat('!Y-m-d', (string)$dataBasePrazo);
+            $dataVencimento = DateTimeImmutable::createFromFormat('!Y-m-d', $prazo_padrao_exigencias);
+            if ($dataBase && $dataVencimento && $dataVencimento >= $dataBase) {
+                $diasCalculados = (int)$dataBase->diff($dataVencimento)->days;
+                if (in_array($diasCalculados, [60, 90], true)) {
+                    $prazo_exigencias_dias = (string)$diasCalculados;
+                }
+            }
+        }
     }
 } catch (Exception $e) {
     error_log('Erro ao buscar vistoria: ' . $e->getMessage());
 }
 
 $editando = !empty($vistoria);
-$admin_review_mode = ($cargo === 'ADMIN' && $editando);
+$eh_relatorio_cumprimento = (($vistoria['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS');
+$admin_review_mode = (temPerfil('ANALISTA') && $editando && $cargo !== 'VISTORIADOR')
+    || ($cargo === 'VISTORIADOR' && $editando && in_array($vistoria['status'] ?? '', ['APROVADA', 'APROVADA_COM_EXIGENCIAS', 'REPROVADA'], true));
 $exigencias_relatorio = [];
 $total_exigencias_relatorio = 0;
 $total_nao_conformes_relatorio = 0;
@@ -158,6 +199,27 @@ if ($pode_ir_etapa2) $etapa_atual = 2;
 
 // Se ainda nao tem exigencias avulsas, inicializa vazia (sem a primeira linha em branco se possível, ou controlada via JS)
 $relatorio_anterior_id = $vistoria['relatorio_anterior_id'] ?? '';
+$possui_as_pendente = $vistoria ? relatorioPossuiASPendente($pdo, $vistoria['id']) : false;
+$relatorio_cumprimento_aberto_id = null;
+if ($vistoria && $possui_as_pendente && in_array($vistoria['status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)) {
+    $stmtCumprimentoAberto = $pdo->prepare("SELECT id FROM vistorias
+        WHERE relatorio_anterior_id = :anterior
+          AND finalidade = 'CUMPRIMENTO_EXIGENCIAS'
+          AND status IN ('PENDENTE','AGUARDANDO_APROVACAO')
+        ORDER BY criado_em DESC, id DESC LIMIT 1");
+    $stmtCumprimentoAberto->execute([':anterior' => $vistoria['id']]);
+    $relatorio_cumprimento_aberto_id = $stmtCumprimentoAberto->fetchColumn() ?: null;
+}
+$liberacao_certificacao = $vistoria ? avaliarLiberacaoCertificacao($pdo, $vistoria['id']) : ['permitido' => false];
+$relatorio_substituto_aprovado = null;
+if ($vistoria) {
+    $stmtSubstituto = $pdo->prepare("SELECT id, numero FROM vistorias
+        WHERE relatorio_anterior_id = :anterior
+          AND status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')
+        ORDER BY criado_em DESC, id DESC LIMIT 1");
+    $stmtSubstituto->execute([':anterior' => $vistoria['id']]);
+    $relatorio_substituto_aprovado = $stmtSubstituto->fetch(PDO::FETCH_ASSOC) ?: null;
+}
 
 // ============================================
 // CLASSIFICAÇ?O DA EMBARCAÇ?O E CHECKLIST
@@ -236,17 +298,13 @@ try {
     $stmtCat = $pdo->query("SELECT * FROM exigencias_categorias ORDER BY nome ASC");
     $categorias_bd = $stmtCat->fetchAll(PDO::FETCH_ASSOC);
 
-    $blocosFiltro = array_keys($blocos_vistoria_disponiveis);
-    $placeholdersBlocos = implode(',', array_fill(0, count($blocosFiltro), '?'));
     $stmtItens = $pdo->prepare("
         SELECT *
         FROM exigencias_catalogo
         WHERE ativo = 1
-          AND {$coluna_aplicabilidade} = 1
-          AND bloco_vistoria IN ({$placeholdersBlocos})
         ORDER BY codigo_interno ASC
     ");
-    $stmtItens->execute($blocosFiltro);
+    $stmtItens->execute();
     $itens_bd = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($categorias_bd as $c) {
@@ -352,66 +410,133 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 .admin-review-exigencia small { display: block; color: var(--cor-texto-secundario, #aaa); }
 .admin-review-pdf { width: 100%; min-height: 760px; border: 1px solid var(--cor-borda, rgba(255,255,255,0.08)); border-radius: 8px; background: #111; }
 .admin-decision-card { border-color: rgba(243, 156, 18, 0.55); background: linear-gradient(135deg, rgba(243,156,18,0.12), rgba(255,255,255,0.02)); }
+.avulsa-empty { padding: 18px; border: 1px dashed rgba(86,224,173,.24); border-radius: 12px; color: var(--cor-texto-secundario, #aaa); text-align: center; background: rgba(3,20,18,.24); }
+.avulsa-empty i { display: block; margin-bottom: 8px; color: var(--cor-destaque, #2ECC71); font-size: 1.35rem; }
+.avulsa-table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.avulsa-table-wrap.is-hidden, .avulsa-empty.is-hidden { display: none; }
 @media (max-width: 980px) {
     .admin-review-grid { grid-template-columns: 1fr; }
     .admin-review-pdf { min-height: 520px; }
 }
+@media (max-width: 768px) {
+    .flow-shell { padding-inline: 10px !important; }
+    .flow-hero { padding: 16px; border-radius: 14px; }
+    .flow-hero p { font-size: .88rem; line-height: 1.5; }
+    .flow-track { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; overflow: visible; padding-bottom: 6px; }
+    .flow-track-step { min-width: 0; width: 100%; padding: 12px; }
+    .flow-track-step:last-child { grid-column: 1 / -1; }
+    .etapas-fluxo { padding: 12px 4px !important; }
+    .form-container { border-radius: 14px; overflow: hidden; }
+    #formRelatorio { padding: 0; }
+    .checklist-editor-section, .avulsa-section, .observacoes-section { padding: 16px !important; }
+    .checklist-header { min-height: 50px; padding: 12px; gap: 10px; line-height: 1.35; }
+    .checklist-item { padding: 14px 12px; }
+    .item-text { line-height: 1.48; }
+    .item-actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    .btn-toggle { min-height: 44px; }
+    .avulsa-add-button { width: 100%; min-height: 46px; justify-content: center; }
+    .avulsa-table-wrap { overflow: visible !important; }
+    #tabelaExigenciasAvulsas { display: block; min-width: 0 !important; width: 100% !important; table-layout: auto !important; }
+    #tabelaExigenciasAvulsas thead { display: none; }
+    #tabelaExigenciasAvulsas tbody { display: grid; gap: 12px; width: 100%; }
+    #tabelaExigenciasAvulsas tr.linha-exigencia-avulsa { display: block; width: 100%; padding: 14px; border: 1px solid rgba(86,224,173,.16); border-radius: 14px; background: rgba(3,20,18,.44); box-sizing: border-box; }
+    #tabelaExigenciasAvulsas td { display: block; width: 100% !important; min-width: 0 !important; padding: 10px 0 !important; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left !important; white-space: normal !important; box-sizing: border-box; }
+    #tabelaExigenciasAvulsas td::before { content: attr(data-label); display: block; margin-bottom: 7px; color: var(--cor-texto-secundario, #9fb0ac); font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+    #tabelaExigenciasAvulsas td:first-child { padding-top: 0 !important; }
+    #tabelaExigenciasAvulsas td:last-child { min-width: 0 !important; padding-bottom: 0 !important; border-bottom: 0; }
+    #tabelaExigenciasAvulsas input, #tabelaExigenciasAvulsas select { min-width: 0; min-height: 42px; }
+    #tabelaExigenciasAvulsas .btn { width: 44px; min-height: 42px; justify-content: center; }
+    .report-actions { position: sticky; bottom: 0; z-index: 40; padding: 12px 16px !important; background: rgba(5,24,21,.97); border-top: 1px solid rgba(86,224,173,.18); backdrop-filter: blur(12px); }
+    .report-actions .btn { flex: 1 1 100%; min-height: 46px; justify-content: center; margin: 0 !important; }
+    .report-actions .text-muted { margin: 4px 0 0 !important; line-height: 1.45; }
+}
 </style>
 
 <!-- BOT?O ETAPA 2 (somente ADMIN, somente quando aprovado) -->
-<?php if (getCargo() === 'ADMIN' && $pode_ir_etapa2): ?>
-    <div class="alert alert-success" style="margin-bottom: 20px;">
-        <strong>Relatório aprovado.</strong> Você pode gerar os certificados agora.
-        <a href="<?= APP_URL ?>documentacao/novo_certificado?agendamento_id=<?= urlencode($agendamento_id) ?>"
-           class="btn btn-success ms-3">
-            <i class="fas fa-certificate"></i> Ir para Etapa 2 — Gerar Certificado
-        </a>
+<?php if ($relatorio_substituto_aprovado): ?>
+    <div class="alert alert-info" style="margin-bottom:20px;">
+        <strong>Relatório histórico/substituído.</strong>
+        Para decisões atuais e certificação, use
+        <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($agendamento_id) ?>&vistoria_id=<?= urlencode($relatorio_substituto_aprovado['id']) ?>"><?= h($relatorio_substituto_aprovado['numero']) ?></a>.
+    </div>
+<?php endif; ?>
+<?php if ($vistoria && $possui_as_pendente && in_array($vistoria['status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)): ?>
+    <div class="alert alert-danger" style="margin-bottom:20px;">
+        <strong>Certificação bloqueada por exigência A/S.</strong>
+        A embarcação não pode receber certificados até a aprovação da verificação de cumprimento.
+        <?php if ($relatorio_cumprimento_aberto_id): ?>
+            <a class="btn btn-warning ms-3" href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($agendamento_id) ?>&vistoria_id=<?= urlencode($relatorio_cumprimento_aberto_id) ?>">Continuar verificação de cumprimento</a>
+        <?php elseif (getCargo() === 'ADMIN' || ($ag['vistoriador_id'] ?? '') === $usuario_id): ?>
+            <form method="POST" action="<?= APP_URL ?>vistorias/actions?action=iniciar_cumprimento_exigencias" style="display:inline-block;margin-left:12px;">
+                <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
+                <input type="hidden" name="vistoria_id" value="<?= h($vistoria['id']) ?>">
+                <button type="submit" class="btn btn-warning"><i class="fas fa-clipboard-check"></i> Verificar cumprimento de exigências</button>
+            </form>
+        <?php endif; ?>
+    </div>
+<?php elseif (getCargo() === 'ADMIN' && !empty($liberacao_certificacao['permitido'])): ?>
+    <div class="alert alert-success" style="margin-bottom:20px;">
+        <strong>Relatório vigente aprovado.</strong> Você pode gerar os certificados agora.
+        <a href="<?= APP_URL ?>documentacao/novo_certificado?agendamento_id=<?= urlencode($agendamento_id) ?>" class="btn btn-success ms-3"><i class="fas fa-certificate"></i> Ir para Etapa 2 — Gerar Certificado</a>
     </div>
 <?php endif; ?>
     <div class="form-container">
-        <div class="form-header">
-            <h3>
-                <i class="fas fa-clipboard-list"></i>
-                Relatório Técnico de Vistoria
-            </h3>
-            <span class="help-text">Checklist, exigências e resultado final</span>
+        <div class="form-header report-summary-header">
+            <div class="report-summary-heading">
+                <h3>
+                    <i class="fas fa-clipboard-list"></i>
+                    Relatório Técnico de Vistoria
+                </h3>
+                <span class="help-text">Checklist, exigências e resultado final</span>
+            </div>
+            <?php if (!empty($vistoria['id'])): ?>
+                <a href="<?= APP_URL ?>vistorias/relatorio_pdf.php?id=<?= urlencode($vistoria['id']); ?>"
+                   target="_blank"
+                   rel="noopener"
+                   class="report-pdf-primary"
+                   data-testid="abrir-pdf-completo">
+                    <span class="report-pdf-primary-icon"><i class="fas fa-file-pdf"></i></span>
+                    <span><strong>Visualizar PDF do relatório</strong><small>Disponível também enquanto estiver pendente</small></span>
+                    <i class="fas fa-arrow-up-right-from-square"></i>
+                </a>
+            <?php endif; ?>
         </div>
 
         <!-- ===== DADOS DO AGENDAMENTO ===== -->
-        <div style="padding: 20px; border-bottom: 1px solid var(--cor-borda, rgba(255,255,255,0.08));">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
-                <div>
+        <div class="report-context">
+            <div class="report-context-grid">
+                <div class="report-context-item">
                     <small class="text-muted"><i class="fas fa-file-invoice"></i> OS</small>
                     <div style="font-weight: 600;"><?php echo $ag['os_numero'] ? h($ag['os_numero']) : '<em class="text-muted">Pendente</em>'; ?></div>
                 </div>
-                <div>
+                <div class="report-context-item">
                     <small class="text-muted"><i class="fas fa-calendar-day"></i> Data da Vistoria</small>
                     <div style="font-weight: 600;"><?php echo formatarData($ag['data_vistoria']); ?></div>
                 </div>
-                <div>
+                <div class="report-context-item">
                     <small class="text-muted"><i class="fas fa-user-check"></i> Vistoriador</small>
                     <div style="font-weight: 600;"><?php echo h($ag['vistoriador_nome'] ?? 'Não atribuído'); ?></div>
                 </div>
-                <div>
+                <div class="report-context-item">
                     <small class="text-muted"><i class="fas fa-ship"></i> Categoria Normam</small>
                     <div><span class="badge bg-info">Tipo <?php echo strtoupper($categoria_embarcacao); ?></span></div>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 12px;">
-                <div>
+            <div class="report-context-grid report-context-grid--secondary">
+                <div class="report-context-item">
                     <small class="text-muted"><i class="fas fa-user-tie"></i> Cliente</small>
                     <div style="font-weight: 600;"><?php echo h($ag['cliente_nome']); ?></div>
                 </div>
-                <div>
+                <div class="report-context-item">
                     <small class="text-muted"><i class="fas fa-ship"></i> Embarcação</small>
                     <div style="font-weight: 600;"><?php echo h($ag['embarcacao_nome']); ?> <?php echo $ag['embarcacao_registro'] ? '(' . h($ag['embarcacao_registro']) . ')' : ''; ?></div>
                 </div>
-                <div>
+                <div class="report-context-item report-context-item--wide">
                     <small class="text-muted"><i class="fas fa-clipboard-check"></i> Tipo de Vistoria</small>
                     <div><?php echo h($ag['tipo_vistoria']); ?></div>
                 </div>
-                <div>
+                <div class="report-context-item">
                     <small class="text-muted"><i class="fas fa-info-circle"></i> Status Agendamento</small>
                     <div><?php echo h($ag['status']); ?></div>
                 </div>
@@ -437,11 +562,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             ];
             ?>
             <div class="admin-review-grid">
-                <div class="admin-review-panel">
-                    <h4><i class="fas fa-file-signature"></i> Revisao do relatorio enviado</h4>
+                <div class="admin-review-panel admin-review-main">
+                    <h4><i class="fas fa-file-signature"></i> Revisão do relatório enviado</h4>
                     <div class="admin-review-body">
                         <div class="admin-review-kpis">
-                            <div class="admin-review-kpi">
+                            <div class="admin-review-kpi admin-review-kpi--status">
                                 <small>Numero do relatorio</small>
                                 <strong><?= h($vistoria['numero'] ?? 'S/N') ?></strong>
                             </div>
@@ -460,21 +585,28 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </div>
 
                         <div style="margin-bottom: 16px;">
-                            <h5 style="margin: 0 0 8px; color: var(--cor-texto);">Observacoes tecnicas do vistoriador</h5>
+                            <h5 class="admin-review-section-heading">Observações técnicas do vistoriador</h5>
                             <div class="admin-review-text"><?= h($vistoria['observacoes_tecnicas'] ?: 'Nenhuma observacao tecnica informada.') ?></div>
                         </div>
 
-                        <div>
-                            <h5 style="margin: 0 0 8px; color: var(--cor-texto);">Relatorio original gerado pelo vistoriador</h5>
-                            <a href="<?= APP_URL ?>vistorias/relatorio_pdf.php?id=<?= urlencode($vistoria['id']); ?>" target="_blank" class="btn btn-info" style="color:#fff; margin-bottom: 12px;">
-                                <i class="fas fa-up-right-from-square"></i> Abrir PDF completo
-                            </a>
-                            <iframe class="admin-review-pdf" src="<?= APP_URL ?>vistorias/relatorio_pdf.php?id=<?= urlencode($vistoria['id']); ?>"></iframe>
+                        <div class="admin-review-document">
+                            <div class="admin-review-document-bar">
+                                <div class="admin-review-document-title">
+                                    <span><i class="fas fa-file-pdf"></i></span>
+                                    <div><strong>Relatório original do vistoriador</strong><small>Confira todas as respostas, exigências e dados oficiais.</small></div>
+                                </div>
+                                <a href="<?= APP_URL ?>vistorias/relatorio_pdf.php?id=<?= urlencode($vistoria['id']); ?>"
+                                   target="_blank" rel="noopener" class="admin-review-document-link">
+                                    <i class="fas fa-up-right-from-square"></i> Abrir PDF completo
+                                </a>
+                            </div>
+                            <p class="admin-review-document-mobile-note"><i class="fas fa-mobile-screen-button"></i> No celular, abra o PDF completo para uma leitura melhor.</p>
+                            <iframe class="admin-review-pdf" title="Prévia do relatório técnico" loading="lazy" src="<?= APP_URL ?>vistorias/relatorio_pdf.php?id=<?= urlencode($vistoria['id']); ?>"></iframe>
                         </div>
                     </div>
                 </div>
 
-                <div style="display: grid; gap: 18px; align-content: start;">
+                <div class="admin-review-sidebar">
                     <div class="admin-review-panel admin-decision-card">
                         <h4><i class="fas fa-gavel"></i> Resultado final da vistoria</h4>
                         <div class="admin-review-body">
@@ -488,20 +620,19 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                             <option value="">Selecione o resultado...</option>
                                             <option value="PENDENTE" <?= ($vistoria['status'] ?? '') === 'PENDENTE' ? 'selected' : '' ?>>Pendente (relatorio em andamento)</option>
                                             <option value="AGUARDANDO_APROVACAO" <?= ($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO' ? 'selected' : '' ?>>Aguardando Aprovacao</option>
-                                            <option value="APROVADA" <?= ($vistoria['status'] ?? '') === 'APROVADA' ? 'selected' : '' ?>>Aprovada</option>
-                                            <option value="APROVADA_COM_EXIGENCIAS" <?= ($vistoria['status'] ?? '') === 'APROVADA_COM_EXIGENCIAS' ? 'selected' : '' ?>>Aprovada c/ Exigencias</option>
                                             <option value="REPROVADA" <?= ($vistoria['status'] ?? '') === 'REPROVADA' ? 'selected' : '' ?>>Reprovada</option>
                                             <option value="CANCELADA" <?= ($vistoria['status'] ?? '') === 'CANCELADA' ? 'selected' : '' ?>>Cancelada</option>
                                         </select>
                                     </div>
                                     <div class="form-group mb-3">
-                                        <label for="observacao_admin">Observacao do admin</label>
+                                        <label for="observacao_admin">Observacao do analista</label>
                                         <textarea id="observacao_admin" name="observacao_admin" class="form-control" rows="4" placeholder="Obrigatoria para reprovar. Opcional para aprovar."></textarea>
                                     </div>
                                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                                         <button type="submit" class="btn btn-success">
-                                            <i class="fas fa-check"></i> Confirmar decisao
+                                            <i class="fas fa-save"></i> Salvar sem aprovar
                                         </button>
+                                        <?php renderBotaoAprovacaoDocumento($pdo,'RELATORIO',$vistoria['id'],$vistoria['status'],false,!empty($vistoria['responsavel_assinatura_id'])?(int)$vistoria['responsavel_assinatura_id']:null); ?>
                                         <a href="<?= APP_URL ?>documentacao/aprovacao_relatorios" class="btn btn-secondary">
                                             Voltar para aprovacoes
                                         </a>
@@ -523,6 +654,70 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </div>
                     </div>
 
+                    <div class="admin-review-panel">
+                        <h4><i class="fas fa-plus-circle"></i> Exigencia manual do analista</h4>
+                        <div class="admin-review-body">
+                            <?php if (($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO'): ?>
+                                <form method="POST" action="<?= APP_URL ?>vistorias/actions?action=adicionar_exigencia_analista">
+                                    <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()); ?>">
+                                    <input type="hidden" name="vistoria_id" value="<?= h($vistoria['id']); ?>">
+                                    <div class="form-group mb-3">
+                                        <label for="analista_bloco">Tipo</label>
+                                        <select id="analista_bloco" name="bloco_vistoria" class="form-control">
+                                            <?php foreach ($blocos_vistoria_todos as $valorBloco => $rotuloBloco): ?>
+                                                <option value="<?= h($valorBloco); ?>"><?= h($rotuloBloco); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label for="analista_descricao">Descricao da exigencia *</label>
+                                        <textarea id="analista_descricao" name="descricao" class="form-control" rows="3" required placeholder="Descreva a pendencia encontrada na revisao."></textarea>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label for="analista_normam">Referencia normativa</label>
+                                        <input type="text" id="analista_normam" name="item_normam" class="form-control" placeholder="Ex.: NORMAM-202/DPC, item 4.14">
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label for="analista_observacao">Observacao interna</label>
+                                        <textarea id="analista_observacao" name="observacao" class="form-control" rows="2"></textarea>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label style="display:flex; gap:8px; align-items:center;">
+                                            <input type="checkbox" name="sem_prazo" value="1" checked>
+                                            A/S — Antes de suspender
+                                        </label>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Adicionar exigencia ao relatorio
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <p class="text-muted">Relatorio finalizado. Novas exigencias manuais ficam bloqueadas para preservar o historico.</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="admin-review-panel">
+                        <h4><i class="fas fa-list-check"></i> Exigencias registradas</h4>
+                        <div class="admin-review-body">
+                            <?php if (empty($exigencias_relatorio)): ?>
+                                <p class="text-muted">Nenhuma exigencia registrada neste relatorio.</p>
+                            <?php else: ?>
+                                <div class="admin-review-exigencias">
+                                    <?php foreach ($exigencias_relatorio as $exReview): ?>
+                                        <div class="admin-review-exigencia">
+                                            <strong><?= h($exReview['descricao'] ?? $exReview['catalogo_descricao'] ?? 'Exigencia sem descricao') ?></strong>
+                                            <small><?= h($exReview['item_normam'] ?? $exReview['catalogo_item_normam'] ?? 'Sem referencia normativa') ?></small>
+                                            <?php if (!empty($exReview['observacao'])): ?>
+                                                <small>Obs.: <?= h($exReview['observacao']) ?></small>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         <?php else: ?>
@@ -533,6 +728,80 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <?php if ($editando): ?>
                 <input type="hidden" name="vistoria_id" value="<?php echo h($vistoria['id']); ?>">
             <?php endif; ?>
+
+            <?php if ($eh_relatorio_cumprimento): ?>
+                <div style="margin:20px;padding:18px;border:1px solid #f59e0b;border-radius:10px;background:rgba(245,158,11,.08);">
+                    <h4 style="margin-top:0;"><i class="fas fa-clipboard-check"></i> Relatório de Verificação de Cumprimento de Exigências</h4>
+                    <p>Relatório substituto de <strong><?= h($vistoria['relatorio_anterior_id']) ?></strong>. Classifique somente as exigências pendentes copiadas do relatório anterior.</p>
+                </div>
+                <div style="padding:0 20px 20px;display:grid;gap:14px;">
+                    <div class="form-group">
+                        <label for="data_vistoria">Data da verificação *</label>
+                        <input type="date" id="data_vistoria" name="data_vistoria" required value="<?= h($vistoria['data_vistoria'] ?? date('Y-m-d')) ?>">
+                    </div>
+                    <?php foreach ($exigencias_avulsas as $ex): ?>
+                        <article style="padding:16px;border:1px solid var(--cor-borda,#444);border-radius:9px;">
+                            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+                                <div>
+                                    <strong><?= h($ex['descricao'] ?: $ex['item']) ?></strong>
+                                    <?php if (!empty($ex['item_normam'])): ?><small style="display:block;">NORMAM: <?= h($ex['item_normam']) ?></small><?php endif; ?>
+                                </div>
+                                <?php if (!empty($ex['antes_de_suspender'])): ?><span class="badge bg-danger">A/S — Antes de suspender</span><?php endif; ?>
+                            </div>
+                            <div class="form-group" style="margin-top:12px;">
+                                <label for="cumprimento_<?= h($ex['id']) ?>">Resultado da verificação *</label>
+                                <select id="cumprimento_<?= h($ex['id']) ?>" name="cumprimento_status[<?= h($ex['id']) ?>]" required>
+                                    <option value="pendente" <?= ($ex['status_item'] ?? '') === 'pendente' ? 'selected' : '' ?>>Não cumprida / transcrita</option>
+                                    <option value="cumprida" <?= ($ex['status_item'] ?? '') === 'cumprida' ? 'selected' : '' ?>>Cumprida</option>
+                                    <option value="cumprida_parcial_reescrita" <?= ($ex['status_item'] ?? '') === 'cumprida_parcial_reescrita' ? 'selected' : '' ?>>Parcialmente cumprida / reescrita</option>
+                                    <option value="nao_cumprida_transcrita" <?= ($ex['status_item'] ?? '') === 'nao_cumprida_transcrita' ? 'selected' : '' ?>>Não cumprida / transcrita</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Observações e evidências verificadas</label>
+                                <textarea name="cumprimento_observacao[<?= h($ex['id']) ?>]" rows="3" placeholder="Descreva o que foi verificado e as evidências apresentadas."><?= h($ex['observacao'] ?? '') ?></textarea>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                    <div class="form-group">
+                        <label for="observacoes_tecnicas">Observações técnicas gerais</label>
+                        <textarea id="observacoes_tecnicas" name="observacoes_tecnicas" rows="4"><?= h($vistoria['observacoes_tecnicas'] ?? '') ?></textarea>
+                    </div>
+                    <div class="form-group" style="padding:14px;border:1px solid #f59e0b;border-radius:8px;background:rgba(245,158,11,.06);">
+                        <label for="prazo_exigencias_dias">Validade do relatório para certificação *</label>
+                        <select id="prazo_exigencias_dias" name="prazo_exigencias_dias" required style="max-width:280px;">
+                            <option value="" <?= $prazo_exigencias_dias === '' ? 'selected' : '' ?> disabled>Selecione...</option>
+                            <option value="60" <?= $prazo_exigencias_dias === '60' ? 'selected' : '' ?>>60 dias</option>
+                            <option value="90" <?= $prazo_exigencias_dias === '90' ? 'selected' : '' ?>>90 dias</option>
+                        </select>
+                        <small class="text-muted" style="display:block;margin-top:6px;">
+                            A validade será contada a partir da data desta verificação e usada na emissão do certificado. Quando definida no relatório anterior, a opção é herdada automaticamente.
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label for="status_vistoria">Situação do relatório *</label>
+                        <select id="status_vistoria" name="status_vistoria" required>
+                            <option value="PENDENTE" <?= ($vistoria['status'] ?? '') === 'PENDENTE' ? 'selected' : '' ?>>Salvar como pendente</option>
+                            <option value="AGUARDANDO_APROVACAO" <?= ($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO' ? 'selected' : '' ?>>Enviar para análise</option>
+                        </select>
+                    </div>
+                </div>
+            <?php else: ?>
+
+            <div style="margin: 20px 20px 0; padding: 14px 16px; border: 1px solid var(--cor-destaque); border-radius: 8px; background: rgba(46, 204, 113, 0.08);">
+                <strong style="display:block; margin-bottom: 8px; color: var(--cor-destaque);">
+                    <i class="fas fa-user-check"></i> Responsável pelo fechamento da proposta
+                </strong>
+                <div><?php echo h($ag['contato_nome'] ?: 'Não informado'); ?></div>
+                <small class="text-muted">
+                    Telefone:
+                    <?php if (!empty($ag['contato_telefone'])): ?>
+                        <a href="tel:<?php echo h(preg_replace('/\D/', '', $ag['contato_telefone'])); ?>"><?php echo h($ag['contato_telefone']); ?></a>
+                    <?php else: ?>
+                        Não informado
+                    <?php endif; ?>
+                </small>
+            </div>
 
             <!-- ===== DATA DA VISTORIA E ARMADOR ===== -->
             <div style="padding: 20px 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -578,7 +847,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
 
             <!-- ===== CHECKLIST DINAMICO ===== -->
-            <div style="padding: 20px;">
+            <div style="padding: 20px;" class="checklist-editor-section">
                 <h4 style="margin: 0 0 15px 0; font-size: 1.1rem; color: var(--cor-destaque, #2ECC71);">
                     <i class="fas fa-clipboard-check"></i> Checklist de Vistoria
                 </h4>
@@ -588,16 +857,19 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
 
                 <div style="margin-bottom: 20px; padding: 14px; border: 1px solid var(--cor-borda, #444); border-radius: 6px; background: var(--cor-sidebar, #1a1a2e);">
-                    <label for="prazo_padrao_exigencias" style="display:block; margin-bottom: 6px; font-weight: 600;">
-                        Data de Vencimento (opcional)
+                    <label for="prazo_exigencias_dias" style="display:block; margin-bottom: 6px; font-weight: 600;">
+                        Prazo de validade do relatório <span style="color:#ef4444;">*</span>
                     </label>
-                    <input type="date"
-                           id="prazo_padrao_exigencias"
-                           name="prazo_padrao_exigencias"
-                           value="<?= h($prazo_padrao_exigencias) ?>"
-                           style="max-width: 240px; padding: 8px 10px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
+                    <select id="prazo_exigencias_dias"
+                            name="prazo_exigencias_dias"
+                            required
+                            style="max-width: 280px; padding: 8px 10px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
+                        <option value="" <?= $prazo_exigencias_dias === '' ? 'selected' : '' ?> disabled>Selecione...</option>
+                        <option value="60" <?= $prazo_exigencias_dias === '60' ? 'selected' : '' ?>>60 dias</option>
+                        <option value="90" <?= $prazo_exigencias_dias === '90' ? 'selected' : '' ?>>90 dias</option>
+                    </select>
                     <small style="display:block; margin-top: 6px; color: var(--cor-texto-secundario, #aaa);">
-                        Esta data será aplicada a todas as exigências não conformes, exceto as marcadas como AS / sem prazo.
+                        Selecione obrigatoriamente 60 ou 90 dias. Essa escolha define o vencimento das exigências e a validade do CSN. A/S significa “Antes de suspender” e bloqueia a embarcação e todos os certificados.
                     </small>
                 </div>
 
@@ -614,7 +886,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 $status = $resp['status'] ?? '';
                                 $obs = $resp['observacao'] ?? '';
                                 $venc = $resp['vencimento'] ?? '';
-                                $semPrazo = ($status === 'NAO_CONFORME' && empty($venc));
+                                $semPrazo = ($status === 'NAO_CONFORME' && !empty($resp['sem_prazo']));
                             ?>
                             <div class="checklist-item" data-id="<?= $item['id'] ?>" data-text="<?= htmlspecialchars(strtolower($item['descricao'] . ' ' . $item['item_normam'])) ?>">
                                 <div class="item-text"><?= h($item['descricao']) ?></div>
@@ -644,7 +916,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                                class="checklist-sem-prazo"
                                                data-target="sem_prazo_<?= $item['id'] ?>"
                                                <?= $semPrazo ? 'checked' : '' ?>>
-                                        AS / sem prazo
+                                        A/S — Antes de suspender
                                     </label>
                                 </div>
                             </div>
@@ -656,18 +928,23 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
 
             <!-- ===== EXIGÊNCIAS AVULSAS ===== -->
-            <div style="padding: 20px;">
+            <div style="padding: 20px;" class="avulsa-section">
                 <h4 style="margin: 0 0 15px 0; font-size: 1rem; color: var(--cor-destaque, #2ECC71);">
                     <i class="fas fa-plus-circle"></i> Exigências Avulsas (Fora do Catálogo)
                 </h4>
                 <small class="text-muted">Adicione itens pendentes que não constam no checklist acima.</small>
 
                 <div style="margin: 15px 0;" class="no-print">
-                    <button type="button" class="btn btn-sm btn-primary" onclick="adicionarLinhaAvulsa()">
+                    <button type="button" class="btn btn-sm btn-primary avulsa-add-button" onclick="adicionarLinhaAvulsa()">
                         <i class="fas fa-plus"></i> Adicionar Item Avulso
                     </button>
                 </div>
 
+                <div id="avulsaEmpty" class="avulsa-empty <?= empty($exigencias_avulsas) ? '' : 'is-hidden' ?>">
+                    <i class="fas fa-clipboard-check"></i>
+                    Nenhuma exigência avulsa adicionada.
+                </div>
+                <div id="avulsaTableWrap" class="avulsa-table-wrap <?= empty($exigencias_avulsas) ? 'is-hidden' : '' ?>">
                 <table id="tabelaExigenciasAvulsas" style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr style="background: var(--cor-sidebar, #1a1a2e); border-bottom: 2px solid var(--cor-borda);">
@@ -677,19 +954,19 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <th style="text-align: left; padding: 8px 6px;">Item da NORMAM</th>
                             <th style="width: 120px; text-align: center; padding: 8px 6px;">Situação</th>
                             <th style="text-align: left; padding: 8px 6px;">Observacao / Justificativa</th>
-                            <th style="width: 100px; text-align: center; padding: 8px 6px;">AS / Sem Prazo</th>
+                            <th style="width: 130px; text-align: center; padding: 8px 6px;">A/S — Antes de suspender</th>
                             <th style="width: 40px; text-align: center; padding: 8px 6px;" class="no-print"></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($exigencias_avulsas as $idx => $ex): ?>
                         <tr class="linha-exigencia-avulsa">
-                            <td style="text-align: center; padding: 6px;">
+                            <td data-label="Ordem" style="text-align: center; padding: 6px;">
                                 <span class="ordem-num-avulsa"><?php echo (int)$ex['ordem']; ?></span>
                                 <input type="hidden" name="exigencia_id[]" value="<?php echo h($ex['id'] ?? ''); ?>">
                                 <input type="hidden" name="exigencia_ordem[]" value="<?php echo (int)$ex['ordem']; ?>" class="ordem-input-avulsa">
                             </td>
-                            <td style="padding: 6px;">
+                            <td data-label="Tipo" style="padding: 6px;">
                                 <?php $blocoAtual = $ex['bloco_vistoria'] ?? $bloco_vistoria_padrao; ?>
                                 <select name="exigencia_bloco[]"
                                         style="width: 100%; padding: 6px 4px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
@@ -700,17 +977,17 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <?php endforeach; ?>
                                 </select>
                             </td>
-                            <td style="padding: 6px;">
+                            <td data-label="Descrição" style="padding: 6px;">
                                 <input type="text" name="exigencia_descricao[]" value="<?php echo h($ex['descricao'] ?? ''); ?>"
                                        placeholder="Ex.: nao tem seguranca" required
                                        style="width: 100%; padding: 6px 10px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
                             </td>
-                            <td style="padding: 6px;">
+                            <td data-label="NORMAM" style="padding: 6px;">
                                 <input type="text" name="exigencia_item[]" value="<?php echo h($ex['item']); ?>"
                                        placeholder="Ex.: NORMAM-202/DPC, Cap. 03"
                                        style="width: 100%; padding: 6px 10px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
                             </td>
-                            <td style="padding: 6px; text-align: center;">
+                            <td data-label="Situação" style="padding: 6px; text-align: center;">
                                 <select name="status_item[]"
                                         style="width: 100%; padding: 6px 4px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
                                     <option value="inserida" <?php echo ($ex['status_item'] ?? 'inserida') === 'inserida' ? 'selected' : ''; ?>>Inserida / N/A</option>
@@ -718,21 +995,21 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <option value="cumprida" <?php echo ($ex['status_item'] ?? '') === 'cumprida' ? 'selected' : ''; ?>>Cumprida</option>
                                 </select>
                             </td>
-                            <td style="padding: 6px;">
+                            <td data-label="Observação" style="padding: 6px;">
                                 <input type="text" name="exigencia_observacao[]" value="<?php echo h($ex['observacao'] ?? ''); ?>"
                                        placeholder="Observacao"
                                        style="width: 100%; padding: 6px 10px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
                             </td>
-                            <td style="padding: 6px; text-align: center;">
-                                <?php $avulsaSemPrazo = empty($ex['vencimento']); ?>
+                            <td data-label="Sem prazo" style="padding: 6px; text-align: center;">
+                                <?php $avulsaSemPrazo = !empty($ex['antes_de_suspender']); ?>
                                 <input type="hidden" name="exigencia_sem_prazo[]" class="avulsa-sem-prazo-input" value="<?php echo $avulsaSemPrazo ? '1' : '0'; ?>">
                                 <label style="display:inline-flex; align-items:center; gap:6px;">
                                     <input type="checkbox" class="avulsa-sem-prazo-check" <?php echo $avulsaSemPrazo ? 'checked' : ''; ?>>
-                                    AS
+                                    A/S
                                 </label>
                             </td>
-                            <td style="text-align: center; padding: 6px;" class="no-print">
-                                <button type="button" class="btn btn-danger btn-sm" onclick="removerLinhaAvulsa(this)" title="Remover">
+                            <td data-label="Ações" style="text-align: center; padding: 6px;" class="no-print">
+                                <button type="button" class="btn btn-danger btn-sm" onclick="removerLinhaAvulsa(this)" title="Remover" aria-label="Remover exigência avulsa">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -740,10 +1017,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                </div>
             </div>
 
             <!-- ===== OBSERVACOES TECNICAS ===== -->
-            <div style="padding: 0 20px 20px;">
+            <div style="padding: 0 20px 20px;" class="observacoes-section">
                 <div class="form-group">
                     <label for="observacoes_tecnicas">
                         <i class="fas fa-sticky-note"></i> Observações Técnicas
@@ -772,12 +1050,21 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
             </div>
 
+            <?php endif; ?>
+
+            <!-- Deve permanecer como o ultimo campo do formulario. Se o PHP truncar
+                 a requisicao por max_input_vars, o backend detecta sua ausencia. -->
+            <input type="hidden" name="formulario_completo" value="1">
+
             <!-- ===== BOTOES ===== -->
-            <div class="form-actions" style="padding: 0 20px 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <div class="form-actions report-actions" style="padding: 0 20px 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <button type="submit" class="btn btn-primary" id="btnSalvar">
                     <i class="fas fa-save"></i>
                     <?php echo $editando ? 'Atualizar Relatorio' : 'Salvar Relatorio'; ?>
                 </button>
+                <span id="rascunhoRelatorioStatus" class="text-muted" style="font-size:.8rem;">
+                    <i class="fas fa-cloud-arrow-down"></i> Preenchimento preservado automaticamente neste navegador.
+                </span>
                 <?php if ($editando && !empty($vistoria['id'])): ?>
                     <a href="<?php echo APP_URL; ?>vistorias/relatorio_pdf.php?id=<?php echo urlencode($vistoria['id']); ?>" target="_blank" class="btn btn-info" style="color: #fff;">
                         <i class="fas fa-file-pdf"></i> Visualizar Relatório
@@ -806,6 +1093,106 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
 <?php if (!$admin_review_mode): ?>
 <script>
+// Preserva o preenchimento mesmo quando uma validação do servidor redirecionar
+// de volta ao relatório. Dados de segurança e arquivos nunca são armazenados.
+(function preservarRascunhoRelatorio() {
+    const form = document.getElementById('formRelatorio');
+    if (!form || typeof localStorage === 'undefined') return;
+
+    const draftKey = <?= json_encode('erp:relatorio:rascunho:' . $agendamento_id . ':' . ($vistoria['id'] ?? 'novo'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+    const ignorados = new Set(['csrf_token', 'formulario_completo', 'agendamento_id', 'vistoria_id']);
+    const status = document.getElementById('rascunhoRelatorioStatus');
+
+    function controlesPersistiveis() {
+        return Array.from(form.elements).filter(function(campo) {
+            return campo.name && !ignorados.has(campo.name) && !['file', 'submit', 'button', 'password'].includes(campo.type);
+        });
+    }
+
+    function salvar() {
+        try {
+            const ocorrencias = Object.create(null);
+            const campos = controlesPersistiveis().map(function(campo) {
+                const indice = ocorrencias[campo.name] || 0;
+                ocorrencias[campo.name] = indice + 1;
+                return {
+                    nome: campo.name,
+                    indice: indice,
+                    valor: campo.value,
+                    marcado: campo.type === 'checkbox' || campo.type === 'radio' ? campo.checked : null
+                };
+            });
+            localStorage.setItem(draftKey, JSON.stringify({campos: campos, salvoEm: Date.now()}));
+            if (status) status.innerHTML = '<i class="fas fa-cloud-arrow-down"></i> Preenchimento preservado automaticamente.';
+        } catch (e) {
+            // O formulário continua funcionando normalmente se o armazenamento local estiver indisponível.
+        }
+    }
+
+    function restaurar() {
+        try {
+            const bruto = localStorage.getItem(draftKey);
+            if (!bruto) return;
+            const rascunho = JSON.parse(bruto);
+            const totalAvulsasSalvas = (rascunho.campos || []).filter(function(campo) {
+                return campo.nome === 'exigencia_descricao[]';
+            }).length;
+            let totalAvulsasAtuais = form.querySelectorAll('[name="exigencia_descricao[]"]').length;
+            while (totalAvulsasAtuais < totalAvulsasSalvas && typeof adicionarLinhaAvulsa === 'function') {
+                adicionarLinhaAvulsa();
+                totalAvulsasAtuais++;
+            }
+            const porChave = new Map((rascunho.campos || []).map(function(campo) {
+                return [campo.nome + '::' + campo.indice, campo];
+            }));
+            const ocorrencias = Object.create(null);
+            controlesPersistiveis().forEach(function(campo) {
+                const indice = ocorrencias[campo.name] || 0;
+                ocorrencias[campo.name] = indice + 1;
+                const salvo = porChave.get(campo.name + '::' + indice);
+                if (!salvo) return;
+                if (campo.type === 'checkbox' || campo.type === 'radio') campo.checked = !!salvo.marcado;
+                else campo.value = salvo.valor;
+            });
+            form.querySelectorAll('.checklist-item').forEach(function(item) {
+                const itemId = item.dataset.id;
+                const valor = document.getElementById('status_' + itemId)?.value || '';
+                item.querySelectorAll('.btn-toggle').forEach(function(botao) { botao.classList.remove('active'); });
+                const seletor = valor === 'CONFORME' ? '.btn-toggle.conforme'
+                    : (valor === 'NAO_CONFORME' ? '.btn-toggle.nao-conforme'
+                    : (valor === 'NAO_SE_APLICA' ? '.btn-toggle.na' : ''));
+                if (seletor) item.querySelector(seletor)?.classList.add('active');
+                const detalhes = document.getElementById('details_' + itemId);
+                if (detalhes) detalhes.style.display = valor === 'NAO_CONFORME' ? 'block' : 'none';
+                const asOculto = document.getElementById('sem_prazo_' + itemId);
+                const asCheck = item.querySelector('.checklist-sem-prazo');
+                if (asOculto && asCheck) asCheck.checked = asOculto.value === '1';
+            });
+            if (status) status.innerHTML = '<i class="fas fa-rotate-left"></i> Preenchimento anterior restaurado.';
+        } catch (e) {
+            localStorage.removeItem(draftKey);
+        }
+    }
+
+    const salvoComSucesso = new URLSearchParams(window.location.search).get('salvo') === '1';
+    if (salvoComSucesso) {
+        localStorage.removeItem(draftKey);
+        const urlLimpa = new URL(window.location.href);
+        urlLimpa.searchParams.delete('salvo');
+        window.history.replaceState({}, '', urlLimpa.toString());
+    } else window.setTimeout(restaurar, 0);
+
+    let temporizador = null;
+    function agendarSalvamento() {
+        window.clearTimeout(temporizador);
+        temporizador = window.setTimeout(salvar, 120);
+    }
+    form.addEventListener('input', agendarSalvamento);
+    form.addEventListener('change', salvar);
+    form.addEventListener('click', function() { window.setTimeout(salvar, 0); });
+    form.addEventListener('submit', salvar);
+})();
+
 // Toggle Accordions
 function toggleSection(id) {
     const body = document.getElementById(id);
@@ -910,48 +1297,48 @@ function adicionarLinhaAvulsa() {
     tr.className = 'linha-exigencia-avulsa';
 
     tr.innerHTML = `
-        <td style="text-align: center; padding: 6px;">
+        <td data-label="Ordem" style="text-align: center; padding: 6px;">
             <span class="ordem-num-avulsa">${contadorLinhasAvulsa}</span>
             <input type="hidden" name="exigencia_id[]" value="">
             <input type="hidden" name="exigencia_ordem[]" value="${contadorLinhasAvulsa}" class="ordem-input-avulsa">
         </td>
-        <td style="padding: 6px;">
+        <td data-label="Tipo" style="padding: 6px;">
             <select name="exigencia_bloco[]"
                     style="width: 100%; padding: 6px 4px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
                 ${opcoesBlocoVistoriaAvulsa(blocoVistoriaPadrao)}
             </select>
         </td>
-        <td style="padding: 6px;">
+        <td data-label="Descrição" style="padding: 6px;">
             <input type="text" name="exigencia_descricao[]" value=""
                    placeholder="Ex.: nao tem seguranca" required
                    style="width: 100%; padding: 6px 10px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
         </td>
-        <td style="padding: 6px;">
+        <td data-label="NORMAM" style="padding: 6px;">
             <input type="text" name="exigencia_item[]" value=""
                    placeholder="Ex.: NORMAM-202/DPC, Cap. 03"
                    style="width: 100%; padding: 6px 10px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
         </td>
-        <td style="padding: 6px; text-align: center;">
+        <td data-label="Situação" style="padding: 6px; text-align: center;">
             <select name="status_item[]"
                     style="width: 100%; padding: 6px 4px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
                 <option value="pendente">Pendente</option>
                 <option value="cumprida">Cumprida</option>
             </select>
         </td>
-        <td style="padding: 6px;">
+        <td data-label="Observação" style="padding: 6px;">
             <input type="text" name="exigencia_observacao[]" value=""
                    placeholder="Observacao"
                    style="width: 100%; padding: 6px 10px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
         </td>
-        <td style="padding: 6px; text-align: center;">
+        <td data-label="Sem prazo" style="padding: 6px; text-align: center;">
             <input type="hidden" name="exigencia_sem_prazo[]" class="avulsa-sem-prazo-input" value="1">
             <label style="display:inline-flex; align-items:center; gap:6px;">
                 <input type="checkbox" class="avulsa-sem-prazo-check" checked>
                 AS
             </label>
         </td>
-        <td style="text-align: center; padding: 6px;" class="no-print">
-            <button type="button" class="btn btn-danger btn-sm" onclick="removerLinhaAvulsa(this)" title="Remover">
+        <td data-label="Ações" style="text-align: center; padding: 6px;" class="no-print">
+            <button type="button" class="btn btn-danger btn-sm" onclick="removerLinhaAvulsa(this)" title="Remover" aria-label="Remover exigência avulsa">
                 <i class="fas fa-trash"></i>
             </button>
         </td>
@@ -959,6 +1346,7 @@ function adicionarLinhaAvulsa() {
     tbody.appendChild(tr);
     vincularSemPrazoAvulsa(tr);
     renumerarLinhasAvulsas();
+    atualizarEstadoTabelaAvulsa();
 }
 
 function vincularSemPrazoAvulsa(contexto) {
@@ -975,6 +1363,13 @@ document.querySelectorAll('#tabelaExigenciasAvulsas tbody tr').forEach(vincularS
 function removerLinhaAvulsa(btn) {
     btn.closest('tr').remove();
     renumerarLinhasAvulsas();
+    atualizarEstadoTabelaAvulsa();
+}
+
+function atualizarEstadoTabelaAvulsa() {
+    const temLinhas = document.querySelectorAll('#tabelaExigenciasAvulsas tbody tr.linha-exigencia-avulsa').length > 0;
+    document.getElementById('avulsaEmpty').classList.toggle('is-hidden', temLinhas);
+    document.getElementById('avulsaTableWrap').classList.toggle('is-hidden', !temLinhas);
 }
 
 function renumerarLinhasAvulsas() {
@@ -986,6 +1381,8 @@ function renumerarLinhasAvulsas() {
     });
     contadorLinhasAvulsa = rows.length;
 }
+
+atualizarEstadoTabelaAvulsa();
 
 // Confirmacao ao salvar com status final
 document.getElementById('formRelatorio').addEventListener('submit', function(e) {
@@ -1034,7 +1431,7 @@ document.getElementById('formDecisaoAdmin')?.addEventListener('submit', function
 </script>
 <?php endif; ?>
 
-<?php if (!$admin_review_mode && getCargo() === 'ADMIN' && ($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO'): ?>
+<?php if (!$admin_review_mode && temPerfil('ANALISTA') && ($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO'): ?>
 <div class="card mt-4" style="border: 2px solid #f39c12; max-width: 950px; margin: 20px auto;">
     <div class="card-header" style="background:#f39c12;color:#000">
         <h4><i class="fas fa-gavel"></i> Decisão de Aprovação</h4>
@@ -1047,10 +1444,7 @@ document.getElementById('formDecisaoAdmin')?.addEventListener('submit', function
                 <label>Observação (obrigatória para reprovar, opcional para aprovar):</label>
                 <textarea name="observacao_admin" class="form-control" rows="3"></textarea>
             </div>
-            <button type="submit" name="decisao" value="aprovar" class="btn btn-success"
-                onclick="return confirm('Confirmar APROVAÇ?O deste relatório?')">
-                <i class="fas fa-check"></i> Aprovar Relatório
-            </button>
+            <?php renderBotaoAprovacaoDocumento($pdo,'RELATORIO',$vistoria['id'],$vistoria['status'],false,!empty($vistoria['responsavel_assinatura_id'])?(int)$vistoria['responsavel_assinatura_id']:null); ?>
             <button type="submit" name="decisao" value="reprovar" class="btn btn-danger ms-2"
                 onclick="return confirm('Confirmar REPROVAÇ?O? A observação é obrigatória.')">
                 <i class="fas fa-times"></i> Reprovar Relatório
@@ -1059,4 +1453,4 @@ document.getElementById('formDecisaoAdmin')?.addEventListener('submit', function
     </div>
 </div>
 <?php endif; ?>
-<?php require_once __DIR__ . '/../../includes/footer.php'; ?>
+<?php renderAprovacaoUi($pdo); require_once __DIR__ . '/../../includes/footer.php'; ?>

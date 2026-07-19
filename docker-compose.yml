@@ -37,14 +37,54 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/campo/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - erp_network
     restart: unless-stopped
-    command: sh -c "composer install --no-interaction --prefer-dist --no-dev && apache2-foreground"
+    command: sh -c "install -d -o www-data -g www-data -m 0750 /var/www/html/storage/private/exportacoes /var/www/html/storage/private/documento_artefatos && composer install --no-interaction --prefer-dist --no-dev && apache2-foreground"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: "www-data"
+    volumes:
+      - .:/var/www/html
+      - ./docker/php.ini:/usr/local/etc/php/conf.d/erp.ini
+    environment:
+      - DB_HOST=db
+      - DB_NAME=${DB_NAME:-erp_sistema}
+      - DB_USER=${DB_USER:-erp_user}
+      - DB_PASS=${DB_PASS:-erp_pass_2026}
+      - APP_URL=${APP_URL:-http://localhost:8082/}
+      - APP_DEBUG=${APP_DEBUG:-0}
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-erp_minio_admin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-erp_minio_pass_2026}
+    depends_on:
+      app:
+        condition: service_healthy
+      db: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    networks:
+      - erp_network
+    restart: unless-stopped
+    command: sh -c "while true; do php scripts/processar_exportacoes.php; sleep 60; done"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
 
   # Banco de Dados MySQL
   db:
-    image: mysql:8.0
+    image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
     container_name: erp_db
     ports:
       - "${DB_PORT:-3307}:3306"
@@ -67,10 +107,13 @@ services:
     networks:
       - erp_network
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
 
   # phpMyAdmin (opcional)
   phpmyadmin:
-    image: phpmyadmin:5.2.1
+    image: phpmyadmin:5.2.1@sha256:6e75aa8f767c5c9b7f3859e7f3006ad669739159d4e312e7570b66082da7f949
     container_name: erp_phpmyadmin
     ports:
       - "${PHPMYADMIN_PORT:-8083}:80"
@@ -84,10 +127,13 @@ services:
     networks:
       - erp_network
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
 
   # MinIO (S3 Compatible Storage)
   minio:
-    image: minio/minio:latest
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     container_name: erp_minio
     ports:
       - "${MINIO_PORT:-9002}:9000"
@@ -106,6 +152,9 @@ services:
     networks:
       - erp_network
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
 
 volumes:
   db_data:

@@ -17,6 +17,11 @@ if (!podeAcessar('vistorias')) {
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
+if (in_array($action, ['salvar', 'salvar_wizard'], true)) {
+    setMensagem('error', 'Não é permitido criar vistoria avulsa. Inicie-a pelo agendamento atribuído.');
+    redirecionar(APP_URL . 'agendamentos');
+}
+
 function normalizarTipoVistoriaAction(string $texto): string
 {
     $texto = mb_strtolower($texto, 'UTF-8');
@@ -45,7 +50,108 @@ function blocosPermitidosRelatorioAction(string $tipoVistoria): array
     return !empty($blocos) ? $blocos : ['seco', 'flutuando', 'borda_livre', 'arqueacao'];
 }
 
+function bloquearMutacaoRelatorioAuditavel(PDO $pdo, string $vistoriaId, string $destino): void
+{
+    if ($vistoriaId === '') return;
+    $stmt = $pdo->prepare("SELECT 1 FROM documento_aprovacoes WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status IN ('APROVADO','CANCELADO') LIMIT 1");
+    $stmt->execute([':id'=>$vistoriaId]);
+    if ($stmt->fetchColumn()) {
+        setMensagem('error', 'Este relatorio possui uma aprovacao auditavel e e imutavel. Para corrigir, cancele e emita um novo documento.');
+        redirecionar($destino);
+    }
+}
+
 switch ($action) {
+
+    // ==============================
+    // INICIAR VERIFICACAO DE CUMPRIMENTO DE EXIGENCIAS A/S
+    // ==============================
+    case 'iniciar_cumprimento_exigencias':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verificarCSRF($_POST['csrf_token'] ?? '')) {
+            setMensagem('error', 'Requisicao invalida ou token de seguranca expirado.');
+            redirecionar(APP_URL . 'vistorias');
+        }
+
+        $relatorioOrigemId = trim($_POST['vistoria_id'] ?? '');
+        try {
+            $pdo->beginTransaction();
+            $stmtOrigem = $pdo->prepare("SELECT v.*, a.vistoriador_id, a.tipo_vistoria
+                FROM vistorias v
+                INNER JOIN agendamentos a ON a.id = v.agendamento_id
+                WHERE v.id = :id FOR UPDATE");
+            $stmtOrigem->execute([':id' => $relatorioOrigemId]);
+            $origem = $stmtOrigem->fetch(PDO::FETCH_ASSOC);
+            if (!$origem || !in_array($origem['status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)) {
+                throw new Exception('O relatorio de origem precisa estar aprovado.');
+            }
+            $vigente = obterRelatorioVigenteAgendamento($pdo, $origem['agendamento_id']);
+            if (!$vigente || $vigente['id'] !== $origem['id']) {
+                throw new Exception('Este relatorio ja foi substituido por um relatorio mais recente.');
+            }
+            if (getCargo() !== 'ADMIN' && ($origem['vistoriador_id'] ?? '') !== ($_SESSION['usuario_id'] ?? '')) {
+                throw new Exception('Somente o vistoriador atribuido ou um administrador pode iniciar esta verificacao.');
+            }
+            if (!relatorioPossuiASPendente($pdo, $origem['id'])) {
+                throw new Exception('O relatorio nao possui exigencia A/S pendente.');
+            }
+
+            $stmtExistente = $pdo->prepare("SELECT id FROM vistorias
+                WHERE relatorio_anterior_id = :origem
+                  AND finalidade = 'CUMPRIMENTO_EXIGENCIAS'
+                  AND status IN ('PENDENTE','AGUARDANDO_APROVACAO')
+                ORDER BY criado_em DESC, id DESC LIMIT 1");
+            $stmtExistente->execute([':origem' => $origem['id']]);
+            $novoId = $stmtExistente->fetchColumn();
+
+            if (!$novoId) {
+                $novoId = gerarUUID();
+                $isArqueacao = stripos((string)$origem['numero'], 'REL-AP') !== false
+                    || stripos((string)$origem['tipo_vistoria'], 'arquea') !== false;
+                $numero = $isArqueacao
+                    ? gerarNumeroDocumento('REL-AP', 'AM-REL-AP')
+                    : gerarNumeroDocumento('REL-V', 'AM-REL-V');
+
+                $stmtNovo = $pdo->prepare("INSERT INTO vistorias
+                    (id, numero, embarcacao_id, pessoa_id, armador_id, operador_nome, agendamento_id,
+                     relatorio_anterior_id, finalidade, data_vistoria, prazo_exigencias_dias,
+                     observacoes_tecnicas, status, criado_por)
+                    VALUES (:id, :numero, :embarcacao, :pessoa, :armador, :operador, :agendamento,
+                            :anterior, 'CUMPRIMENTO_EXIGENCIAS', CURDATE(), :prazo,
+                            :observacoes, 'PENDENTE', :usuario)");
+                $stmtNovo->execute([
+                    ':id' => $novoId, ':numero' => $numero, ':embarcacao' => $origem['embarcacao_id'],
+                    ':pessoa' => $origem['pessoa_id'], ':armador' => $origem['armador_id'],
+                    ':operador' => $origem['operador_nome'], ':agendamento' => $origem['agendamento_id'],
+                    ':anterior' => $origem['id'], ':prazo' => $origem['prazo_exigencias_dias'],
+                    ':observacoes' => 'Verificacao de cumprimento das exigencias do relatorio ' . ($origem['numero'] ?: $origem['id']),
+                    ':usuario' => $_SESSION['usuario_id'],
+                ]);
+
+                $stmtCopiar = $pdo->prepare("INSERT INTO vistoria_exigencias
+                    (id, vistoria_id, catalogo_id, bloco_vistoria, ordem, item, descricao, conforme,
+                     observacao, item_normam, vencimento, antes_de_suspender, status_item, exigencia_origem_id)
+                    SELECT UUID(), :novo, catalogo_id, bloco_vistoria, ordem, item, descricao, 'nao',
+                           observacao, item_normam, vencimento, antes_de_suspender, 'pendente', id
+                      FROM vistoria_exigencias
+                     WHERE vistoria_id = :origem
+                       AND conforme = 'nao'
+                       AND status_item <> 'cumprida'");
+                $stmtCopiar->execute([':novo' => $novoId, ':origem' => $origem['id']]);
+                if ($stmtCopiar->rowCount() === 0) {
+                    throw new Exception('Nenhuma exigencia pendente foi encontrada para verificacao.');
+                }
+                log_atividade('relatorio_cumprimento_criado', "Relatorio {$numero} criado para substituir {$origem['numero']} ({$origem['id']}).");
+            }
+
+            $pdo->commit();
+            setMensagem('success', 'Relatorio de verificacao de cumprimento iniciado.');
+            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($origem['agendamento_id']) . '&vistoria_id=' . urlencode($novoId));
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            setMensagem('error', $e->getMessage());
+            redirecionar(APP_URL . 'vistorias');
+        }
+        break;
 
     // ==============================
     // SALVAR VISTORIA (WIZARD)
@@ -171,6 +277,7 @@ switch ($action) {
         $id             = trim($_POST['id'] ?? '');
         $vistoriador_id = trim($_POST['vistoriador_id'] ?? '');
         $data_vistoria  = trim($_POST['data_vistoria'] ?? '');
+        bloquearMutacaoRelatorioAuditavel($pdo, $id, APP_URL . 'vistorias/detalhe?id=' . urlencode($id));
 
         if (empty($id) || empty($vistoriador_id) || empty($data_vistoria)) {
             setMensagem('error', 'Preencha todos os campos obrigatórios.');
@@ -266,6 +373,7 @@ switch ($action) {
         $id            = trim($_POST['id'] ?? '');
         $novo_status   = trim($_POST['status'] ?? '');
         $resultado     = trim($_POST['resultado'] ?? '');
+        bloquearMutacaoRelatorioAuditavel($pdo, $id, APP_URL . 'vistorias/detalhe?id=' . urlencode($id));
 
         // Status alinhados com o fluxo real do relatorio tecnico
         // (salvar_relatorio / aprovacao_relatorios usam os mesmos valores).
@@ -335,20 +443,30 @@ switch ($action) {
             redirecionar(APP_URL . 'agendamentos');
         }
 
+        $agendamento_id = $_POST['agendamento_id'] ?? '';
+        if (($_POST['formulario_completo'] ?? '') !== '1') {
+            setMensagem('error', 'O relatorio possui muitos campos e o envio foi interrompido pelo servidor. Tente novamente apos reiniciar o ambiente.');
+            $destino = $agendamento_id !== ''
+                ? APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id)
+                : APP_URL . 'agendamentos';
+            redirecionar($destino);
+        }
+
         $csrf = $_POST['csrf_token'] ?? '';
         if (!verificarCSRF($csrf)) {
             setMensagem('error', 'Token de seguranca invalido.');
             redirecionar(APP_URL . 'agendamentos');
         }
 
-        $agendamento_id       = $_POST['agendamento_id'] ?? '';
         $vistoria_id          = $_POST['vistoria_id'] ?? '';
+        bloquearMutacaoRelatorioAuditavel($pdo, $vistoria_id, APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id));
         $armador_id           = trim($_POST['armador_id'] ?? '');
         $operador_nome        = trim($_POST['operador_nome'] ?? '');
         $data_vistoria        = trim($_POST['data_vistoria'] ?? '');
         $observacoes_tecnicas = trim($_POST['observacoes_tecnicas'] ?? '');
         $status_vistoria      = $_POST['status_vistoria'] ?? 'PENDENTE';
-        $prazo_padrao_exigencias = trim($_POST['prazo_padrao_exigencias'] ?? '') ?: null;
+        $prazo_exigencias_dias = (int)($_POST['prazo_exigencias_dias'] ?? 0);
+        $prazo_padrao_exigencias = null;
         
         // Avulsas
         $itens                = $_POST['exigencia_item'] ?? [];
@@ -397,6 +515,101 @@ switch ($action) {
             }
         }
 
+        // O relatorio de cumprimento atualiza somente as exigencias copiadas, preservando
+        // integralmente o relatorio aprovado que lhe deu origem.
+        if (!empty($vistoria_id)) {
+            $stmtFinalidade = $pdo->prepare("SELECT finalidade, numero, status FROM vistorias WHERE id = :id LIMIT 1");
+            $stmtFinalidade->execute([':id' => $vistoria_id]);
+            $relatorioCumprimento = $stmtFinalidade->fetch(PDO::FETCH_ASSOC);
+            if (($relatorioCumprimento['finalidade'] ?? '') === 'CUMPRIMENTO_EXIGENCIAS') {
+                try {
+                    $pdo->beginTransaction();
+                    $stmtAg = $pdo->prepare("SELECT vistoriador_id FROM agendamentos WHERE id = :id FOR UPDATE");
+                    $stmtAg->execute([':id' => $agendamento_id]);
+                    $vistoriadorAtribuido = $stmtAg->fetchColumn();
+                    if (getCargo() !== 'ADMIN' && $vistoriadorAtribuido !== ($_SESSION['usuario_id'] ?? '')) {
+                        throw new Exception('Somente o vistoriador atribuido pode preencher este relatorio.');
+                    }
+                    if (!in_array($relatorioCumprimento['status'], ['PENDENTE', 'AGUARDANDO_APROVACAO'], true)) {
+                        throw new Exception('Este relatorio de cumprimento ja foi finalizado e esta preservado para auditoria.');
+                    }
+                    if (getCargo() === 'VISTORIADOR' && !in_array($status_vistoria, ['PENDENTE', 'AGUARDANDO_APROVACAO'], true)) {
+                        throw new Exception('O vistoriador deve salvar ou enviar o relatorio para aprovacao.');
+                    }
+
+                    $statusCumprimento = $_POST['cumprimento_status'] ?? [];
+                    $observacoesCumprimento = $_POST['cumprimento_observacao'] ?? [];
+                    $prazoCumprimentoValido = in_array($prazo_exigencias_dias, [60, 90], true);
+                    // Se a validade estiver ausente, salve todo o preenchimento como
+                    // rascunho e impeça somente o envio para análise.
+                    $statusCumprimentoSalvar = $prazoCumprimentoValido ? $status_vistoria : 'PENDENTE';
+                    $statusPermitidos = ['pendente', 'cumprida', 'nao_cumprida_transcrita', 'cumprida_parcial_reescrita'];
+                    $stmtAtualizar = $pdo->prepare("UPDATE vistoria_exigencias
+                        SET status_item = :status_item,
+                            conforme = :conforme,
+                            observacao = :observacao
+                        WHERE id = :id AND vistoria_id = :vistoria_id");
+                    $stmtIds = $pdo->prepare("SELECT id FROM vistoria_exigencias WHERE vistoria_id = :vistoria_id");
+                    $stmtIds->execute([':vistoria_id' => $vistoria_id]);
+                    $idsEsperados = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
+                    if (!$idsEsperados) throw new Exception('O relatorio nao possui exigencias para verificar.');
+
+                    $decisoesLog = [];
+                    foreach ($idsEsperados as $exigenciaId) {
+                        $situacao = $statusCumprimento[$exigenciaId] ?? 'pendente';
+                        if (!in_array($situacao, $statusPermitidos, true)) $situacao = 'pendente';
+                        $stmtAtualizar->execute([
+                            ':status_item' => $situacao,
+                            ':conforme' => $situacao === 'cumprida' ? 'sim' : 'nao',
+                            ':observacao' => trim($observacoesCumprimento[$exigenciaId] ?? '') ?: null,
+                            ':id' => $exigenciaId,
+                            ':vistoria_id' => $vistoria_id,
+                        ]);
+                        $decisoesLog[] = $exigenciaId . ':' . $situacao;
+                    }
+
+                    $stmtAtualizaRelatorio = $pdo->prepare("UPDATE vistorias
+                        SET data_vistoria = :data_vistoria,
+                            prazo_exigencias_dias = CASE
+                                WHEN :prazo IN (60, 90) THEN :prazo_valido
+                                ELSE prazo_exigencias_dias
+                            END,
+                            observacoes_tecnicas = :observacoes,
+                            status = :status
+                        WHERE id = :id");
+                    $stmtAtualizaRelatorio->execute([
+                        ':data_vistoria' => $data_vistoria ?: date('Y-m-d'),
+                        ':prazo' => $prazo_exigencias_dias,
+                        ':prazo_valido' => $prazo_exigencias_dias,
+                        ':observacoes' => $observacoes_tecnicas ?: null,
+                        ':status' => $statusCumprimentoSalvar,
+                        ':id' => $vistoria_id,
+                    ]);
+                    $pdo->commit();
+                    log_atividade('relatorio_cumprimento_salvo', "Relatorio {$relatorioCumprimento['numero']} salvo com status {$statusCumprimentoSalvar}. Decisoes: " . implode(', ', $decisoesLog));
+                    if (!$prazoCumprimentoValido) {
+                        setMensagem('error', 'Os dados foram salvos como pendentes. Selecione a validade do relatorio: 60 ou 90 dias.');
+                        redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id) . '&vistoria_id=' . urlencode($vistoria_id));
+                    }
+                    setMensagem('success', $statusCumprimentoSalvar === 'AGUARDANDO_APROVACAO'
+                        ? 'Relatorio de cumprimento enviado para analise.'
+                        : 'Relatorio de cumprimento salvo.');
+                    redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id) . '&vistoria_id=' . urlencode($vistoria_id) . '&salvo=1');
+                } catch (Exception $e) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    setMensagem('error', 'Erro ao salvar cumprimento: ' . $e->getMessage());
+                    redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id) . '&vistoria_id=' . urlencode($vistoria_id));
+                }
+            }
+        }
+
+        if (!in_array($prazo_exigencias_dias, [60, 90], true)) {
+            setMensagem('error', 'Selecione obrigatoriamente o prazo de validade do relatório: 60 ou 90 dias. O preenchimento foi preservado neste navegador.');
+            $destinoErro = APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id);
+            if ($vistoria_id !== '') $destinoErro .= '&vistoria_id=' . urlencode($vistoria_id);
+            redirecionar($destinoErro);
+        }
+
         try {
             $pdo->beginTransaction();
 
@@ -406,6 +619,21 @@ switch ($action) {
 
             if (!$ag) {
                 throw new Exception('Agendamento nao encontrado.');
+            }
+
+            if ($prazo_exigencias_dias > 0) {
+                $data_base_prazo = $data_vistoria ?: ($ag['data_vistoria'] ?? date('Y-m-d'));
+                $data_base_obj = DateTimeImmutable::createFromFormat('!Y-m-d', $data_base_prazo);
+                if (!$data_base_obj) {
+                    throw new Exception('Data da vistoria invalida para calcular o prazo das exigencias.');
+                }
+                $prazo_padrao_exigencias = $data_base_obj
+                    ->modify('+' . $prazo_exigencias_dias . ' days')
+                    ->format('Y-m-d');
+            }
+
+            if (getCargo() === 'VISTORIADOR' && ($ag['vistoriador_id'] ?? '') !== ($_SESSION['usuario_id'] ?? '')) {
+                throw new Exception('Acesso negado. Este agendamento não está atribuído a você.');
             }
 
             $blocos_permitidos_relatorio = blocosPermitidosRelatorioAction((string)($ag['tipo_vistoria'] ?? ''));
@@ -447,8 +675,8 @@ switch ($action) {
                 // Criar nova vistoria com numero
                 $vistoria_id = gerarUUID();
                 $stmtV = $pdo->prepare("
-                    INSERT INTO vistorias (id, numero, embarcacao_id, pessoa_id, armador_id, operador_nome, agendamento_id, data_vistoria, observacoes_tecnicas, status, criado_por, relatorio_anterior_id, texto_observacoes_geradas)
-                    VALUES (:id, :numero, :embarcacao_id, :pessoa_id, :armador_id, :operador_nome, :agendamento_id, :data_vistoria, :obs_tecnicas, :status, :criado_por, :rel_ant, :txt_gerado)
+                    INSERT INTO vistorias (id, numero, embarcacao_id, pessoa_id, armador_id, operador_nome, agendamento_id, data_vistoria, prazo_exigencias_dias, observacoes_tecnicas, status, criado_por, relatorio_anterior_id, texto_observacoes_geradas)
+                    VALUES (:id, :numero, :embarcacao_id, :pessoa_id, :armador_id, :operador_nome, :agendamento_id, :data_vistoria, :prazo_exigencias_dias, :obs_tecnicas, :status, :criado_por, :rel_ant, :txt_gerado)
                 ");
                 $stmtV->execute([
                     ':id'             => $vistoria_id,
@@ -459,6 +687,7 @@ switch ($action) {
                     ':operador_nome'  => $operador_nome ?: null,
                     ':agendamento_id' => $agendamento_id,
                     ':data_vistoria'  => $data_vistoria ?: $ag['data_vistoria'],
+                    ':prazo_exigencias_dias' => $prazo_exigencias_dias ?: null,
                     ':obs_tecnicas'   => $observacoes_tecnicas ?: null,
                     ':status'         => $status_vistoria,
                     ':criado_por'     => $_SESSION['usuario_id'],
@@ -477,6 +706,7 @@ switch ($action) {
                     SET armador_id = :armador_id,
                         operador_nome = :operador_nome,
                         data_vistoria = :data_vistoria,
+                        prazo_exigencias_dias = :prazo_exigencias_dias,
                         observacoes_tecnicas = :obs_tecnicas, status = :status,
                         aprovado_por = IF(:status_check IN ('APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA'), :aprovador, aprovado_por),
                         data_aprovacao = IF(:status2 IN ('APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA'), NOW(), data_aprovacao),
@@ -488,6 +718,7 @@ switch ($action) {
                     ':armador_id'   => $armador_id ?: null,
                     ':operador_nome' => $operador_nome ?: null,
                     ':data_vistoria'=> $data_vistoria ?: $ag['data_vistoria'],
+                    ':prazo_exigencias_dias' => $prazo_exigencias_dias ?: null,
                     ':obs_tecnicas' => $observacoes_tecnicas ?: null,
                     ':status'       => $status_vistoria,
                     ':status_check' => $status_vistoria,
@@ -511,8 +742,8 @@ switch ($action) {
             $ordem_global = 1;
             
             $stmtEx = $pdo->prepare("
-                INSERT INTO vistoria_exigencias (id, vistoria_id, catalogo_id, bloco_vistoria, ordem, item, descricao, conforme, observacao, item_normam, vencimento, status_item)
-                VALUES (UUID(), :vistoria_id, :catalogo_id, :bloco_vistoria, :ordem, :item, :descricao, :conforme, :observacao, :item_normam, :vencimento, :status_item)
+                INSERT INTO vistoria_exigencias (id, vistoria_id, catalogo_id, bloco_vistoria, ordem, item, descricao, conforme, observacao, item_normam, vencimento, antes_de_suspender, status_item)
+                VALUES (UUID(), :vistoria_id, :catalogo_id, :bloco_vistoria, :ordem, :item, :descricao, :conforme, :observacao, :item_normam, :vencimento, :antes_de_suspender, :status_item)
             ");
             
             if (!empty($checklist_ids)) {
@@ -571,7 +802,8 @@ switch ($action) {
                             ':observacao'  => $obs,
                             ':item_normam'  => $item_normam ?: ($cat_dados['item_normam'] ?? null),
                             ':status_item' => 'pendente',
-                            ':vencimento'  => $venc
+                            ':vencimento'  => $venc,
+                            ':antes_de_suspender' => $sem_prazo ? 1 : 0,
                         ]);
                     }
                 }
@@ -610,7 +842,8 @@ switch ($action) {
                         ':observacao'  => trim($observacoes_exig[$i] ?? '') ?: null,
                         ':item_normam'  => $item ?: null,
                         ':status_item' => $status_it,
-                        ':vencimento'  => $venc
+                        ':vencimento'  => $venc,
+                        ':antes_de_suspender' => $sem_prazo ? 1 : 0,
                     ]);
                 }
             }
@@ -636,18 +869,104 @@ switch ($action) {
                 $msg .= ' Ordem de Servico avancada para EXECUTADA. Certificados liberados.';
             }
             setMensagem('success', $msg);
-            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id));
+            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id) . '&vistoria_id=' . urlencode($vistoria_id) . '&salvo=1');
 
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao salvar relatorio: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
             setMensagem('error', 'Erro ao salvar relatorio tecnico: ' . $e->getMessage());
-            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id));
+            $destinoErro = APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id);
+            if ($vistoria_id !== '') $destinoErro .= '&vistoria_id=' . urlencode($vistoria_id);
+            redirecionar($destinoErro);
         }
         break;
 
     // ==============================
-    // APROVAR OU REPROVAR RELATORIO (ADMIN)
+    // ADICIONAR EXIGENCIA MANUAL NA ANALISE
+    // ==============================
+    case 'adicionar_exigencia_analista':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            setMensagem('error', 'Requisicao invalida.');
+            redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
+        }
+
+        $csrf = $_POST['csrf_token'] ?? '';
+        if (!verificarCSRF($csrf)) {
+            setMensagem('error', 'Token de seguranca invalido.');
+            redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
+        }
+
+        if (!temPerfil('ANALISTA')) {
+            setMensagem('error', 'Apenas administradores e analistas podem adicionar exigencias na revisao.');
+            redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
+        }
+
+        $vistoria_id = trim($_POST['vistoria_id'] ?? '');
+        $descricao = trim($_POST['descricao'] ?? '');
+        $item_normam = trim($_POST['item_normam'] ?? '');
+        $observacao = trim($_POST['observacao'] ?? '');
+        $bloco = trim($_POST['bloco_vistoria'] ?? 'flutuando');
+        $sem_prazo = isset($_POST['sem_prazo']);
+        bloquearMutacaoRelatorioAuditavel($pdo, $vistoria_id, APP_URL . 'documentacao/aprovacao_relatorios');
+
+        if (empty($vistoria_id) || empty($descricao)) {
+            setMensagem('error', 'Informe a descricao da exigencia manual.');
+            redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
+        }
+
+        if (!in_array($bloco, ['seco', 'flutuando', 'borda_livre', 'arqueacao'], true)) {
+            $bloco = 'flutuando';
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            $stmtV = $pdo->prepare("SELECT id, agendamento_id, status FROM vistorias WHERE id = :id FOR UPDATE");
+            $stmtV->execute([':id' => $vistoria_id]);
+            $vistoriaAnalise = $stmtV->fetch(PDO::FETCH_ASSOC);
+
+            if (!$vistoriaAnalise) {
+                throw new Exception('Relatorio nao encontrado.');
+            }
+            if (($vistoriaAnalise['status'] ?? '') !== 'AGUARDANDO_APROVACAO') {
+                throw new Exception('So e possivel adicionar exigencia em relatorio aguardando aprovacao.');
+            }
+
+            $stmtOrdem = $pdo->prepare("SELECT COALESCE(MAX(ordem), 0) + 1 FROM vistoria_exigencias WHERE vistoria_id = :vistoria_id");
+            $stmtOrdem->execute([':vistoria_id' => $vistoria_id]);
+            $ordem = (int)$stmtOrdem->fetchColumn();
+
+            $stmt = $pdo->prepare("
+                INSERT INTO vistoria_exigencias
+                    (id, vistoria_id, catalogo_id, bloco_vistoria, ordem, item, descricao, conforme, observacao, item_normam, vencimento, antes_de_suspender, status_item)
+                VALUES
+                    (UUID(), :vistoria_id, NULL, :bloco, :ordem, :item, :descricao, 'nao', :observacao, :item_normam, NULL, :antes_de_suspender, 'pendente')
+            ");
+            $stmt->execute([
+                ':vistoria_id' => $vistoria_id,
+                ':bloco' => $bloco,
+                ':ordem' => $ordem,
+                ':item' => $item_normam ?: $descricao,
+                ':descricao' => $descricao,
+                ':observacao' => $observacao ?: null,
+                ':item_normam' => $item_normam ?: null,
+                ':antes_de_suspender' => $sem_prazo ? 1 : 0,
+            ]);
+
+            $pdo->commit();
+            log_atividade('exigencia_manual_analista', "Exigencia manual adicionada na vistoria ID {$vistoria_id}.");
+            setMensagem('success', 'Exigencia manual adicionada ao relatorio.');
+            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($vistoriaAnalise['agendamento_id']));
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('Erro ao adicionar exigencia manual do analista: ' . $e->getMessage());
+            setMensagem('error', 'Erro ao adicionar exigencia manual: ' . $e->getMessage());
+            redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
+        }
+        break;
+
+    // ==============================
+    // APROVAR OU REPROVAR RELATORIO (ADMIN/ANALISTA)
     // ==============================
     case 'aprovar_ou_reprovar':
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -661,12 +980,16 @@ switch ($action) {
             redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
         }
 
-        verificar_cargo('ADMIN');
+        if (!temPerfil('ANALISTA')) {
+            setMensagem('error', 'Apenas administradores e analistas podem revisar relatorios.');
+            redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
+        }
 
         $id = $_POST['id'] ?? '';
         $decisao = $_POST['decisao'] ?? '';
         $status_vistoria = $_POST['status_vistoria'] ?? '';
         $observacao = sanitizar($_POST['observacao_admin'] ?? '');
+        bloquearMutacaoRelatorioAuditavel($pdo, $id, APP_URL . 'documentacao/aprovacao_relatorios');
 
         if (empty($id)) {
             setMensagem('error', 'ID da vistoria invalido.');
@@ -705,6 +1028,20 @@ switch ($action) {
 
         try {
             $pdo->beginTransaction();
+
+            $relatorioVigente = obterRelatorioVigenteAgendamento($pdo, (string)$agendamento_id);
+            if (!$relatorioVigente || $relatorioVigente['id'] !== $id) {
+                throw new Exception('Somente o relatorio vigente da cadeia pode receber uma decisao.');
+            }
+
+            if ($decisao === 'aprovar' || in_array($status_vistoria, ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)) {
+                $stmtPendencias = $pdo->prepare("SELECT COUNT(*) FROM vistoria_exigencias
+                    WHERE vistoria_id = :id AND conforme = 'nao' AND status_item <> 'cumprida'");
+                $stmtPendencias->execute([':id' => $id]);
+                $status_vistoria = ((int)$stmtPendencias->fetchColumn() > 0)
+                    ? 'APROVADA_COM_EXIGENCIAS'
+                    : 'APROVADA';
+            }
 
             $statusFinalizaFluxo = in_array($status_vistoria, ['APROVADA', 'APROVADA_COM_EXIGENCIAS', 'REPROVADA'], true);
             $stmt = $pdo->prepare("
@@ -748,9 +1085,14 @@ switch ($action) {
         }
 
         if (in_array($status_vistoria, ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true) && $agendamento_id) {
-            redirecionar(APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode($agendamento_id));
+            $liberacao = avaliarLiberacaoCertificacao($pdo, $id);
+            if (!empty($liberacao['permitido'])) {
+                log_atividade('certificacao_desbloqueada', "Certificacao liberada pela aprovacao do relatorio ID {$id}.");
+                redirecionar(APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode($agendamento_id));
+            }
+            setMensagem('warning', $liberacao['mensagem'] ?? 'Certificacao permanece bloqueada.');
         }
-        redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id));
+        redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id) . '&vistoria_id=' . urlencode($id));
         break;
 
                 if ($decisao === 'aprovar') {

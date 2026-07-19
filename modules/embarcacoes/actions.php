@@ -38,7 +38,6 @@ switch ($action) {
 
         $id = trim($_POST['id'] ?? '');
         $nome = trim($_POST['nome'] ?? '');
-        $registro = trim($_POST['registro'] ?? '');
         $tipo_embarcacao_id = trim($_POST['tipo_embarcacao_id'] ?? '');
         $ano = trim($_POST['ano'] ?? '');
         $porto_inscricao = trim($_POST['porto_inscricao'] ?? '');
@@ -49,6 +48,8 @@ switch ($action) {
         // Tab Tecnicos
         $possui_propulsao = isset($_POST['possui_propulsao']) && $_POST['possui_propulsao'] !== '' ? (int)$_POST['possui_propulsao'] : null;
         $fabricante_motor = trim($_POST['fabricante_motor'] ?? '');
+        $modelo_motor = trim($_POST['modelo_motor'] ?? '');
+        $numero_motor = trim($_POST['numero_motor'] ?? '');
         $potencia_kw = trim($_POST['potencia_kw'] ?? '');
         $material_casco = trim($_POST['material_casco'] ?? '');
         $tipo_navegacao = trim($_POST['tipo_navegacao'] ?? '');
@@ -108,40 +109,47 @@ switch ($action) {
             $erros[] = 'O nome deve ter pelo menos 2 caracteres.';
         }
 
-        if (empty($registro)) {
-            $erros[] = 'O registro e obrigatorio.';
-        } elseif (strlen($registro) < 2) {
-            $erros[] = 'O registro deve ter pelo menos 2 caracteres.';
-        }
-
         if (!empty($ano) && ($ano < 1900 || $ano > 2099)) {
             $erros[] = 'O ano deve estar entre 1900 e 2099.';
         }
-        
-        if ($possui_propulsao === null) {
-            $erros[] = 'A informação se possui propulsão é obrigatória.';
-        }
 
-        // Verificar registro duplicado
-        $isEdicao = !empty($id);
-        if (empty($erros)) {
-            try {
-                $sqlCheck = "SELECT id FROM embarcacoes WHERE registro = :registro";
-                $paramsCheck = [':registro' => $registro];
-                if ($isEdicao) {
-                    $sqlCheck .= " AND id <> :id";
-                    $paramsCheck[':id'] = $id;
-                }
-                $stmtCheck = $pdo->prepare($sqlCheck);
-                $stmtCheck->execute($paramsCheck);
-                if ($stmtCheck->fetch()) {
-                    $erros[] = 'Ja existe uma embarcacao com este registro.';
-                }
-            } catch (Exception $e) {
-                error_log('Erro ao verificar registro: ' . $e->getMessage());
-                $erros[] = 'Erro ao validar dados.';
+        foreach ([
+            'tripulantes' => $numero_tripulantes,
+            'passageiros N1' => $numero_passageiros_n1,
+            'passageiros N2' => $numero_passageiros_n2,
+        ] as $rotulo => $quantidade) {
+            if ($quantidade !== '' && (!ctype_digit($quantidade) || (int)$quantidade < 0)) {
+                $erros[] = 'A quantidade de ' . $rotulo . ' deve ser um número inteiro igual ou maior que zero.';
             }
         }
+
+        foreach ([
+            'comprimento total' => $comprimento_total,
+            'comprimento do casco' => $comprimento_casco,
+            'comprimento LPP' => $comprimento_lpp,
+            'pontal moldado' => $pontal_moldado,
+            'boca moldada' => $boca_moldada,
+            'boca máxima' => $boca_maxima,
+        ] as $rotulo => $medida) {
+            if ($medida !== '' && (!is_numeric($medida) || (float)$medida < 0)) {
+                $erros[] = 'O campo ' . $rotulo . ' deve conter um valor igual ou maior que zero.';
+            }
+        }
+
+        if (!in_array($possui_propulsao, [0, 1], true)) {
+            $erros[] = 'A informação se possui propulsão é obrigatória.';
+        } elseif ($possui_propulsao === 1) {
+            if ($fabricante_motor === '') $erros[] = 'Informe o fabricante do motor.';
+            if ($modelo_motor === '') $erros[] = 'Informe o modelo do motor.';
+            if ($numero_motor === '') $erros[] = 'Informe o número do motor.';
+            if ($potencia_kw === '') $erros[] = 'Informe a potência propulsiva.';
+        } else {
+            $fabricante_motor = '';
+            $modelo_motor = '';
+            $numero_motor = '';
+            $potencia_kw = '';
+        }
+        $isEdicao = !empty($id);
 
         if (!empty($erros)) {
             setMensagem('error', implode(' ', $erros));
@@ -163,7 +171,7 @@ switch ($action) {
         // Preparar dados
         $dados = [
             ':nome' => $nome,
-            ':registro' => $registro,
+            ':registro' => null,
             ':tipo_embarcacao_id' => $tipo_embarcacao_id ?: null,
             ':tipo_embarcacao' => $tipo_embarcacao,
             ':cnbl_tipo_embarcacao' => $cnbl_tipo_embarcacao ?: null,
@@ -174,6 +182,8 @@ switch ($action) {
             ':observacoes' => $observacoes ?: null,
             ':possui_propulsao' => $possui_propulsao,
             ':fabricante_motor' => $fabricante_motor ?: null,
+            ':modelo_motor' => $modelo_motor ?: null,
+            ':numero_motor' => $numero_motor ?: null,
             ':potencia_kw' => $potencia_kw ?: null,
             ':material_casco' => $material_casco ?: null,
             ':tipo_navegacao' => $tipo_navegacao ?: null,
@@ -181,25 +191,25 @@ switch ($action) {
             ':cnbl_area_navegacao' => $cnbl_area_navegacao ?: null,
             ':tipo_servico' => $tipo_servico ?: null,
             ':autorizado_carga' => $autorizado_carga,
-            ':numero_tripulantes' => !empty($numero_tripulantes) ? (int)$numero_tripulantes : null,
-            ':numero_passageiros_n1' => !empty($numero_passageiros_n1) ? (int)$numero_passageiros_n1 : null,
-            ':numero_passageiros_n2' => !empty($numero_passageiros_n2) ? (int)$numero_passageiros_n2 : null,
+            ':numero_tripulantes' => $numero_tripulantes !== '' ? (int)$numero_tripulantes : null,
+            ':numero_passageiros_n1' => $numero_passageiros_n1 !== '' ? (int)$numero_passageiros_n1 : null,
+            ':numero_passageiros_n2' => $numero_passageiros_n2 !== '' ? (int)$numero_passageiros_n2 : null,
             ':obs_passageiros' => $obs_passageiros ?: null,
             ':acessibilidade' => $acessibilidade,
-            ':comprimento_total' => !empty($comprimento_total) ? (float)$comprimento_total : null,
-            ':comprimento_casco' => !empty($comprimento_casco) ? (float)$comprimento_casco : null,
-            ':comprimento_lpp' => !empty($comprimento_lpp) ? (float)$comprimento_lpp : null,
-            ':pontal_moldado' => !empty($pontal_moldado) ? (float)$pontal_moldado : null,
-            ':boca_moldada' => !empty($boca_moldada) ? (float)$boca_moldada : null,
-            ':boca_maxima' => !empty($boca_maxima) ? (float)$boca_maxima : null,
+            ':comprimento_total' => $comprimento_total !== '' ? (float)$comprimento_total : null,
+            ':comprimento_casco' => $comprimento_casco !== '' ? (float)$comprimento_casco : null,
+            ':comprimento_lpp' => $comprimento_lpp !== '' ? (float)$comprimento_lpp : null,
+            ':pontal_moldado' => $pontal_moldado !== '' ? (float)$pontal_moldado : null,
+            ':boca_moldada' => $boca_moldada !== '' ? (float)$boca_moldada : null,
+            ':boca_maxima' => $boca_maxima !== '' ? (float)$boca_maxima : null,
             ':arqueacao_bruta' => $arqueacao_bruta ?: null,
-            ':arqueacao_liquida' => !empty($arqueacao_liquida) ? (float)$arqueacao_liquida : null,
+            ':arqueacao_liquida' => $arqueacao_liquida !== '' ? (float)$arqueacao_liquida : null,
             ':metodo_arqueacao' => $metodo_arqueacao ?: null,
             ':cnarq_data_quilha' => $cnarq_data_quilha ?: null,
-            ':cnarq_calado_moldado_m' => !empty($cnarq_calado_moldado_m) ? (float)$cnarq_calado_moldado_m : null,
+            ':cnarq_calado_moldado_m' => $cnarq_calado_moldado_m !== '' ? (float)$cnarq_calado_moldado_m : null,
             ':cnarq_espacos_incluidos_ab' => $cnarq_espacos_incluidos_ab ?: null,
             ':cnarq_espacos_incluidos_al' => $cnarq_espacos_incluidos_al ?: null,
-            ':cnarq_espacos_excluidos_m3' => !empty($cnarq_espacos_excluidos_m3) ? (float)$cnarq_espacos_excluidos_m3 : null,
+            ':cnarq_espacos_excluidos_m3' => $cnarq_espacos_excluidos_m3 !== '' ? (float)$cnarq_espacos_excluidos_m3 : null,
             ':cnarq_data_local_arqueacao_original' => $cnarq_data_local_arqueacao_original ?: null,
             ':cnarq_data_local_ultima_rearqueacao' => $cnarq_data_local_ultima_rearqueacao ?: null,
             ':local_construcao' => $local_construcao ?: null,
@@ -208,9 +218,9 @@ switch ($action) {
             ':estaleiro_nome' => $estaleiro_nome ?: null,
             ':estaleiro_cpf_cnpj' => $estaleiro_cpf_cnpj ?: null,
             ':estaleiro_endereco' => $estaleiro_endereco ?: null,
-            ':borda_livre_mm' => !empty($borda_livre_mm) ? (int)$borda_livre_mm : null,
+            ':borda_livre_mm' => $borda_livre_mm !== '' ? (int)$borda_livre_mm : null,
             ':borda_livre_tipo' => $borda_livre_tipo ?: null,
-            ':calado_maximo_m' => !empty($calado_maximo_m) ? (float)$calado_maximo_m : null,
+            ':calado_maximo_m' => $calado_maximo_m !== '' ? (float)$calado_maximo_m : null,
             ':aresta_superior_linha_conves' => $aresta_superior_linha_conves ?: null,
             ':centro_disco_situado' => $centro_disco_situado ?: null,
             ':acrescimo_agua_salgada' => $acrescimo_agua_salgada ?: null,
@@ -235,7 +245,9 @@ switch ($action) {
                     indicativo_chamada = :indicativo_chamada,
                     observacoes = :observacoes,
                     possui_propulsao = :possui_propulsao, 
-                    fabricante_motor = :fabricante_motor, 
+                    fabricante_motor = :fabricante_motor,
+                    modelo_motor = :modelo_motor,
+                    numero_motor = :numero_motor,
                     potencia_kw = :potencia_kw, 
                     material_casco = :material_casco, 
                     tipo_navegacao = :tipo_navegacao, 
@@ -288,9 +300,9 @@ switch ($action) {
             } else {
                 // Criar
                 $sql = "INSERT INTO embarcacoes (
-                    id, nome, registro, tipo_embarcacao_id, tipo_embarcacao, cnbl_tipo_embarcacao, ano, porto_inscricao, numero_inscricao, indicativo_chamada, observacoes, possui_propulsao, fabricante_motor, potencia_kw, material_casco, tipo_navegacao, area_navegacao, cnbl_area_navegacao, tipo_servico, autorizado_carga, numero_tripulantes, numero_passageiros_n1, numero_passageiros_n2, obs_passageiros, acessibilidade, comprimento_total, comprimento_casco, comprimento_lpp, pontal_moldado, boca_moldada, boca_maxima, arqueacao_bruta, arqueacao_liquida, metodo_arqueacao, cnarq_data_quilha, cnarq_calado_moldado_m, cnarq_espacos_incluidos_ab, cnarq_espacos_incluidos_al, cnarq_espacos_excluidos_m3, cnarq_data_local_arqueacao_original, cnarq_data_local_ultima_rearqueacao, local_construcao, numero_casco, porte_bruto, estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco, borda_livre_mm, borda_livre_tipo, calado_maximo_m, aresta_superior_linha_conves, centro_disco_situado, acrescimo_agua_salgada, dist_linha_conves_bico_proa, dist_linha_conves_abaixo_disco, marca_linha_carga_area1, marca_linha_carga_area2, criado_por
+                    id, nome, registro, tipo_embarcacao_id, tipo_embarcacao, cnbl_tipo_embarcacao, ano, porto_inscricao, numero_inscricao, indicativo_chamada, observacoes, possui_propulsao, fabricante_motor, modelo_motor, numero_motor, potencia_kw, material_casco, tipo_navegacao, area_navegacao, cnbl_area_navegacao, tipo_servico, autorizado_carga, numero_tripulantes, numero_passageiros_n1, numero_passageiros_n2, obs_passageiros, acessibilidade, comprimento_total, comprimento_casco, comprimento_lpp, pontal_moldado, boca_moldada, boca_maxima, arqueacao_bruta, arqueacao_liquida, metodo_arqueacao, cnarq_data_quilha, cnarq_calado_moldado_m, cnarq_espacos_incluidos_ab, cnarq_espacos_incluidos_al, cnarq_espacos_excluidos_m3, cnarq_data_local_arqueacao_original, cnarq_data_local_ultima_rearqueacao, local_construcao, numero_casco, porte_bruto, estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco, borda_livre_mm, borda_livre_tipo, calado_maximo_m, aresta_superior_linha_conves, centro_disco_situado, acrescimo_agua_salgada, dist_linha_conves_bico_proa, dist_linha_conves_abaixo_disco, marca_linha_carga_area1, marca_linha_carga_area2, criado_por
                 ) VALUES (
-                    :id, :nome, :registro, :tipo_embarcacao_id, :tipo_embarcacao, :cnbl_tipo_embarcacao, :ano, :porto_inscricao, :numero_inscricao, :indicativo_chamada, :observacoes, :possui_propulsao, :fabricante_motor, :potencia_kw, :material_casco, :tipo_navegacao, :area_navegacao, :cnbl_area_navegacao, :tipo_servico, :autorizado_carga, :numero_tripulantes, :numero_passageiros_n1, :numero_passageiros_n2, :obs_passageiros, :acessibilidade, :comprimento_total, :comprimento_casco, :comprimento_lpp, :pontal_moldado, :boca_moldada, :boca_maxima, :arqueacao_bruta, :arqueacao_liquida, :metodo_arqueacao, :cnarq_data_quilha, :cnarq_calado_moldado_m, :cnarq_espacos_incluidos_ab, :cnarq_espacos_incluidos_al, :cnarq_espacos_excluidos_m3, :cnarq_data_local_arqueacao_original, :cnarq_data_local_ultima_rearqueacao, :local_construcao, :numero_casco, :porte_bruto, :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco, :borda_livre_mm, :borda_livre_tipo, :calado_maximo_m, :aresta_superior_linha_conves, :centro_disco_situado, :acrescimo_agua_salgada, :dist_linha_conves_bico_proa, :dist_linha_conves_abaixo_disco, :marca_linha_carga_area1, :marca_linha_carga_area2, :criado_por
+                    :id, :nome, :registro, :tipo_embarcacao_id, :tipo_embarcacao, :cnbl_tipo_embarcacao, :ano, :porto_inscricao, :numero_inscricao, :indicativo_chamada, :observacoes, :possui_propulsao, :fabricante_motor, :modelo_motor, :numero_motor, :potencia_kw, :material_casco, :tipo_navegacao, :area_navegacao, :cnbl_area_navegacao, :tipo_servico, :autorizado_carga, :numero_tripulantes, :numero_passageiros_n1, :numero_passageiros_n2, :obs_passageiros, :acessibilidade, :comprimento_total, :comprimento_casco, :comprimento_lpp, :pontal_moldado, :boca_moldada, :boca_maxima, :arqueacao_bruta, :arqueacao_liquida, :metodo_arqueacao, :cnarq_data_quilha, :cnarq_calado_moldado_m, :cnarq_espacos_incluidos_ab, :cnarq_espacos_incluidos_al, :cnarq_espacos_excluidos_m3, :cnarq_data_local_arqueacao_original, :cnarq_data_local_ultima_rearqueacao, :local_construcao, :numero_casco, :porte_bruto, :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco, :borda_livre_mm, :borda_livre_tipo, :calado_maximo_m, :aresta_superior_linha_conves, :centro_disco_situado, :acrescimo_agua_salgada, :dist_linha_conves_bico_proa, :dist_linha_conves_abaixo_disco, :marca_linha_carga_area1, :marca_linha_carga_area2, :criado_por
                 )";
                 $stmt = $pdo->prepare($sql);
                 $dados[':id'] = gerarUUID();

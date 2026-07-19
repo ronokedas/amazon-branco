@@ -139,24 +139,6 @@ $pdf->Cell(180, 5, 'VÁLIDO ATÉ: ' . (!empty($c['data_validade']) ? date('d/m/Y
 $pdf->SetFont('helvetica', 'B', 8.5);
 $pdf->Cell(180, 5, 'Expedido em ' . ($c['local_emissao'] ?: 'Belém-PA') . ', em ' . chtDataExtenso($c['data_emissao']), 0, 1, 'C');
 
-// Quadro de assinatura
-$yAss = 224;
-$pdf->SetLineWidth(0.35);
-$pdf->Rect(28, $yAss, 154, 43);
-if (chtImagemValida($logo)) {
-    $pdf->Image($logo, 37, $yAss + 8, 25, 25, '', '', '', true, 300);
-}
-$pdf->SetLineWidth(0.2);
-$pdf->Line(78, $yAss + 25, 169, $yAss + 25);
-$pdf->SetXY(78, $yAss + 27);
-$pdf->SetFont('helvetica', 'B', 8.5);
-$pdf->Cell(91, 4, h($c['assinante_nome']), 0, 1, 'C');
-$pdf->SetX(78);
-$pdf->SetFont('helvetica', '', 8);
-$pdf->Cell(91, 4, h($c['assinante_titulo']), 0, 1, 'C');
-$pdf->SetX(78);
-$pdf->Cell(91, 4, h($c['assinante_registro']), 0, 1, 'C');
-
 $nomeArquivo = 'CHT_' . preg_replace('/[^A-Za-z0-9_-]+/', '-', $numero) . '.pdf';
 if (isset($salvar_pdf_caminho) && $salvar_pdf_caminho) {
     $pdf->Output($salvar_pdf_caminho, 'F');

@@ -1,7 +1,7 @@
 <?php
 /**
  * MÓDULO: Documentação > Certificados CNBL
- * Actions: Salvar, Excluir (soft delete)
+ * Actions: Salvar e enviar documentos
  * Numeração automática AM-CNBL-{n}/{ano}
  */
 
@@ -18,6 +18,50 @@ if (!podeAcessar('documentacao')) {
 
 $action = $_POST['action'] ?? '';
 
+if ($action === 'atualizar_convalidacoes') {
+    if (!verificarCSRF($_POST['csrf_token'] ?? '')) {
+        setMensagem('error', 'Token de segurança inválido. Tente novamente.');
+        redirecionar(APP_URL . 'documentacao/cnbl');
+    }
+    $id = trim((string)($_POST['id'] ?? ''));
+    if (!documentoEstaAprovadoOuAssinado($pdo, 'certificados_cnbl', 'CNBL', $id)) {
+        setMensagem('error', 'Esta exceção de edição existe apenas para certificado aprovado ou assinado.');
+        redirecionar(APP_URL . 'documentacao/cnbl/form?id=' . urlencode($id));
+    }
+    $ids = $_POST['conv_id'] ?? [];
+    $locais = $_POST['conv_local'] ?? [];
+    $datas = $_POST['conv_data_realizacao'] ?? [];
+    $vistoriadores = $_POST['conv_vistoriador_id'] ?? [];
+    try {
+        $pdo->beginTransaction();
+        $buscarVistoriador = $pdo->prepare("SELECT nome FROM usuarios WHERE id=:id AND cargo='VISTORIADOR'");
+        $atualizar = $pdo->prepare("UPDATE cert_convalidacoes SET local_data=:local_data, vistoriador=:vistoriador WHERE id=:conv_id AND certificado_id=:certificado_id AND tipo_certificado='CNBL'");
+        $locaisPermitidos = certificadoLocaisVistoria($pdo);
+        foreach ($ids as $i => $convId) {
+            $local = trim((string)($locais[$i] ?? ''));
+            $data = trim((string)($datas[$i] ?? ''));
+            $vistoriadorId = trim((string)($vistoriadores[$i] ?? ''));
+            if ($local === '' && $data === '' && $vistoriadorId === '') {
+                continue;
+            } else {
+                if ($local === '' || $data === '' || $vistoriadorId === '') throw new InvalidArgumentException('Local, data e vistoriador devem ser preenchidos juntos.');
+                if (!in_array($local, $locaisPermitidos, true)) throw new InvalidArgumentException('Selecione um local de vistoria cadastrado.');
+                $buscarVistoriador->execute([':id'=>$vistoriadorId]);
+                $nome=(string)$buscarVistoriador->fetchColumn();
+                if ($nome === '') throw new InvalidArgumentException('Selecione um vistoriador cadastrado no sistema.');
+            }
+            $atualizar->execute([':local_data'=>certificadoComporLocalDataConvalidacao($local,$data),':vistoriador'=>$nome,':conv_id'=>$convId,':certificado_id'=>$id]);
+        }
+        $pdo->commit();
+        log_atividade('convalidacoes_cnbl_atualizadas', "Convalidações do certificado CNBL {$id} atualizadas sem alterar os dados assinados.");
+        setMensagem('success', 'Convalidações atualizadas com sucesso. Os demais dados assinados permaneceram inalterados.');
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        setMensagem('error', 'Erro ao atualizar convalidações: ' . $e->getMessage());
+    }
+    redirecionar(APP_URL . 'documentacao/cnbl/form?id=' . urlencode($id));
+}
+
 // ============================================
 // SALVAR CERTIFICADO
 // ============================================
@@ -30,6 +74,7 @@ if ($action === 'salvar') {
 
     $id = $_POST['id'] ?? null;
     $editando = !empty($id);
+    bloquearEdicaoDocumentoAssinado($pdo,'certificados_cnbl',$id,APP_URL.'documentacao/cnbl');
 
     // Dados principais
     $nome_embarcacao      = trim($_POST['nome_embarcacao'] ?? '');
@@ -94,6 +139,13 @@ if ($action === 'salvar') {
 
     // Validações
     $vistoria_id = $_POST['vistoria_id'] ?? null;
+    if ($vistoria_id) {
+        $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
+        if (empty($liberacao['permitido'])) {
+            setMensagem('error', $liberacao['mensagem']);
+            redirecionar(APP_URL . 'documentacao/cnbl/form' . ($editando ? "?id={$id}" : ''));
+        }
+    }
     if (empty($vistoria_id)) {
         setMensagem('error', 'É obrigatório selecionar um relatório aprovado para emitir o certificado.');
         redirecionar(APP_URL . 'documentacao/cnbl/form' . ($editando ? "?id={$id}" : ''));
@@ -295,8 +347,10 @@ if ($action === 'salvar') {
         $conv_numero      = $_POST['conv_numero'] ?? [];
         $conv_data_inicio = $_POST['conv_data_inicio'] ?? [];
         $conv_data_fim    = $_POST['conv_data_fim'] ?? [];
-        $conv_local_data  = $_POST['conv_local_data'] ?? [];
-        $conv_vistoriador = $_POST['conv_vistoriador'] ?? [];
+        $conv_local       = $_POST['conv_local'] ?? [];
+        $conv_realizacao  = $_POST['conv_data_realizacao'] ?? [];
+        $conv_vistoriador = $_POST['conv_vistoriador_id'] ?? [];
+        $stmt_nome_vistoriador = $pdo->prepare("SELECT nome FROM usuarios WHERE id=:id AND cargo='VISTORIADOR'");
 
         $stmt_conv = $pdo->prepare("INSERT INTO cert_convalidacoes 
                                     (id, tipo_certificado, certificado_id, numero_vistoria, data_inicio, data_fim, local_data, vistoriador) 
@@ -306,8 +360,15 @@ if ($action === 'salvar') {
             $numero   = trim($conv_numero[$i] ?? '');
             $dt_inicio = $conv_data_inicio[$i] ?: null;
             $dt_fim    = $conv_data_fim[$i] ?: null;
-            $local_dt  = trim($conv_local_data[$i] ?? '');
-            $vist      = trim($conv_vistoriador[$i] ?? '');
+            $local     = trim($conv_local[$i] ?? '');
+            $local_dt  = certificadoComporLocalDataConvalidacao($local, $conv_realizacao[$i] ?? null);
+            $vist_id   = trim($conv_vistoriador[$i] ?? '');
+            $vist      = '';
+            if ($vist_id !== '') {
+                $stmt_nome_vistoriador->execute([':id'=>$vist_id]);
+                $vist=(string)$stmt_nome_vistoriador->fetchColumn();
+                if ($vist === '') throw new InvalidArgumentException('Vistoriador da convalidação inválido.');
+            }
 
             $stmt_conv->execute([
                 ':id'                => gerarUUID(),
@@ -336,37 +397,6 @@ if ($action === 'salvar') {
         setMensagem('error', 'Erro ao salvar certificado: ' . $e->getMessage());
         redirecionar(APP_URL . 'documentacao/cnbl/form' . ($editando ? "?id={$id}" : ''));
     }
-}
-
-// ============================================
-// EXCLUIR CERTIFICADO (Soft Delete)
-// ============================================
-if ($action === 'excluir') {
-    // Verificar CSRF
-    if (!verificarCSRF($_POST['csrf_token'] ?? '')) {
-        setMensagem('error', 'Token de segurança inválido.');
-        redirecionar(APP_URL . 'documentacao/cnbl');
-    }
-
-    $id = $_POST['id'] ?? '';
-
-    if (empty($id)) {
-        setMensagem('error', 'ID do certificado não informado.');
-        redirecionar(APP_URL . 'documentacao/cnbl');
-    }
-
-    try {
-        $stmt = $pdo->prepare("UPDATE certificados_cnbl SET ativo = 0 WHERE id = :id");
-        $stmt->execute([':id' => $id]);
-
-        log_atividade('certificado_cnbl_excluido', "Certificado CNBL ID: {$id}");
-
-        setMensagem('success', 'Certificado excluído com sucesso.');
-    } catch (Exception $e) {
-        setMensagem('error', 'Erro ao excluir certificado: ' . $e->getMessage());
-    }
-
-    redirecionar(APP_URL . 'documentacao/cnbl');
 }
 
 // ============================================

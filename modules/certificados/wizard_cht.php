@@ -10,6 +10,15 @@ $cpf_cnpj = trim($_POST['cpf_cnpj'] ?? '');
 $email_destinatario = trim($_POST['email_destinatario'] ?? '');
 $atividade_homologada = trim($_POST['atividade_homologada'] ?? '');
 $relatorio_homologacao_numero = trim($_POST['relatorio_homologacao_numero'] ?? '');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $relatorio_homologacao_numero !== '') {
+    $stmtRelatorio = $pdo->prepare("SELECT id FROM vistorias WHERE numero = :numero ORDER BY criado_em DESC, id DESC LIMIT 1");
+    $stmtRelatorio->execute([':numero' => $relatorio_homologacao_numero]);
+    $vistoriaRelacionada = $stmtRelatorio->fetchColumn();
+    if ($vistoriaRelacionada) {
+        $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoriaRelacionada);
+        if (empty($liberacao['permitido'])) $erro = $liberacao['mensagem'];
+    }
+}
 $data_validade = $_POST['data_validade'] ?? '';
 $local_emissao = $_POST['local_emissao'] ?? 'Belém-PA';
 $responsavel_id = $_POST['responsavel_id'] ?? '';
@@ -96,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':criado_por' => $_SESSION['usuario_id'] ?? null,
                 ]);
 
+                $pdo->prepare('UPDATE certificados_cht SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id, $id]);
                 $pdo->commit();
                 log_atividade('certificado_cht_criado', "{$numero_certificado} - {$profissional_empresa}");
                 setMensagem('success', "Certificado CHT criado com sucesso! Número: {$numero_certificado}");
