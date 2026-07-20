@@ -241,7 +241,10 @@ function verificarSessao() {
         }
     } catch (Throwable $e) {
         error_log('Erro ao validar sessao do usuario: ' . $e->getMessage());
-        logout();
+        // Uma indisponibilidade momentanea do banco nao significa que a
+        // autenticacao deixou de ser valida. Encerrar a sessao aqui fazia o
+        // usuario voltar aleatoriamente ao login ao navegar entre modulos.
+        // A verificacao sera refeita normalmente na proxima requisicao.
     }
 
     // Mantido apenas como registro da ultima atividade, sem causar logout.
