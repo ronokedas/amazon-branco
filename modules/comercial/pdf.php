@@ -738,7 +738,28 @@ if (file_exists($logo_path2) && filesize($logo_path2) > 100) {
 
 // Imagem da Assinatura do Cliente
 if (!empty($proposta['assinado'])) {
-    if (!empty($proposta['assinatura_url'])) {
+    $imagemAssinatura = carregarImagemAssinatura(
+        $proposta['assinatura_imagem'] ?? '',
+        $proposta['assinatura_url'] ?? ''
+    );
+
+    if ($imagemAssinatura !== null) {
+        $tmp_file = tempnam(sys_get_temp_dir(), 'sig_') . '.' . $imagemAssinatura['extensao'];
+        file_put_contents($tmp_file, $imagemAssinatura['bytes'], LOCK_EX);
+        $pdf->Image(
+            $tmp_file,
+            25,
+            $assinaturaY + 14,
+            55,
+            25,
+            $imagemAssinatura['tipo_pdf'],
+            '',
+            '',
+            true,
+            150
+        );
+        @unlink($tmp_file);
+    } elseif (!empty($proposta['assinatura_url'])) {
         // Nova abordagem: baixar URL
         $url = $proposta['assinatura_url'];
         

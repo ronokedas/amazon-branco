@@ -46,7 +46,7 @@ services:
     networks:
       - erp_network
     restart: unless-stopped
-    command: sh -c "install -d -o www-data -g www-data -m 0750 /var/www/html/storage/private/exportacoes /var/www/html/storage/private/documento_artefatos && composer install --no-interaction --prefer-dist --no-dev && apache2-foreground"
+    command: sh -c "sh docker/prepare-runtime-dirs.sh && composer install --no-interaction --prefer-dist --no-dev && apache2-foreground"
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }

@@ -32,13 +32,10 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock* ./
 RUN if [ -f composer.json ]; then composer install --no-interaction --prefer-dist --no-dev || true; fi
 
-# Ajustar permissoes
-RUN mkdir -p /var/www/html/uploads /var/www/html/logs /var/www/html/storage/backups \
-    && chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html \
-    && chmod -R 777 /var/www/html/uploads \
-    && chmod -R 777 /var/www/html/logs \
-    && chmod -R 777 /var/www/html/storage
+# Preparar os diretorios gravaveis tambem para execucao sem bind mount.
+COPY docker/prepare-runtime-dirs.sh /usr/local/bin/prepare-runtime-dirs
+RUN chmod 0755 /usr/local/bin/prepare-runtime-dirs \
+    && /usr/local/bin/prepare-runtime-dirs
 
 # Configurar PHP
 RUN mv "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"

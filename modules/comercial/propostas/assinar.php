@@ -71,11 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
         exit;
     }
 
-    // Validar que é base64 válido
-    if (!preg_match('/^data:image\/\w+;base64,/', $assinatura_imagem)) {
+    // Validar e normalizar o PNG real recebido do canvas.
+    $imagem_assinatura = carregarImagemAssinatura($assinatura_imagem, '');
+    if ($imagem_assinatura === null || $imagem_assinatura['mime'] !== 'image/png') {
         echo json_encode(['sucesso' => false, 'mensagem' => 'Formato de assinatura inválido.']);
         exit;
     }
+    $assinatura_imagem = 'data:image/png;base64,' . base64_encode($imagem_assinatura['bytes']);
 
     $ip_assinatura = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     $data_assinatura = date('Y-m-d H:i:s');
@@ -88,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
 
         $stmt = $pdo->prepare("UPDATE propostas SET 
                                     assinatura_url = :img_url,
+                                    assinatura_imagem = :img_data,
                                     assinatura_ip = :ip,
                                     assinatura_em = :data,
                                     assinante_nome = :nome,
@@ -96,7 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
                                     status = 'assinada'
                                 WHERE id = :id AND assinado = 0");
         $stmt->execute([
-            ':img_url' => $url_assinatura,
+            ':img_url' => $url_assinatura !== '' ? $url_assinatura : null,
+            ':img_data' => $assinatura_imagem,
             ':ip'      => $ip_assinatura,
             ':data'    => $data_assinatura,
             ':nome'    => $assinante_nome,
@@ -392,14 +396,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             </div>
 
             <?php if ($prop['assinado']): ?>
+                <?php
+                $imagemAssinaturaExibicao = carregarImagemAssinatura(
+                    $prop['assinatura_imagem'] ?? '',
+                    $prop['assinatura_url'] ?? ''
+                );
+                $assinaturaSrc = $imagemAssinaturaExibicao !== null
+                    ? 'data:' . $imagemAssinaturaExibicao['mime'] . ';base64,' . base64_encode($imagemAssinaturaExibicao['bytes'])
+                    : '';
+                ?>
                 <!-- JÁ ASSINADO -->
                 <div class="assinado-box">
                     <h2>✔️ Proposta Já Assinada</h2>
                     <p>Esta proposta já foi assinada digitalmente e encontra-se Aprovada.</p>
-                    <?php if (!empty($prop['assinatura_url'])): ?>
-                        <img src="<?php echo h($prop['assinatura_url']); ?>" alt="Assinatura" class="assinatura-img">
-                    <?php elseif (!empty($prop['assinatura_imagem'])): ?>
-                        <img src="<?php echo h($prop['assinatura_imagem']); ?>" alt="Assinatura" class="assinatura-img">
+                    <?php if ($assinaturaSrc !== ''): ?>
+                        <img src="<?php echo h($assinaturaSrc); ?>" alt="Assinatura" class="assinatura-img">
+                    <?php else: ?>
+                        <p class="msg-erro" style="display:block;">A imagem da assinatura não está disponível. Será necessário coletar a assinatura novamente.</p>
                     <?php endif; ?>
                     <div class="detalhes">
                         <p><strong>Assinado por:</strong> <?php echo h($prop['assinante_nome']); ?></p>

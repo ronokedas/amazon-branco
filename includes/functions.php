@@ -372,6 +372,15 @@ function upload_to_storage($base64_string, $folder = 'assinaturas') {
 
     $filename = $folder . '/' . uniqid() . '_' . time() . '.' . $ext;
 
+    // Carregar o SDK quando esta funcao for chamada por uma pagina publica
+    // que nao passou pelo autoloader principal da aplicacao.
+    if (!class_exists('Aws\\S3\\S3Client') && defined('BASE_PATH')) {
+        $autoload = BASE_PATH . '/vendor/autoload.php';
+        if (is_file($autoload)) {
+            require_once $autoload;
+        }
+    }
+
     // Se estivermos usando AWS SDK
     if (class_exists('Aws\S3\S3Client')) {
         try {
@@ -430,12 +439,126 @@ function upload_to_storage($base64_string, $folder = 'assinaturas') {
     }
 
     // Fallback: salvar localmente em storage local (UPLOADS_PATH)
-    if (!is_dir(UPLOADS_PATH . $folder)) {
-        mkdir(UPLOADS_PATH . $folder, 0755, true);
+    if (!is_dir(UPLOADS_PATH . $folder)
+        && !mkdir(UPLOADS_PATH . $folder, 0755, true)
+        && !is_dir(UPLOADS_PATH . $folder)) {
+        error_log('Nao foi possivel criar a pasta local da assinatura: ' . UPLOADS_PATH . $folder);
+        return '';
     }
     $local_path = UPLOADS_PATH . $filename;
-    file_put_contents($local_path, $binary);
+    if (file_put_contents($local_path, $binary, LOCK_EX) === false) {
+        error_log('Nao foi possivel salvar a assinatura localmente: ' . $local_path);
+        return '';
+    }
     return APP_URL . 'uploads/' . $filename;
+}
+
+/**
+ * Recupera uma assinatura armazenada como data URI, arquivo local ou objeto S3.
+ * O retorno normalizado permite que a pagina publica e o PDF usem exatamente
+ * a mesma fonte, sem depender de uma URL acessivel pelo navegador.
+ */
+function carregarImagemAssinatura($dataUri = '', $url = '') {
+    $normalizar = static function ($bytes) {
+        if (!is_string($bytes) || $bytes === '' || strlen($bytes) > 5 * 1024 * 1024) {
+            return null;
+        }
+
+        $info = @getimagesizefromstring($bytes);
+        $mime = strtolower((string)($info['mime'] ?? ''));
+        $tipos = [
+            'image/png' => ['extensao' => 'png', 'tipo_pdf' => 'PNG'],
+            'image/jpeg' => ['extensao' => 'jpg', 'tipo_pdf' => 'JPG'],
+        ];
+
+        if (!isset($tipos[$mime])) {
+            return null;
+        }
+
+        return [
+            'bytes' => $bytes,
+            'mime' => $mime,
+            'extensao' => $tipos[$mime]['extensao'],
+            'tipo_pdf' => $tipos[$mime]['tipo_pdf'],
+        ];
+    };
+
+    if (is_string($dataUri) && preg_match('#^data:image/(?:png|jpe?g);base64,(.+)$#is', trim($dataUri), $matches)) {
+        $bytes = base64_decode(preg_replace('/\\s+/', '', $matches[1]), true);
+        $imagem = $normalizar($bytes);
+        if ($imagem !== null) {
+            return $imagem;
+        }
+    }
+
+    $url = trim((string)$url);
+    if ($url === '') {
+        return null;
+    }
+
+    $pathUrl = (string)(parse_url($url, PHP_URL_PATH) ?? '');
+    $marcadorUploads = '/uploads/';
+    $posUploads = strpos($pathUrl, $marcadorUploads);
+    if ($posUploads !== false && defined('UPLOADS_PATH')) {
+        $relativo = rawurldecode(substr($pathUrl, $posUploads + strlen($marcadorUploads)));
+        $relativo = str_replace(['../', '..\\'], '', $relativo);
+        $arquivo = rtrim(UPLOADS_PATH, '/\\') . DIRECTORY_SEPARATOR
+            . str_replace('/', DIRECTORY_SEPARATOR, ltrim($relativo, '/'));
+
+        if (is_file($arquivo)) {
+            $imagem = $normalizar(@file_get_contents($arquivo));
+            if ($imagem !== null) {
+                return $imagem;
+            }
+        }
+    }
+
+    if (!class_exists('Aws\\S3\\S3Client') && defined('BASE_PATH')) {
+        $autoload = BASE_PATH . '/vendor/autoload.php';
+        if (is_file($autoload)) {
+            require_once $autoload;
+        }
+    }
+
+    $bucket = defined('MINIO_BUCKET') ? MINIO_BUCKET : 'erp-storage';
+    $pathObjeto = ltrim($pathUrl, '/');
+    if (class_exists('Aws\\S3\\S3Client') && str_starts_with($pathObjeto, $bucket . '/')) {
+        try {
+            $s3 = new Aws\S3\S3Client([
+                'version' => 'latest',
+                'region' => 'us-east-1',
+                'endpoint' => defined('MINIO_ENDPOINT') ? MINIO_ENDPOINT : 'http://minio:9000',
+                'use_path_style_endpoint' => true,
+                'credentials' => [
+                    'key' => defined('MINIO_ACCESS_KEY') ? MINIO_ACCESS_KEY : 'erp_minio_admin',
+                    'secret' => defined('MINIO_SECRET_KEY') ? MINIO_SECRET_KEY : 'erp_minio_pass_2026',
+                ],
+            ]);
+            $resultado = $s3->getObject([
+                'Bucket' => $bucket,
+                'Key' => substr($pathObjeto, strlen($bucket) + 1),
+            ]);
+            $imagem = $normalizar((string)$resultado['Body']);
+            if ($imagem !== null) {
+                return $imagem;
+            }
+        } catch (Exception $e) {
+            error_log('Erro ao recuperar assinatura no S3/MinIO: ' . $e->getMessage());
+        }
+    }
+
+    if (preg_match('#^https?://#i', $url)) {
+        $contexto = stream_context_create([
+            'http' => ['method' => 'GET', 'timeout' => 8],
+            'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
+        ]);
+        $imagem = $normalizar(@file_get_contents($url, false, $contexto));
+        if ($imagem !== null) {
+            return $imagem;
+        }
+    }
+
+    return null;
 }
 
 // Data em português

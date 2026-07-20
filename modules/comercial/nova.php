@@ -215,8 +215,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </select>
                         <div class="discount-control" role="group" aria-label="Tipo e valor do desconto">
                             <div class="discount-mode">
-                                <button type="button" class="discount-mode-btn is-active" data-discount-type="perc" onclick="setTipoDesconto('perc')" title="Desconto em porcentagem">%</button>
-                                <button type="button" class="discount-mode-btn" data-discount-type="valor" onclick="setTipoDesconto('valor')" title="Desconto em reais">R$</button>
+                                <button type="button" class="discount-mode-btn is-active" data-discount-type="perc" onclick="setTipoDesconto('perc')" title="Desconto em porcentagem" aria-pressed="true">%</button>
+                                <button type="button" class="discount-mode-btn" data-discount-type="valor" onclick="setTipoDesconto('valor')" title="Desconto em reais" aria-pressed="false">R$</button>
                             </div>
                             <label class="discount-input-wrap" for="descontoGlobal">
                                 <span id="descontoPrefixo">%</span>
@@ -750,7 +750,9 @@ function setTipoDesconto(tipo) {
     }
 
     document.querySelectorAll('.discount-mode-btn').forEach(btn => {
-        btn.classList.toggle('is-active', btn.dataset.discountType === tipoSeguro);
+        const ativo = btn.dataset.discountType === tipoSeguro;
+        btn.classList.toggle('is-active', ativo);
+        btn.setAttribute('aria-pressed', ativo ? 'true' : 'false');
     });
 
     atualizarTotais();
@@ -1474,15 +1476,18 @@ document.addEventListener('keydown', avancarWizardComEnter);
 }
 .discount-control {
     display: grid;
-    grid-template-columns: auto minmax(150px, 1fr);
+    grid-template-columns: minmax(86px, 0.75fr) minmax(0, 1.25fr);
     align-items: stretch;
     justify-content: center;
     gap: 8px;
     width: 100%;
+    min-width: 0;
 }
 .discount-mode {
-    display: inline-grid;
-    grid-template-columns: repeat(2, 44px);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
     border: 1px solid var(--cor-borda);
     border-radius: 8px;
     overflow: hidden;
@@ -1491,6 +1496,7 @@ document.addEventListener('keydown', avancarWizardComEnter);
     gap: 3px;
 }
 .discount-mode-btn {
+    min-width: 0;
     height: 40px;
     border: 1px solid transparent;
     border-radius: 6px;
