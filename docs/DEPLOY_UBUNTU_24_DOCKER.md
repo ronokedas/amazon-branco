@@ -275,8 +275,7 @@ git pull origin main
 
 
 cd /opt/sistema-amazon
-git pull
-docker compose up -d --build
+git pull --ff-only origin main && sudo docker compose up -d --build && sudo docker compose ps
 
 ou sem db
 docker compose up -d --force-recreate app

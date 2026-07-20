@@ -88,7 +88,29 @@ require_once __DIR__.'/../../includes/sidebar.php';
 <div class="welcome-section" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap"><div><h1><i class="fas fa-building-columns"></i> Configuração Financeira</h1><p>Cadastro de escritórios e metas mensais por unidade.</p></div><a class="btn btn-secondary" href="<?= APP_URL ?>configuracoes"><i class="fas fa-arrow-left"></i> Voltar</a></div>
 <div class="grid-2" style="align-items:start">
 <section class="card"><div class="card-header"><h3><?= $edit?'Editar':'Novo' ?> escritório</h3></div><div class="card-body"><form method="post"><input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>"><input type="hidden" name="action" value="salvar_escritorio"><input type="hidden" name="id" value="<?= h($edit['id']??'') ?>"><div class="form-group"><label>Nome *</label><input name="nome" maxlength="150" required value="<?= h($edit['nome']??'') ?>"></div><div class="grid-2"><div class="form-group"><label>Cidade *</label><input name="cidade" maxlength="150" required value="<?= h($edit['cidade']??'') ?>"></div><div class="form-group"><label>UF *</label><input name="uf" maxlength="2" pattern="[A-Za-z]{2}" required value="<?= h($edit['uf']??'AM') ?>"></div></div><button class="btn btn-primary"><i class="fas fa-save"></i> Salvar escritório</button></form></div></section>
-<section class="card"><div class="card-header"><h3>Escritórios cadastrados</h3></div><div class="card-body" style="overflow:auto"><table><thead><tr><th>Escritório</th><th>Local</th><th>Status</th><th>Ações</th></tr></thead><tbody><?php foreach($escritorios as $e): ?><tr><td><strong><?= h($e['nome']) ?></strong></td><td><?= h($e['cidade'].'/'.$e['uf']) ?></td><td><span class="badge <?= $e['ativo']?'badge-success':'badge-secondary' ?>"><?= $e['ativo']?'Ativo':'Inativo' ?></span></td><td style="display:flex;gap:6px"><a class="btn btn-secondary btn-sm" href="?editar=<?= urlencode($e['id']) ?>&competencia=<?= h(substr($competencia,0,7)) ?>"><i class="fas fa-edit"></i></a><form method="post"><input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>"><input type="hidden" name="action" value="alternar_escritorio"><input type="hidden" name="id" value="<?= h($e['id']) ?>"><button class="btn btn-sm <?= $e['ativo']?'btn-danger':'btn-success' ?>" title="<?= $e['ativo']?'Desativar':'Ativar' ?>"><i class="fas fa-power-off"></i></button></form></td></tr><?php endforeach ?></tbody></table></div></section>
+<section class="card">
+    <div class="card-header"><h3>Escritórios cadastrados</h3></div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+        <?php foreach($escritorios as $e): ?>
+        <article style="border:1px solid var(--cor-borda);border-radius:10px;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+            <div style="min-width:180px;flex:1">
+                <strong style="display:block"><?= h($e['nome']) ?></strong>
+                <small class="text-muted"><i class="fas fa-location-dot"></i> <?= h($e['cidade'].'/'.$e['uf']) ?></small>
+            </div>
+            <span class="badge <?= $e['ativo']?'badge-success':'badge-secondary' ?>"><?= $e['ativo']?'Ativo':'Inativo' ?></span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <a class="btn btn-secondary btn-sm" href="?editar=<?= urlencode($e['id']) ?>&competencia=<?= h(substr($competencia,0,7)) ?>"><i class="fas fa-edit"></i> Editar</a>
+                <form method="post" onsubmit="return confirm('<?= $e['ativo']?'Desativar este escritório?':'Ativar este escritório?' ?>')">
+                    <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
+                    <input type="hidden" name="action" value="alternar_escritorio">
+                    <input type="hidden" name="id" value="<?= h($e['id']) ?>">
+                    <button class="btn btn-sm <?= $e['ativo']?'btn-danger':'btn-success' ?>" type="submit"><i class="fas fa-power-off"></i> <?= $e['ativo']?'Desativar':'Ativar' ?></button>
+                </form>
+            </div>
+        </article>
+        <?php endforeach ?>
+    </div>
+</section>
 </div>
 <section class="card" style="margin-top:20px"><div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h3><i class="fas fa-bullseye"></i> Metas dos escritórios</h3><form method="get"><label>Competência <input type="month" name="competencia" value="<?= h(substr($competencia,0,7)) ?>" onchange="this.form.submit()"></label></form></div><div class="card-body"><form method="post"><input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>"><input type="hidden" name="action" value="salvar_metas_escritorios"><input type="hidden" name="competencia" value="<?= h(substr($competencia,0,7)) ?>"><div class="grid-2"><?php foreach($escritorios as $e)if($e['ativo']): ?><div class="form-group"><label><?= h($e['nome'].' · '.$e['cidade'].'/'.$e['uf']) ?></label><input type="number" min="0" step="0.01" name="meta_escritorio[<?= h($e['id']) ?>]" value="<?= h($metasEscritorio[$e['id']]??'0.00') ?>"></div><?php endif ?></div><button class="btn btn-primary btn-lg" style="margin-top:18px"><i class="fas fa-save"></i> Salvar metas dos escritórios</button></form></div></section>
 </div>
