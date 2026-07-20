@@ -81,7 +81,7 @@ try {
             $stmtA = $pdo->prepare("SELECT va.*, ec.descricao AS item_descricao
                                     FROM vistoria_anexos va
                                     LEFT JOIN exigencias_catalogo ec ON ec.id = va.catalogo_id
-                                    WHERE va.vistoria_id = :vistoria_id
+                                    WHERE va.vistoria_id = :vistoria_id AND va.excluido_em IS NULL
                                     ORDER BY va.criado_em ASC");
             $stmtA->execute([':vistoria_id' => $vistoria['id']]);
             $anexos_campo = $stmtA->fetchAll(PDO::FETCH_ASSOC);
@@ -322,9 +322,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </label>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:8px;">
                     <?php foreach ($anexos_campo as $anexo): ?>
-                    <a href="<?php echo h($anexo['url_arquivo']); ?>" target="_blank" rel="noopener noreferrer"
+                    <?php $anexo_url = APP_URL . 'api/campo/v1/anexos/' . rawurlencode((string)$anexo['id']); ?>
+                    <a href="<?php echo h($anexo_url); ?>" target="_blank" rel="noopener noreferrer"
                        style="display:block;color:inherit;text-decoration:none;border:1px solid var(--cor-borda);border-radius:9px;overflow:hidden;background:var(--cor-sidebar);">
-                        <img src="<?php echo h($anexo['url_arquivo']); ?>" alt="Evidência da vistoria"
+                        <img src="<?php echo h($anexo_url); ?>" alt="Evidência da vistoria" loading="lazy"
                              style="width:100%;height:130px;display:block;object-fit:cover;">
                         <span style="display:block;padding:8px;font-size:0.72rem;line-height:1.35;">
                             <?php echo h(mb_strimwidth($anexo['item_descricao'] ?? 'Evidência geral', 0, 70, '...')); ?>

@@ -22,6 +22,7 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-erp_minio_admin}
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-erp_minio_pass_2026}
       - MINIO_BUCKET=${MINIO_BUCKET:-erp-storage}
+      - MINIO_CAMPO_BUCKET=${MINIO_CAMPO_BUCKET:-erp-campo-private}
       - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
       - MAIL_PORT=${MAIL_PORT:-587}
       - MAIL_USERNAME=${MAIL_USERNAME:-}
@@ -37,8 +38,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost/campo/"]
+      test: ["CMD", "php", "scripts/healthcheck.php"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -46,7 +49,7 @@ services:
     networks:
       - erp_network
     restart: unless-stopped
-    command: sh -c "sh docker/prepare-runtime-dirs.sh && composer install --no-interaction --prefer-dist --no-dev && apache2-foreground"
+    command: sh -c "sh docker/prepare-runtime-dirs.sh && composer install --no-interaction --prefer-dist --no-dev && php scripts/prepare_storage.php && apache2-foreground"
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }
@@ -69,6 +72,8 @@ services:
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-erp_minio_admin}
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-erp_minio_pass_2026}
+      - MINIO_BUCKET=${MINIO_BUCKET:-erp-storage}
+      - MINIO_CAMPO_BUCKET=${MINIO_CAMPO_BUCKET:-erp-campo-private}
     depends_on:
       app:
         condition: service_healthy

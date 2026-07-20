@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/embarcacao_foto.php';
+require_once __DIR__ . '/../../includes/campo_storage.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -16,6 +17,7 @@ function campoJson(array $dados, int $status = 200): never {
 }
 
 function campoErro(string $codigo, string $mensagem, int $status, array $detalhes = []): never {
+    header('Content-Type: application/json; charset=utf-8');
     campoJson(['ok' => false, 'erro' => ['codigo' => $codigo, 'mensagem' => $mensagem, 'detalhes' => $detalhes]], $status);
 }
 
@@ -46,7 +48,7 @@ function campoUsuarioId(): string {
     if (!estaLogado() || empty($_SESSION['usuario_id'])) {
         campoErro('NAO_AUTENTICADO', 'Sua sessão expirou. Entre novamente.', 401);
     }
-    if ((time() - (int)($_SESSION['campo_login_em'] ?? 0)) > 60 * 60 * 24 * 30) {
+    if ((time() - (int)($_SESSION['campo_login_em'] ?? 0)) > 60 * 60 * 24 * 365) {
         session_unset();
         session_destroy();
         campoErro('SESSAO_EXPIRADA', 'Sua sessão expirou. Entre novamente.', 401);
@@ -61,7 +63,7 @@ function campoUsuarioId(): string {
         session_destroy();
         campoErro('NAO_AUTORIZADO', 'Entre com uma conta ativa de vistoriador.', 403);
     }
-    $pdo->prepare("UPDATE campo_sessoes SET ultimo_acesso_em=NOW(),expira_em=DATE_ADD(NOW(),INTERVAL 30 DAY) WHERE id=:id")
+    $pdo->prepare("UPDATE campo_sessoes SET ultimo_acesso_em=NOW(),expira_em=DATE_ADD(NOW(),INTERVAL 365 DAY) WHERE id=:id")
         ->execute([':id'=>campoSessaoId()]);
     $_SESSION['campo_login_em'] = time();
     $_SESSION['login_time'] = time();
@@ -71,6 +73,21 @@ function campoUsuarioId(): string {
 function campoExigirCsrf(): void {
     $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (!verificarCSRF($token)) campoErro('CSRF_INVALIDO', 'Atualize a tela e tente novamente.', 419);
+}
+
+function campoErpPodeVisualizarAnexo(PDO $pdo, array $anexo): bool {
+    if (!estaLogado() || empty($_SESSION['usuario_id']) || !podeAcessar('vistorias')) return false;
+
+    $usuarioId = (string)$_SESSION['usuario_id'];
+    $stmt = $pdo->prepare("SELECT ativo, excluido_em FROM usuarios WHERE id=:id LIMIT 1");
+    $stmt->execute([':id' => $usuarioId]);
+    $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$usuario || (int)$usuario['ativo'] !== 1 || $usuario['excluido_em'] !== null) return false;
+
+    $cargo = getCargo();
+    if ($cargo === 'VISTORIADOR') return (string)$anexo['vistoriador_id'] === $usuarioId;
+    if ($cargo === 'ANALISTA') return (string)$anexo['vistoria_status'] === 'AGUARDANDO_APROVACAO';
+    return true;
 }
 
 function campoAgendamento(PDO $pdo, string $id, string $usuarioId): array {
@@ -158,28 +175,18 @@ function campoNormalizarDataHoraCaptura(?string $valor): string {
     }
 }
 
-function campoS3(): ?\Aws\S3\S3Client {
-    if (!class_exists('Aws\\S3\\S3Client')) return null;
-    return new Aws\S3\S3Client([
-        'version'=>'latest', 'region'=>'us-east-1',
-        'endpoint'=>defined('MINIO_ENDPOINT') ? MINIO_ENDPOINT : 'http://minio:9000',
-        'use_path_style_endpoint'=>true,
-        'credentials'=>[
-            'key'=>defined('MINIO_ACCESS_KEY') ? MINIO_ACCESS_KEY : 'erp_minio_admin',
-            'secret'=>defined('MINIO_SECRET_KEY') ? MINIO_SECRET_KEY : 'erp_minio_pass_2026',
-        ],
-    ]);
+function campoUrlAnexo(string $anexoId): string {
+    $basePath = rtrim((string)(parse_url(APP_URL, PHP_URL_PATH) ?: ''), '/');
+    return $basePath . '/api/campo/v1/anexos/' . rawurlencode($anexoId);
 }
 
 function campoGuardarFotoPrivada(string $binario, string $mime, string $vistoriaId, string $anexoId): string {
     $ext = ['image/jpeg'=>'jpg', 'image/png'=>'png', 'image/webp'=>'webp'][$mime] ?? 'bin';
     $chave = 'vistorias/' . $vistoriaId . '/originais/' . $anexoId . '.' . $ext;
-    $s3 = campoS3();
+    $s3 = campoStorageS3();
     if ($s3) {
-        $bucket = defined('MINIO_CAMPO_BUCKET') ? MINIO_CAMPO_BUCKET : 'erp-campo-private';
-        try { $s3->headBucket(['Bucket'=>$bucket]); }
-        catch (Throwable $e) { $s3->createBucket(['Bucket'=>$bucket]); }
-        $s3->putObject(['Bucket'=>$bucket, 'Key'=>$chave, 'Body'=>$binario, 'ContentType'=>$mime]);
+        campoStorageGarantirBucket();
+        $s3->putObject(['Bucket'=>campoStorageBucket(), 'Key'=>$chave, 'Body'=>$binario, 'ContentType'=>$mime]);
         return $chave;
     }
     $diretorio = __DIR__ . '/../../storage/private/' . dirname($chave);
@@ -195,29 +202,34 @@ function campoExcluirFotoPrivada(string $chave): void {
         if (is_file($arquivo)) @unlink($arquivo);
         return;
     }
-    $s3 = campoS3();
+    $s3 = campoStorageS3();
     if ($s3) {
         $s3->deleteObject([
-            'Bucket'=>defined('MINIO_CAMPO_BUCKET') ? MINIO_CAMPO_BUCKET : 'erp-campo-private',
+            'Bucket'=>campoStorageBucket(),
             'Key'=>$chave,
         ]);
     }
 }
 
 function campoEmitirFotoPrivada(string $chave, string $mime, string $nome): never {
-    header('Content-Type: ' . $mime);
-    header('Content-Disposition: inline; filename="' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $nome ?: 'evidencia') . '"');
-    header('Cache-Control: private, max-age=300');
+    $nomeSeguro = preg_replace('/[^a-zA-Z0-9._-]/', '_', $nome ?: 'evidencia');
     if (str_starts_with($chave, 'local:')) {
         $arquivo = __DIR__ . '/../../storage/private/' . substr($chave, 6);
         if (!is_file($arquivo)) campoErro('ANEXO_NAO_ENCONTRADO', 'Evidência não encontrada.', 404);
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: inline; filename="' . $nomeSeguro . '"');
+        header('Cache-Control: private, max-age=300');
         header('Content-Length: ' . filesize($arquivo));
         readfile($arquivo);
         exit;
     }
-    $s3 = campoS3();
+    $s3 = campoStorageS3();
     if (!$s3) campoErro('STORAGE_INDISPONIVEL', 'Armazenamento indisponível.', 503);
-    $result = $s3->getObject(['Bucket'=>defined('MINIO_CAMPO_BUCKET') ? MINIO_CAMPO_BUCKET : 'erp-campo-private', 'Key'=>$chave]);
+    $result = $s3->getObject(['Bucket'=>campoStorageBucket(), 'Key'=>$chave]);
+    header('Content-Type: ' . $mime);
+    header('Content-Disposition: inline; filename="' . $nomeSeguro . '"');
+    header('Cache-Control: private, max-age=300');
+    if (!empty($result['ContentLength'])) header('Content-Length: ' . (int)$result['ContentLength']);
     echo $result['Body'];
     exit;
 }
@@ -242,7 +254,11 @@ function campoListaChecklist(PDO $pdo, ?string $vistoriaId, bool $demonstracao =
         $a = $pdo->prepare("SELECT id, catalogo_id, url_arquivo, mime_type, tamanho_bytes, sha256, capturado_em, nome_original, criado_por
                             FROM vistoria_anexos WHERE vistoria_id = :id AND excluido_em IS NULL ORDER BY criado_em");
         $a->execute([':id' => $vistoriaId]);
-        foreach ($a->fetchAll(PDO::FETCH_ASSOC) as $anexo) $anexos[$anexo['catalogo_id'] ?? 'geral'][] = $anexo;
+        foreach ($a->fetchAll(PDO::FETCH_ASSOC) as $anexo) {
+            // Nao reutilizar o host gravado no banco: ele pode mudar em outra VPS.
+            $anexo['url_arquivo'] = campoUrlAnexo((string)$anexo['id']);
+            $anexos[$anexo['catalogo_id'] ?? 'geral'][] = $anexo;
+        }
     }
 
     $categorias = [];
@@ -312,7 +328,7 @@ try {
         $sessaoId = campoSessaoId();
         $pdo->prepare("INSERT INTO campo_sessoes
             (id,usuario_id,expira_em,ip_hash,user_agent_hash)
-            VALUES (:id,:usuario,DATE_ADD(NOW(),INTERVAL 30 DAY),:ip,:ua)
+            VALUES (:id,:usuario,DATE_ADD(NOW(),INTERVAL 365 DAY),:ip,:ua)
             ON DUPLICATE KEY UPDATE revogado_em=NULL,ultimo_acesso_em=NOW(),expira_em=VALUES(expira_em)")
             ->execute([':id'=>$sessaoId, ':usuario'=>$usuario['id'], ':ip'=>$ipHash,
                 ':ua'=>hash('sha256', (string)($_SERVER['HTTP_USER_AGENT'] ?? ''))]);
@@ -320,8 +336,40 @@ try {
         campoJson(['ok'=>true, 'dados'=>[
             'usuario'=>['id'=>$usuario['id'], 'nome'=>$usuario['nome'], 'perfis'=>['VISTORIADOR']],
             'csrf_token'=>gerarCSRF(),
-            'expira_em'=>date(DATE_ATOM, time() + 60 * 60 * 24 * 30),
+            'expira_em'=>date(DATE_ATOM, time() + 60 * 60 * 24 * 365),
         ]]);
+    }
+
+    if ($method === 'GET' && preg_match('#^anexos/([^/]+)$#', $rota, $m)) {
+        $stmt = $pdo->prepare("SELECT va.*, a.vistoriador_id, v.status AS vistoria_status
+            FROM vistoria_anexos va
+            INNER JOIN vistorias v ON v.id=va.vistoria_id
+            INNER JOIN agendamentos a ON a.id=v.agendamento_id
+            WHERE va.id=:id AND va.excluido_em IS NULL LIMIT 1");
+        $stmt->execute([':id'=>$m[1]]);
+        $anexo = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$anexo) campoErro('ANEXO_NAO_ENCONTRADO', 'Evidencia nao encontrada.', 404);
+
+        $sessaoErp = estaLogado() && empty($_SESSION['campo_login_em']);
+        if ($sessaoErp) {
+            if (!campoErpPodeVisualizarAnexo($pdo, $anexo)) {
+                campoErro('ANEXO_NAO_ENCONTRADO', 'Evidencia nao encontrada.', 404);
+            }
+        } else {
+            // No aplicativo de campo, manter a autorizacao pelo vinculo da agenda.
+            $usuarioCampoId = campoUsuarioId();
+            if (!temPerfil('ADMIN', $usuarioCampoId) && (string)$anexo['vistoriador_id'] !== $usuarioCampoId) {
+                campoErro('ANEXO_NAO_ENCONTRADO', 'Evidencia nao encontrada.', 404);
+            }
+        }
+
+        campoRegistrarAuditoria('campo_foto_visualizada', 'Foto visualizada na vistoria ' . $anexo['vistoria_id']);
+        try {
+            campoEmitirFotoPrivada($anexo['chave_arquivo'], $anexo['mime_type'], $anexo['nome_original'] ?? 'evidencia');
+        } catch (Throwable $e) {
+            error_log('API campo: falha ao ler evidencia ' . $anexo['id'] . ': ' . $e->getMessage());
+            campoErro('EVIDENCIA_INDISPONIVEL', 'A evidencia nao pode ser lida no armazenamento.', 503);
+        }
     }
 
     $usuarioId = campoUsuarioId();
@@ -334,21 +382,6 @@ try {
         session_unset();
         session_destroy();
         campoJson(['ok'=>true, 'dados'=>['logout'=>true]]);
-    }
-
-    if ($method === 'GET' && preg_match('#^anexos/([^/]+)$#', $rota, $m)) {
-        $stmt = $pdo->prepare("SELECT va.*, a.vistoriador_id
-            FROM vistoria_anexos va
-            INNER JOIN vistorias v ON v.id=va.vistoria_id
-            INNER JOIN agendamentos a ON a.id=v.agendamento_id
-            WHERE va.id=:id AND va.excluido_em IS NULL LIMIT 1");
-        $stmt->execute([':id'=>$m[1]]);
-        $anexo = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$anexo || (!temPerfil('ADMIN', $usuarioId) && $anexo['vistoriador_id'] !== $usuarioId)) {
-            campoErro('ANEXO_NAO_ENCONTRADO', 'Evidência não encontrada.', 404);
-        }
-        campoRegistrarAuditoria('campo_foto_visualizada', 'Foto visualizada na vistoria ' . $anexo['vistoria_id']);
-        campoEmitirFotoPrivada($anexo['chave_arquivo'], $anexo['mime_type'], $anexo['nome_original'] ?? 'evidencia');
     }
 
     if ($method === 'DELETE' && preg_match('#^anexos/([^/]+)$#', $rota, $m)) {
@@ -637,7 +670,7 @@ try {
         $capturadoEm = campoNormalizarDataHoraCaptura($_POST['capturado_em'] ?? null);
         if ($ja) {
             $id = $ja['id'];
-            $url = $ja['url_arquivo'];
+            $url = campoUrlAnexo((string)$id);
         } else {
             try {
                 $chave = campoGuardarFotoPrivada($binario, $mime, $vistoria['id'], $id);
@@ -649,7 +682,7 @@ try {
                     503
                 );
             }
-            $url = APP_URL . 'api/campo/v1/anexos/' . rawurlencode($id);
+            $url = campoUrlAnexo((string)$id);
             $stmt = $pdo->prepare("INSERT INTO vistoria_anexos
                 (id, vistoria_id, catalogo_id, url_arquivo, chave_arquivo, nome_original, mime_type,
                  tamanho_bytes, sha256, capturado_em, criado_por)

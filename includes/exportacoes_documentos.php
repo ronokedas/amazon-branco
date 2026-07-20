@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/aprovacao_documentos.php';
+require_once __DIR__ . '/campo_storage.php';
 
 function exportacaoTipos(): array {
     return [
@@ -175,19 +176,37 @@ function exportacaoProcessar(PDO $pdo, array $job): void {
                     }
                 }
                 if ($categoria === 'VISTORIAS') {
-                    $fotos = $pdo->prepare("SELECT * FROM vistoria_anexos WHERE vistoria_id=:id AND excluido_em IS NULL ORDER BY capturado_em,criado_em");
+                    $fotos = $pdo->prepare("SELECT va.*, ec.codigo_interno, ec.item_normam, ec.descricao AS item_descricao
+                        FROM vistoria_anexos va
+                        LEFT JOIN exigencias_catalogo ec ON ec.id=va.catalogo_id
+                        WHERE va.vistoria_id=:id AND va.excluido_em IS NULL
+                        ORDER BY ec.codigo_interno, va.capturado_em, va.criado_em");
                     $fotos->execute([':id'=>$doc['id']]);
+                    $pastasPorItem = [];
+                    $quantidadePorItem = [];
                     foreach ($fotos->fetchAll(PDO::FETCH_ASSOC) as $foto) {
                         $ext = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$foto['mime_type']] ?? 'bin';
-                        $nomeFoto = exportacaoSlug((string)($foto['catalogo_id'] ?: 'geral')) . '_' . date('Y-m-d_H-i-s',strtotime($foto['capturado_em'] ?: $foto['criado_em'])) . '_' . substr($foto['sha256'],0,8) . '.' . $ext;
-                        if (str_starts_with($foto['chave_arquivo'],'local:')) $arquivo=exportacaoBaseSegura('storage/private/'.substr($foto['chave_arquivo'],6));
-                        else {
-                            $tmp=tempnam(sys_get_temp_dir(),'exp_foto_');
-                            $s3=campoS3Exportacao();
-                            $s3->getObject(['Bucket'=>defined('MINIO_CAMPO_BUCKET')?MINIO_CAMPO_BUCKET:'erp-campo-private','Key'=>$foto['chave_arquivo'],'SaveAs'=>$tmp]);
-                            $arquivo=$tmp; $temporarios[]=$tmp;
+                        $item = exportacaoSlug((string)($foto['codigo_interno'] ?: $foto['item_normam'] ?: 'evidencia-geral'), 60);
+                        $chaveItem = (string)($foto['catalogo_id'] ?: 'geral');
+                        if (!isset($pastasPorItem[$chaveItem])) {
+                            $pastasPorItem[$chaveItem] = sprintf('%03d_', count($pastasPorItem) + 1) . $item . '/';
                         }
-                        exportacaoAdicionar($zip,$arquivo,$baseDoc.'fotos/'.$nomeFoto,$manifesto,['categoria'=>'FOTO_VISTORIA','documento'=>$doc['numero'],'versao'=>1,'situacao'=>$doc['status'],'cliente'=>$doc['cliente'],'embarcacao'=>$doc['embarcacao']]);
+                        $quantidadePorItem[$chaveItem] = ($quantidadePorItem[$chaveItem] ?? 0) + 1;
+                        $pastaFoto = $pastasPorItem[$chaveItem];
+                        $nomeOriginal = pathinfo((string)($foto['nome_original'] ?: 'foto'), PATHINFO_FILENAME);
+                        $nomeFoto = sprintf('foto-%02d_', $quantidadePorItem[$chaveItem])
+                            . date('Y-m-d_H-i-s',strtotime($foto['capturado_em'] ?: $foto['criado_em'])) . '_'
+                            . exportacaoSlug($nomeOriginal, 45) . '_' . substr((string)$foto['sha256'],0,8) . '.' . $ext;
+                        $tmp=tempnam(sys_get_temp_dir(),'exp_foto_');
+                        if ($tmp === false) throw new RuntimeException('Falha ao preparar arquivo temporario da evidencia.');
+                        $temporarios[]=$tmp;
+                        campoStorageBaixarPara((string)$foto['chave_arquivo'], $tmp);
+                        $arquivo=$tmp;
+                        exportacaoAdicionar($zip,$arquivo,$baseDoc.'fotos/'.$pastaFoto.$nomeFoto,$manifesto,[
+                            'categoria'=>'FOTO_VISTORIA','documento'=>$doc['numero'],'versao'=>1,'situacao'=>$doc['status'],
+                            'cliente'=>$doc['cliente'],'embarcacao'=>$doc['embarcacao'],'item_normam'=>$foto['item_normam'] ?? '',
+                            'descricao_item'=>$foto['item_descricao'] ?? '',
+                        ]);
                     }
                 }
                 $zip->addFromString($baseDoc.'metadados.json',json_encode($doc,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
@@ -195,8 +214,9 @@ function exportacaoProcessar(PDO $pdo, array $job): void {
         }
         $json=json_encode($manifesto,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         $zip->addFromString($raiz.'manifesto.json',$json);
-        $csv=fopen('php://temp','w+'); fputcsv($csv,['categoria','documento','versao','situacao','cliente','embarcacao','caminho','tamanho','sha256']);
-        foreach ($manifesto as $linha) fputcsv($csv,array_map(fn($k)=>$linha[$k]??'',['categoria','documento','versao','situacao','cliente','embarcacao','caminho','tamanho','sha256']));
+        $colunasManifesto=['categoria','documento','versao','situacao','cliente','embarcacao','item_normam','descricao_item','caminho','tamanho','sha256'];
+        $csv=fopen('php://temp','w+'); fputcsv($csv,$colunasManifesto);
+        foreach ($manifesto as $linha) fputcsv($csv,array_map(fn($k)=>$linha[$k]??'',$colunasManifesto));
         rewind($csv); $zip->addFromString($raiz.'manifesto.csv',stream_get_contents($csv)); fclose($csv);
     } finally {
         $zip->close();
@@ -205,9 +225,4 @@ function exportacaoProcessar(PDO $pdo, array $job): void {
     $pdo->prepare("UPDATE exportacoes_documentos SET status='CONCLUIDA',caminho_arquivo=:caminho,nome_arquivo=:nome,
         tamanho_bytes=:tamanho,quantidade_arquivos=:quantidade,sha256=:hash,concluido_em=NOW(),expira_em=DATE_ADD(NOW(),INTERVAL 24 HOUR) WHERE id=:id")
         ->execute([':caminho'=>'storage/private/exportacoes/'.$nomeZip,':nome'=>$nomeZip,':tamanho'=>filesize($caminhoZip),':quantidade'=>count($manifesto),':hash'=>hash_file('sha256',$caminhoZip),':id'=>$job['id']]);
-}
-
-function campoS3Exportacao(): \Aws\S3\S3Client {
-    return new \Aws\S3\S3Client(['version'=>'latest','region'=>'us-east-1','endpoint'=>MINIO_ENDPOINT,'use_path_style_endpoint'=>true,
-        'credentials'=>['key'=>MINIO_ACCESS_KEY,'secret'=>MINIO_SECRET_KEY]]);
 }

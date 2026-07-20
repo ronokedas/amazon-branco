@@ -56,6 +56,7 @@ define('MINIO_ENDPOINT', getenv('MINIO_ENDPOINT') ?: 'http://minio:9000');
 define('MINIO_ACCESS_KEY', getenv('MINIO_ACCESS_KEY') ?: 'erp_minio_admin');
 define('MINIO_SECRET_KEY', getenv('MINIO_SECRET_KEY') ?: 'erp_minio_pass_2026');
 define('MINIO_BUCKET', getenv('MINIO_BUCKET') ?: 'erp-storage');
+define('MINIO_CAMPO_BUCKET', getenv('MINIO_CAMPO_BUCKET') ?: 'erp-campo-private');
 
 // Credenciais SMTP para envio de e-mails (PHPMailer)
 define('MAIL_HOST', getenv('MAIL_HOST') ?: 'smtp.gmail.com');

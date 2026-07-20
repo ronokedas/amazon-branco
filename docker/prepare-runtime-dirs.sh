@@ -20,6 +20,7 @@ storage/private/documento_artefatos
 storage/private/embarcacoes
 storage/private/exportacoes
 storage/private/vistorias
+storage/sessions
 tmp/pdfs
 tmp/portal
 temp_pdf
