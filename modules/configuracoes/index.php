@@ -78,6 +78,16 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     </div>
 
     <div class="dashboard-cards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+
+        <a href="<?php echo APP_URL; ?>configuracoes/financeiro" class="card-link" style="text-decoration:none;color:inherit;display:block;">
+            <div class="card" style="height:100%;transition:transform .2s,box-shadow .2s;cursor:pointer;">
+                <div class="card-body" style="text-align:center;padding:40px 20px;">
+                    <i class="fas fa-building-columns" style="font-size:3rem;color:#28a745;margin-bottom:15px;"></i>
+                    <h3 style="margin-bottom:10px;color:var(--cor-texto);">Configuração Financeira</h3>
+                    <p style="color:var(--cor-texto-secundario);font-size:.95rem;">Cadastre escritórios, vincule funcionários e defina metas mensais por unidade e vendedor.</p>
+                </div>
+            </div>
+        </a>
         
         <!-- Configurações Gerais -->
         <a href="<?php echo APP_URL; ?>configuracoes/geral" class="card-link" style="text-decoration: none; color: inherit; display: block;">

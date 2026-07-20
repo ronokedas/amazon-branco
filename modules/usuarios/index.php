@@ -14,7 +14,10 @@ verificar_cargo('ADMIN');
 
 // Buscar todos os usuarios ainda disponíveis no sistema
 try {
-    $stmt = $pdo->query("SELECT id, nome, email, cargo, ativo, criado_em, atualizado_em FROM usuarios WHERE excluido_em IS NULL ORDER BY nome ASC");
+    $stmt = $pdo->query("SELECT u.id,u.nome,u.email,u.cargo,u.ativo,u.criado_em,u.atualizado_em,
+        (SELECT GROUP_CONCAT(CONCAT(e.nome,IF(ue.principal=1,' (principal)','')) ORDER BY ue.principal DESC,e.nome SEPARATOR ', ')
+         FROM usuario_escritorios ue JOIN escritorios e ON e.id=ue.escritorio_id WHERE ue.usuario_id=u.id) escritorios
+        FROM usuarios u WHERE u.excluido_em IS NULL ORDER BY u.nome ASC");
     $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $totalAdministradores = (int)$pdo->query(
         "SELECT COUNT(*) FROM usuarios WHERE cargo = 'ADMIN' AND excluido_em IS NULL"
@@ -74,6 +77,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <th>Nome</th>
                         <th>Email</th>
                         <th>Cargo</th>
+                        <th>Escritório(s)</th>
                         <th>Status</th>
                         <th>Criado em</th>
                         <th>Acoes</th>
@@ -101,6 +105,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <?php echo h($cargoLabel); ?>
                             </span>
                         </td>
+                        <td><?= h($u['escritorios'] ?: 'Sem vínculo') ?></td>
                         <td>
                             <?php if ($u['ativo']): ?>
                                 <span class="badge badge-success"><i class="fas fa-check-circle"></i> Ativo</span>

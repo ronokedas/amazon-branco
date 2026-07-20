@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
 
 // Exigir login e cargo ADMIN
 verificar_sessao();
@@ -39,6 +40,8 @@ switch ($action) {
         $senha       = $_POST['senha'] ?? '';
         $confirma    = $_POST['senha_confirma'] ?? '';
         $ativo       = isset($_POST['ativo']) ? 1 : 0;
+        $escritoriosIds = array_values(array_unique(array_filter(array_map('trim', (array)($_POST['escritorios_ids'] ?? [])))));
+        $escritorioPrincipalId = trim($_POST['escritorio_principal_id'] ?? '');
 
         // Validacoes
         $erros = [];
@@ -63,6 +66,11 @@ switch ($action) {
         if (!in_array($cargo, ['ADMIN', 'VENDEDOR', 'VISTORIADOR', 'ANALISTA'])) {
             $erros[] = 'Cargo invalido.';
             $errosCampos['cargo'] = 'Selecione um cargo valido.';
+        }
+
+        if (!$escritoriosIds || !$escritorioPrincipalId || !in_array($escritorioPrincipalId, $escritoriosIds, true)) {
+            $erros[] = 'Selecione ao menos um escritorio e defina o escritorio principal.';
+            $errosCampos['escritorios_ids'] = 'Revise os escritorios do funcionario.';
         }
 
         // Se e criacao, senha e obrigatoria
@@ -139,6 +147,7 @@ switch ($action) {
         }
 
         try {
+            $pdo->beginTransaction();
             if ($isEdicao) {
                 // Atualizar
                 if (!empty($senha)) {
@@ -171,6 +180,7 @@ switch ($action) {
                 if ($cargoAnterior !== $cargo) {
                     try { aplicarPermissoesPadraoUsuario($pdo, $id, $cargo); } catch (Throwable $e) { error_log('Erro ao aplicar permissoes padrao: '.$e->getMessage()); }
                 }
+                financeiroSalvarVinculosUsuario($pdo, $id, $escritoriosIds, $escritorioPrincipalId);
                 setMensagem('success', 'Usuario atualizado com sucesso!');
             } else {
                 // Criar
@@ -192,11 +202,14 @@ switch ($action) {
                     // Compatibilidade quando a migration de perfis ainda nao foi aplicada.
                 }
                 try { aplicarPermissoesPadraoUsuario($pdo, $novoUsuarioId, $cargo); } catch (Throwable $e) { error_log('Erro ao aplicar permissoes padrao: '.$e->getMessage()); }
+                financeiroSalvarVinculosUsuario($pdo, $novoUsuarioId, $escritoriosIds, $escritorioPrincipalId);
                 setMensagem('success', 'Usuario criado com sucesso!');
             }
-        } catch (Exception $e) {
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao salvar usuario: ' . $e->getMessage());
-            setMensagem('error', 'Erro ao salvar usuario. Tente novamente.');
+            setMensagem('error', $e instanceof RuntimeException ? $e->getMessage() : 'Erro ao salvar usuario. Tente novamente.');
         }
 
         redirecionar(APP_URL . 'usuarios');

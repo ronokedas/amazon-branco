@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: db:3306
--- Tempo de geração: 19/07/2026 às 16:25
+-- Tempo de geração: 20/07/2026 às 15:58
 -- Versão do servidor: 8.0.46
 -- Versão do PHP: 8.2.27
 
@@ -929,6 +929,30 @@ CREATE TABLE `embarcacoes` (
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `escritorios`
+--
+
+CREATE TABLE `escritorios` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `nome` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `cidade` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `uf` char(2) COLLATE utf8mb4_general_ci NOT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Despejando dados para a tabela `escritorios`
+--
+
+INSERT INTO `escritorios` (`id`, `nome`, `cidade`, `uf`, `ativo`, `criado_em`, `atualizado_em`) VALUES
+('00000000-0000-4000-8000-000000000100', 'Matriz', 'Manaus', 'AM', 1, '2026-07-20 15:13:20', '2026-07-20 15:13:20'),
+('1801fc90-5734-417c-acf2-fed7399a23f1', 'Conquista', 'Ananindeua', 'PA', 1, '2026-07-20 15:13:20', '2026-07-20 15:13:20');
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `exigencias_catalogo`
 --
 
@@ -1350,6 +1374,9 @@ CREATE TABLE `financeiro_historico_baixas` (
 CREATE TABLE `financeiro_lancamentos` (
   `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
   `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `escritorio_id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '00000000-0000-4000-8000-000000000100',
+  `responsavel_usuario_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proposta_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `tipo` enum('RECEITA','DESPESA') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `descricao` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `valor` decimal(10,2) NOT NULL,
@@ -1366,6 +1393,22 @@ CREATE TABLE `financeiro_lancamentos` (
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `financeiro_metas_mensais`
+--
+
+CREATE TABLE `financeiro_metas_mensais` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `competencia` date NOT NULL,
+  `escritorio_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `valor` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ;
 
 -- --------------------------------------------------------
 
@@ -1455,6 +1498,7 @@ CREATE TABLE `propostas` (
   `observacoes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `status` enum('rascunho','enviada','aprovada','recusada','cancelada','assinada') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'rascunho',
   `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `escritorio_id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '00000000-0000-4000-8000-000000000100',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   `token_assinatura` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
@@ -1520,7 +1564,7 @@ CREATE TABLE `responsaveis_assinatura` (
 --
 
 INSERT INTO `responsaveis_assinatura` (`id`, `nome_completo`, `cpf_cnpj`, `cargo_titulo`, `registro_profissional`, `assinatura_arquivo`, `assinatura_hash`, `assinatura_atualizada_em`, `ativo`, `created_at`, `updated_at`) VALUES
-(2, 'Victal Donanzan', '383.034.518-63', 'Engenheiro Naval', 'CREA: 22.537', 'storage/private/assinaturas_responsaveis/2/20260717_080718_dbbb62d5b83faa0a.png', '09da23f7c13fbfbf42c88f65ff2208903086c13f3ed5022813784e45a94bdd13', '2026-07-17 11:07:18', 1, '2026-07-02 04:58:28', '2026-07-17 11:07:18'),
+(2, 'Victal Donanzan', '383.034.518-63', 'Engenheiro Naval', 'CREA: 22.537', 'storage/private/assinaturas_responsaveis/2/20260720_100109_90048b1dd4c51d95.png', '09da23f7c13fbfbf42c88f65ff2208903086c13f3ed5022813784e45a94bdd13', '2026-07-20 13:01:09', 1, '2026-07-02 04:58:28', '2026-07-20 13:01:09'),
 (5, 'João Responsável', NULL, 'Engenheiro Naval', '123456', NULL, NULL, NULL, 0, '2026-07-02 17:39:46', '2026-07-17 06:33:34'),
 (6, 'João Responsável', NULL, 'Engenheiro Naval', '123456', NULL, NULL, NULL, 0, '2026-07-02 17:43:53', '2026-07-07 21:13:57');
 
@@ -1618,25 +1662,48 @@ CREATE TABLE `usuarios` (
   `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `acesso_documentacao` tinyint(1) DEFAULT '0',
-  `acesso_financeiro` tinyint(1) DEFAULT '0'
+  `acesso_financeiro` tinyint(1) DEFAULT '0',
+  `escritorio_id` char(36) COLLATE utf8mb4_general_ci DEFAULT '00000000-0000-4000-8000-000000000100'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Despejando dados para a tabela `usuarios`
 --
 
-INSERT INTO `usuarios` (`id`, `nome`, `email`, `senha_hash`, `cargo`, `ativo`, `excluido_em`, `criado_em`, `atualizado_em`, `acesso_documentacao`, `acesso_financeiro`) VALUES
-('11111111-1111-1111-1111-111111111111', 'Carlos Mendes', 'excluido.11111111111111111111111111111111@local.invalid', '$2y$10$SjdkE2qA2s5C1UHZo/V4yOaIYQ1RWLsybsGP7Vf1cLmGJYmeflMFi', 'VISTORIADOR', 0, '2026-07-19 02:27:38', '2026-06-24 17:33:03', '2026-07-19 02:27:38', 0, 0),
-('1c015cb0-3187-4068-bc6d-06585521e165', 'anabe', 'excluido.1c015cb031874068bc6d06585521e165@local.invalid', '$2y$10$YTFhG9EMyJrdZssxn5aXuelGURp2nULigmFHIKVGdqFiQxbzAXIBu', 'VENDEDOR', 0, '2026-07-19 02:27:32', '2026-06-27 03:51:48', '2026-07-19 02:27:32', 1, 1),
-('22222222-2222-2222-2222-222222222222', 'Ana Paula Silva', 'excluido.22222222222222222222222222222222@local.invalid', '$2y$10$t5EgpXiQyTOM/NZjPcdREep5XsL.u.y8OztQGiCY1EF55VlLklvvO', 'VISTORIADOR', 0, '2026-07-19 02:27:28', '2026-06-24 17:33:03', '2026-07-19 02:27:28', 0, 0),
-('33333333-3333-3333-3333-333333333333', 'Roberto Lima', 'excluido.33333333333333333333333333333333@local.invalid', '$2y$10$lH9jpywZL4ueeCNV1kxUXe4Ayl51gRcqjTqNLiU0S5aW0DA4IqD1y', 'VISTORIADOR', 0, '2026-07-19 02:27:48', '2026-06-24 17:33:03', '2026-07-19 02:27:48', 0, 0),
-('3774d80c-2574-470e-88a9-9781936c6de3', 'Any', 'excluido.3774d80c2574470e88a99781936c6de3@local.invalid', '$2y$10$TzfH61SflMPiQpW4MFIP5OTf2/khZ51Q66XX1HiNl3SjgtruZj8au', 'VISTORIADOR', 0, '2026-07-19 02:27:35', '2026-06-23 22:51:43', '2026-07-19 02:27:35', 1, 0),
-('74e02f95-fbe6-42f3-bedf-f8535e4d13aa', 'Rosano Souza', 'excluido.74e02f95fbe642f3bedff8535e4d13aa@local.invalid', '$2y$10$pEGJqFBciTy5Zm4.xv1CTOi9eF29nXW4NWRaifY/h4f74SWAJd0EG', 'VISTORIADOR', 0, '2026-07-19 02:27:52', '2026-06-11 21:44:56', '2026-07-19 02:27:52', 0, 0),
-('95eb5557-65e8-11f1-85ef-047c16b568a3', 'Administrador', 'excluido.95eb555765e811f185ef047c16b568a3@local.invalid', '$2y$10$WDtKPgD44yf3STmx0SPfOuiy2AgKuWi5EEFozzSOfvZ3vLGGLW7Pq', 'ADMIN', 0, '2026-07-19 02:28:49', '2026-06-11 19:55:04', '2026-07-19 02:28:49', 0, 0),
-('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'itamar', 'analista@teste.com', '$2y$10$PftOdZbu7u.NZ65.r1NpO.s4jBDtysUHLwrLVH0jxALGB/VlWvn.2', 'ANALISTA', 1, NULL, '2026-07-16 15:38:12', '2026-07-16 15:38:12', 0, 0),
-('d2a16613-dfa4-4948-8de4-8c802abdf394', 'Neto', 'teste1@teste.com', '$2y$10$nho8g81ikeWtP9U7G3Ft7uHZOARhHcfD.oVRW5/hMKQnZ7MRsLxOy', 'VISTORIADOR', 1, NULL, '2026-07-07 21:10:28', '2026-07-07 22:24:42', 1, 0),
-('dd121661-feb4-42f6-895a-68eb0608d1e4', 'teste admin', 'teste@teste.com', '$2y$10$eK05TTRWPQmp7ldYEALHrOMRSVKUGMo6yqVv3kCU0yYiOz5KzBWw6', 'ADMIN', 1, NULL, '2026-07-05 13:39:17', '2026-07-15 23:52:54', 0, 0),
-('e5c68a85-c920-4b11-bc93-9343d9d94f14', 'vistoriador teste', 'excluido.e5c68a85c9204b11bc939343d9d94f14@local.invalid', '$2y$10$LdMu1ZxZP.ysBC10FSV/TeWm5yuEeZkyenLH5fxHKx4QA6MbAPGeW', 'VISTORIADOR', 0, '2026-07-19 02:28:20', '2026-07-02 15:06:59', '2026-07-19 02:28:20', 0, 0);
+INSERT INTO `usuarios` (`id`, `nome`, `email`, `senha_hash`, `cargo`, `ativo`, `excluido_em`, `criado_em`, `atualizado_em`, `acesso_documentacao`, `acesso_financeiro`, `escritorio_id`) VALUES
+('11111111-1111-1111-1111-111111111111', 'Carlos Mendes', 'excluido.11111111111111111111111111111111@local.invalid', '$2y$10$SjdkE2qA2s5C1UHZo/V4yOaIYQ1RWLsybsGP7Vf1cLmGJYmeflMFi', 'VISTORIADOR', 0, '2026-07-19 02:27:38', '2026-06-24 17:33:03', '2026-07-19 02:27:38', 0, 0, '00000000-0000-4000-8000-000000000100'),
+('1c015cb0-3187-4068-bc6d-06585521e165', 'anabe', 'excluido.1c015cb031874068bc6d06585521e165@local.invalid', '$2y$10$YTFhG9EMyJrdZssxn5aXuelGURp2nULigmFHIKVGdqFiQxbzAXIBu', 'VENDEDOR', 0, '2026-07-19 02:27:32', '2026-06-27 03:51:48', '2026-07-19 02:27:32', 1, 1, '00000000-0000-4000-8000-000000000100'),
+('22222222-2222-2222-2222-222222222222', 'Ana Paula Silva', 'excluido.22222222222222222222222222222222@local.invalid', '$2y$10$t5EgpXiQyTOM/NZjPcdREep5XsL.u.y8OztQGiCY1EF55VlLklvvO', 'VISTORIADOR', 0, '2026-07-19 02:27:28', '2026-06-24 17:33:03', '2026-07-19 02:27:28', 0, 0, '00000000-0000-4000-8000-000000000100'),
+('33333333-3333-3333-3333-333333333333', 'Roberto Lima', 'excluido.33333333333333333333333333333333@local.invalid', '$2y$10$lH9jpywZL4ueeCNV1kxUXe4Ayl51gRcqjTqNLiU0S5aW0DA4IqD1y', 'VISTORIADOR', 0, '2026-07-19 02:27:48', '2026-06-24 17:33:03', '2026-07-19 02:27:48', 0, 0, '00000000-0000-4000-8000-000000000100'),
+('3774d80c-2574-470e-88a9-9781936c6de3', 'Any', 'excluido.3774d80c2574470e88a99781936c6de3@local.invalid', '$2y$10$TzfH61SflMPiQpW4MFIP5OTf2/khZ51Q66XX1HiNl3SjgtruZj8au', 'VISTORIADOR', 0, '2026-07-19 02:27:35', '2026-06-23 22:51:43', '2026-07-19 02:27:35', 1, 0, '00000000-0000-4000-8000-000000000100'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa', 'Rosano Souza', 'excluido.74e02f95fbe642f3bedff8535e4d13aa@local.invalid', '$2y$10$pEGJqFBciTy5Zm4.xv1CTOi9eF29nXW4NWRaifY/h4f74SWAJd0EG', 'VISTORIADOR', 0, '2026-07-19 02:27:52', '2026-06-11 21:44:56', '2026-07-19 02:27:52', 0, 0, '00000000-0000-4000-8000-000000000100'),
+('95eb5557-65e8-11f1-85ef-047c16b568a3', 'Administrador', 'excluido.95eb555765e811f185ef047c16b568a3@local.invalid', '$2y$10$WDtKPgD44yf3STmx0SPfOuiy2AgKuWi5EEFozzSOfvZ3vLGGLW7Pq', 'ADMIN', 0, '2026-07-19 02:28:49', '2026-06-11 19:55:04', '2026-07-19 02:28:49', 0, 0, '00000000-0000-4000-8000-000000000100'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'itamar', 'analista@teste.com', '$2y$10$PftOdZbu7u.NZ65.r1NpO.s4jBDtysUHLwrLVH0jxALGB/VlWvn.2', 'ANALISTA', 1, NULL, '2026-07-16 15:38:12', '2026-07-20 15:13:20', 0, 0, '1801fc90-5734-417c-acf2-fed7399a23f1'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', 'Neto', 'teste1@teste.com', '$2y$10$nho8g81ikeWtP9U7G3Ft7uHZOARhHcfD.oVRW5/hMKQnZ7MRsLxOy', 'VISTORIADOR', 1, NULL, '2026-07-07 21:10:28', '2026-07-20 15:13:20', 1, 0, '1801fc90-5734-417c-acf2-fed7399a23f1'),
+('dd121661-feb4-42f6-895a-68eb0608d1e4', 'teste admin', 'teste@teste.com', '$2y$10$eK05TTRWPQmp7ldYEALHrOMRSVKUGMo6yqVv3kCU0yYiOz5KzBWw6', 'ADMIN', 1, NULL, '2026-07-05 13:39:17', '2026-07-20 15:13:20', 0, 0, '1801fc90-5734-417c-acf2-fed7399a23f1'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14', 'vistoriador teste', 'excluido.e5c68a85c9204b11bc939343d9d94f14@local.invalid', '$2y$10$LdMu1ZxZP.ysBC10FSV/TeWm5yuEeZkyenLH5fxHKx4QA6MbAPGeW', 'VISTORIADOR', 0, '2026-07-19 02:28:20', '2026-07-02 15:06:59', '2026-07-19 02:28:20', 0, 0, '00000000-0000-4000-8000-000000000100');
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `usuario_escritorios`
+--
+
+CREATE TABLE `usuario_escritorios` (
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `escritorio_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `principal` tinyint(1) NOT NULL DEFAULT '0',
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Despejando dados para a tabela `usuario_escritorios`
+--
+
+INSERT INTO `usuario_escritorios` (`usuario_id`, `escritorio_id`, `principal`, `criado_em`) VALUES
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', '1801fc90-5734-417c-acf2-fed7399a23f1', 1, '2026-07-20 15:13:20'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394', '1801fc90-5734-417c-acf2-fed7399a23f1', 1, '2026-07-20 15:13:20'),
+('dd121661-feb4-42f6-895a-68eb0608d1e4', '1801fc90-5734-417c-acf2-fed7399a23f1', 1, '2026-07-20 15:13:20');
 
 -- --------------------------------------------------------
 
@@ -1657,7 +1724,8 @@ CREATE TABLE `usuario_perfis` (
 INSERT INTO `usuario_perfis` (`usuario_id`, `perfil`, `criado_em`) VALUES
 ('9cd7e53a-da9d-4f2b-9b32-328be32da2f0', 'ANALISTA', '2026-07-16 15:38:12'),
 ('d2a16613-dfa4-4948-8de4-8c802abdf394', 'VISTORIADOR', '2026-07-14 22:05:44'),
-('dd121661-feb4-42f6-895a-68eb0608d1e4', 'ADMIN', '2026-07-14 22:05:44');
+('dd121661-feb4-42f6-895a-68eb0608d1e4', 'ADMIN', '2026-07-14 22:05:44'),
+('dd121661-feb4-42f6-895a-68eb0608d1e4', 'VISTORIADOR', '2026-07-20 13:31:05');
 
 -- --------------------------------------------------------
 
@@ -2119,6 +2187,14 @@ ALTER TABLE `embarcacoes`
   ADD KEY `idx_embarcacoes_foto_atualizada` (`foto_atualizada_em`);
 
 --
+-- Índices de tabela `escritorios`
+--
+ALTER TABLE `escritorios`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_escritorios_nome_cidade` (`nome`,`cidade`,`uf`),
+  ADD KEY `idx_escritorios_ativo` (`ativo`);
+
+--
 -- Índices de tabela `exigencias_catalogo`
 --
 ALTER TABLE `exigencias_catalogo`
@@ -2170,7 +2246,19 @@ ALTER TABLE `financeiro_historico_baixas`
 ALTER TABLE `financeiro_lancamentos`
   ADD PRIMARY KEY (`id`),
   ADD KEY `criado_por` (`criado_por`),
-  ADD KEY `fk_financeiro_cliente` (`cliente_id`);
+  ADD KEY `fk_financeiro_cliente` (`cliente_id`),
+  ADD KEY `idx_financeiro_escritorio_data` (`escritorio_id`,`data`),
+  ADD KEY `idx_financeiro_responsavel` (`responsavel_usuario_id`),
+  ADD KEY `idx_financeiro_proposta` (`proposta_id`);
+
+--
+-- Índices de tabela `financeiro_metas_mensais`
+--
+ALTER TABLE `financeiro_metas_mensais`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_meta_escritorio_usuario_competencia` (`escritorio_id`,`usuario_id`,`competencia`),
+  ADD KEY `idx_metas_competencia` (`competencia`),
+  ADD KEY `idx_metas_usuario` (`usuario_id`);
 
 --
 -- Índices de tabela `logs_atividade`
@@ -2211,7 +2299,8 @@ ALTER TABLE `propostas`
   ADD KEY `cliente_id` (`cliente_id`),
   ADD KEY `status` (`status`),
   ADD KEY `criado_por` (`criado_por`),
-  ADD KEY `idx_propostas_armador_id` (`armador_id`);
+  ADD KEY `idx_propostas_armador_id` (`armador_id`),
+  ADD KEY `idx_propostas_escritorio` (`escritorio_id`);
 
 --
 -- Índices de tabela `propostas_embarcacoes`
@@ -2261,7 +2350,16 @@ ALTER TABLE `tipos_embarcacao`
 ALTER TABLE `usuarios`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `email` (`email`),
-  ADD KEY `idx_usuarios_excluido_em` (`excluido_em`);
+  ADD KEY `idx_usuarios_excluido_em` (`excluido_em`),
+  ADD KEY `idx_usuarios_escritorio` (`escritorio_id`);
+
+--
+-- Índices de tabela `usuario_escritorios`
+--
+ALTER TABLE `usuario_escritorios`
+  ADD PRIMARY KEY (`usuario_id`,`escritorio_id`),
+  ADD KEY `idx_usuario_escritorios_escritorio` (`escritorio_id`),
+  ADD KEY `idx_usuario_escritorios_principal` (`usuario_id`,`principal`);
 
 --
 -- Índices de tabela `usuario_perfis`
@@ -2564,7 +2662,17 @@ ALTER TABLE `financeiro_historico_baixas`
 --
 ALTER TABLE `financeiro_lancamentos`
   ADD CONSTRAINT `financeiro_lancamentos_ibfk_1` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `fk_financeiro_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`);
+  ADD CONSTRAINT `fk_financeiro_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`),
+  ADD CONSTRAINT `fk_financeiro_escritorio` FOREIGN KEY (`escritorio_id`) REFERENCES `escritorios` (`id`) ON DELETE RESTRICT,
+  ADD CONSTRAINT `fk_financeiro_proposta` FOREIGN KEY (`proposta_id`) REFERENCES `propostas` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_financeiro_responsavel` FOREIGN KEY (`responsavel_usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL;
+
+--
+-- Restrições para tabelas `financeiro_metas_mensais`
+--
+ALTER TABLE `financeiro_metas_mensais`
+  ADD CONSTRAINT `fk_metas_escritorio` FOREIGN KEY (`escritorio_id`) REFERENCES `escritorios` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_metas_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
 
 --
 -- Restrições para tabelas `ordens_servico`
@@ -2589,6 +2697,7 @@ ALTER TABLE `portal_auditoria`
 --
 ALTER TABLE `propostas`
   ADD CONSTRAINT `fk_propostas_armador` FOREIGN KEY (`armador_id`) REFERENCES `clientes` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_propostas_escritorio` FOREIGN KEY (`escritorio_id`) REFERENCES `escritorios` (`id`) ON DELETE RESTRICT,
   ADD CONSTRAINT `propostas_ibfk_1` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE RESTRICT,
   ADD CONSTRAINT `propostas_ibfk_2` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL;
 
@@ -2606,6 +2715,19 @@ ALTER TABLE `propostas_servicos`
   ADD CONSTRAINT `propostas_servicos_ibfk_1` FOREIGN KEY (`proposta_id`) REFERENCES `propostas` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `propostas_servicos_ibfk_2` FOREIGN KEY (`servico_id`) REFERENCES `servicos` (`id`) ON DELETE RESTRICT,
   ADD CONSTRAINT `propostas_servicos_ibfk_3` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE SET NULL;
+
+--
+-- Restrições para tabelas `usuarios`
+--
+ALTER TABLE `usuarios`
+  ADD CONSTRAINT `fk_usuarios_escritorio` FOREIGN KEY (`escritorio_id`) REFERENCES `escritorios` (`id`) ON DELETE SET NULL;
+
+--
+-- Restrições para tabelas `usuario_escritorios`
+--
+ALTER TABLE `usuario_escritorios`
+  ADD CONSTRAINT `fk_usuario_escritorios_escritorio` FOREIGN KEY (`escritorio_id`) REFERENCES `escritorios` (`id`) ON DELETE RESTRICT,
+  ADD CONSTRAINT `fk_usuario_escritorios_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
 
 --
 -- Restrições para tabelas `usuario_perfis`

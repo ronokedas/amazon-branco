@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
 
 // Exigir login e cargo ADMIN
 verificar_sessao();
@@ -32,6 +33,18 @@ if (!empty($id)) {
         error_log('Erro ao buscar usuario: ' . $e->getMessage());
         setMensagem('error', 'Erro ao carregar dados do usuario.');
         redirecionar(APP_URL . 'usuarios');
+    }
+}
+
+$escritorios = financeiroEscritorios($pdo);
+$escritoriosSelecionados = [];
+$escritorioPrincipal = '';
+if ($usuario) {
+    $vinculos = financeiroEscritoriosUsuario($pdo, $usuario['id'], false);
+    $escritoriosSelecionados = array_column($vinculos, 'id');
+    $escritorioPrincipal = financeiroEscritorioUsuario($pdo, $usuario['id']) ?? '';
+    foreach ($vinculos as $vinculo) {
+        if (!(int)$vinculo['ativo'] && !in_array($vinculo['id'], array_column($escritorios, 'id'), true)) $escritorios[] = $vinculo;
     }
 }
 
@@ -131,6 +144,24 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label><i class="fas fa-building"></i> Escritório(s) do funcionário *</label>
+                    <small class="text-muted" style="display:block;margin-bottom:10px">Selecione todos os escritórios em que este funcionário pode atuar e marque um como principal.</small>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px">
+                        <?php foreach ($escritorios as $e): $selecionado=in_array($e['id'],$escritoriosSelecionados,true); ?>
+                        <div style="border:1px solid var(--cor-borda);border-radius:8px;padding:12px;<?= !(int)$e['ativo']?'opacity:.65':'' ?>">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0">
+                                <input type="checkbox" name="escritorios_ids[]" value="<?= h($e['id']) ?>" <?= $selecionado?'checked':'' ?> <?= !(int)$e['ativo']?'disabled':'' ?> onchange="atualizarEscritoriosUsuario()">
+                                <strong><?= h($e['nome']) ?></strong>
+                            </label>
+                            <small><?= h($e['cidade'].'/'.$e['uf']) ?><?= !(int)$e['ativo']?' · Inativo':'' ?></small>
+                            <?php if((int)$e['ativo']): ?><label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:.85rem"><input type="radio" name="escritorio_principal_id" value="<?= h($e['id']) ?>" <?= $e['id']===$escritorioPrincipal?'checked':'' ?>> Principal</label><?php endif ?>
+                        </div>
+                        <?php endforeach ?>
+                    </div>
+                    <div id="erroEscritorios" class="text-danger" style="display:none;margin-top:8px">Selecione ao menos um escritório e defina o principal.</div>
+                </div>
+
                 <hr style="border-color: var(--cor-borda); margin: 20px 0;">
 
                 <!-- Senha -->
@@ -209,5 +240,25 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </div>
     </div>
 </div>
+
+<script>
+function atualizarEscritoriosUsuario() {
+    const marcados = [...document.querySelectorAll('input[name="escritorios_ids[]"]:checked')];
+    const ids = new Set(marcados.map(c => c.value));
+    const radios = [...document.querySelectorAll('input[name="escritorio_principal_id"]')];
+    radios.forEach(r => { r.disabled = !ids.has(r.value); if (r.disabled) r.checked = false; });
+    if (marcados.length === 1) {
+        const unico = radios.find(r => r.value === marcados[0].value);
+        if (unico) unico.checked = true;
+    }
+}
+document.getElementById('formUsuario').addEventListener('submit', function(event) {
+    const temEscritorio = document.querySelector('input[name="escritorios_ids[]"]:checked');
+    const temPrincipal = document.querySelector('input[name="escritorio_principal_id"]:checked');
+    document.getElementById('erroEscritorios').style.display = temEscritorio && temPrincipal ? 'none' : 'block';
+    if (!temEscritorio || !temPrincipal) event.preventDefault();
+});
+atualizarEscritoriosUsuario();
+</script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

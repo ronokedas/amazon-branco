@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
 
 // Exigir login e cargo ADMIN
 verificar_sessao();
@@ -24,9 +25,7 @@ $isEdicao = false;
 if (!empty($id)) {
     $isEdicao = true;
     try {
-        $stmt = $pdo->prepare("SELECT * FROM financeiro_lancamentos WHERE id = :id LIMIT 1");
-        $stmt->execute([':id' => $id]);
-        $lancamento = $stmt->fetch(PDO::FETCH_ASSOC);
+        $lancamento = financeiroExigirAcessoLancamento($pdo, $id);
 
         if (!$lancamento) {
             setMensagem('error', 'Lancamento nao encontrado.');
@@ -46,6 +45,18 @@ if (!empty($id)) {
         setMensagem('error', 'Erro ao carregar dados do lancamento.');
         redirecionar(APP_URL . 'financeiro');
     }
+}
+
+try {
+    $escritorioSelecionado = $lancamento['escritorio_id'] ?? financeiroResolverEscritorio($pdo, $_GET['escritorio_id'] ?? null);
+    if ($escritorioSelecionado === 'todos') $escritorioSelecionado = financeiroEscritorioUsuario($pdo) ?: (financeiroEscritorios($pdo)[0]['id'] ?? '');
+    $escritorios = financeiroEscritoriosPermitidos($pdo);
+    $exibirSeletorEscritorio = financeiroEhAdmin() || count($escritorios) > 1;
+    $todosVendedores = $pdo->query("SELECT u.id,u.nome,GROUP_CONCAT(ue.escritorio_id) escritorios_ids FROM usuarios u JOIN usuario_escritorios ue ON ue.usuario_id=u.id WHERE u.cargo='VENDEDOR' AND u.ativo=1 AND u.excluido_em IS NULL GROUP BY u.id,u.nome ORDER BY u.nome")->fetchAll(PDO::FETCH_ASSOC);
+    $responsavelSelecionado = $lancamento['responsavel_usuario_id'] ?? (getCargo()==='VENDEDOR' ? ($_SESSION['usuario_id'] ?? '') : '');
+} catch (Throwable $e) {
+    setMensagem('error', $e->getMessage());
+    redirecionar(APP_URL . 'financeiro');
 }
 
 // Gerar CSRF token
@@ -79,6 +90,28 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>">
                 <input type="hidden" name="id" value="<?php echo h($lancamento['id'] ?? ''); ?>">
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="escritorio_id"><i class="fas fa-building"></i> Escritório *</label>
+                        <?php if ($exibirSeletorEscritorio): ?>
+                        <select id="escritorio_id" name="escritorio_id" required>
+                            <?php foreach ($escritorios as $e): ?><option value="<?= h($e['id']) ?>" <?= $e['id']===$escritorioSelecionado?'selected':'' ?>><?= h($e['nome'].' · '.$e['cidade'].'/'.$e['uf']) ?></option><?php endforeach ?>
+                        </select>
+                        <?php else: ?>
+                        <input type="hidden" id="escritorio_id" name="escritorio_id" value="<?= h($escritorioSelecionado) ?>">
+                        <input value="<?= h(($escritorios[0]['nome']??'Escritório').' · '.($escritorios[0]['cidade']??'').'/'.($escritorios[0]['uf']??'')) ?>" disabled>
+                        <?php endif ?>
+                    </div>
+                    <div class="form-group" id="grupoResponsavel">
+                        <label for="responsavel_usuario_id"><i class="fas fa-user-tie"></i> Vendedor responsável</label>
+                        <select id="responsavel_usuario_id" name="responsavel_usuario_id" data-original="<?= h($lancamento['responsavel_usuario_id']??'') ?>" data-original-escritorio="<?= h($lancamento['escritorio_id']??'') ?>">
+                            <option value="">Sem responsável</option>
+                            <?php foreach ($todosVendedores as $v): ?><option value="<?= h($v['id']) ?>" data-escritorios="<?= h($v['escritorios_ids']) ?>" <?= $v['id']===$responsavelSelecionado?'selected':'' ?>><?= h($v['nome']) ?></option><?php endforeach ?>
+                        </select>
+                        <small class="text-muted">Usado no painel de desempenho das receitas.</small>
+                    </div>
+                </div>
 
                 <div class="grid-2">
                     <!-- Tipo -->
@@ -411,6 +444,34 @@ if (comprovantesInput && arquivosParaUpload) {
         atualizarListaArquivosSelecionados();
     });
 }
+</script>
+
+<script>
+(function () {
+    const escritorio = document.getElementById('escritorio_id');
+    const tipo = document.getElementById('tipo');
+    const responsavel = document.getElementById('responsavel_usuario_id');
+    const grupo = document.getElementById('grupoResponsavel');
+    if (!escritorio || !tipo || !responsavel) return;
+    function atualizarResponsaveis() {
+        const escritorioId = escritorio.value;
+        Array.from(responsavel.options).forEach(function (opcao, indice) {
+            if (indice === 0) return;
+            const vinculado = (opcao.dataset.escritorios || '').split(',').includes(escritorioId);
+            const historico = opcao.value === responsavel.dataset.original && escritorioId === responsavel.dataset.originalEscritorio;
+            const visivel = vinculado || historico;
+            opcao.hidden = !visivel;
+            opcao.disabled = !visivel;
+            if (!visivel && opcao.selected) responsavel.value = '';
+        });
+        const receita = tipo.value === 'RECEITA';
+        grupo.style.display = receita ? '' : 'none';
+        responsavel.disabled = !receita;
+    }
+    escritorio.addEventListener('change', atualizarResponsaveis);
+    tipo.addEventListener('change', atualizarResponsaveis);
+    atualizarResponsaveis();
+})();
 </script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

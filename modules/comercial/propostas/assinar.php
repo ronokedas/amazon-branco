@@ -7,6 +7,8 @@
 
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../includes/functions.php';
+require_once __DIR__ . '/../../../includes/auth.php';
+require_once __DIR__ . '/../../../includes/financeiro_escritorios.php';
 
 // Esta página é PÚBLICA — não requer login
 $token = $_GET['token'] ?? '';
@@ -125,6 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             ':observacoes' => 'Lançamento gerado automaticamente após assinatura da proposta.',
             ':criado_por'  => $prop['criado_por'] ?? null
         ]);
+        $pdo->prepare('UPDATE financeiro_lancamentos SET escritorio_id=:escritorio, responsavel_usuario_id=:responsavel, proposta_id=:proposta WHERE cliente_id=:cliente AND descricao LIKE :numero AND proposta_id IS NULL AND ativo=1 ORDER BY criado_em DESC LIMIT 1')
+            ->execute([':escritorio'=>$prop['escritorio_id'] ?: ESCRITORIO_MATRIZ_ID, ':responsavel'=>financeiroResponsavelVenda($pdo,$prop['criado_por']??null), ':proposta'=>$prop['id'], ':cliente'=>$prop['cliente_id'], ':numero'=>'%'.$prop['numero']]);
 
         // GATILHO 2: Rascunho no Agendamentos
         $stmtEmb = $pdo->prepare("

@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
 
 // Exigir login e cargo ADMIN
 verificar_sessao();
@@ -20,10 +21,16 @@ $filtro_tipo      = $_GET['tipo'] ?? '';
 $filtro_data_ini  = $_GET['data_ini'] ?? '';
 $filtro_data_fim  = $_GET['data_fim'] ?? '';
 $filtro_categoria = $_GET['categoria'] ?? '';
+$escritorios = financeiroEscritoriosPermitidos($pdo);
+$podeSelecionarEscritorio = financeiroEhAdmin() || count($escritorios) > 1;
+$escritoriosPorId=[];foreach($escritorios as $e)$escritoriosPorId[$e['id']]=$e;
+try { $filtro_escritorio = financeiroResolverEscritorio($pdo, $_GET['escritorio_id'] ?? null); }
+catch (Throwable $e) { setMensagem('error',$e->getMessage()); redirecionar(APP_URL.'dashboard'); }
 
 // Construir query com filtros
-$sql = "SELECT id, tipo, descricao, valor, valor_original, saldo_devedor, status, data, categoria, observacoes, criado_em, atualizado_em FROM financeiro_lancamentos WHERE ativo = 1";
+$sql = "SELECT id, escritorio_id, responsavel_usuario_id, tipo, descricao, valor, valor_original, saldo_devedor, status, data, categoria, observacoes, criado_em, atualizado_em FROM financeiro_lancamentos WHERE ativo = 1";
 $params = [];
+if ($filtro_escritorio !== 'todos') { $sql .= ' AND escritorio_id = :escritorio'; $params[':escritorio']=$filtro_escritorio; }
 
 if (!empty($filtro_tipo) && in_array($filtro_tipo, ['RECEITA', 'DESPESA'])) {
     $sql .= " AND tipo = :tipo";
@@ -76,6 +83,7 @@ try {
         WHERE l.ativo = 1 AND l.status != 'CANCELADO'
     ";
     $paramsTotais = [];
+    if ($filtro_escritorio !== 'todos') { $sqlTotais .= ' AND l.escritorio_id = :escritorio'; $paramsTotais[':escritorio']=$filtro_escritorio; }
 
     if (!empty($filtro_tipo) && in_array($filtro_tipo, ['RECEITA', 'DESPESA'])) {
         $sqlTotais .= " AND l.tipo = :tipo";
@@ -108,7 +116,10 @@ $saldo = $totalReceitas - $totalDespesas;
 
 // Buscar categorias distintas para o filtro
 try {
-    $categorias = $pdo->query("SELECT DISTINCT categoria FROM financeiro_lancamentos WHERE categoria IS NOT NULL AND categoria != '' ORDER BY categoria ASC")->fetchAll(PDO::FETCH_COLUMN);
+    $sqlCategorias="SELECT DISTINCT categoria FROM financeiro_lancamentos WHERE categoria IS NOT NULL AND categoria != ''";
+    $paramsCategorias=[];
+    if($filtro_escritorio!=='todos'){$sqlCategorias.=' AND escritorio_id=:escritorio';$paramsCategorias[':escritorio']=$filtro_escritorio;}
+    $sqlCategorias.=' ORDER BY categoria ASC';$stmtCategorias=$pdo->prepare($sqlCategorias);$stmtCategorias->execute($paramsCategorias);$categorias=$stmtCategorias->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {
     $categorias = [];
 }
@@ -131,7 +142,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     <div class="tabela-container">
         <div class="tabela-header">
             <h3><i class="fas fa-dollar-sign"></i> Financeiro</h3>
-            <a href="<?php echo APP_URL; ?>financeiro/form" class="btn btn-primary btn-sm">
+            <a href="<?php echo APP_URL; ?>financeiro/form?escritorio_id=<?= urlencode($filtro_escritorio) ?>" class="btn btn-primary btn-sm">
                 <i class="fas fa-plus"></i> Novo Lancamento
             </a>
         </div>
@@ -194,6 +205,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <!-- Filtros -->
         <form method="GET" action="<?php echo APP_URL; ?>financeiro" style="margin: 0 20px 15px;">
             <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+                <div class="form-group" style="margin-bottom:0;flex:1;min-width:190px"><label style="font-size:.8rem"><i class="fas fa-building"></i> Escritório</label><select name="escritorio_id" style="width:100%;padding:8px 10px" <?= $podeSelecionarEscritorio?'':'disabled' ?>><?php if(financeiroEhAdmin()): ?><option value="todos" <?= $filtro_escritorio==='todos'?'selected':'' ?>>Todos os escritórios</option><?php endif ?><?php foreach($escritorios as $e): ?><option value="<?= h($e['id']) ?>" <?= $filtro_escritorio===$e['id']?'selected':'' ?>><?= h($e['nome'].' · '.$e['cidade'].'/'.$e['uf']) ?></option><?php endforeach ?></select><?php if(!$podeSelecionarEscritorio): ?><input type="hidden" name="escritorio_id" value="<?= h($filtro_escritorio) ?>"><?php endif ?></div>
                 <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 120px;">
                     <label style="font-size: 0.8rem;"><i class="fas fa-tag"></i> Tipo</label>
                     <select name="tipo" style="width: 100%; padding: 8px 10px;">
@@ -219,9 +231,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <i class="fas fa-search"></i> Filtrar
                     </button>
                 </div>
-                <?php if (!empty($filtro_tipo) || !empty($filtro_data_ini) || !empty($filtro_data_fim) || !empty($filtro_categoria)): ?>
+                <?php if (!empty($filtro_tipo) || !empty($filtro_data_ini) || !empty($filtro_data_fim) || !empty($filtro_categoria) || $filtro_escritorio!=='todos'): ?>
                 <div class="form-group" style="margin-bottom: 0;">
-                    <a href="<?php echo APP_URL; ?>financeiro" class="btn btn-secondary btn-sm">
+                    <a href="<?php echo financeiroUrl(['escritorio_id'=>financeiroEhAdmin()?'todos':$filtro_escritorio]); ?>" class="btn btn-secondary btn-sm">
                         <i class="fas fa-times"></i> Limpar
                     </a>
                 </div>
@@ -239,6 +251,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <table>
                 <thead>
                     <tr>
+                        <?php if($filtro_escritorio==='todos'): ?><th>Escritório</th><?php endif ?>
                         <th>Data</th>
                         <th>Tipo</th>
                         <th>Status</th>
@@ -251,6 +264,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <tbody>
                     <?php foreach ($lancamentos as $l): ?>
                     <tr>
+                        <?php if($filtro_escritorio==='todos'): ?><td><strong><?= h($escritoriosPorId[$l['escritorio_id']]['nome']??'Escritório') ?></strong></td><?php endif ?>
                         <td><?php echo formatarData($l['data']); ?></td>
                         <td>
                             <?php if ($l['tipo'] === 'RECEITA'): ?>
@@ -347,6 +361,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </header>
         <form method="POST" action="<?php echo APP_URL; ?>financeiro/actions?action=baixar" id="formBaixa" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>">
+            <input type="hidden" name="escritorio_id" value="<?= h($filtro_escritorio) ?>">
             <input type="hidden" name="lancamento_id" id="baixaLancamentoId">
             <div class="financeiro-modal__body">
                 <div class="baixa-resumo">

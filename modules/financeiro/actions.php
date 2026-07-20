@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
 
 // Exigir login e cargo ADMIN
 verificar_sessao();
@@ -177,6 +178,7 @@ switch ($action) {
         }
 
         $lancamentoId = trim($_POST['lancamento_id'] ?? '');
+        $escritorioRetorno = financeiroResolverEscritorio($pdo, $_POST['escritorio_id'] ?? null);
         $formaPagamento = trim($_POST['forma_pagamento'] ?? '');
         $formasPagamentoValidas = ['a_vista', 'parcelado', 'boleto', 'pix'];
         $dataPagamento = trim($_POST['data_pagamento'] ?? '');
@@ -189,6 +191,7 @@ switch ($action) {
         }
 
         try {
+            financeiroExigirAcessoLancamento($pdo, $lancamentoId);
             $pdo->beginTransaction();
 
             $stmt = $pdo->prepare("SELECT id, descricao, status, saldo_devedor FROM financeiro_lancamentos WHERE id = :id AND ativo = 1 FOR UPDATE");
@@ -252,7 +255,7 @@ switch ($action) {
             setMensagem('error', $e instanceof RuntimeException ? $e->getMessage() : 'Erro ao registrar a baixa.');
         }
 
-        redirecionar(APP_URL . 'financeiro');
+        redirecionar(financeiroUrl(['escritorio_id'=>$escritorioRetorno]));
         break;
 
     // ==============================
@@ -282,12 +285,18 @@ switch ($action) {
         $valor           = trim($_POST['valor'] ?? '');
         $categoria       = trim($_POST['categoria'] ?? '');
         $observacoes     = trim($_POST['observacoes'] ?? '');
+        $escritorioId    = financeiroResolverEscritorio($pdo, $_POST['escritorio_id'] ?? null);
+        $responsavelId   = $tipo === 'RECEITA' ? trim($_POST['responsavel_usuario_id'] ?? '') : '';
 
         if (empty($data)) $data = null;
 
         // Validacoes
         $erros = [];
         $errosCampos = [];
+        if ($escritorioId === 'todos') {
+            $erros[] = 'Selecione um escritório específico para o lançamento.';
+            $escritorioId = '';
+        }
 
         if (!in_array($tipo, ['RECEITA', 'DESPESA'])) {
             $erros[] = 'Tipo invalido. Selecione RECEITA ou DESPESA.';
@@ -321,6 +330,15 @@ switch ($action) {
             $errosCampos['data_vencimento'] = 'Informe a data de vencimento.';
         }
 
+        if ($responsavelId !== '') {
+            $stmtResponsavel = $pdo->prepare("SELECT COUNT(*) FROM usuarios u WHERE u.id=:id AND u.cargo='VENDEDOR' AND u.excluido_em IS NULL AND ((u.ativo=1 AND EXISTS(SELECT 1 FROM usuario_escritorios ue WHERE ue.usuario_id=u.id AND ue.escritorio_id=:escritorio)) OR EXISTS(SELECT 1 FROM financeiro_lancamentos l WHERE l.id=:lancamento AND l.escritorio_id=:escritorio_historico AND l.responsavel_usuario_id=u.id))");
+            $stmtResponsavel->execute([':id'=>$responsavelId, ':escritorio'=>$escritorioId, ':lancamento'=>$id, ':escritorio_historico'=>$escritorioId]);
+            if (!(int)$stmtResponsavel->fetchColumn()) {
+                $erros[] = 'O vendedor responsável não pertence ao escritório selecionado.';
+                $errosCampos['responsavel_usuario_id'] = 'Selecione um vendedor deste escritório.';
+            }
+        }
+
         if (!empty($erros)) {
             setMensagem('error', implode(' ', $erros), $errosCampos);
             $url = APP_URL . 'financeiro/form';
@@ -330,6 +348,8 @@ switch ($action) {
 
         try {
             $isEdicao = !empty($id);
+
+            if ($isEdicao) financeiroExigirAcessoLancamento($pdo, $id);
 
             $pdo->beginTransaction();
             $lancamentoId = $id;
@@ -356,8 +376,10 @@ switch ($action) {
                     ? $atual['saldo_devedor']
                     : (in_array($status, ['PAGO', 'CANCELADO'], true) ? '0.00' : $valorLimpo);
 
-                $stmt = $pdo->prepare("UPDATE financeiro_lancamentos SET tipo = :tipo, frequencia = :frequencia, status = :status, data_vencimento = :data_vencimento, cliente_id = :cliente_id, descricao = :descricao, valor = :valor, valor_original = :valor_original, saldo_devedor = :saldo_devedor, data = :data, categoria = :categoria, observacoes = :observacoes WHERE id = :id");
+                $stmt = $pdo->prepare("UPDATE financeiro_lancamentos SET escritorio_id=:escritorio_id, responsavel_usuario_id=:responsavel_usuario_id, tipo = :tipo, frequencia = :frequencia, status = :status, data_vencimento = :data_vencimento, cliente_id = :cliente_id, descricao = :descricao, valor = :valor, valor_original = :valor_original, saldo_devedor = :saldo_devedor, data = :data, categoria = :categoria, observacoes = :observacoes WHERE id = :id");
                 $stmt->execute([
+                    ':escritorio_id'   => $escritorioId,
+                    ':responsavel_usuario_id' => $responsavelId ?: null,
                     ':tipo'            => $tipo,
                     ':frequencia'      => $frequencia,
                     ':status'          => $status,
@@ -377,8 +399,8 @@ switch ($action) {
                 if ($status === 'PAGO' && $frequencia !== 'unica') {
                     // Verifica se já foi gerado (evitar duplicação).
                     // Para simplificar, verificamos se existe algum lançamento com mesma descricao e data_vencimento maior que a deste
-                    $stmtClone = $pdo->prepare("SELECT COUNT(*) as qtd FROM financeiro_lancamentos WHERE descricao = :descricao AND data_vencimento > :dv_atual");
-                    $stmtClone->execute([':descricao' => $descricao, ':dv_atual' => $data_vencimento]);
+                    $stmtClone = $pdo->prepare("SELECT COUNT(*) as qtd FROM financeiro_lancamentos WHERE escritorio_id=:escritorio AND descricao = :descricao AND data_vencimento > :dv_atual");
+                    $stmtClone->execute([':escritorio'=>$escritorioId, ':descricao' => $descricao, ':dv_atual' => $data_vencimento]);
                     $ja_existe = $stmtClone->fetch()['qtd'] > 0;
 
                     if (!$ja_existe) {
@@ -389,9 +411,11 @@ switch ($action) {
 
                         $nova_data_vencimento = date('Y-m-d', strtotime("+{$meses} months", strtotime($data_vencimento)));
 
-                        $stmtInsert = $pdo->prepare("INSERT INTO financeiro_lancamentos (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por) VALUES (:id, :tipo, :frequencia, :status, :data_vencimento, :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, :data, :categoria, :observacoes, :criado_por)");
+                        $stmtInsert = $pdo->prepare("INSERT INTO financeiro_lancamentos (id, escritorio_id, responsavel_usuario_id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por) VALUES (:id, :escritorio_id, :responsavel_usuario_id, :tipo, :frequencia, :status, :data_vencimento, :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, :data, :categoria, :observacoes, :criado_por)");
                         $stmtInsert->execute([
                             ':id'              => gerarUUID(),
+                            ':escritorio_id'   => $escritorioId,
+                            ':responsavel_usuario_id' => $responsavelId ?: null,
                             ':tipo'            => $tipo,
                             ':frequencia'      => $frequencia,
                             ':status'          => 'PENDENTE',
@@ -420,9 +444,11 @@ switch ($action) {
                 // Criar
                 $lancamentoId = gerarUUID();
                 $saldoInicial = in_array($status, ['PAGO', 'CANCELADO'], true) ? '0.00' : $valorLimpo;
-                $stmt = $pdo->prepare("INSERT INTO financeiro_lancamentos (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por) VALUES (:id, :tipo, :frequencia, :status, :data_vencimento, :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, :data, :categoria, :observacoes, :criado_por)");
+                $stmt = $pdo->prepare("INSERT INTO financeiro_lancamentos (id, escritorio_id, responsavel_usuario_id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por) VALUES (:id, :escritorio_id, :responsavel_usuario_id, :tipo, :frequencia, :status, :data_vencimento, :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, :data, :categoria, :observacoes, :criado_por)");
                 $stmt->execute([
                     ':id'              => $lancamentoId,
+                    ':escritorio_id'   => $escritorioId,
+                    ':responsavel_usuario_id' => $responsavelId ?: null,
                     ':tipo'            => $tipo,
                     ':frequencia'      => $frequencia,
                     ':status'          => $status,
@@ -446,9 +472,11 @@ switch ($action) {
 
                     $nova_data_vencimento = date('Y-m-d', strtotime("+{$meses} months", strtotime($data_vencimento)));
 
-                    $stmtInsert = $pdo->prepare("INSERT INTO financeiro_lancamentos (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por) VALUES (:id, :tipo, :frequencia, :status, :data_vencimento, :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, :data, :categoria, :observacoes, :criado_por)");
+                    $stmtInsert = $pdo->prepare("INSERT INTO financeiro_lancamentos (id, escritorio_id, responsavel_usuario_id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por) VALUES (:id, :escritorio_id, :responsavel_usuario_id, :tipo, :frequencia, :status, :data_vencimento, :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, :data, :categoria, :observacoes, :criado_por)");
                     $stmtInsert->execute([
                         ':id'              => gerarUUID(),
+                        ':escritorio_id'   => $escritorioId,
+                        ':responsavel_usuario_id' => $responsavelId ?: null,
                         ':tipo'            => $tipo,
                         ':frequencia'      => $frequencia,
                         ':status'          => 'PENDENTE',
@@ -484,7 +512,7 @@ switch ($action) {
             setMensagem('error', $mensagemErro);
         }
 
-        redirecionar(APP_URL . 'financeiro');
+        redirecionar(financeiroUrl(['escritorio_id'=>$escritorioId]));
         break;
 
     // ==============================
@@ -510,6 +538,7 @@ switch ($action) {
         }
 
         try {
+            financeiroExigirAcessoLancamento($pdo, $lancamentoId);
             $stmt = $pdo->prepare("
                 SELECT id, lancamento_id, caminho
                 FROM financeiro_comprovantes
@@ -552,6 +581,7 @@ switch ($action) {
         }
 
         try {
+            financeiroExigirAcessoLancamento($pdo, $id);
             $stmt = $pdo->prepare("UPDATE financeiro_lancamentos SET ativo = 0 WHERE id = :id");
             $stmt->execute([':id' => $id]);
             setMensagem('success', 'Lancamento excluido com sucesso!');

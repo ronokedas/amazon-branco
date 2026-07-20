@@ -10,12 +10,18 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
 
 verificar_sessao();
 if (!in_array(getCargo(), ['ADMIN', 'VENDEDOR'], true)) {
     setMensagem('error', 'Acesso negado.');
     redirecionar(APP_URL . 'dashboard');
 }
+
+$escritoriosProposta = financeiroEscritoriosPermitidos($pdo);
+$escritorioProposta = financeiroResolverEscritorio($pdo, $_GET['escritorio_id'] ?? null);
+if ($escritorioProposta === 'todos') $escritorioProposta = financeiroEscritorioUsuario($pdo) ?: ($escritoriosProposta[0]['id'] ?? '');
+$selecionarEscritorioProposta = count($escritoriosProposta) > 1;
 
 // Buscar proprietarios ativos
 try {
@@ -109,6 +115,16 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <h3><i class="fas fa-user-tie"></i> Passo 1: Proprietário e responsável pelo fechamento</h3>
                 </div>
                 <div class="card-body">
+                    <div class="form-group" style="margin-bottom:18px">
+                        <label for="escritorio_id"><i class="fas fa-building"></i> Escritório da proposta *</label>
+                        <?php if($selecionarEscritorioProposta): ?>
+                        <select id="escritorio_id" name="escritorio_id" required><?php foreach($escritoriosProposta as $e): ?><option value="<?= h($e['id']) ?>" <?= $e['id']===$escritorioProposta?'selected':'' ?>><?= h($e['nome'].' · '.$e['cidade'].'/'.$e['uf']) ?></option><?php endforeach ?></select>
+                        <small class="text-muted">A receita gerada pela proposta ficará vinculada a este escritório.</small>
+                        <?php else: ?>
+                        <input type="hidden" name="escritorio_id" value="<?= h($escritorioProposta) ?>">
+                        <input value="<?= h(($escritoriosProposta[0]['nome']??'Escritório').' · '.($escritoriosProposta[0]['cidade']??'').'/'.($escritoriosProposta[0]['uf']??'')) ?>" disabled>
+                        <?php endif ?>
+                    </div>
                     <div class="wizard-helper">
                         <i class="fas fa-info-circle"></i>
                         <span>Primeiro escolha o proprietário da embarcação. Se desejar, informe quem foi o responsável pelo fechamento da proposta e seu telefone.</span>

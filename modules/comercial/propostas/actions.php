@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../includes/functions.php';
 require_once __DIR__ . '/../../../includes/auth.php';
+require_once __DIR__ . '/../../../includes/financeiro_escritorios.php';
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
@@ -121,6 +122,8 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
                 : 'Lançamento gerado automaticamente após assinatura da proposta.',
             ':criado_por' => $criado_por,
         ]);
+        $pdo->prepare('UPDATE financeiro_lancamentos SET escritorio_id=:escritorio, responsavel_usuario_id=:responsavel, proposta_id=:proposta WHERE cliente_id=:cliente AND descricao=:descricao AND ativo=1')
+            ->execute([':escritorio'=>$prop['escritorio_id'] ?: ESCRITORIO_MATRIZ_ID, ':responsavel'=>financeiroResponsavelVenda($pdo,$prop['criado_por']??null), ':proposta'=>$prop['id'], ':cliente'=>$prop['cliente_id'], ':descricao'=>$descricaoFinanceiro]);
     }
 
     $stmtEmb = $pdo->prepare("
@@ -179,6 +182,8 @@ switch ($action) {
 
     case 'criar':
         try {
+            $escritorioId = financeiroResolverEscritorio($pdo, $_POST['escritorio_id'] ?? null);
+            if ($escritorioId === 'todos') throw new RuntimeException('Selecione o escritório da proposta.');
             $cliente_json = $_POST['dados_cliente'] ?? '{}';
             $clienteData  = json_decode($cliente_json, true);
             $cliente_id   = $clienteData['id'] ?? '';
@@ -298,6 +303,8 @@ switch ($action) {
             if (!$proposta_id) {
                 throw new Exception('Erro ao recuperar ID da proposta.');
             }
+            $pdo->prepare('UPDATE propostas SET escritorio_id=:escritorio WHERE id=:id')
+                ->execute([':escritorio'=>$escritorioId, ':id'=>$proposta_id]);
 
             // 4. Vincular embarcações (únicas)
             $stmtEmb = $pdo->prepare("INSERT INTO propostas_embarcacoes (id, proposta_id, embarcacao_id) VALUES (UUID(), :proposta_id, :embarcacao_id)");
