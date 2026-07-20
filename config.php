@@ -20,10 +20,17 @@ mb_http_output('UTF-8');
 
 // Sessao
 if (session_status() === PHP_SESSION_NONE) {
+    // Nao expirar a autenticacao por inatividade durante o uso normal.
+    // O prazo longo abaixo existe apenas para a manutencao tecnica dos arquivos
+    // de sessao e do cookie; a saida continua sendo feita pelo logout explicito.
+    $sessionLifetime = 60 * 60 * 24 * 365;
+    ini_set('session.gc_maxlifetime', (string)$sessionLifetime);
+    ini_set('session.cookie_lifetime', (string)$sessionLifetime);
+
     $sessionSecure = str_starts_with(strtolower((string)(getenv('APP_URL') ?: '')), 'https://')
         || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
     session_set_cookie_params([
-        'lifetime' => 60 * 60 * 24 * 30,
+        'lifetime' => $sessionLifetime,
         'path' => '/',
         'secure' => $sessionSecure,
         'httponly' => true,

@@ -212,6 +212,10 @@ button { color: inherit; }
 .photo-grid figure { position: relative; display: grid; grid-template-rows: 1fr auto; }
 .photo-grid figure figcaption { min-height: 34px; padding: 5px 7px; display: flex; align-items: center; justify-content: space-between; gap: 6px; color: var(--muted); background: #fff; font-size: 10px; }
 .photo-grid figure figcaption button { width: 32px; height: 32px; display: grid; place-items: center; color: var(--red); background: var(--red-soft); border: 0; border-radius: 6px; }
+.sync-safety-note { margin: 10px 0 0; padding: 10px 11px; display: grid; gap: 3px; color: #725309; background: #fff8df; border: 1px solid #e8d28b; border-radius: 8px; }
+.sync-safety-note strong { font-size: 11px; }
+.sync-safety-note span { font-size: 10px; line-height: 1.4; }
+.evidence-error { margin-right: 0; margin-left: 0; }
 .photo-add { min-height: 126px; display: grid; place-items: center; align-content: center; gap: 8px; color: var(--muted); border: 1px dashed #b7c5c1; border-radius: 7px; background: #fff; font-size: 11px; cursor: pointer; }
 .photo-add input, .file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 textarea, .evidence-content > input, .date-field { width: 100%; border: 1px solid #ccd5d2; border-radius: 7px; background: #fff; color: var(--text); font-size: 13px; }

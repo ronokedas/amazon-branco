@@ -102,6 +102,7 @@ export default function App() {
   const [tabLoading, setTabLoading] = useState(false)
   const autoSyncAttempt = useRef('')
   const autosaveSignature = useRef('')
+  const syncPromiseRef = useRef(null)
 
   useEffect(() => {
     const capture = event => {
@@ -230,15 +231,16 @@ export default function App() {
       if (propagarErro) throw error
       return { ok: false, error }
     }
-    if (syncing) {
-      const error = new Error('A sincronização já está em andamento. Aguarde alguns segundos.')
-      if (propagarErro) throw error
-      return { ok: false, error }
+    if (syncPromiseRef.current) {
+      const resultadoEmAndamento = await syncPromiseRef.current
+      if (propagarErro && resultadoEmAndamento?.ok === false) throw resultadoEmAndamento.error
+      return resultadoEmAndamento
     }
     setSyncing(true)
     setFormError('')
-    try {
-      const aplicarProgresso = ({ operacao, dados }) => {
+    const executar = async () => {
+      try {
+        const aplicarProgresso = ({ operacao, dados }) => {
         if (operacao.tipo === 'rascunho' && dados?.versao) {
           atualizarPacote(current => current ? ({ ...current, vistoria: { ...(current.vistoria || {}), id: dados.vistoria_id, mobile_versao: dados.versao } }) : current)
         }
@@ -300,17 +302,27 @@ export default function App() {
       const finalizou = resultado.resultados?.some(item => item?.operacao?.tipo === 'finalizacao')
       if (screen === 'reports' || finalizou) await carregarRelatorios()
       if (finalizou) setScreen('reports')
-      return { ok: true, ...resultado }
-    } catch (error) {
-      const detail = Array.isArray(error.details) ? error.details.join(' ') : Object.values(error.details || {}).join(' ')
-      setFormError(`${error.message}${detail ? ` ${detail}` : ''}`)
-      await refreshPending()
-      if (propagarErro) throw error
-      return { ok: false, error }
-    } finally {
-      setSyncing(false)
+        return { ok: true, ...resultado }
+      } catch (error) {
+        const detail = Array.isArray(error.details) ? error.details.join(' ') : Object.values(error.details || {}).join(' ')
+        setFormError(`${error.message}${detail ? ` ${detail}` : ''}`)
+        await refreshPending()
+        return { ok: false, error }
+      } finally {
+        setSyncing(false)
+      }
     }
-  }, [atualizarAgenda, atualizarPacote, carregarAgenda, carregarPacotes, carregarRelatorios, refreshPending, screen, syncing, usuarioId])
+
+    const tarefa = executar()
+    syncPromiseRef.current = tarefa
+    try {
+      const resultado = await tarefa
+      if (propagarErro && resultado?.ok === false) throw resultado.error
+      return resultado
+    } finally {
+      if (syncPromiseRef.current === tarefa) syncPromiseRef.current = null
+    }
+  }, [atualizarAgenda, atualizarPacote, carregarAgenda, carregarPacotes, carregarRelatorios, refreshPending, screen, usuarioId])
 
   useEffect(() => {
     const key = `${online ? 'online' : 'offline'}:${pending}`
@@ -565,15 +577,15 @@ export default function App() {
     setSaving(true)
     setFormError('')
     try {
-      const vistoriaSincronizada = await salvarRascunho()
-      if (online && !vistoriaSincronizada?.id) throw new Error('O rascunho ainda não foi confirmado pelo servidor. Toque em Enviar agora e tente novamente.')
+      await salvarRascunho({ processar: false })
       setScreen('summary')
+      if (online) await sincronizar()
     } catch (error) {
       setFormError(error.message || 'Não foi possível preparar a revisão da vistoria.')
     } finally {
       setSaving(false)
     }
-  }, [online, salvarRascunho])
+  }, [online, salvarRascunho, sincronizar])
 
   const adicionarFoto = useCallback(async file => {
     if (!file || !itemEvidencia || !pacote) return
@@ -705,7 +717,7 @@ export default function App() {
   if (loading) return <div className="loading-overlay"><LoaderCircle className="spin" /></div>
 
   if (screen === 'checklist' && pacote) return <ChecklistScreen pacote={pacote} respostas={respostas} detalhes={detalhes} online={online} pending={pending} syncing={syncing} saving={saving} error={formError} onSync={sincronizar} onBack={() => setScreen('agenda')} onChange={mudarStatus} onEvidence={abrirEvidencia} onDetailChange={atualizarDetalhe} onAddRequirement={adicionarExigenciaAvulsa} onRequirementChange={atualizarExigenciaAvulsa} onRemoveRequirement={removerExigenciaAvulsa} onSave={salvarManual} onSummary={revisarVistoria} />
-  if (screen === 'evidence' && pacote && itemEvidencia) return <EvidenceScreen item={itensPorId.get(itemEvidencia)} resposta={respostas[itemEvidencia] || { catalogo_id: itemEvidencia, status: 'NAO_CONFORME' }} prazoCorrecao={detalhes.prazo_correcao} online={online} pending={pending} syncing={syncing} onSync={sincronizar} onBack={() => setScreen('checklist')} onUpdate={atualizarEvidencia} onPhoto={adicionarFoto} onDeletePhoto={removerFoto} onSave={async () => { await salvarRascunho({ processar: false }); setScreen('checklist') }} />
+  if (screen === 'evidence' && pacote && itemEvidencia) return <EvidenceScreen item={itensPorId.get(itemEvidencia)} resposta={respostas[itemEvidencia] || { catalogo_id: itemEvidencia, status: 'NAO_CONFORME' }} prazoCorrecao={detalhes.prazo_correcao} online={online} pending={pending} syncing={syncing} error={formError} onSync={sincronizar} onBack={() => setScreen('checklist')} onUpdate={atualizarEvidencia} onPhoto={adicionarFoto} onDeletePhoto={removerFoto} onSave={async () => { await salvarRascunho({ processar: false }); setScreen('checklist') }} />
   if (screen === 'summary' && pacote) return <SummaryScreen pacote={pacote} respostas={respostas} detalhes={detalhes} online={online} pending={pending} syncing={syncing} onSync={sincronizar} onBack={() => setScreen('checklist')} onSubmit={enviarAprovacao} submitting={submitting} error={formError} />
   if (screen === 'inspections') return <InspectionsScreen pacotes={pacotes} online={online} pending={pending} syncing={syncing} onSync={sincronizar} onOpen={abrirVistoria} onNavigate={navegar} />
   if (screen === 'reports') return <ReportsScreen reports={reports} online={online} pending={pending} syncing={syncing} loading={tabLoading} onSync={sincronizar} onReload={carregarRelatorios} onNavigate={navegar} />

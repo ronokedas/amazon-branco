@@ -13,7 +13,7 @@ function Foto({ anexo, onDelete }) {
   return <figure><img src={src} alt="Evidência da não conformidade" /><figcaption><span>{anexo.local ? 'Aguardando envio' : 'Sincronizada'}</span><button type="button" onClick={() => onDelete(anexo)} aria-label={`Excluir foto ${anexo.nome || anexo.nome_original || ''}`}><Trash2 size={16} /></button></figcaption></figure>
 }
 
-export function EvidenceScreen({ item, resposta, prazoCorrecao, online, pending, syncing, onSync, onBack, onUpdate, onPhoto, onDeletePhoto, onSave }) {
+export function EvidenceScreen({ item, resposta, prazoCorrecao, online, pending, syncing, error, onSync, onBack, onUpdate, onPhoto, onDeletePhoto, onSave }) {
   const anexos = item.anexos || []
   return (
     <AppShell title="Não conformidade" online={online} pending={pending} syncing={syncing} onSync={onSync} onBack={onBack}>
@@ -22,8 +22,10 @@ export function EvidenceScreen({ item, resposta, prazoCorrecao, online, pending,
         <label className="field-label">Evidência fotográfica <small>(opcional)</small></label>
         <div className="photo-grid">
           {anexos.map(anexo => <Foto key={anexo.id} anexo={anexo} onDelete={onDeletePhoto} />)}
-          <label className="photo-add"><Camera size={28} /><span>Adicionar foto</span><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event => onPhoto(event.target.files?.[0])} /></label>
+          <label className="photo-add"><Camera size={28} /><span>Adicionar foto</span><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onPhoto(file) }} /></label>
         </div>
+        {pending ? <div className="sync-safety-note" role="status"><strong>Foto protegida neste aparelho</strong><span>Ela continuará aguardando e será reenviada sem precisar tirar outra foto.</span></div> : null}
+        {error ? <div className="form-error evidence-error" role="alert"><strong>Envio pendente</strong><span>{error}</span></div> : null}
         <label className="field-label" htmlFor="observacao">Observação <small>(opcional)</small></label>
         <textarea id="observacao" rows="4" maxLength="500" value={resposta.observacao || ''} onChange={e => onUpdate({ observacao: e.target.value })} placeholder="Descreva o problema encontrado" />
         <small className="char-count">{(resposta.observacao || '').length}/500</small>
@@ -34,7 +36,7 @@ export function EvidenceScreen({ item, resposta, prazoCorrecao, online, pending,
         <label className="field-label" htmlFor="normam">Referência NORMAM</label>
         <input id="normam" value={resposta.item_normam || ''} onChange={e => onUpdate({ item_normam: e.target.value })} placeholder="Ex.: NORMAM-202/DPC, item 2.1" />
       </section>
-      <div className="sticky-actions"><label className="secondary-button file-button"><ImagePlus size={18} /> Outra foto<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event => onPhoto(event.target.files?.[0])} /></label><button className="danger-button" onClick={onSave}><Save size={18} /> Salvar exigência</button></div>
+      <div className="sticky-actions"><label className="secondary-button file-button"><ImagePlus size={18} /> Outra foto<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onPhoto(file) }} /></label><button className="danger-button" onClick={onSave}><Save size={18} /> Salvar exigência</button></div>
     </AppShell>
   )
 }

@@ -218,9 +218,10 @@ function logout() {
     exit;
 }
 
-// Verificar se a sessao expirou (30 minutos)
+// Verificar se a sessao e o usuario continuam validos.
+// Nao ha encerramento automatico por tempo de inatividade.
 function verificarSessao() {
-    if (!estaLogado() || (time() - ($_SESSION['login_time'] ?? 0)) > 1800) {
+    if (!estaLogado()) {
         logout();
     }
 
@@ -242,7 +243,7 @@ function verificarSessao() {
         logout();
     }
 
-    // A expiracao e por inatividade, portanto uma requisicao valida renova o prazo.
+    // Mantido apenas como registro da ultima atividade, sem causar logout.
     $_SESSION['login_time'] = time();
 }
 

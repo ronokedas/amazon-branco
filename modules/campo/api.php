@@ -143,6 +143,21 @@ function campoRegistrarOperacao(PDO $pdo, string $operacaoId, ?string $vistoriaI
     ]);
 }
 
+function campoNormalizarDataHoraCaptura(?string $valor): string {
+    $valor = trim((string)$valor);
+    if ($valor === '') return date('Y-m-d H:i:s');
+
+    try {
+        $data = new DateTimeImmutable($valor);
+        $fuso = new DateTimeZone(date_default_timezone_get());
+        return $data->setTimezone($fuso)->format('Y-m-d H:i:s');
+    } catch (Throwable $e) {
+        // Uma data malformada do aparelho nunca deve impedir o envio da foto.
+        error_log('API campo: data de captura invalida recebida: ' . $valor);
+        return date('Y-m-d H:i:s');
+    }
+}
+
 function campoS3(): ?\Aws\S3\S3Client {
     if (!class_exists('Aws\\S3\\S3Client')) return null;
     return new Aws\S3\S3Client([
@@ -619,11 +634,21 @@ try {
         $q = $pdo->prepare("SELECT id, url_arquivo FROM vistoria_anexos WHERE vistoria_id=:v AND sha256=:h AND excluido_em IS NULL");
         $q->execute([':v'=>$vistoria['id'], ':h'=>$hash]);
         $ja = $q->fetch(PDO::FETCH_ASSOC);
+        $capturadoEm = campoNormalizarDataHoraCaptura($_POST['capturado_em'] ?? null);
         if ($ja) {
             $id = $ja['id'];
             $url = $ja['url_arquivo'];
         } else {
-            $chave = campoGuardarFotoPrivada($binario, $mime, $vistoria['id'], $id);
+            try {
+                $chave = campoGuardarFotoPrivada($binario, $mime, $vistoria['id'], $id);
+            } catch (Throwable $e) {
+                error_log('API campo: falha ao armazenar evidencia: ' . $e->getMessage());
+                campoErro(
+                    'ARMAZENAMENTO_INDISPONIVEL',
+                    'A foto continua salva neste aparelho. Toque em Enviar agora para tentar novamente.',
+                    503
+                );
+            }
             $url = APP_URL . 'api/campo/v1/anexos/' . rawurlencode($id);
             $stmt = $pdo->prepare("INSERT INTO vistoria_anexos
                 (id, vistoria_id, catalogo_id, url_arquivo, chave_arquivo, nome_original, mime_type,
@@ -632,11 +657,11 @@ try {
             $stmt->execute([':id'=>$id, ':vistoria'=>$vistoria['id'], ':catalogo'=>$catalogoId, ':url'=>$url,
                 ':chave'=>$chave, ':nome'=>substr((string)($upload['name'] ?? 'evidencia'), 0, 255),
                 ':mime'=>$mime, ':tamanho'=>$tamanho, ':hash'=>$hash,
-                ':capturado'=>$_POST['capturado_em'] ?? date('Y-m-d H:i:s'), ':usuario'=>$usuarioId]);
+                ':capturado'=>$capturadoEm, ':usuario'=>$usuarioId]);
         }
         $resposta = ['ok'=>true, 'dados'=>['id'=>$id, 'url'=>$url, 'url_arquivo'=>$url, 'catalogo_id'=>$catalogoId,
             'nome_original'=>$upload['name'] ?? 'evidencia', 'mime_type'=>$mime, 'tamanho_bytes'=>$tamanho,
-            'sha256'=>$hash, 'capturado_em'=>$_POST['capturado_em'] ?? date('Y-m-d H:i:s')]];
+            'sha256'=>$hash, 'capturado_em'=>$capturadoEm]];
         $registro = ['catalogo_id'=>$catalogoId, 'nome'=>$upload['name'] ?? 'evidencia', 'sha256'=>$hash, 'tamanho'=>$tamanho];
         campoRegistrarOperacao($pdo, $operacaoId, $vistoria['id'], $usuarioId, 'ANEXO', $registro, $resposta);
         campoRegistrarAuditoria('campo_foto_enviada', 'Foto vinculada à vistoria ' . $vistoria['id']);
