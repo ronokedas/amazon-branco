@@ -82,6 +82,15 @@ if (!str_contains($novaProposta, 'proprietarios/form')) {
     throw new RuntimeException('O estado vazio da nova proposta nao oferece cadastro de proprietario.');
 }
 
+$comercial = file_get_contents(__DIR__ . '/../modules/comercial/index.php');
+$actionsPropostas = file_get_contents(__DIR__ . '/../modules/comercial/propostas/actions.php');
+if ($comercial === false || $actionsPropostas === false
+    || !str_contains($comercial, "in_array(\$cargo, ['ADMIN', 'VENDEDOR'], true)")
+    || !str_contains($actionsPropostas, "\$cargoAtual === 'VENDEDOR' && (\$prop['criado_por'] ?? '') !== \$usuarioAtualId")
+    || !str_contains($actionsPropostas, 'financeiroPodeAcessarEscritorio')) {
+    throw new RuntimeException('A autorizacao manual de proposta nao protege vendedor, autoria e escritorio.');
+}
+
 $roteador = file_get_contents(__DIR__ . '/../index.php');
 $pdfVistoria = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio_pdf.php');
 if ($roteador === false || $pdfVistoria === false) {

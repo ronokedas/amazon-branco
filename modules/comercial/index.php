@@ -468,7 +468,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     $embNomes = !empty($embarcacoesLista) ? implode(', ', $embarcacoesLista) : 'N/I';
                     $statusCfg = $statusConfig[$p['status']] ?? ['label' => $p['status'], 'cor' => 'secondary'];
                     $assinada = !empty($p['assinado']) || ($p['status'] ?? '') === 'assinada';
-                    $podeAprovarManual = $cargo === 'ADMIN' && !$assinada && !in_array(($p['status'] ?? ''), ['cancelada', 'recusada'], true);
+                    $podeAprovarManual = in_array($cargo, ['ADMIN', 'VENDEDOR'], true)
+                        && ($cargo === 'ADMIN' || ($p['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
+                        && !$assinada
+                        && !in_array(($p['status'] ?? ''), ['cancelada', 'recusada'], true);
                 ?>
                 <article class="proposal-row<?php echo ($modo_foco_proposta && $pid === $proposta_foco_id) ? ' is-focus' : ''; ?>" id="proposta-<?php echo h($pid); ?>">
                     <div class="proposal-main">
@@ -528,11 +531,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <?php endif; ?>
                         <?php if ($podeAprovarManual): ?>
                             <form method="POST" action="<?php echo APP_URL; ?>comercial/propostas/actions"
-                                  onsubmit="return confirm('Aprovar <?php echo h(addslashes($p['numero'])); ?> como assinada? Isso cria os mesmos lançamentos e agendamentos da assinatura do cliente.');">
+                                  onsubmit="return confirm('Autorizar <?php echo h(addslashes($p['numero'])); ?> sem a assinatura digital do cliente? A proposta será marcada como assinada e criará os lançamentos e agendamentos.');">
                                 <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
                                 <input type="hidden" name="action" value="aprovar_assinatura_manual">
                                 <input type="hidden" name="id" value="<?php echo h($pid); ?>">
-                                <button type="submit" class="proposal-action proposal-action-approve" title="Aprovar como assinada">
+                                <button type="submit" class="proposal-action proposal-action-approve" title="Autorizar e marcar como assinada" aria-label="Autorizar <?php echo h($p['numero']); ?> sem assinatura digital">
                                     <i class="fas fa-circle-check"></i>
                                 </button>
                             </form>

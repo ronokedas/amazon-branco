@@ -513,8 +513,10 @@ switch ($action) {
 
     case 'aprovar_assinatura_manual':
         try {
-            if (getCargo() !== 'ADMIN') {
-                setMensagem('error', 'Apenas administradores podem aprovar uma proposta como assinada.');
+            $cargoAtual = getCargo();
+            $usuarioAtualId = (string)($_SESSION['usuario_id'] ?? '');
+            if (!in_array($cargoAtual, ['ADMIN', 'VENDEDOR'], true)) {
+                setMensagem('error', 'Seu perfil não pode autorizar propostas sem assinatura digital.');
                 redirecionar(APP_URL . 'comercial');
             }
 
@@ -539,6 +541,12 @@ switch ($action) {
             if (!$prop) {
                 throw new RuntimeException('Proposta não encontrada.');
             }
+            if ($cargoAtual === 'VENDEDOR' && ($prop['criado_por'] ?? '') !== $usuarioAtualId) {
+                throw new RuntimeException('O vendedor só pode autorizar propostas criadas por ele.');
+            }
+            if (empty($prop['escritorio_id']) || !financeiroPodeAcessarEscritorio($pdo, (string)$prop['escritorio_id'])) {
+                throw new RuntimeException('Proposta não encontrada ou sem acesso ao escritório responsável.');
+            }
             if (!empty($prop['assinado']) || ($prop['status'] ?? '') === 'assinada') {
                 throw new RuntimeException('Esta proposta já está assinada.');
             }
@@ -546,7 +554,7 @@ switch ($action) {
                 throw new RuntimeException('Esta proposta não pode ser aprovada nesse status.');
             }
 
-            $assinanteNome = 'Aprovação interna - ' . ($_SESSION['usuario_nome'] ?? 'Administrador');
+            $assinanteNome = 'Autorização interna - ' . ($_SESSION['usuario_nome'] ?? 'Usuário responsável');
             $assinaturaIp = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
             $dataAssinatura = date('Y-m-d H:i:s');
 
@@ -564,7 +572,7 @@ switch ($action) {
                 ':ip' => $assinaturaIp,
                 ':data' => $dataAssinatura,
                 ':nome' => $assinanteNome,
-                ':doc' => 'Aprovação interna',
+                ':doc' => 'Autorização interna sem assinatura digital',
                 ':id' => $id,
             ]);
 
@@ -578,8 +586,8 @@ switch ($action) {
 
             $pdo->commit();
 
-            log_atividade('proposta_aprovada_assinatura_manual', "Proposta {$prop['numero']} aprovada internamente como assinada por {$assinanteNome}.");
-            setMensagem('success', "Proposta {$prop['numero']} aprovada como assinada. Financeiro e agendamentos foram gerados.");
+            log_atividade('proposta_aprovada_assinatura_manual', "Proposta {$prop['numero']} autorizada internamente sem assinatura digital por {$assinanteNome}.");
+            setMensagem('success', "Proposta {$prop['numero']} autorizada e marcada como assinada. Financeiro e agendamentos foram gerados.");
             redirecionar(APP_URL . 'comercial?proposta=' . urlencode($id));
         } catch (Exception $e) {
             if ($pdo->inTransaction()) {
