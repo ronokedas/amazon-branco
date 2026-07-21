@@ -273,8 +273,8 @@ switch ($action) {
             $token_assinatura = md5(uniqid(rand(), true)) . uniqid();
             
             $stmtProp = $pdo->prepare("
-                INSERT INTO propostas (id, numero, cliente_id, responsavel_fechamento_nome, responsavel_fechamento_telefone, data_emissao, data_validade, parcelas, forma_pagamento, valor_total, valor_entrada, desconto_percentual, desconto_valor, observacoes, status, criado_por, token_assinatura)
-                VALUES (UUID(), :numero, :cliente_id, :responsavel_fechamento_nome, :responsavel_fechamento_telefone, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), :parcelas, :forma_pagamento, :valor_total, :valor_entrada, :desconto_percentual, :desconto_valor, :observacoes, 'rascunho', :criado_por, :token_assinatura)
+                INSERT INTO propostas (id, numero, cliente_id, responsavel_fechamento_nome, responsavel_fechamento_telefone, data_emissao, data_validade, parcelas, forma_pagamento, valor_total, valor_entrada, desconto_percentual, desconto_valor, observacoes, status, criado_por, token_assinatura, escritorio_id)
+                VALUES (UUID(), :numero, :cliente_id, :responsavel_fechamento_nome, :responsavel_fechamento_telefone, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), :parcelas, :forma_pagamento, :valor_total, :valor_entrada, :desconto_percentual, :desconto_valor, :observacoes, 'rascunho', :criado_por, :token_assinatura, :escritorio_id)
             ");
             $stmtProp->execute([
                 ':numero'              => $numero,
@@ -290,6 +290,7 @@ switch ($action) {
                 ':observacoes'         => $observacoes,
                 ':criado_por'          => $_SESSION['usuario_id'],
                 ':token_assinatura'    => $token_assinatura,
+                ':escritorio_id'       => $escritorioId,
             ]);
 
             // Pegar o ID da proposta recém-criada
@@ -300,9 +301,6 @@ switch ($action) {
             if (!$proposta_id) {
                 throw new Exception('Erro ao recuperar ID da proposta.');
             }
-            $pdo->prepare('UPDATE propostas SET escritorio_id=:escritorio WHERE id=:id')
-                ->execute([':escritorio'=>$escritorioId, ':id'=>$proposta_id]);
-
             // 4. Vincular embarcações (únicas)
             $stmtEmb = $pdo->prepare("INSERT INTO propostas_embarcacoes (id, proposta_id, embarcacao_id) VALUES (UUID(), :proposta_id, :embarcacao_id)");
             foreach (array_unique($embarcacoes_ids) as $emb_id) {
@@ -336,7 +334,10 @@ switch ($action) {
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao criar proposta: ' . $e->getMessage());
-            setMensagem('error', 'Erro ao criar proposta: ' . $e->getMessage());
+            $mensagem = $e instanceof PDOException
+                ? 'Não foi possível salvar a proposta. Verifique os dados e tente novamente.'
+                : $e->getMessage();
+            setMensagem('error', 'Erro ao criar proposta: ' . $mensagem);
             redirecionar(APP_URL . 'comercial/nova');
         }
         break;

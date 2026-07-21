@@ -60,4 +60,11 @@ if ($actionsUsuarios === false
     throw new RuntimeException('A criacao de usuario nao grava o escritorio principal no INSERT inicial.');
 }
 
+$actionsPropostas = file_get_contents(__DIR__ . '/../modules/comercial/propostas/actions.php');
+if ($actionsPropostas === false
+    || !str_contains($actionsPropostas, 'token_assinatura, escritorio_id)')
+    || !str_contains($actionsPropostas, ':token_assinatura, :escritorio_id)')) {
+    throw new RuntimeException('A criacao de proposta nao grava o escritorio no INSERT inicial.');
+}
+
 echo "OK: Matriz, vinculos multiplos e isolamento por escritorio validados.\n";
