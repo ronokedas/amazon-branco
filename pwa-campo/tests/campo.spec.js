@@ -12,10 +12,14 @@ async function entrar(page) {
   await expect(page.getByRole('heading', { name: 'Minhas vistorias' })).toBeVisible()
 }
 
-test('instala, preserva rascunho offline e sincroniza ao reconectar', async ({ page, context }) => {
+test('preserva o rascunho offline e só envia ao finalizar', async ({ page, context }) => {
   const consoleErrors = []
+  let enviosAntesDaFinalizacao = 0
   page.on('console', message => {
     if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('request', request => {
+    if (request.method() === 'POST' && /\/api\/campo\/v1\/vistorias\/[^/]+\/(rascunho|anexos|foto-embarcacao|finalizar)/.test(request.url())) enviosAntesDaFinalizacao += 1
   })
 
   await entrar(page)
@@ -46,18 +50,17 @@ test('instala, preserva rascunho offline e sincroniza ao reconectar', async ({ p
   await page.locator('textarea[placeholder^="Descreva o item"]').last().fill('Exigência avulsa criada no aplicativo.')
   const primeiroConforme = page.locator('.check-item .status-button.conforme').first()
   if (!(await primeiroConforme.getAttribute('class')).includes('selected')) await primeiroConforme.click()
-  await page.getByRole('button', { name: 'Salvar rascunho' }).click()
-  await expect(page.getByText('Rascunho sincronizado')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('Salvo automaticamente neste aparelho')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Sincronizar|Enviar agora|Salvar rascunho/ })).toHaveCount(0)
   await page.getByRole('button', { name: 'Revisar e enviar' }).click()
-  await expect(page.getByRole('link', { name: 'Ver relatório em PDF' })).toBeVisible()
+  await expect(page.getByText('Ao enviar, os dados e as fotos serão gravados no servidor e o PDF será gerado.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Enviar para aprovação' })).toBeVisible()
   await page.getByRole('button', { name: 'Voltar' }).click()
 
   await context.setOffline(true)
   const segundoConforme = page.locator('.check-item .status-button.conforme').nth(1)
   if (!(await segundoConforme.getAttribute('class')).includes('selected')) await segundoConforme.click()
-  await page.getByRole('button', { name: 'Salvar rascunho' }).click()
-  await expect(page.getByText(/alteração aguardando envio/)).toBeVisible()
+  await expect(page.getByText('Modo offline · salvo neste aparelho')).toBeVisible()
 
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Minhas vistorias' })).toBeVisible()
@@ -72,7 +75,9 @@ test('instala, preserva rascunho offline e sincroniza ao reconectar', async ({ p
   await page.screenshot({ path: 'test-results/checklist-offline-android.png', fullPage: true })
 
   await context.setOffline(false)
-  await expect(page.getByText('Rascunho sincronizado')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('Salvo automaticamente neste aparelho')).toBeVisible()
+  await page.waitForTimeout(2000)
+  expect(enviosAntesDaFinalizacao).toBe(0)
   await expect(page.locator('.check-item').nth(0).locator('.status-button.conforme')).toHaveClass(/selected/)
   await expect(page.locator('.check-item').nth(1).locator('.status-button.conforme')).toHaveClass(/selected/)
 
@@ -112,27 +117,22 @@ test('IndexedDB preserva 50 respostas e 20 fotos pendentes offline', async ({ pa
   expect(depois).toEqual({ respostas: 50, fotos: 20 })
 })
 
-test('foto oficial da embarcação é a mesma no Campo e no ERP', async ({ page }) => {
+test('foto oficial da embarcação fica local até o envio final', async ({ page }) => {
   await entrar(page)
   const card = page.locator('.agenda-card').first()
-  const embarcacao = (await card.locator('.agenda-details > strong').innerText()).trim()
-  const uploadConcluido = page.waitForResponse(response =>
-    response.url().includes('/foto-embarcacao') && response.request().method() === 'POST')
+  let uploads = 0
+  page.on('request', request => {
+    if (request.url().includes('/foto-embarcacao') && request.method() === 'POST') uploads += 1
+  })
 
   await card.locator('input[type="file"]').setInputFiles(
     path.resolve(process.cwd(), '..', 'assets', 'img', 'portal-hero-ship.png'),
   )
-  const resposta = await uploadConcluido
-  expect(resposta.status()).toBe(201)
-  await expect(card.locator('.vessel-photo-control > span')).toContainText('Trocar')
+  await expect(card.locator('.vessel-photo-control > span')).toContainText('Salva no aparelho')
+  await page.waitForTimeout(1500)
+  expect(uploads).toBe(0)
   const fotoCampo = await card.locator('.vessel-photo-control img').getAttribute('src')
-  expect(fotoCampo).toContain('/embarcacoes/foto?id=')
-
-  await page.goto('/embarcacoes')
-  const linha = page.locator('tbody tr').filter({ hasText: embarcacao })
-  await expect(linha).toHaveCount(1)
-  await expect(linha).toContainText('Foto oficial')
-  await expect(linha.locator('img')).toHaveAttribute('src', fotoCampo)
+  expect(fotoCampo).toContain('blob:')
 })
 
 test('navegação principal abre áreas funcionais sem controles inertes', async ({ page, context }) => {
@@ -155,7 +155,7 @@ test('navegação principal abre áreas funcionais sem controles inertes', async
 
   await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
   await expect(page.locator('.tab-heading h1')).toBeVisible()
-  await expect(page.getByText('Conexão e sincronização')).toBeVisible()
+  await expect(page.getByText('Dados neste aparelho')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Sair do aplicativo' })).toBeEnabled()
   await page.screenshot({ path: 'test-results/ajustes-campo-android.png', fullPage: true })
 

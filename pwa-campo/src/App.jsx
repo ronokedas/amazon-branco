@@ -100,7 +100,6 @@ export default function App() {
   const [saving, setSaving] = useState(false)
   const [installPrompt, setInstallPrompt] = useState(null)
   const [tabLoading, setTabLoading] = useState(false)
-  const autoSyncAttempt = useRef('')
   const autosaveSignature = useRef('')
   const syncPromiseRef = useRef(null)
 
@@ -226,6 +225,7 @@ export default function App() {
 
   const sincronizar = useCallback(async (options = {}) => {
     const propagarErro = options?.propagarErro === true
+    const agendamentoId = options?.agendamentoId || null
     if (!navigator.onLine) {
       const error = new Error('Sem conexão. O rascunho continua salvo neste aparelho.')
       if (propagarErro) throw error
@@ -272,7 +272,7 @@ export default function App() {
       let conflitoCorrigido = false
       for (let tentativa = 0; tentativa < 3; tentativa += 1) {
         try {
-          resultado = await processarFila(aplicarProgresso, usuarioId)
+          resultado = await processarFila(aplicarProgresso, usuarioId, agendamentoId)
           break
         } catch (error) {
           if (error.status === 419 && !csrfRenovado) {
@@ -295,7 +295,7 @@ export default function App() {
           throw error
         }
       }
-      if (!resultado) throw new Error('Não foi possível concluir a sincronização. Tente novamente.')
+      if (!resultado) throw new Error('Não foi possível concluir o envio. Tente novamente.')
       await refreshPending()
       await carregarAgenda()
       await carregarPacotes()
@@ -324,18 +324,6 @@ export default function App() {
     }
   }, [atualizarAgenda, atualizarPacote, carregarAgenda, carregarPacotes, carregarRelatorios, refreshPending, screen, usuarioId])
 
-  useEffect(() => {
-    const key = `${online ? 'online' : 'offline'}:${pending}`
-    if (!pending) {
-      autoSyncAttempt.current = ''
-      return
-    }
-    if (online && autoSyncAttempt.current !== key) {
-      autoSyncAttempt.current = key
-      sincronizar()
-    }
-  }, [online, pending])
-
   const abrirVistoria = useCallback(async item => {
     if (Number(item.tarefa_cumprimento) === 1 && item.relatorio_url) {
       window.location.assign(item.relatorio_url)
@@ -348,8 +336,15 @@ export default function App() {
       try {
         dados = await api(`vistorias/${item.id}/pacote`)
       } catch (error) {
-        dados = await obterPacote(item.id)
-        if (!dados) throw error
+        const pacoteLocal = await obterPacote(item.id)
+        const agendamentoInvalido = navigator.onLine && (error.status === 403 || error.status === 404)
+        if (!pacoteLocal || agendamentoInvalido) {
+          if (error.code === 'VISTORIA_NAO_ENCONTRADA' || agendamentoInvalido) {
+            throw new Error('Este agendamento foi alterado no ERP ou não está mais atribuído a você. Volte à Agenda e abra a vistoria atualizada.')
+          }
+          throw error
+        }
+        dados = pacoteLocal
       }
       const normalizado = { ...dados, agendamento_id: item.id }
       const respostasIniciais = respostasDoPacote(normalizado)
@@ -488,7 +483,7 @@ export default function App() {
     exigencias_avulsas: detalhes.exigencias_avulsas,
   }), [detalhes, pacote?.vistoria?.mobile_versao, respostas])
 
-  const salvarRascunho = useCallback(async ({ processar = true } = {}) => {
+  const salvarRascunho = useCallback(async () => {
     if (!pacote) return
     const payload = payloadRascunho()
     await enfileirar({ operacao_id: payload.operacao_id, tipo: 'rascunho', agendamento_id: pacote.agendamento.id, usuario_id: usuarioId, payload }, true)
@@ -509,32 +504,8 @@ export default function App() {
       exigencias_avulsas_locais: detalhes.exigencias_avulsas,
     }))
     await refreshPending()
-    if (online && processar) {
-      const resultado = await sincronizar({ propagarErro: true })
-      const rascunhoSincronizado = [...(resultado.resultados || [])].reverse().find(item => item.operacao.tipo === 'rascunho' && item.operacao.agendamento_id === pacote.agendamento.id)
-      if (rascunhoSincronizado?.dados?.vistoria_id) {
-        const vistoriaAtualizada = {
-          ...(pacote.vistoria || {}),
-          id: rascunhoSincronizado.dados.vistoria_id,
-          mobile_versao: rascunhoSincronizado.dados.versao,
-        }
-        await atualizarPacote(current => current ? ({ ...current, vistoria: vistoriaAtualizada }) : current)
-        return vistoriaAtualizada
-      }
-      const estadoServidor = await api(`vistorias/${pacote.agendamento.id}/sync`)
-      if (estadoServidor?.vistoria_id) {
-        const vistoriaAtualizada = {
-          ...(pacote.vistoria || {}),
-          id: estadoServidor.vistoria_id,
-          mobile_versao: estadoServidor.versao,
-          status: estadoServidor.status,
-        }
-        await atualizarPacote(current => current ? ({ ...current, vistoria: vistoriaAtualizada }) : current)
-        return vistoriaAtualizada
-      }
-    }
     return pacote.vistoria || null
-  }, [atualizarPacote, detalhes, online, pacote, payloadRascunho, refreshPending, respostas, sincronizar, usuarioId])
+  }, [atualizarPacote, detalhes, pacote, payloadRascunho, refreshPending, respostas, usuarioId])
 
   useEffect(() => {
     if (!pacote?.agendamento?.id || pacote?.vistoria?.status && pacote.vistoria.status !== 'PENDENTE') return undefined
@@ -560,39 +531,30 @@ export default function App() {
     if (assinatura === autosaveSignature.current) return undefined
     autosaveSignature.current = assinatura
     const timer = window.setTimeout(() => {
-      salvarRascunho({ processar: online }).catch(error => setFormError(error.message || 'O salvamento automático ficou pendente.'))
+      salvarRascunho().catch(error => setFormError(error.message || 'Não foi possível salvar neste aparelho.'))
     }, 1200)
     return () => window.clearTimeout(timer)
-  }, [detalhes, online, pacote?.agendamento?.id, pacote?.vistoria?.status, respostas, salvarRascunho, screen])
-
-  const salvarManual = useCallback(async () => {
-    setSaving(true)
-    setFormError('')
-    try { await salvarRascunho() }
-    catch (error) { setFormError(error.message || 'Não foi possível salvar o rascunho.') }
-    finally { setSaving(false) }
-  }, [salvarRascunho])
+  }, [detalhes, pacote?.agendamento?.id, pacote?.vistoria?.status, respostas, salvarRascunho, screen])
 
   const revisarVistoria = useCallback(async () => {
     setSaving(true)
     setFormError('')
     try {
-      await salvarRascunho({ processar: false })
+      await salvarRascunho()
       setScreen('summary')
-      if (online) await sincronizar()
     } catch (error) {
       setFormError(error.message || 'Não foi possível preparar a revisão da vistoria.')
     } finally {
       setSaving(false)
     }
-  }, [online, salvarRascunho, sincronizar])
+  }, [salvarRascunho])
 
   const adicionarFoto = useCallback(async file => {
     if (!file || !itemEvidencia || !pacote) return
     setLoading(true)
     try {
       const foto = await prepararImagemOriginal(file)
-      await salvarRascunho({ processar: false })
+      await salvarRascunho()
       await enfileirar({
         operacao_id: foto.id,
         tipo: 'anexo',
@@ -605,13 +567,12 @@ export default function App() {
         categorias: current.categorias.map(cat => ({ ...cat, itens: cat.itens.map(item => item.id === itemEvidencia ? ({ ...item, anexos: [...(item.anexos || []), { ...foto, local: true }] }) : item) })),
       }))
       await refreshPending()
-      if (online) await sincronizar()
     } catch (error) {
       setFormError(error.message || 'Não foi possível guardar esta foto original.')
     } finally {
       setLoading(false)
     }
-  }, [atualizarPacote, itemEvidencia, online, pacote, refreshPending, salvarRascunho, sincronizar, usuarioId])
+  }, [atualizarPacote, itemEvidencia, pacote, refreshPending, salvarRascunho, usuarioId])
 
   const adicionarFotoEmbarcacao = useCallback(async (item, file) => {
     if (!item || !file) return
@@ -627,22 +588,30 @@ export default function App() {
         payload: { operacao_id: foto.id, nome: foto.nome, blob: foto.blob },
       }, true)
       atualizarAgenda(current => current.map(agendaItem => agendaItem.embarcacao_id === item.embarcacao_id
-        ? { ...agendaItem, foto_local_blob: foto.blob, foto_status: online ? 'enviando' : 'pendente' }
+        ? { ...agendaItem, foto_local_blob: foto.blob, foto_status: 'pendente' }
         : agendaItem))
       await refreshPending()
-      if (online) await sincronizar()
     } catch (error) {
       setFormError(error.message || 'Não foi possível guardar a foto da embarcação.')
     } finally {
       setLoading(false)
     }
-  }, [atualizarAgenda, online, refreshPending, sincronizar, usuarioId])
+  }, [atualizarAgenda, refreshPending, usuarioId])
 
   const removerFoto = useCallback(async anexo => {
     if (!anexo || !pacote || pacote?.vistoria?.status && pacote.vistoria.status !== 'PENDENTE') return
     try {
       if (anexo.local) await removerDaFila(anexo.id)
-      else await api(`anexos/${anexo.id}`, { method: 'DELETE' })
+      else {
+        const operacaoId = crypto.randomUUID()
+        await enfileirar({
+          operacao_id: operacaoId,
+          tipo: 'exclusao_anexo',
+          agendamento_id: pacote.agendamento.id,
+          usuario_id: usuarioId,
+          payload: { anexo_id: anexo.id },
+        })
+      }
       await atualizarPacote(current => ({
         ...current,
         categorias: current.categorias.map(categoria => ({
@@ -654,7 +623,7 @@ export default function App() {
     } catch (error) {
       setFormError(error.message || 'Não foi possível excluir a foto.')
     }
-  }, [atualizarPacote, pacote, refreshPending])
+  }, [atualizarPacote, pacote, refreshPending, usuarioId])
 
   const enviarAprovacao = useCallback(async () => {
     if (!pacote) return
@@ -672,25 +641,29 @@ export default function App() {
     }
     setSubmitting(true)
     try {
-      await salvarRascunho({ processar: false })
-      const operacaoId = crypto.randomUUID()
-      await enfileirar({ operacao_id: operacaoId, tipo: 'finalizacao', agendamento_id: pacote.agendamento.id, usuario_id: usuarioId, payload: { operacao_id: operacaoId } })
-      await refreshPending()
-      if (online) {
-        await sincronizar({ propagarErro: true })
-        await carregarRelatorios()
-        setScreen('reports')
+      await salvarRascunho()
+      if (!online) {
+        setFormError('Tudo continua salvo neste aparelho. Conecte-se à internet e toque em “Enviar para aprovação” novamente.')
+        return
       }
-      else setFormError('Envio preparado. Ele será concluído automaticamente quando a conexão voltar.')
+      const operacaoId = crypto.randomUUID()
+      await enfileirar({ operacao_id: operacaoId, tipo: 'finalizacao', agendamento_id: pacote.agendamento.id, usuario_id: usuarioId, payload: { operacao_id: operacaoId } }, true)
+      await refreshPending()
+      await sincronizar({ propagarErro: true, agendamentoId: pacote.agendamento.id })
+      await carregarRelatorios()
+      setScreen('reports')
     } catch (error) {
-      setFormError(error.message || 'Não foi possível enviar a vistoria para aprovação.')
+      const mensagem = error.code === 'VISTORIA_NAO_ENCONTRADA'
+        ? 'Este agendamento foi alterado no ERP ou não está mais atribuído a você. Volte à Agenda e abra a vistoria atualizada.'
+        : (error.message || 'Não foi possível enviar a vistoria para aprovação.')
+      setFormError(mensagem)
     } finally {
       setSubmitting(false)
     }
   }, [carregarRelatorios, detalhes, online, pacote, refreshPending, respostas, salvarRascunho, sincronizar, usuarioId])
 
   const sairAplicativo = useCallback(async () => {
-    if (pending && !window.confirm(`Existem ${pending} alterações ainda não sincronizadas. Sair apagará esses dados deste aparelho. Deseja continuar?`)) return
+    if (pending && !window.confirm(`Existem dados de vistoria ainda não enviados. Sair apagará esses dados deste aparelho. Deseja continuar?`)) return
     setLoading(true)
     try { await api('logout', { method: 'POST', body: JSON.stringify({}) }) }
     catch (error) { if (online) setLoginError(error.message) }
@@ -716,11 +689,11 @@ export default function App() {
   if (fatalError) return <div className="app-state"><AlertTriangle /><strong>{fatalError}</strong><button className="primary-button" onClick={() => window.location.reload()}>Tentar novamente</button></div>
   if (loading) return <div className="loading-overlay"><LoaderCircle className="spin" /></div>
 
-  if (screen === 'checklist' && pacote) return <ChecklistScreen pacote={pacote} respostas={respostas} detalhes={detalhes} online={online} pending={pending} syncing={syncing} saving={saving} error={formError} onSync={sincronizar} onBack={() => setScreen('agenda')} onChange={mudarStatus} onEvidence={abrirEvidencia} onDetailChange={atualizarDetalhe} onAddRequirement={adicionarExigenciaAvulsa} onRequirementChange={atualizarExigenciaAvulsa} onRemoveRequirement={removerExigenciaAvulsa} onSave={salvarManual} onSummary={revisarVistoria} />
-  if (screen === 'evidence' && pacote && itemEvidencia) return <EvidenceScreen item={itensPorId.get(itemEvidencia)} resposta={respostas[itemEvidencia] || { catalogo_id: itemEvidencia, status: 'NAO_CONFORME' }} prazoCorrecao={detalhes.prazo_correcao} online={online} pending={pending} syncing={syncing} error={formError} onSync={sincronizar} onBack={() => setScreen('checklist')} onUpdate={atualizarEvidencia} onPhoto={adicionarFoto} onDeletePhoto={removerFoto} onSave={async () => { await salvarRascunho({ processar: false }); setScreen('checklist') }} />
-  if (screen === 'summary' && pacote) return <SummaryScreen pacote={pacote} respostas={respostas} detalhes={detalhes} online={online} pending={pending} syncing={syncing} onSync={sincronizar} onBack={() => setScreen('checklist')} onSubmit={enviarAprovacao} submitting={submitting} error={formError} />
-  if (screen === 'inspections') return <InspectionsScreen pacotes={pacotes} online={online} pending={pending} syncing={syncing} onSync={sincronizar} onOpen={abrirVistoria} onNavigate={navegar} />
-  if (screen === 'reports') return <ReportsScreen reports={reports} online={online} pending={pending} syncing={syncing} loading={tabLoading} onSync={sincronizar} onReload={carregarRelatorios} onNavigate={navegar} />
-  if (screen === 'settings') return <SettingsScreen session={session} online={online} pending={pending} syncing={syncing} onSync={sincronizar} onInstall={instalarAplicativo} onLogout={sairAplicativo} onNavigate={navegar} />
-  return <AgendaScreen session={session} agenda={agendaComEstado} online={online} pending={pending} syncing={syncing} onSync={sincronizar} onOpen={abrirVistoria} onVesselPhoto={adicionarFotoEmbarcacao} onInstall={instalarAplicativo} onNavigate={navegar} />
+  if (screen === 'checklist' && pacote) return <ChecklistScreen pacote={pacote} respostas={respostas} detalhes={detalhes} online={online} saving={saving} error={formError} onBack={() => setScreen('agenda')} onChange={mudarStatus} onEvidence={abrirEvidencia} onDetailChange={atualizarDetalhe} onAddRequirement={adicionarExigenciaAvulsa} onRequirementChange={atualizarExigenciaAvulsa} onRemoveRequirement={removerExigenciaAvulsa} onSummary={revisarVistoria} />
+  if (screen === 'evidence' && pacote && itemEvidencia) return <EvidenceScreen item={itensPorId.get(itemEvidencia)} resposta={respostas[itemEvidencia] || { catalogo_id: itemEvidencia, status: 'NAO_CONFORME' }} prazoCorrecao={detalhes.prazo_correcao} online={online} error={formError} onBack={() => setScreen('checklist')} onUpdate={atualizarEvidencia} onPhoto={adicionarFoto} onDeletePhoto={removerFoto} onSave={async () => { await salvarRascunho(); setScreen('checklist') }} />
+  if (screen === 'summary' && pacote) return <SummaryScreen pacote={pacote} respostas={respostas} detalhes={detalhes} online={online} onBack={() => setScreen('checklist')} onSubmit={enviarAprovacao} submitting={submitting} error={formError} />
+  if (screen === 'inspections') return <InspectionsScreen pacotes={pacotes} agenda={agendaComEstado} online={online} error={formError} onOpen={abrirVistoria} onNavigate={navegar} />
+  if (screen === 'reports') return <ReportsScreen reports={reports} online={online} loading={tabLoading} onReload={carregarRelatorios} onNavigate={navegar} />
+  if (screen === 'settings') return <SettingsScreen session={session} online={online} onInstall={instalarAplicativo} onLogout={sairAplicativo} onNavigate={navegar} />
+  return <AgendaScreen session={session} agenda={agendaComEstado} online={online} onOpen={abrirVistoria} onVesselPhoto={adicionarFotoEmbarcacao} onInstall={instalarAplicativo} onNavigate={navegar} />
 }

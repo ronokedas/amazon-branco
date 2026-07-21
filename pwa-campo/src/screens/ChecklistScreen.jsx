@@ -72,7 +72,7 @@ function InspectionDetails({ detalhes, cumprimento, aberta, onToggle, onChange, 
   )
 }
 
-export function ChecklistScreen({ pacote, respostas, detalhes, online, pending, syncing, saving, error, onSync, onBack, onChange, onEvidence, onDetailChange, onAddRequirement, onRequirementChange, onRemoveRequirement, onSave, onSummary }) {
+export function ChecklistScreen({ pacote, respostas, detalhes, online, saving, error, onBack, onChange, onEvidence, onDetailChange, onAddRequirement, onRequirementChange, onRemoveRequirement, onSummary }) {
   const categorias = pacote.categorias || []
   const cumprimento = pacote.vistoria?.finalidade === 'CUMPRIMENTO_EXIGENCIAS'
   const total = categorias.reduce((sum, cat) => sum + cat.itens.length, 0)
@@ -94,10 +94,10 @@ export function ChecklistScreen({ pacote, respostas, detalhes, online, pending, 
   const totalEncontrado = categoriasVisiveis.reduce((sum, categoria) => sum + categoria.itens.length, 0)
 
   return (
-    <AppShell title="Vistoria em campo" online={online} pending={pending} syncing={syncing} onSync={onSync} onBack={onBack}>
+    <AppShell title="Vistoria em campo" online={online} onBack={onBack}>
       <section className="inspection-identity">
         <span><strong>{pacote.agendamento.embarcacao_nome}</strong><small>{pacote.agendamento.embarcacao_registro || pacote.vistoria?.numero || 'Rascunho de campo'}</small></span>
-        <span className={online && !pending ? 'saved-state' : 'offline-state'}>{pending ? 'salvo no aparelho' : online ? 'alterações salvas' : 'Sem conexão'}</span>
+        <span className={online ? 'saved-state' : 'offline-state'}>{online ? 'salvo automaticamente' : 'salvo no aparelho'}</span>
       </section>
       <section className="summary-notes">
         <strong><UserRound size={17} /> Responsável pelo fechamento da proposta</strong>
@@ -124,7 +124,7 @@ export function ChecklistScreen({ pacote, respostas, detalhes, online, pending, 
       </section>
       {termo ? <div className="search-result-count">{totalEncontrado} exigência{totalEncontrado === 1 ? '' : 's'} encontrada{totalEncontrado === 1 ? '' : 's'}</div> : null}
       <InspectionDetails detalhes={detalhes} cumprimento={cumprimento} aberta={dadosAbertos} onToggle={() => setDadosAbertos(current => !current)} onChange={onDetailChange} onAddRequirement={onAddRequirement} onRequirementChange={onRequirementChange} onRemoveRequirement={onRemoveRequirement} />
-      {error ? <div className="form-error checklist-error" role="alert"><strong>{pending ? 'Salvo no aparelho; envio pendente' : 'Não foi possível salvar'}</strong><span>{error}</span></div> : null}
+      {error ? <div className="form-error checklist-error" role="alert"><strong>Verifique os dados</strong><span>{error}</span></div> : null}
       <section className="checklist-sections">
         {categoriasVisiveis.map((categoria, index) => {
           const completos = categoria.itens.filter(item => respostas[item.id]?.status).length
@@ -143,7 +143,7 @@ export function ChecklistScreen({ pacote, respostas, detalhes, online, pending, 
         })}
         {termo && totalEncontrado === 0 ? <div className="checklist-search-empty"><Search size={25} /><strong>Nenhuma exigência encontrada</strong><span>Tente outro termo ou número da NORMAM.</span></div> : null}
       </section>
-      <div className="sticky-actions"><button className="secondary-button" onClick={onSave} disabled={saving}>{saving ? 'Salvando…' : 'Salvar rascunho'}</button><button className="primary-button" onClick={onSummary} disabled={saving}>{saving ? 'Preparando…' : 'Revisar e enviar'}</button></div>
+      <div className="sticky-actions single-action"><button className="primary-button" onClick={onSummary} disabled={saving}>{saving ? 'Preparando…' : 'Revisar e enviar'}</button></div>
     </AppShell>
   )
 }

@@ -1,7 +1,7 @@
 import { CalendarDays, CheckCircle2, CircleMinus, CircleX, ClipboardPlus, FileText, Image, MessageSquareText, Phone, Send, UserRound } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
 
-export function SummaryScreen({ pacote, respostas, detalhes, online, pending, syncing, onSync, onBack, onSubmit, submitting, error }) {
+export function SummaryScreen({ pacote, respostas, detalhes, online, onBack, onSubmit, submitting, error }) {
   const itens = pacote.categorias.flatMap(cat => cat.itens)
   const values = Object.values(respostas)
   const counts = {
@@ -12,9 +12,9 @@ export function SummaryScreen({ pacote, respostas, detalhes, online, pending, sy
   const fotos = itens.reduce((sum, item) => sum + (item.anexos?.length || 0), 0)
   const selecionados = values.filter(r => r.status).length
   const enviada = pacote.vistoria?.status === 'AGUARDANDO_APROVACAO'
-  const pdfUrl = pacote.vistoria?.id ? `/vistorias/relatorio_pdf.php?id=${encodeURIComponent(pacote.vistoria.id)}` : ''
+  const pdfUrl = enviada && pacote.vistoria?.id ? `/vistorias/relatorio_pdf.php?id=${encodeURIComponent(pacote.vistoria.id)}` : ''
   return (
-    <AppShell title="Resumo da vistoria" online={online} pending={pending} syncing={syncing} onSync={onSync} onBack={onBack}>
+    <AppShell title="Resumo da vistoria" online={online} onBack={onBack}>
       <section className="inspection-identity"><span><strong>{pacote.agendamento.embarcacao_nome}</strong><small>{pacote.agendamento.embarcacao_registro || pacote.vistoria?.numero || 'Rascunho de campo'}</small></span><span className="saved-state">{enviada ? 'Enviada para aprovação' : 'Seleção concluída'}</span></section>
       <section className="progress-card"><div><strong>Itens selecionados</strong><span>{selecionados} exigência{selecionados === 1 ? '' : 's'} selecionada{selecionados === 1 ? '' : 's'}</span></div><div className="selection-note">Somente os itens escolhidos pelo vistoriador fazem parte desta vistoria.</div></section>
       <section className="summary-counts">
@@ -37,9 +37,9 @@ export function SummaryScreen({ pacote, respostas, detalhes, online, pending, sy
       </dl>
       {detalhes.observacoes_tecnicas ? <section className="summary-notes"><strong><MessageSquareText size={17} /> Observações técnicas</strong><p>{detalhes.observacoes_tecnicas}</p></section> : null}
       {error ? <div className="form-error"><strong>Revise antes de enviar</strong><span>{error}</span></div> : null}
-      {!pdfUrl ? <p className="pdf-help">{online ? 'O rascunho ainda está aguardando confirmação do servidor. Sincronize para liberar o PDF.' : 'O rascunho está salvo neste aparelho. Conecte-se para liberar o PDF.'}</p> : null}
-      <div className="summary-actions summary-actions--sticky">
-        {pdfUrl ? <a className="secondary-button" href={pdfUrl} target="_blank" rel="noreferrer"><FileText size={18} /> Ver relatório em PDF</a> : online ? <button className="secondary-button" onClick={() => onSync()} disabled={syncing}><FileText size={18} /> {syncing ? 'Sincronizando…' : 'Sincronizar para gerar PDF'}</button> : <button className="secondary-button" disabled><FileText size={18} /> PDF disponível quando conectar</button>}
+      {!pdfUrl ? <p className="pdf-help">{online ? 'Ao enviar, os dados e as fotos serão gravados no servidor e o PDF será gerado.' : 'Tudo está salvo neste aparelho. Conecte-se para enviar e gerar o PDF.'}</p> : null}
+      <div className={`summary-actions summary-actions--sticky ${pdfUrl ? '' : 'single-action'}`}>
+        {pdfUrl ? <a className="secondary-button" href={pdfUrl} target="_blank" rel="noreferrer"><FileText size={18} /> Ver relatório em PDF</a> : null}
         <button className="primary-button" onClick={onSubmit} disabled={submitting || enviada}>{enviada ? <CheckCircle2 size={18} /> : <Send size={18} />} {submitting ? 'Enviando…' : enviada ? 'Enviada para aprovação' : 'Enviar para aprovação'}</button>
       </div>
     </AppShell>

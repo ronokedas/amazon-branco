@@ -1,9 +1,9 @@
 import { api } from './api'
 import { listarFila, removerDaFila } from './db'
 
-export async function processarFila(onProgress, usuarioId = null) {
-  if (!navigator.onLine) return { processadas: 0, pendentes: (await listarFila(usuarioId)).length, resultados: [] }
-  const fila = await listarFila(usuarioId)
+export async function processarFila(onProgress, usuarioId = null, agendamentoId = null) {
+  if (!navigator.onLine) return { processadas: 0, pendentes: (await listarFila(usuarioId, agendamentoId)).length, resultados: [] }
+  const fila = await listarFila(usuarioId, agendamentoId)
   let processadas = 0
   const resultados = []
   for (const operacao of fila) {
@@ -23,6 +23,8 @@ export async function processarFila(onProgress, usuarioId = null) {
         form.set('operacao_id', operacao.payload.operacao_id)
         form.set('arquivo', operacao.payload.blob, operacao.payload.nome || 'embarcacao')
         dados = await api(`vistorias/${operacao.agendamento_id}/foto-embarcacao`, { method: 'POST', body: form })
+      } else if (operacao.tipo === 'exclusao_anexo') {
+        dados = await api(`anexos/${operacao.payload.anexo_id}`, { method: 'DELETE' })
       } else if (operacao.tipo === 'finalizacao') {
         dados = await api(`vistorias/${operacao.agendamento_id}/finalizar`, { method: 'POST', body: JSON.stringify(operacao.payload) })
       }
@@ -35,5 +37,5 @@ export async function processarFila(onProgress, usuarioId = null) {
       throw error
     }
   }
-  return { processadas, pendentes: (await listarFila(usuarioId)).length, resultados }
+  return { processadas, pendentes: (await listarFila(usuarioId, agendamentoId)).length, resultados }
 }

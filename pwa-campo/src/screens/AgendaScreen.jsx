@@ -17,9 +17,7 @@ function VesselPhoto({ item, onPhoto }) {
     return () => URL.revokeObjectURL(url)
   }, [item.foto_local_blob])
   const src = localUrl || item.foto_url || '/assets/img/portal-hero-ship.png'
-  const actionLabel = item.foto_status === 'enviando'
-    ? 'Enviando…'
-    : item.foto_status === 'pendente'
+  const actionLabel = item.foto_status === 'pendente'
       ? 'Salva no aparelho'
       : item.foto_url || localUrl ? 'Trocar' : 'Adicionar'
   return <label className={`vessel-photo-control ${item.foto_url || localUrl ? 'has-photo' : ''}`}>
@@ -59,7 +57,7 @@ function AgendaCard({ item, onOpen, onVesselPhoto }) {
   )
 }
 
-export function AgendaScreen({ session, agenda, online, pending, syncing, onSync, onOpen, onVesselPhoto, onInstall, onNavigate }) {
+export function AgendaScreen({ session, agenda, online, onOpen, onVesselPhoto, onInstall, onNavigate }) {
   const [installHelp, setInstallHelp] = useState(false)
   const instalar = async () => {
     const instalado = await onInstall?.()
@@ -74,7 +72,7 @@ export function AgendaScreen({ session, agenda, online, pending, syncing, onSync
     ['Próximas vistorias', agenda.filter(item => !item.data_vistoria || item.data_vistoria > hoje)],
   ].filter(([, itens]) => itens.length)
   return (
-    <AppShell title="Amazon Campo" online={online} pending={pending} syncing={syncing} onSync={onSync} footer={false} header={false}>
+    <AppShell title="Amazon Campo" online={online} footer={false} header={false}>
       <section className="brand-header">
         <button className="brand-menu" type="button" onClick={() => onNavigate('settings')} aria-label="Abrir menu"><Menu size={24} /></button>
         <img className="brand-logo" src="/img/logo-amazon-sidebar.svg" alt="Amazon Certificadora" />
@@ -86,7 +84,7 @@ export function AgendaScreen({ session, agenda, online, pending, syncing, onSync
       </section>
       {grupos.map(([titulo, itens]) => <section className="agenda-group" key={titulo}><div className="section-title"><strong>{titulo}</strong><span>{itens.length} atribuída{itens.length === 1 ? '' : 's'}</span></div><div className="agenda-list">{itens.map(item => <AgendaCard key={item.id} item={item} onOpen={onOpen} onVesselPhoto={onVesselPhoto} />)}</div></section>)}
       {agenda.length === 0 ? <section className="agenda-list"><div className="empty-state"><CalendarDays size={34} /><strong>Nenhuma vistoria pendente</strong><span>Quando houver uma nova atribuição, ela aparecerá aqui.</span></div></section> : null}
-      <div className="mode-banner"><CloudDownload size={22} /><span><strong>{online ? 'Pronto para trabalhar offline' : 'Modo offline ativo'}</strong><small>{pending ? `${pending} alterações aguardando sincronização` : 'Os pacotes baixados ficam disponíveis neste aparelho'}</small></span><button className="install-button" onClick={instalar}>Instalar no Android</button>{installHelp ? <small className="install-help" role="status">No Chrome, toque no menu ⋮ e escolha <strong>Adicionar à tela inicial</strong>.</small> : null}</div>
+      <div className="mode-banner"><CloudDownload size={22} /><span><strong>{online ? 'Pronto para trabalhar offline' : 'Modo offline ativo'}</strong><small>As vistorias ficam salvas neste aparelho e são enviadas somente ao finalizar.</small></span><button className="install-button" onClick={instalar}>Instalar no Android</button>{installHelp ? <small className="install-help" role="status">No Chrome, toque no menu ⋮ e escolha <strong>Adicionar à tela inicial</strong>.</small> : null}</div>
       <BottomNav active="agenda" onNavigate={onNavigate} />
     </AppShell>
   )

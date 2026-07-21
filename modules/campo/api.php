@@ -645,7 +645,7 @@ try {
         if (!preg_match('/^[a-f0-9-]{36}$/i', $operacaoId)) campoErro('OPERACAO_INVALIDA', 'Identificador da operação inválido.', 422);
         campoAgendamento($pdo, $m[1], $usuarioId);
         $vistoria = campoVistoriaPorAgendamento($pdo, $m[1]);
-        if (!$vistoria) campoErro('RASCUNHO_NAO_SINCRONIZADO', 'Sincronize o rascunho antes das fotos.', 409);
+        if (!$vistoria) campoErro('RASCUNHO_NAO_ENVIADO', 'Os dados da vistoria precisam ser enviados antes das fotos.', 409);
         $existente = campoOperacaoExistente($pdo, $operacaoId);
         if ($existente) campoJson($existente);
         if ($vistoria['status'] !== 'PENDENTE') campoErro('VISTORIA_BLOQUEADA', 'A vistoria já foi enviada.', 409);
@@ -678,7 +678,7 @@ try {
                 error_log('API campo: falha ao armazenar evidencia: ' . $e->getMessage());
                 campoErro(
                     'ARMAZENAMENTO_INDISPONIVEL',
-                    'A foto continua salva neste aparelho. Toque em Enviar agora para tentar novamente.',
+                    'A foto continua salva neste aparelho. Tente enviar a vistoria novamente quando o servidor estiver disponível.',
                     503
                 );
             }
@@ -831,7 +831,7 @@ try {
     if ($method === 'GET' && preg_match('#^vistorias/([^/]+)/previa$#', $rota, $m)) {
         $ag = campoAgendamento($pdo, $m[1], $usuarioId);
         $vistoria = campoVistoriaPorAgendamento($pdo, $m[1]);
-        if (!$vistoria) campoErro('RASCUNHO_INEXISTENTE', 'A vistoria ainda não possui dados sincronizados.', 404);
+        if (!$vistoria) campoErro('RASCUNHO_INEXISTENTE', 'A vistoria ainda não possui dados enviados.', 404);
         $stmt = $pdo->prepare("SELECT
                 COUNT(*) AS respondidos,
                 SUM(status='CONFORME') AS conformes,

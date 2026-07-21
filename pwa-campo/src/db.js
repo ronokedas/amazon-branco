@@ -105,7 +105,7 @@ export async function enfileirar(operacao, substituirTipo = false) {
   })
 }
 
-export async function listarFila(usuarioId = null) {
+export async function listarFila(usuarioId = null, agendamentoId = null) {
   const db = await openDatabase()
   return new Promise((resolve, reject) => {
     const tx = db.transaction(['fila', 'pacotes'], 'readonly')
@@ -115,9 +115,10 @@ export async function listarFila(usuarioId = null) {
       const donosPorAgendamento = new Map(
         (pacotesReq.result || []).map(item => [item.agendamento_id, usuarioDoPacote(item)]),
       )
-      const prioridade = { foto_embarcacao: 0, rascunho: 1, anexo: 2, finalizacao: 3 }
+      const prioridade = { foto_embarcacao: 0, rascunho: 1, exclusao_anexo: 2, anexo: 3, finalizacao: 4 }
       const itens = [...(filaReq.result || [])]
         .filter(item => !usuarioId || (item.usuario_id || donosPorAgendamento.get(item.agendamento_id)) === usuarioId)
+        .filter(item => !agendamentoId || item.agendamento_id === agendamentoId)
         .sort((a, b) => (prioridade[a.tipo] - prioridade[b.tipo]) || (a.criado_em - b.criado_em))
       fecharConexao(db); resolve(itens)
     }

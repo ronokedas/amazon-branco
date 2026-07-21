@@ -1,4 +1,4 @@
-const CACHE = 'amazon-campo-v9'
+const CACHE = 'amazon-campo-v10'
 const SHELL = ['/campo/', '/campo/manifest.webmanifest', '/campo/icon.svg']
 
 async function cacheAppShell() {
