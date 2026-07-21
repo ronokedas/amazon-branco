@@ -488,33 +488,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
             <?php endif; ?>
 
-            <!-- Revisão de relatório legado sem agendamento (ANALISTA) -->
-            <?php if ($cargo === 'ANALISTA' && $vistoria['status'] === 'AGUARDANDO_APROVACAO'): ?>
-            <div style="background:#f5fbf8;padding:18px 20px;border-radius:8px;margin-bottom:15px;border:1px solid #a8d9c5;border-left:4px solid #0aa36c;">
-                <h4 style="margin-bottom:8px;color:#08734f;"><i class="fas fa-clipboard-check"></i> Decisão da análise técnica</h4>
-                <p class="text-muted" style="margin-bottom:14px;">Este é um relatório antigo sem agendamento vinculado. A decisão pode ser registrada normalmente por esta tela.</p>
-                <form method="POST" action="<?php echo APP_URL; ?>vistorias/actions?action=aprovar_ou_reprovar">
-                    <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>">
-                    <input type="hidden" name="id" value="<?php echo h($vistoria['id']); ?>">
-                    <div class="form-group">
-                        <label for="observacao_analista"><i class="fas fa-comment"></i> Observação da análise</label>
-                        <textarea id="observacao_analista" name="observacao_admin" rows="4" maxlength="2000" placeholder="Obrigatória para reprovar; opcional para aprovar."></textarea>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" name="decisao" value="aprovar" class="btn btn-success" onclick="return confirm('Aprovar este relatório?')"><i class="fas fa-check"></i> Aprovar relatório</button>
-                        <button type="submit" name="decisao" value="reprovar" class="btn btn-danger" onclick="return confirmarReprovacaoLegada()"><i class="fas fa-times"></i> Reprovar relatório</button>
-                    </div>
-                </form>
-            </div>
-            <script>
-            function confirmarReprovacaoLegada() {
-                const observacao = document.getElementById('observacao_analista').value.trim();
-                if (!observacao) { alert('Informe uma observação para reprovar o relatório.'); return false; }
-                return confirm('Reprovar este relatório?');
-            }
-            </script>
-            <?php endif; ?>
-
             <!-- Alterar Status (apenas ADMIN) -->
             <?php if ($cargo === 'ADMIN'): ?>
             <div style="background: var(--cor-sidebar); padding: 15px 20px; border-radius: 8px; margin-bottom: 15px;">

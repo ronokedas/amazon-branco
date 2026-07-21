@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/aprovacao_documentos.php';
 
 // Exigir login e permissao (ADMIN e VISTORIADOR)
 verificar_sessao();
@@ -988,6 +989,8 @@ switch ($action) {
         $id = $_POST['id'] ?? '';
         $decisao = $_POST['decisao'] ?? '';
         $status_vistoria = $_POST['status_vistoria'] ?? '';
+        $resultado_relatorio = strtoupper(trim((string)($_POST['resultado_relatorio'] ?? '')));
+        $versao_relatorio = trim((string)($_POST['versao_relatorio'] ?? ''));
         $observacao = sanitizar($_POST['observacao_admin'] ?? '');
         bloquearMutacaoRelatorioAuditavel($pdo, $id, APP_URL . 'documentacao/aprovacao_relatorios');
 
@@ -996,6 +999,7 @@ switch ($action) {
             redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
         }
 
+        $aprovando = $decisao === 'aprovar';
         $statusesValidosAdmin = ['PENDENTE', 'AGUARDANDO_APROVACAO', 'REPROVADA', 'CANCELADA'];
         if (empty($status_vistoria)) {
             if ($decisao === 'reprovar') {
@@ -1003,7 +1007,7 @@ switch ($action) {
             }
         }
 
-        if (!in_array($status_vistoria, $statusesValidosAdmin, true)) {
+        if (!$aprovando && !in_array($status_vistoria, $statusesValidosAdmin, true)) {
             setMensagem('error', 'Resultado final da vistoria invalido.');
             redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
         }
@@ -1013,26 +1017,37 @@ switch ($action) {
             redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
         }
 
-        $stmtV = $pdo->prepare("SELECT * FROM vistorias WHERE id = :id");
-        $stmtV->execute([':id' => $id]);
-        $vistoria = $stmtV->fetch(PDO::FETCH_ASSOC);
-
-        if (!$vistoria) {
-            setMensagem('error', 'Vistoria nao encontrada.');
-            redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
-        }
-
-        $agendamento_id = $vistoria['agendamento_id'] ?? null;
+        $agendamento_id = null;
 
         try {
             $pdo->beginTransaction();
 
+            $stmtV = $pdo->prepare("SELECT * FROM vistorias WHERE id = :id FOR UPDATE");
+            $stmtV->execute([':id' => $id]);
+            $vistoria = $stmtV->fetch(PDO::FETCH_ASSOC);
+            if (!$vistoria) {
+                throw new Exception('Vistoria nao encontrada.');
+            }
+            if (($vistoria['status'] ?? '') !== 'AGUARDANDO_APROVACAO') {
+                throw new Exception('Somente relatorios aguardando aprovacao podem receber esta decisao.');
+            }
+
+            $agendamento_id = $vistoria['agendamento_id'] ?? null;
+            if (empty($agendamento_id)) {
+                throw new Exception('O relatorio precisa estar vinculado a um agendamento para concluir o fluxo.');
+            }
             $relatorioVigente = obterRelatorioVigenteAgendamento($pdo, (string)$agendamento_id);
             if (!$relatorioVigente || $relatorioVigente['id'] !== $id) {
                 throw new Exception('Somente o relatorio vigente da cadeia pode receber uma decisao.');
             }
 
-            $statusFinalizaFluxo = $status_vistoria === 'REPROVADA';
+            if ($aprovando) {
+                $resumoAprovacao = aprovacaoRelatorioResumoExigencias($pdo, $id);
+                aprovacaoRelatorioValidarResultado($resumoAprovacao, $resultado_relatorio, $versao_relatorio);
+                $status_vistoria = (string)$resumoAprovacao['status_esperado'];
+            }
+
+            $statusFinalizaFluxo = $aprovando || $status_vistoria === 'REPROVADA';
             $stmt = $pdo->prepare("
                 UPDATE vistorias
                 SET status = :status,
@@ -1061,6 +1076,8 @@ switch ($action) {
             $mensagensStatus = [
                 'PENDENTE' => 'Relatorio mantido como pendente.',
                 'AGUARDANDO_APROVACAO' => 'Relatorio mantido aguardando aprovacao.',
+                'APROVADA' => 'Relatorio aprovado com sucesso.',
+                'APROVADA_COM_EXIGENCIAS' => 'Relatorio aprovado com exigencias com sucesso.',
                 'REPROVADA' => 'Relatorio reprovado. Agendamento concluido.',
                 'CANCELADA' => 'Relatorio cancelado.'
             ];
@@ -1068,9 +1085,24 @@ switch ($action) {
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao salvar decisao admin da vistoria: ' . $e->getMessage());
-            setMensagem('error', 'Erro ao processar decisao do relatorio. Tente novamente.');
+            $mensagensRevisao = [
+                'O relatorio ou suas exigencias foram alterados. Atualize a pagina e revise novamente antes de aprovar.',
+                'O relatorio possui exigencias abertas e deve ser aprovado com exigencias.',
+                'O relatorio nao possui exigencias abertas e deve ser aprovado sem exigencias.',
+                'Somente relatorios aguardando aprovacao podem receber esta decisao.',
+                'Somente o relatorio vigente da cadeia pode receber uma decisao.',
+            ];
+            setMensagem('error', in_array($e->getMessage(), $mensagensRevisao, true) ? $e->getMessage() : 'Erro ao processar decisao do relatorio. Tente novamente.');
+            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode((string)$agendamento_id) . '&vistoria_id=' . urlencode($id));
         }
 
+        if ($aprovando) {
+            $liberacao = avaliarLiberacaoCertificacao($pdo, $id);
+            if (!empty($liberacao['permitido'])) {
+                redirecionar(APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id));
+            }
+            setMensagem('warning', $liberacao['mensagem'] ?? 'Certificacao permanece bloqueada.');
+        }
         redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id) . '&vistoria_id=' . urlencode($id));
         break;
 

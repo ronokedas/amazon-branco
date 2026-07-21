@@ -10,7 +10,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
-require_once __DIR__ . '/../../includes/aprovacao_ui.php';
+require_once __DIR__ . '/../../includes/aprovacao_documentos.php';
 
 exigirAcesso('vistorias');
 $cargo = getCargo();
@@ -642,7 +642,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         <?php endif; ?>
                                     </div>
                                     <div style="margin-bottom:16px">
-                                        <?php renderBotaoAprovacaoDocumento($pdo,'RELATORIO',$vistoria['id'],$vistoria['status'],false,!empty($vistoria['responsavel_assinatura_id'])?(int)$vistoria['responsavel_assinatura_id']:null); ?>
+                                        <button type="submit" name="decisao" value="aprovar" class="btn btn-warning"
+                                                onclick="return confirm('<?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar este relatorio com exigencias?' : 'Aprovar este relatorio?' ?>')">
+                                            <i class="fas fa-check-circle"></i>
+                                            <?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar com exig&ecirc;ncias' : 'Aprovar relat&oacute;rio' ?>
+                                        </button>
                                     </div>
                                     <hr style="border:0;border-top:1px solid #dfe9e5;margin:16px 0">
                                     <div class="form-group mb-3">
@@ -670,7 +674,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <?php elseif (($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO'): ?>
                                 <div class="admin-review-text">
                                     A revis&atilde;o t&eacute;cnica e a inclus&atilde;o de exig&ecirc;ncias est&atilde;o dispon&iacute;veis abaixo.
-                                    A decis&atilde;o final e a assinatura pertencem exclusivamente ao administrador.
+                                    A decis&atilde;o final pertence exclusivamente ao administrador.
                                 </div>
                             <?php else: ?>
                                 <div class="admin-review-text">
@@ -1432,6 +1436,9 @@ document.getElementById('formRelatorio').addEventListener('submit', function(e) 
 <?php else: ?>
 <script>
 document.getElementById('formDecisaoAdmin')?.addEventListener('submit', function(e) {
+    if (e.submitter?.name === 'decisao' && e.submitter.value === 'aprovar') {
+        return;
+    }
     const status = document.getElementById('status_vistoria_admin').value;
     const observacao = document.getElementById('observacao_admin').value.trim();
 
@@ -1463,4 +1470,4 @@ document.getElementById('formDecisaoAdmin')?.addEventListener('submit', function
 </script>
 <?php endif; ?>
 
-<?php renderAprovacaoUi($pdo); require_once __DIR__ . '/../../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

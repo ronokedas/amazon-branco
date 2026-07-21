@@ -220,6 +220,9 @@ function aprovacaoDocumentoFinalizarEstado(PDO $pdo, string $tipo, string $id, i
 function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
 {
     $tipo = strtoupper(trim((string)($input['documento_tipo'] ?? '')));
+    if ($tipo === 'RELATORIO') {
+        throw new RuntimeException('Relatorios de vistoria nao exigem assinatura eletronica. Use a decisao administrativa da revisao.');
+    }
     $id = trim((string)($input['documento_id'] ?? ''));
     $responsavelId = (int)($input['responsavel_id'] ?? 0);
     $latitude = filter_var($input['latitude'] ?? null, FILTER_VALIDATE_FLOAT);

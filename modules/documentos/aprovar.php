@@ -21,6 +21,10 @@ try {
         http_response_code(419);
         throw new RuntimeException('Sessao expirada. Atualize a pagina e tente novamente.');
     }
+    if (strtoupper(trim((string)($_POST['documento_tipo'] ?? ''))) === 'RELATORIO') {
+        http_response_code(422);
+        throw new RuntimeException('Relatorios de vistoria sao aprovados diretamente na revisao administrativa e nao exigem assinatura eletronica.');
+    }
 
     $result = aprovarDocumentoEletronicamente($pdo, $_POST);
     echo json_encode(['success'=>true, 'message'=>'Documento aprovado e assinado eletronicamente.', 'data'=>$result], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
