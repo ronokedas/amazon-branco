@@ -243,3 +243,29 @@
     };
 
 })();
+document.addEventListener('change', function (event) {
+    const input = event.target.closest('[data-feedback-upload] input[type="file"]');
+    if (!input) return;
+    const files = Array.from(input.files || []);
+    const allowed = ['jpg','jpeg','png','webp','pdf','docx','xlsx','pptx','csv','txt'];
+    const invalid = files.length > 5 || files.some(file => file.size > 10 * 1024 * 1024 || !allowed.includes((file.name.split('.').pop() || '').toLowerCase()));
+    if (invalid) {
+        input.value = '';
+        if (typeof showToast === 'function') showToast('Use até 5 arquivos permitidos, com no máximo 10 MB cada.', 'error');
+    }
+    const preview = input.closest('[data-feedback-upload]').querySelector('.feedback-preview');
+    if (preview) preview.innerHTML = invalid ? '' : files.map(file => '<span>' + String(file.name).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])) + '</span>').join('');
+});
+
+document.addEventListener('input', function (event) {
+    const search = event.target.closest('[data-feedback-user-search]');
+    if (!search) return;
+    const select = search.closest('form').querySelector('[data-feedback-user-select]');
+    if (!select) return;
+    const term = search.value.trim().toLocaleLowerCase('pt-BR');
+    Array.from(select.options).forEach((option, index) => {
+        if (index === 0) return;
+        option.hidden = term !== '' && !option.textContent.toLocaleLowerCase('pt-BR').includes(term);
+    });
+    if (select.selectedOptions[0]?.hidden) select.value = '';
+});

@@ -8,7 +8,7 @@ require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
-requireLogin();
+exigirAcesso('certificados');
 
 $modelo = $_GET['modelo'] ?? '';
 if (empty($modelo)) {

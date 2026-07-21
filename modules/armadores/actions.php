@@ -11,10 +11,7 @@ require_once __DIR__ . '/../../includes/cliente_vinculos.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VISTORIADOR'])) {
-    setMensagem('error', 'Acesso negado.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('armadores');
 
 // Validar CSRF token
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

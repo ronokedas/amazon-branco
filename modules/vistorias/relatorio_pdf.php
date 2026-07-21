@@ -7,15 +7,22 @@
 
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
+require_once __DIR__ . '/../../includes/auth.php';
 
-// O PDF é público e acessível via ID (UUID), portanto não é necessário verificar a sessão.
-// require_once __DIR__ . '/../../includes/auth.php';
-// verificar_sessao();
+$requisicaoExterna = !isset($salvar_pdf_caminho);
+if ($requisicaoExterna) {
+    verificar_sessao();
+    if (!podeAcessar('vistorias')) {
+        http_response_code(403);
+        exit('Acesso negado.');
+    }
+}
 
-$id = $_GET['id'] ?? '';
+$id = trim((string)($_GET['id'] ?? ''));
 
-if (empty($id)) {
-    die("ID não informado.");
+if (!preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i', $id)) {
+    http_response_code(400);
+    exit('Identificador de relatorio invalido.');
 }
 
 // Buscar vistoria
@@ -25,6 +32,7 @@ $stmt = $pdo->prepare("
            c.nome AS cliente_nome,
            arm.nome AS armador_nome,
            a.local AS local_vistoria, a.data_vistoria AS a_data_vistoria, a.tipo_vistoria AS agendamento_tipo_vistoria,
+           a.vistoriador_id AS agendamento_vistoriador_id,
            va.numero AS relatorio_anterior_numero,
            u.nome AS assinante_nome, '' AS assinante_registro, 'Engenheiro Naval' AS assinante_titulo
     FROM vistorias v
@@ -40,7 +48,20 @@ $stmt->execute([':id' => $id]);
 $v = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$v) {
-    die("Relatório não encontrado.");
+    http_response_code(404);
+    exit("Relatório não encontrado.");
+}
+
+if ($requisicaoExterna && getCargo() === 'VISTORIADOR'
+    && (string)($v['agendamento_vistoriador_id'] ?? '') !== (string)($_SESSION['usuario_id'] ?? '')) {
+    http_response_code(403);
+    exit('Acesso negado. Este relatorio nao esta atribuido a voce.');
+}
+
+if ($requisicaoExterna) {
+    header('Cache-Control: private, no-store, max-age=0');
+    header('Pragma: no-cache');
+    header('X-Content-Type-Options: nosniff');
 }
 
 // Depois da aprovacao, o relatorio e imutavel e sempre deve servir o artefato auditado.

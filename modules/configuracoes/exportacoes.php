@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/exportacoes_documentos.php';
-verificar_sessao(); verificar_cargo('ADMIN');
+verificar_sessao(); exigirAcesso('configuracoes');
 $clientes=$pdo->query("SELECT id,nome FROM clientes ORDER BY nome")->fetchAll();
 $embarcacoes=$pdo->query("SELECT id,nome,registro FROM embarcacoes ORDER BY nome")->fetchAll();
 $jobs=$pdo->query("SELECT ex.*,u.nome solicitante,(ex.status='CONCLUIDA' AND ex.expira_em>NOW()) disponivel FROM exportacoes_documentos ex INNER JOIN usuarios u ON u.id=ex.solicitado_por ORDER BY solicitado_em DESC LIMIT 30")->fetchAll();

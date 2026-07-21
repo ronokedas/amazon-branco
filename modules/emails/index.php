@@ -12,10 +12,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 // Exigir login e permissao ADMIN
 verificar_sessao();
 $cargo = getCargo();
-if ($cargo !== 'ADMIN') {
-    setMensagem('error', 'Acesso negado. Apenas administradores.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('emails');
 
 $usuario_id = $_SESSION['usuario_id'];
 

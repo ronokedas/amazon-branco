@@ -273,7 +273,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                               maxlength="1000"><?php echo h($lancamento['observacoes'] ?? ''); ?></textarea>
                 </div>
 
-                <?php if ($isEdicao): ?>
                 <!-- Comprovantes / notas -->
                 <div class="form-group">
                     <label for="comprovantes">
@@ -288,6 +287,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <small class="text-muted">Voce pode escolher varios arquivos de uma vez ou repetir a selecao antes de atualizar. Envie imagens ou PDFs de ate 10MB cada.</small>
                 </div>
 
+                <?php if ($isEdicao): ?>
                 <div class="form-group">
                     <label>
                         <i class="fas fa-folder-open"></i> Ver comprovantes

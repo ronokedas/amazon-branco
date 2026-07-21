@@ -9,11 +9,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-// Permitir ADMIN e VISTORIADOR para algumas ações
-if (!in_array(getCargo(), ['ADMIN', 'VISTORIADOR'])) {
-    setMensagem('error', 'Acesso negado.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('documentacao');
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 

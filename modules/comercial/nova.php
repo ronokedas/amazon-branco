@@ -13,10 +13,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
 
 verificar_sessao();
-if (!in_array(getCargo(), ['ADMIN', 'VENDEDOR'], true)) {
-    setMensagem('error', 'Acesso negado.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('comercial');
 
 $escritoriosProposta = financeiroEscritoriosPermitidos($pdo);
 $escritorioProposta = financeiroResolverEscritorio($pdo, $_GET['escritorio_id'] ?? null);
@@ -134,8 +131,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <i class="fas fa-user-tie"></i>
                             <h3>Nenhum proprietário cadastrado</h3>
                             <p>Cadastre um proprietário antes de criar uma proposta.</p>
-                            <a href="<?php echo APP_URL; ?>clientes/form" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Novo Cliente
+                            <a href="<?php echo APP_URL; ?>proprietarios/form" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Novo Proprietário
                             </a>
                         </div>
                     <?php else: ?>

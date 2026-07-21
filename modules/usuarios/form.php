@@ -11,7 +11,7 @@ require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
 
 // Exigir login e cargo ADMIN
 verificar_sessao();
-verificar_cargo('ADMIN');
+exigirAcesso('usuarios');
 
 // Buscar usuario se for edicao
 $id = $_GET['id'] ?? '';
@@ -37,6 +37,9 @@ if (!empty($id)) {
 }
 
 $escritorios = financeiroEscritorios($pdo);
+$gestoresDisponiveis = $pdo->prepare("SELECT id,nome,cargo FROM usuarios WHERE ativo=1 AND excluido_em IS NULL AND id<>:id ORDER BY nome");
+$gestoresDisponiveis->execute([':id'=>$id ?: '']);
+$gestoresDisponiveis = $gestoresDisponiveis->fetchAll();
 $escritoriosSelecionados = [];
 $escritorioPrincipal = '';
 if ($usuario) {
@@ -142,6 +145,17 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             </label>
                         </div>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="gestor_id"><i class="fas fa-user-tie"></i> Gestor direto</label>
+                    <select id="gestor_id" name="gestor_id">
+                        <option value="">Sem gestor direto</option>
+                        <?php foreach ($gestoresDisponiveis as $gestor): ?>
+                        <option value="<?= h($gestor['id']) ?>" <?= ($usuario['gestor_id'] ?? '')===$gestor['id']?'selected':'' ?>><?= h($gestor['nome'].' · '.$gestor['cargo']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted">Este vínculo define equipe e gestor nas regras de mensagens internas.</small>
                 </div>
 
                 <div class="form-group">

@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config.php'; require_once __DIR__ . '/../../includes/functions.php'; require_once __DIR__ . '/../../includes/auth.php'; require_once __DIR__ . '/../../includes/exportacoes_documentos.php';
-verificar_sessao(); verificar_cargo('ADMIN');$id=trim((string)($_GET['id']??''));
+verificar_sessao(); exigirAcesso('configuracoes');$id=trim((string)($_GET['id']??''));
 $stmt=$pdo->prepare("SELECT * FROM exportacoes_documentos WHERE id=:id AND status='CONCLUIDA' AND expira_em>NOW() LIMIT 1");$stmt->execute([':id'=>$id]);$job=$stmt->fetch();
 if(!$job){http_response_code(404);die('Exportação inexistente ou expirada.');}
 $caminhoRelativo=ltrim((string)$job['caminho_arquivo'],'/');

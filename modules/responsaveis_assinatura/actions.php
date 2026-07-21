@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-verificar_cargo('ADMIN');
+exigirAcesso('responsaveis_assinatura');
 
 function salvarImagemAssinaturaResponsavel(array $arquivo, int $responsavelId): array
 {

@@ -1406,6 +1406,7 @@ CREATE TABLE `financeiro_metas_mensais` (
   `escritorio_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
   `usuario_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `valor` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `mensagem` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ;

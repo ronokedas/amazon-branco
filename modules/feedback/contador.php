@@ -1,0 +1,2 @@
+<?php
+require_once __DIR__.'/../../config.php';require_once __DIR__.'/../../includes/functions.php';require_once __DIR__.'/../../includes/auth.php';require_once __DIR__.'/../../includes/feedback.php';header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');if(!estaLogado()){http_response_code(401);echo json_encode(['error'=>'unauthorized']);exit;}echo json_encode(feedbackResumoNaoLidas($pdo,(string)$_SESSION['usuario_id']),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);

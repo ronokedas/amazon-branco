@@ -94,6 +94,15 @@ function podeAcessar(string $modulo): bool {
     return in_array($modulo, permissoesPadraoCargo($cargo), true);
 }
 
+/** Exige a mesma permissao granular usada pelo roteador e pela barra lateral. */
+function exigirAcesso(string $modulo, string $destino = 'dashboard'): void {
+    requireLogin();
+    if (podeAcessar($modulo)) return;
+
+    setMensagem('error', 'Acesso negado. Voce nao tem permissao para acessar este modulo.');
+    redirecionar(APP_URL . $destino);
+}
+
 // Legado mantido abaixo por compatibilidade de leitura em instalações antigas.
 function podeAcessarLegado($modulo) {
     if (!estaLogado()) {

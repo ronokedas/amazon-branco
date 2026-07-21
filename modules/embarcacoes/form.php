@@ -12,10 +12,7 @@ require_once __DIR__ . '/../../includes/dados_teste_embarcacoes.php';
 // Exigir login e permissao do modulo
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VISTORIADOR'])) {
-    setMensagem('error', 'Acesso negado. Voce nao tem permissao para acessar este modulo.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('embarcacoes');
 
 // Buscar tipos de embarcacao
 $tipos_embarcacao = [];

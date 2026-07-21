@@ -5,6 +5,7 @@
  * Cabecalho padrao de todas as paginas
  */
 require_once __DIR__ . '/auth.php';
+if (estaLogado()) require_once __DIR__ . '/feedback.php';
 
 // Garantir encoding UTF-8
 header('Content-Type: text/html; charset=UTF-8');
@@ -112,9 +113,11 @@ header('Content-Type: text/html; charset=UTF-8');
                 <?php endif; ?>
                 <div class="topbar-right">
                     <?php if ($isAdminDashboard): ?><time class="topbar-current-date"><i class="fa-regular fa-calendar"></i><?= date('d/m/Y') ?></time><div class="topbar-separator"></div><?php endif; ?>
-                    <button class="btn-notification" title="Notificações" onclick="showToast('Nenhuma notificação no momento.', 'info')">
+                    <?php $feedbackGlobal = feedbackResumoNaoLidas($pdo, (string)($_SESSION['usuario_id'] ?? ''), 3); ?>
+                    <a class="btn-notification feedback-bell" title="Mensagens internas" href="<?php echo APP_URL; ?>feedback" aria-label="Mensagens internas: <?= (int)$feedbackGlobal['count'] ?> não lidas">
                         <i class="fa-regular fa-bell"></i>
-                    </button>
+                        <span id="feedbackUnreadBadge"<?= !$feedbackGlobal['count'] ? ' hidden' : '' ?>><?= (int)$feedbackGlobal['count'] ?></span>
+                    </a>
                     <div class="topbar-separator"></div>
                     <div class="topbar-user" onclick="toggleUserMenu()">
                         <div class="topbar-avatar"><?php echo strtoupper(substr($_SESSION['usuario_nome'] ?? 'A', 0, 1)); ?></div>
@@ -238,6 +241,25 @@ header('Content-Type: text/html; charset=UTF-8');
             }
         });
     }
+    </script>
+
+    <script>
+    (() => {
+        const badge = document.getElementById('feedbackUnreadBadge');
+        if (!badge) return;
+        const refresh = () => fetch('<?= APP_URL ?>feedback/contador', {headers:{'Accept':'application/json'}, credentials:'same-origin'})
+            .then(r => r.ok ? r.json() : Promise.reject()).then(data => {
+                const count = Number(data.count || 0);
+                badge.textContent = count > 99 ? '99+' : String(count);
+                badge.hidden = count < 1;
+                badge.closest('a').setAttribute('aria-label', `Mensagens internas: ${count} não lidas`);
+            }).catch(() => {});
+        window.setInterval(refresh, 60000);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+        <?php if (!isset($_SESSION['feedback_toast_login'])): $_SESSION['feedback_toast_login']=true; if ($feedbackGlobal['count']): ?>
+        window.addEventListener('DOMContentLoaded', () => showToast('Você tem <?= (int)$feedbackGlobal['count'] ?> conversa<?= $feedbackGlobal['count']===1?'':'s' ?> com novidades.', 'info', 5500));
+        <?php endif; endif; ?>
+    })();
     </script>
 
             <!-- Conteudo Principal -->

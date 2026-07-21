@@ -6,10 +6,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VENDEDOR', 'VISTORIADOR'], true)) {
-    setMensagem('error', 'Acesso negado.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('agendamentos');
 
 $usuario_id = $_SESSION['usuario_id'];
 $filtro_status = trim($_GET['status'] ?? '');

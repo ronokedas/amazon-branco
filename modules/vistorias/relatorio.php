@@ -12,20 +12,17 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/aprovacao_ui.php';
 
-verificar_sessao();
+exigirAcesso('vistorias');
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VISTORIADOR', 'ANALISTA'])) {
-    setMensagem('error', 'Acesso negado.');
-    redirecionar(APP_URL . 'dashboard');
-}
 
 $usuario_id = $_SESSION['usuario_id'];
 $agendamento_id = $_GET['agendamento_id'] ?? '';
 $vistoria_solicitada_id = trim($_GET['vistoria_id'] ?? '');
 
-if (empty($agendamento_id)) {
-    setMensagem('error', 'ID do agendamento nao informado.');
-    redirecionar(APP_URL . 'agendamentos');
+if (!preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i', (string)$agendamento_id)
+    || ($vistoria_solicitada_id !== '' && !preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i', $vistoria_solicitada_id))) {
+    http_response_code(400);
+    exit('Identificador de relatorio invalido.');
 }
 
 // ============================================

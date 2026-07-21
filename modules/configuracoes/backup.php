@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-verificar_cargo('ADMIN');
+exigirAcesso('configuracoes');
 
 $titulo_page = 'Backup e Limpeza - ERP Sistema';
 require_once __DIR__ . '/../../includes/header.php';

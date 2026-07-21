@@ -9,8 +9,8 @@ require_once __DIR__ . '/../../../includes/functions.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 
 verificar_sessao();
-if (getCargo() !== 'ADMIN') {
-    setMensagem('error', 'Acesso negado. Apenas Administradores podem gerenciar serviços.');
+if (!podeAcessar('servicos')) {
+    setMensagem('error', 'Acesso negado. Você não tem permissão para gerenciar serviços.');
     redirecionar(APP_URL . 'dashboard');
 }
 

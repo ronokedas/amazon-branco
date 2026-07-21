@@ -11,7 +11,7 @@ require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
 
 // Exigir login e cargo ADMIN
 verificar_sessao();
-verificar_cargo('ADMIN');
+exigirAcesso('usuarios');
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
@@ -40,6 +40,7 @@ switch ($action) {
         $senha       = $_POST['senha'] ?? '';
         $confirma    = $_POST['senha_confirma'] ?? '';
         $ativo       = isset($_POST['ativo']) ? 1 : 0;
+        $gestorId    = trim($_POST['gestor_id'] ?? '') ?: null;
         $escritoriosIds = array_values(array_unique(array_filter(array_map('trim', (array)($_POST['escritorios_ids'] ?? [])))));
         $escritorioPrincipalId = trim($_POST['escritorio_principal_id'] ?? '');
 
@@ -75,6 +76,19 @@ switch ($action) {
 
         // Se e criacao, senha e obrigatoria
         $isEdicao = !empty($id);
+        if ($gestorId && $isEdicao && $gestorId === $id) {
+            $erros[] = 'O usuário não pode ser seu próprio gestor.';
+            $errosCampos['gestor_id'] = 'Selecione outro gestor.';
+        }
+        if ($gestorId) {
+            $stmtGestor = $pdo->prepare('SELECT id FROM usuarios WHERE id=:id AND ativo=1 AND excluido_em IS NULL');
+            $stmtGestor->execute([':id'=>$gestorId]);
+            if (!$stmtGestor->fetchColumn()) { $erros[]='Gestor inválido ou inativo.'; $errosCampos['gestor_id']='Selecione um gestor ativo.'; }
+            if ($isEdicao) {
+                $cursor=$gestorId; $visitados=[];
+                while ($cursor && !isset($visitados[$cursor])) { if ($cursor===$id) { $erros[]='O vínculo de gestor criaria um ciclo na hierarquia.'; $errosCampos['gestor_id']='Revise a hierarquia.'; break; } $visitados[$cursor]=1; $s=$pdo->prepare('SELECT gestor_id FROM usuarios WHERE id=:id');$s->execute([':id'=>$cursor]);$cursor=$s->fetchColumn()?:null; }
+            }
+        }
         if (!$isEdicao) {
             if (empty($senha)) {
                 $erros[] = 'A senha e obrigatoria para novos usuarios.';
@@ -152,22 +166,22 @@ switch ($action) {
                 // Atualizar
                 if (!empty($senha)) {
                     $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, senha_hash = :senha, ativo = :ativo WHERE id = :id AND excluido_em IS NULL");
+                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, senha_hash = :senha, ativo = :ativo, gestor_id=:gestor WHERE id = :id AND excluido_em IS NULL");
                     $stmt->execute([
                         ':nome'   => $nome,
                         ':email'  => $email,
                         ':cargo'  => $cargo,
                         ':senha'  => $senhaHash,
-                        ':ativo'  => $ativo,
+                        ':ativo'  => $ativo, ':gestor'=>$gestorId,
                         ':id'     => $id
                     ]);
                 } else {
-                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, ativo = :ativo WHERE id = :id AND excluido_em IS NULL");
+                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, ativo = :ativo, gestor_id=:gestor WHERE id = :id AND excluido_em IS NULL");
                     $stmt->execute([
                         ':nome'   => $nome,
                         ':email'  => $email,
                         ':cargo'  => $cargo,
-                        ':ativo'  => $ativo,
+                        ':ativo'  => $ativo, ':gestor'=>$gestorId,
                         ':id'     => $id
                     ]);
                 }
@@ -186,14 +200,14 @@ switch ($action) {
                 // Criar
                 $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
                 $novoUsuarioId = gerarUUID();
-                $stmt = $pdo->prepare("INSERT INTO usuarios (id, nome, email, senha_hash, cargo, ativo) VALUES (:id, :nome, :email, :senha, :cargo, :ativo)");
+                $stmt = $pdo->prepare("INSERT INTO usuarios (id, nome, email, senha_hash, cargo, ativo, gestor_id) VALUES (:id, :nome, :email, :senha, :cargo, :ativo, :gestor)");
                 $stmt->execute([
                     ':id'     => $novoUsuarioId,
                     ':nome'   => $nome,
                     ':email'  => $email,
                     ':senha'  => $senhaHash,
                     ':cargo'  => $cargo,
-                    ':ativo'  => $ativo
+                    ':ativo'  => $ativo, ':gestor'=>$gestorId
                 ]);
                 try {
                     $stmtPerfil = $pdo->prepare("INSERT IGNORE INTO usuario_perfis (usuario_id, perfil) VALUES (:usuario_id, :perfil)");

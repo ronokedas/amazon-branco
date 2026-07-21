@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-verificar_cargo('ADMIN');
+exigirAcesso('configuracoes');
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     redirecionar(APP_URL . 'configuracoes/backup');

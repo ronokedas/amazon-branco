@@ -11,10 +11,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VENDEDOR'], true)) {
-    setMensagem('error', 'Acesso negado.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('comercial');
 
 // ============================================
 // FILTROS
@@ -116,17 +113,17 @@ if ($cargo === 'ADMIN') {
         $stmt->execute([':mes' => $mesAtual]);
         $assinadasDasEmitidasMes = (int)$stmt->fetchColumn();
 
-        // Meta mensal (buscar da tabela configuracoes)
-        $metaMensal = 50000.00; // valor padrão
+        // Meta mensal consolidada dos escritorios ativos.
+        $metaMensal = 0.00;
         try {
-            $stmtMeta = $pdo->prepare("SELECT valor FROM configuracoes WHERE chave = 'meta_mensal'");
-            $stmtMeta->execute();
+            $stmtMeta = $pdo->prepare("SELECT COALESCE(SUM(fm.valor),0) FROM financeiro_metas_mensais fm JOIN escritorios e ON e.id=fm.escritorio_id AND e.ativo=1 WHERE fm.usuario_id IS NULL AND fm.competencia=:competencia");
+            $stmtMeta->execute([':competencia'=>date('Y-m-01')]);
             $metaValorDb = $stmtMeta->fetchColumn();
             if ($metaValorDb !== false) {
                 $metaMensal = (float)$metaValorDb;
             }
         } catch (Exception $e) {
-            // Se tabela não existir, usa o valor padrão
+            error_log('Erro ao carregar metas dos escritorios: ' . $e->getMessage());
         }
         $percMeta = ($metaMensal > 0) ? round(($valorAssinadoMes / $metaMensal) * 100, 1) : 0;
 
@@ -155,7 +152,7 @@ if ($cargo === 'ADMIN') {
             'total_mes'       => 0,
             'valor_emitido_mes' => 0,
             'valor_assinado_mes' => 0,
-            'meta_mensal'     => 50000.00,
+            'meta_mensal'     => 0.00,
             'perc_meta'       => 0,
             'assinadas_mes'   => 0,
             'assinadas_emitidas_mes' => 0,

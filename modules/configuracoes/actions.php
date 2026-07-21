@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-verificar_cargo('ADMIN');
+exigirAcesso('configuracoes');
 
 $action = $_POST['action'] ?? '';
 
@@ -36,8 +36,6 @@ if (empty($configs)) {
 
 try {
     $descricoes = [
-        'meta_mensal' => 'Meta mensal de faturamento comercial em R$',
-        'meta_mensagem' => 'Mensagem da meta mensal exibida para a equipe',
         'dados_teste_embarcacoes' => 'Exibe o preenchimento rápido com dados fictícios no cadastro de embarcações',
     ];
     $stmt = $pdo->prepare(
@@ -51,29 +49,6 @@ try {
             continue;
         }
         $valor = trim((string)$valor);
-
-        // Validar meta_mensal
-        if ($chave === 'meta_mensal') {
-            $valor = trim((string)$valor);
-            // Se tem vírgula, é formato brasileiro: "50.000,00" ou "50000,00"
-            if (strpos($valor, ',') !== false) {
-                // Remove pontos de milhar primeiro
-                $valor = str_replace('.', '', $valor);
-                // Converte vírgula decimal para ponto
-                $valor = str_replace(',', '.', $valor);
-            }
-            // Se não tem vírgula, já está em formato americano ou inteiro (ex: "50000" ou "50000.00")
-            $valor = floatval($valor);
-            if ($valor <= 0) {
-                setMensagem('error', 'O valor da meta mensal deve ser um número positivo.');
-                redirecionar(APP_URL . $redirect_to);
-            }
-            $valor = number_format($valor, 2, '.', '');
-        }
-
-        if ($chave === 'meta_mensagem') {
-            $valor = mb_substr(strip_tags($valor), 0, 500, 'UTF-8');
-        }
 
         if ($chave === 'dados_teste_embarcacoes') {
             $valor = $valor === '1' ? '1' : '0';

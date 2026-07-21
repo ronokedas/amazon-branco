@@ -16,7 +16,7 @@ if ($action === 'embarcacoes_cliente') {
     verificar_sessao();
     header('Content-Type: application/json; charset=utf-8');
 
-    if (!in_array(getCargo(), ['ADMIN', 'VENDEDOR'])) {
+    if (!podeAcessar('comercial')) {
         echo json_encode(['error' => 'Acesso negado.']);
         exit;
     }
@@ -50,10 +50,7 @@ if ($action === 'embarcacoes_cliente') {
 
 // === DAQUI EM DIANTE: Ações via POST ===
 verificar_sessao();
-if (!in_array(getCargo(), ['ADMIN', 'VENDEDOR'])) {
-    setMensagem('error', 'Acesso negado. Apenas Administradores podem gerenciar propostas.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('comercial');
 
 // Validar CSRF token
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

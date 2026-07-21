@@ -2,7 +2,7 @@
 
 function analisePlanosPodeGerenciar(): bool
 {
-    return estaLogado() && (temPerfil('ANALISTA') || getCargo() === 'ADMIN');
+    return podeAcessar('analise_planos');
 }
 
 function analisePlanosExigirAcesso(): void
@@ -152,4 +152,3 @@ function analisePlanosCategoriasPadrao(): array
 {
     return ['Memorial Descritivo','Arranjo Geral','Plano de Linhas','Seção Mestra e Perfil Estrutural','Curvas Hidrostáticas','Estabilidade','Capacidade','Segurança','ART','Outros'];
 }
-

@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
+
 function dashScalar(PDO $pdo, string $sql, array $params = [], float $fallback = 0): float
 {
     try { $stmt = $pdo->prepare($sql); $stmt->execute($params); return (float)$stmt->fetchColumn(); }
@@ -12,10 +14,36 @@ function dashRows(PDO $pdo, string $sql, array $params = []): array
     catch (Throwable $e) { error_log('Dashboard rows: ' . $e->getMessage()); return []; }
 }
 
-function dashConfig(PDO $pdo, string $key, string $fallback = ''): string
+function dashMetaDoMes(PDO $pdo, string $cargo, string $usuarioId): array
 {
-    try { $stmt = $pdo->prepare('SELECT valor FROM configuracoes WHERE chave = :chave'); $stmt->execute([':chave'=>$key]); $v=$stmt->fetchColumn(); return $v === false ? $fallback : (string)$v; }
-    catch (Throwable $e) { return $fallback; }
+    $competencia = date('Y-m-01');
+    $inicio = $competencia;
+    $fim = date('Y-m-t');
+    $escritorioId = null;
+
+    if ($cargo !== 'ADMIN') {
+        $escritorios = financeiroEscritoriosUsuario($pdo, $usuarioId);
+        $escritorioId = $escritorios[0]['id'] ?? null;
+    }
+
+    if ($cargo === 'ADMIN') {
+        $meta = dashScalar($pdo, "SELECT COALESCE(SUM(fm.valor),0) FROM financeiro_metas_mensais fm JOIN escritorios e ON e.id=fm.escritorio_id AND e.ativo=1 WHERE fm.usuario_id IS NULL AND fm.competencia=:competencia", [':competencia'=>$competencia]);
+        $realizado = dashScalar($pdo, "SELECT COALESCE(SUM(valor),0) FROM financeiro_lancamentos WHERE ativo=1 AND tipo='RECEITA' AND status='PAGO' AND data BETWEEN :inicio AND :fim", [':inicio'=>$inicio, ':fim'=>$fim]);
+        $mensagens = dashRows($pdo, "SELECT e.nome,fm.mensagem FROM financeiro_metas_mensais fm JOIN escritorios e ON e.id=fm.escritorio_id AND e.ativo=1 WHERE fm.usuario_id IS NULL AND fm.competencia=:competencia AND TRIM(COALESCE(fm.mensagem,''))<>'' ORDER BY e.nome", [':competencia'=>$competencia]);
+        $mensagem = implode(' • ', array_map(static fn(array $item): string => $item['nome'] . ': ' . $item['mensagem'], $mensagens));
+    } elseif ($escritorioId) {
+        $metaConfigurada = dashRows($pdo, 'SELECT valor,mensagem FROM financeiro_metas_mensais WHERE usuario_id IS NULL AND escritorio_id=:escritorio AND competencia=:competencia LIMIT 1', [':escritorio'=>$escritorioId, ':competencia'=>$competencia]);
+        $meta = (float)($metaConfigurada[0]['valor'] ?? 0);
+        $mensagem = trim((string)($metaConfigurada[0]['mensagem'] ?? ''));
+        $realizado = dashScalar($pdo, "SELECT COALESCE(SUM(valor),0) FROM financeiro_lancamentos WHERE ativo=1 AND tipo='RECEITA' AND status='PAGO' AND escritorio_id=:escritorio AND data BETWEEN :inicio AND :fim", [':escritorio'=>$escritorioId, ':inicio'=>$inicio, ':fim'=>$fim]);
+    } else {
+        $meta = 0.0;
+        $realizado = 0.0;
+        $mensagem = '';
+    }
+
+    $escopo = $cargo === 'ADMIN' ? 'todos os escritórios' : (string)($escritorios[0]['nome'] ?? 'seu escritório');
+    return ['valor'=>$meta, 'realizado'=>$realizado, 'mensagem'=>$mensagem, 'escopo'=>$escopo];
 }
 
 function dashActivityUrl(array $log): ?string
@@ -33,9 +61,10 @@ function dashActivityUrl(array $log): ?string
 
 function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
 {
-    $meta = max(0.01, (float)dashConfig($pdo, 'meta_mensal', '50000'));
-    $recebido = dashScalar($pdo, "SELECT COALESCE(SUM(valor),0) FROM financeiro_lancamentos WHERE ativo=1 AND tipo='RECEITA' AND status='PAGO' AND data BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())");
-    $base = ['meta'=>['valor'=>$meta,'realizado'=>$recebido,'percentual'=>round(($recebido/$meta)*100,1),'mensagem'=>trim(dashConfig($pdo,'meta_mensagem',''))]];
+    $metaMes = dashMetaDoMes($pdo, $cargo, $usuarioId);
+    $meta = (float)$metaMes['valor'];
+    $recebido = (float)$metaMes['realizado'];
+    $base = ['meta'=>['valor'=>$meta,'realizado'=>$recebido,'percentual'=>$meta>0?round(($recebido/$meta)*100,1):0.0,'mensagem'=>$metaMes['mensagem'],'escopo'=>$metaMes['escopo']]];
     $params = [':uid'=>$usuarioId];
 
     if ($cargo === 'VISTORIADOR') {
@@ -118,7 +147,7 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
         $emitidas=(int)dashScalar($pdo,"SELECT COUNT(*) FROM propostas WHERE criado_por=:uid AND data_emissao BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())",$params);
         $assinadas=(int)dashScalar($pdo,"SELECT COUNT(*) FROM propostas WHERE criado_por=:uid AND assinado=1 AND COALESCE(assinatura_em,created_at) BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())",$params);
         $contrib= dashScalar($pdo,"SELECT COALESCE(SUM(valor),0) FROM financeiro_lancamentos WHERE ativo=1 AND tipo='RECEITA' AND status='PAGO' AND criado_por=:uid AND data BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())",$params);
-        $base['funil']=$funil; $base['conversao']=$emitidas?round(($assinadas/$emitidas)*100,1):0; $base['contribuicao']=round(($contrib/$meta)*100,1);
+        $base['funil']=$funil; $base['conversao']=$emitidas?round(($assinadas/$emitidas)*100,1):0; $base['contribuicao']=$meta>0?round(($contrib/$meta)*100,1):0;
         $base['prioridade']=dashRows($pdo,"SELECT DISTINCT p.id proposta_id,a.id agendamento_id,p.numero,c.nome cliente,COALESCE(e.nome,ep.nome,'Embarcação da proposta') embarcacao,p.assinatura_em FROM propostas p JOIN clientes c ON c.id=p.cliente_id LEFT JOIN agendamentos a ON a.proposta_id=p.id AND a.status<>'cancelado' LEFT JOIN embarcacoes e ON e.id=a.embarcacao_id LEFT JOIN propostas_embarcacoes pe ON pe.proposta_id=p.id LEFT JOIN embarcacoes ep ON ep.id=pe.embarcacao_id WHERE p.criado_por=:uid AND p.assinado=1 AND NOT EXISTS (SELECT 1 FROM agendamentos ac WHERE ac.proposta_id=p.id AND ac.status<>'cancelado' AND ac.data_vistoria IS NOT NULL AND ac.vistoriador_id IS NOT NULL) ORDER BY p.assinatura_em DESC LIMIT 1",$params)[0]??null;
         $base['recentes']=dashRows($pdo,"SELECT p.id,p.numero,p.status,p.data_emissao,p.updated_at,c.nome cliente FROM propostas p JOIN clientes c ON c.id=p.cliente_id WHERE p.criado_por=:uid ORDER BY p.updated_at DESC LIMIT 8",$params);
         $base['acompanhamentos']=array_values(array_filter($base['recentes'],fn($p)=>in_array($p['status'],['rascunho','enviada','assinada'],true)));

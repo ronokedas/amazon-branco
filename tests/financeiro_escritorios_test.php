@@ -40,4 +40,11 @@ if ($usuario) {
     }
 }
 
+$formFinanceiro = file_get_contents(__DIR__ . '/../modules/financeiro/form.php');
+if ($formFinanceiro === false) throw new RuntimeException('Nao foi possivel verificar o formulario financeiro.');
+if (!str_contains($formFinanceiro, 'name="comprovantes[]"')
+    || preg_match('/<\?php\s+if\s*\(\$isEdicao\):\s*\?>\s*<!--\s*Comprovantes \/ notas/', $formFinanceiro)) {
+    throw new RuntimeException('O upload de comprovantes nao esta disponivel na criacao do lancamento.');
+}
+
 echo "OK: Matriz, vinculos multiplos e isolamento por escritorio validados.\n";

@@ -12,10 +12,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VISTORIADOR'])) {
-    setMensagem('error', 'Acesso negado.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('agendamentos');
 
 $usuario_id = $_SESSION['usuario_id'];
 $os_id = $_GET['id'] ?? '';

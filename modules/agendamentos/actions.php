@@ -10,10 +10,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VENDEDOR'])) {
-    setMensagem('error', 'Acesso negado.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('agendamentos');
 
 // Rota AJAX: buscar dados da proposta
 if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {

@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 // Exigir login e cargo ADMIN
 verificar_sessao();
-verificar_cargo('ADMIN');
+exigirAcesso('usuarios');
 
 // Buscar todos os usuarios ainda disponíveis no sistema
 try {

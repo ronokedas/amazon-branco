@@ -5,10 +5,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/cliente_portal.php';
 
 verificar_sessao();
-if (getCargo() !== 'ADMIN') {
-    setMensagem('error', 'Acesso negado. Apenas administradores.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('portal_clientes');
 
 $busca = trim($_GET['busca'] ?? '');
 $perfil = in_array($_GET['perfil'] ?? '', ['proprietario', 'despachante'], true) ? $_GET['perfil'] : '';

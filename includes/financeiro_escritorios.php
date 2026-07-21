@@ -132,6 +132,30 @@ function financeiroCompetencia(string $valor): string {
     return $data && $data->format('Y-m') === $valor ? $data->format('Y-m-01') : date('Y-m-01');
 }
 
+/** Converte valores como 200.000,00 para o decimal armazenado no banco. */
+function financeiroNormalizarMoedaBr(string $valor): float {
+    $valor = trim($valor);
+    if ($valor === '') return 0.0;
+
+    $normalizado = preg_replace('/[^0-9,.-]/u', '', $valor) ?? '';
+    if (str_contains($normalizado, ',')) {
+        $normalizado = str_replace('.', '', $normalizado);
+        $normalizado = str_replace(',', '.', $normalizado);
+    } elseif (substr_count($normalizado, '.') > 1 || preg_match('/^\d{1,3}(?:\.\d{3})+$/', $normalizado)) {
+        $normalizado = str_replace('.', '', $normalizado);
+    }
+
+    if (!preg_match('/^\d+(?:\.\d{1,2})?$/', $normalizado)) {
+        throw new RuntimeException('Informe a meta no formato 200.000,00.');
+    }
+
+    $numero = (float)$normalizado;
+    if (!is_finite($numero) || $numero < 0) {
+        throw new RuntimeException('A meta do escritório deve ser um valor positivo.');
+    }
+    return $numero;
+}
+
 function financeiroUrl(array $parametros = []): string {
     $query = http_build_query(array_filter($parametros, static fn($v) => $v !== null && $v !== ''));
     return APP_URL . 'financeiro' . ($query ? '?' . $query : '');

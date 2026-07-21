@@ -11,10 +11,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 // Exigir login e permissao
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VISTORIADOR'])) {
-    setMensagem('error', 'Acesso negado.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('proprietarios');
 
 // Buscar proprietarios ativos com total de embarcacoes vinculadas
 try {

@@ -5,10 +5,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if (!temPerfil('ANALISTA')) {
-    setMensagem('error', 'Acesso negado. Apenas administradores e analistas podem acessar esta pagina.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('relatorios_aprovacao');
 
 global $pdo;
 

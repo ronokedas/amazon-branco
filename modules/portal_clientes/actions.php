@@ -6,10 +6,7 @@ require_once __DIR__ . '/../../includes/cliente_portal.php';
 require_once __DIR__ . '/../../includes/mailer.php';
 
 verificar_sessao();
-if (getCargo() !== 'ADMIN') {
-    setMensagem('error', 'Acesso negado.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('portal_clientes');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verificarCSRF($_POST['csrf_token'] ?? '')) {
     setMensagem('error', 'Token de segurança inválido.');

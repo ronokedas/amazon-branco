@@ -11,10 +11,7 @@ require_once __DIR__ . '/../../../includes/auth.php';
 
 verificar_sessao();
 $cargo = getCargo();
-if (!in_array($cargo, ['ADMIN', 'VENDEDOR'])) {
-    setMensagem('error', 'Acesso negado.');
-    redirecionar(APP_URL . 'dashboard');
-}
+exigirAcesso('comercial');
 
 // ============================================
 // FILTROS

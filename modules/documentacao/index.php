@@ -9,7 +9,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 // Verificar autenticacao
-requireLogin();
+exigirAcesso('documentacao');
 
 $titulo_page = 'Documentação - ERP Sistema';
 require_once __DIR__ . '/../../includes/header.php';

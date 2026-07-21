@@ -446,7 +446,7 @@ test.describe('ERP responsivo v2', () => {
       '/responsaveis_assinatura',
       '/responsaveis_assinatura/form',
       '/configuracoes',
-      '/configuracoes/geral',
+      '/configuracoes/financeiro',
       '/configuracoes/basicas',
       '/configuracoes/backup',
       '/perfil',

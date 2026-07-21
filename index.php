@@ -35,6 +35,12 @@ if ($path === 'favicon.ico') {
     exit;
 }
 
+// A antiga pagina Geral foi consolidada na configuracao financeira.
+if ($path === 'configuracoes/geral') {
+    header('Location: ' . APP_URL . 'configuracoes/financeiro', true, 302);
+    exit;
+}
+
 // Mapeamento de rotas para modulos
 $rotas = [
     ''              => 'modules/login/index.php',
@@ -77,6 +83,7 @@ $rotas = [
     'financeiro/form'     => 'modules/financeiro/form.php',
     'financeiro/actions'  => 'modules/financeiro/actions.php',
     'financeiro/relatorios' => 'modules/financeiro/relatorios.php',
+    'financeiro/relatorios/exportar' => 'modules/financeiro/relatorios_exportar.php',
     'usuarios'      => 'modules/usuarios/index.php',
     'usuarios/form' => 'modules/usuarios/form.php',
     'usuarios/actions' => 'modules/usuarios/actions.php',
@@ -128,7 +135,6 @@ $rotas = [
     'portal-clientes'       => 'modules/portal_clientes/index.php',
     'portal-clientes/actions' => 'modules/portal_clientes/actions.php',
     'configuracoes'             => 'modules/configuracoes/index.php',
-    'configuracoes/geral'       => 'modules/configuracoes/geral.php',
     'configuracoes/basicas'     => 'modules/configuracoes/basicas.php',
     'configuracoes/financeiro'  => 'modules/configuracoes/financeiro.php',
     'configuracoes/backup'      => 'modules/configuracoes/backup.php',
@@ -146,6 +152,12 @@ $rotas = [
     'busca-global'              => 'ajax/busca_global.php',
     'ajax/busca_cidades.php'    => 'ajax/busca_cidades.php',
     'perfil'                    => 'modules/perfil/index.php',
+    'feedback'                  => 'modules/feedback/index.php',
+    'feedback/conversa'         => 'modules/feedback/conversa.php',
+    'feedback/actions'          => 'modules/feedback/actions.php',
+    'feedback/contador'         => 'modules/feedback/contador.php',
+    'feedback/arquivo'          => 'modules/feedback/arquivo.php',
+    'feedback/configuracoes'    => 'modules/feedback/configuracoes.php',
 ];
 
 // Se nao esta logado, sempre ir para login (exceto proprio login)
@@ -160,8 +172,9 @@ if (!isset($_SESSION['usuario_logado']) && $path !== '' && $path !== 'login') {
         $is_rota_publica = true;
     }
     
-    // Verificar se é rota pública de visualização de PDF via token ou ID
-    if (!$is_rota_publica && (strpos($path, '/pdf') !== false || strpos($path, 'relatorio_pdf') !== false) && !empty($_GET['token'])) {
+    // Somente PDFs de documentos com token proprio podem ser publicos.
+    // Relatorios tecnicos de vistoria exigem sessao e permissao.
+    if (!$is_rota_publica && strpos($path, '/pdf') !== false && !empty($_GET['token'])) {
         $is_rota_publica = true;
     }
     
@@ -189,15 +202,15 @@ if (strpos($path, 'api/campo/v1') === 0) {
         'proprietarios' => 'proprietarios', 'proprietarios/form' => 'proprietarios', 'proprietarios/actions' => 'proprietarios',
         'despachantes' => 'despachantes', 'despachantes/form' => 'despachantes', 'despachantes/actions' => 'despachantes',
         'embarcacoes' => 'embarcacoes', 'embarcacoes/form' => 'embarcacoes', 'embarcacoes/actions' => 'embarcacoes', 'embarcacoes/foto' => 'embarcacoes',
-        'vistorias' => 'vistorias', 'vistorias/nova' => 'vistorias', 'vistorias/detalhe' => 'vistorias', 'vistorias/actions' => 'vistorias', 'vistorias/relatorio' => 'vistorias',
+        'vistorias' => 'vistorias', 'vistorias/nova' => 'vistorias', 'vistorias/detalhe' => 'vistorias', 'vistorias/actions' => 'vistorias', 'vistorias/relatorio' => 'vistorias', 'vistorias/relatorio_pdf' => 'vistorias', 'vistorias/relatorio_pdf.php' => 'vistorias',
         'analises-planos' => 'analise_planos', 'analises-planos/form' => 'analise_planos', 'analises-planos/actions' => 'analise_planos', 'analises-planos/arquivo' => 'analise_planos', 'analises-planos/parecer-pdf' => 'analise_planos',
-        'financeiro' => 'financeiro', 'financeiro/form' => 'financeiro', 'financeiro/actions' => 'financeiro', 'financeiro/relatorios' => 'financeiro',
+        'financeiro' => 'financeiro', 'financeiro/form' => 'financeiro', 'financeiro/actions' => 'financeiro', 'financeiro/relatorios' => 'financeiro', 'financeiro/relatorios/exportar' => 'financeiro',
         'usuarios' => 'usuarios', 'usuarios/form' => 'usuarios', 'usuarios/actions' => 'usuarios',
         'agendamentos' => 'agendamentos', 'agendamentos/form' => 'agendamentos', 'agendamentos/actions' => 'agendamentos', 'agendamentos/os' => 'agendamentos',
         'comercial' => 'comercial', 'comercial/nova' => 'comercial', 'comercial/pdf' => 'comercial', 'comercial/propostas' => 'comercial', 'comercial/propostas/actions' => 'comercial',
         'comercial/servicos' => 'servicos', 'comercial/servicos/form' => 'servicos', 'comercial/servicos/actions' => 'servicos',
         'relatorios' => 'relatorios', 'emails' => 'emails', 'portal-clientes' => 'portal_clientes', 'portal-clientes/actions' => 'portal_clientes',
-        'configuracoes' => 'configuracoes', 'configuracoes/geral' => 'configuracoes', 'configuracoes/basicas' => 'configuracoes', 'configuracoes/financeiro' => 'configuracoes', 'configuracoes/backup' => 'configuracoes', 'configuracoes/exportacoes' => 'configuracoes', 'configuracoes/exportacoes_actions' => 'configuracoes', 'configuracoes/exportacoes_download' => 'configuracoes', 'configuracoes/actions' => 'configuracoes',
+        'configuracoes' => 'configuracoes', 'configuracoes/basicas' => 'configuracoes', 'configuracoes/financeiro' => 'configuracoes', 'configuracoes/backup' => 'configuracoes', 'configuracoes/exportacoes' => 'configuracoes', 'configuracoes/exportacoes_actions' => 'configuracoes', 'configuracoes/exportacoes_download' => 'configuracoes', 'configuracoes/actions' => 'configuracoes',
         'responsaveis_assinatura' => 'responsaveis_assinatura', 'responsaveis_assinatura/form' => 'responsaveis_assinatura', 'responsaveis_assinatura/actions' => 'responsaveis_assinatura', 'responsaveis_assinatura/assinatura' => 'responsaveis_assinatura',
         'documentos/aprovar' => 'documentacao', 'documentos/cancelar' => 'documentacao',
         'documentacao' => 'documentacao', 'documentacao/aprovacao_relatorios' => 'relatorios_aprovacao',
