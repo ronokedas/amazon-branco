@@ -105,9 +105,14 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
     ]);
 
     if ((int)$stmtFinExiste->fetchColumn() === 0) {
+        $escritorioLancamento = (string)($prop['escritorio_id'] ?? '');
+        if ($escritorioLancamento === '') {
+            throw new RuntimeException('A proposta não possui um escritório responsável.');
+        }
+        $responsavelVendaId = financeiroResponsavelVenda($pdo, $prop['criado_por'] ?? null);
         $stmtFin = $pdo->prepare("INSERT INTO financeiro_lancamentos
-            (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por)
-            VALUES (UUID(), 'RECEITA', 'unica', 'PENDENTE', DATE_ADD(CURDATE(), INTERVAL 15 DAY), :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por)");
+            (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por, escritorio_id, responsavel_usuario_id, proposta_id)
+            VALUES (UUID(), 'RECEITA', 'unica', 'PENDENTE', DATE_ADD(CURDATE(), INTERVAL 15 DAY), :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por, :escritorio, :responsavel, :proposta)");
         $stmtFin->execute([
             ':cliente_id' => $prop['cliente_id'],
             ':descricao' => $descricaoFinanceiro,
@@ -118,9 +123,10 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
                 ? 'Lançamento gerado automaticamente após aprovação interna da proposta.'
                 : 'Lançamento gerado automaticamente após assinatura da proposta.',
             ':criado_por' => $criado_por,
+            ':escritorio' => $escritorioLancamento,
+            ':responsavel' => $responsavelVendaId,
+            ':proposta' => $prop['id'],
         ]);
-        $pdo->prepare('UPDATE financeiro_lancamentos SET escritorio_id=:escritorio, responsavel_usuario_id=:responsavel, proposta_id=:proposta WHERE cliente_id=:cliente AND descricao=:descricao AND ativo=1')
-            ->execute([':escritorio'=>$prop['escritorio_id'] ?: ESCRITORIO_MATRIZ_ID, ':responsavel'=>financeiroResponsavelVenda($pdo,$prop['criado_por']??null), ':proposta'=>$prop['id'], ':cliente'=>$prop['cliente_id'], ':descricao'=>$descricaoFinanceiro]);
     }
 
     $stmtEmb = $pdo->prepare("
@@ -594,7 +600,10 @@ switch ($action) {
                 $pdo->rollBack();
             }
             error_log('Erro ao aprovar proposta como assinada: ' . $e->getMessage());
-            setMensagem('error', $e instanceof RuntimeException ? $e->getMessage() : 'Erro ao aprovar proposta como assinada.');
+            $mensagem = $e instanceof PDOException
+                ? 'Não foi possível gerar o financeiro e os agendamentos da proposta.'
+                : ($e instanceof RuntimeException ? $e->getMessage() : 'Erro ao aprovar proposta como assinada.');
+            setMensagem('error', $mensagem);
             redirecionar(APP_URL . 'comercial');
         }
         break;

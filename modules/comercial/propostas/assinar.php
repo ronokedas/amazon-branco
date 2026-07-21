@@ -115,9 +115,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
         }
 
         // GATILHO 1: Lançamento no Financeiro
+        $escritorioLancamento = (string)($prop['escritorio_id'] ?? '');
+        if ($escritorioLancamento === '') {
+            throw new RuntimeException('A proposta não possui um escritório responsável.');
+        }
+        $responsavelVendaId = financeiroResponsavelVenda($pdo, $prop['criado_por'] ?? null);
         $stmtFin = $pdo->prepare("INSERT INTO financeiro_lancamentos 
-            (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por)
-            VALUES (UUID(), 'RECEITA', 'unica', 'PENDENTE', DATE_ADD(CURDATE(), INTERVAL 15 DAY), :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por)");
+            (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por, escritorio_id, responsavel_usuario_id, proposta_id)
+            VALUES (UUID(), 'RECEITA', 'unica', 'PENDENTE', DATE_ADD(CURDATE(), INTERVAL 15 DAY), :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por, :escritorio, :responsavel, :proposta)");
         $stmtFin->execute([
             ':cliente_id'  => $prop['cliente_id'],
             ':descricao'   => 'Referente à Proposta Comercial nº ' . $prop['numero'],
@@ -125,10 +130,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             ':valor_original' => $prop['valor_total'],
             ':saldo_devedor' => $prop['valor_total'],
             ':observacoes' => 'Lançamento gerado automaticamente após assinatura da proposta.',
-            ':criado_por'  => $prop['criado_por'] ?? null
+            ':criado_por'  => $prop['criado_por'] ?? null,
+            ':escritorio'  => $escritorioLancamento,
+            ':responsavel' => $responsavelVendaId,
+            ':proposta'    => $prop['id'],
         ]);
-        $pdo->prepare('UPDATE financeiro_lancamentos SET escritorio_id=:escritorio, responsavel_usuario_id=:responsavel, proposta_id=:proposta WHERE cliente_id=:cliente AND descricao LIKE :numero AND proposta_id IS NULL AND ativo=1 ORDER BY criado_em DESC LIMIT 1')
-            ->execute([':escritorio'=>$prop['escritorio_id'] ?: ESCRITORIO_MATRIZ_ID, ':responsavel'=>financeiroResponsavelVenda($pdo,$prop['criado_por']??null), ':proposta'=>$prop['id'], ':cliente'=>$prop['cliente_id'], ':numero'=>'%'.$prop['numero']]);
 
         // GATILHO 2: Rascunho no Agendamentos
         $stmtEmb = $pdo->prepare("
@@ -187,9 +193,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             $pdo->rollBack();
         }
         error_log('Erro ao assinar proposta: ' . $e->getMessage());
-        $mensagem = $e instanceof RuntimeException
-            ? $e->getMessage()
-            : 'Nao foi possivel concluir a assinatura. Tente novamente.';
+        $mensagem = $e instanceof PDOException
+            ? 'Nao foi possivel gerar o financeiro e o agendamento da proposta. Entre em contato com a Amazon Naval.'
+            : ($e instanceof RuntimeException ? $e->getMessage() : 'Nao foi possivel concluir a assinatura. Tente novamente.');
         echo json_encode(['sucesso' => false, 'mensagem' => $mensagem]);
     }
     exit;

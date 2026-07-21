@@ -66,5 +66,16 @@ if ($actionsPropostas === false
     || !str_contains($actionsPropostas, ':token_assinatura, :escritorio_id)')) {
     throw new RuntimeException('A criacao de proposta nao grava o escritorio no INSERT inicial.');
 }
+if (!str_contains($actionsPropostas, 'criado_por, escritorio_id, responsavel_usuario_id, proposta_id)')
+    || !str_contains($actionsPropostas, ':criado_por, :escritorio, :responsavel, :proposta)')) {
+    throw new RuntimeException('A autorizacao interna nao grava o escritorio no lancamento financeiro inicial.');
+}
+
+$assinaturaProposta = file_get_contents(__DIR__ . '/../modules/comercial/propostas/assinar.php');
+if ($assinaturaProposta === false
+    || !str_contains($assinaturaProposta, 'criado_por, escritorio_id, responsavel_usuario_id, proposta_id)')
+    || !str_contains($assinaturaProposta, ':criado_por, :escritorio, :responsavel, :proposta)')) {
+    throw new RuntimeException('A assinatura publica nao grava o escritorio no lancamento financeiro inicial.');
+}
 
 echo "OK: Matriz, vinculos multiplos e isolamento por escritorio validados.\n";
