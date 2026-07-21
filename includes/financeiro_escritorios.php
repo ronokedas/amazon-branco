@@ -18,15 +18,32 @@ function financeiroEscritorios(PDO $pdo, bool $somenteAtivos = true): array {
 function financeiroEscritoriosUsuario(PDO $pdo, ?string $usuarioId = null, bool $somenteAtivos = true): array {
     $usuarioId = $usuarioId ?: ($_SESSION['usuario_id'] ?? null);
     if (!$usuarioId) return [];
-    $sql = 'SELECT e.id, e.nome, e.cidade, e.uf, e.ativo, ue.principal
-            FROM usuario_escritorios ue
-            JOIN escritorios e ON e.id = ue.escritorio_id
-            WHERE ue.usuario_id = :usuario';
+    try {
+        $sql = 'SELECT e.id, e.nome, e.cidade, e.uf, e.ativo, ue.principal
+                FROM usuario_escritorios ue
+                JOIN escritorios e ON e.id = ue.escritorio_id
+                WHERE ue.usuario_id = :usuario';
+        if ($somenteAtivos) $sql .= ' AND e.ativo = 1';
+        $sql .= ' ORDER BY ue.principal DESC, e.nome, e.cidade';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':usuario' => $usuarioId]);
+        $escritorios = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if ($escritorios) return $escritorios;
+    } catch (PDOException $e) {
+        // Compatibilidade durante a implantação da tabela usuario_escritorios.
+        error_log('Vinculos multi-escritorio indisponiveis; usando escritorio principal do usuario: ' . $e->getMessage());
+    }
+
+    $sql = 'SELECT e.id, e.nome, e.cidade, e.uf, e.ativo, 1 AS principal
+            FROM usuarios u
+            JOIN escritorios e ON e.id = u.escritorio_id
+            WHERE u.id = :usuario AND u.excluido_em IS NULL';
     if ($somenteAtivos) $sql .= ' AND e.ativo = 1';
-    $sql .= ' ORDER BY ue.principal DESC, e.nome, e.cidade';
+    $sql .= ' LIMIT 1';
     $stmt = $pdo->prepare($sql);
     $stmt->execute([':usuario' => $usuarioId]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $escritorio = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $escritorio ? [$escritorio] : [];
 }
 
 function financeiroEscritoriosPermitidos(PDO $pdo, ?string $usuarioId = null): array {
@@ -36,22 +53,8 @@ function financeiroEscritoriosPermitidos(PDO $pdo, ?string $usuarioId = null): a
 }
 
 function financeiroEscritorioUsuario(PDO $pdo, ?string $usuarioId = null): ?string {
-    $usuarioId = $usuarioId ?: ($_SESSION['usuario_id'] ?? null);
-    if (!$usuarioId) return null;
-    $stmt = $pdo->prepare('SELECT ue.escritorio_id
-                           FROM usuario_escritorios ue
-                           JOIN usuarios u ON u.id=ue.usuario_id AND u.excluido_em IS NULL
-                           WHERE ue.usuario_id=:id
-                           ORDER BY ue.principal DESC, ue.criado_em
-                           LIMIT 1');
-    $stmt->execute([':id' => $usuarioId]);
-    $id = $stmt->fetchColumn();
-    if ($id === false) {
-        $stmt = $pdo->prepare('SELECT escritorio_id FROM usuarios WHERE id = :id AND excluido_em IS NULL LIMIT 1');
-        $stmt->execute([':id' => $usuarioId]);
-        $id = $stmt->fetchColumn();
-    }
-    return $id !== false && $id !== null ? (string)$id : null;
+    $escritorios = financeiroEscritoriosUsuario($pdo, $usuarioId);
+    return isset($escritorios[0]['id']) ? (string)$escritorios[0]['id'] : null;
 }
 
 /** Retorna "todos" apenas para ADMIN; demais usuarios ficam limitados aos seus vinculos. */
@@ -67,7 +70,7 @@ function financeiroResolverEscritorio(PDO $pdo, ?string $solicitado = null): str
     }
     $solicitado = trim((string)$solicitado);
     if ($solicitado === '' || $solicitado === 'todos') return 'todos';
-    $stmt = $pdo->prepare('SELECT id FROM escritorios WHERE id = :id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id FROM escritorios WHERE id = :id AND ativo = 1 LIMIT 1');
     $stmt->execute([':id' => $solicitado]);
     if (!$stmt->fetchColumn()) throw new RuntimeException('Escritorio invalido.');
     return $solicitado;

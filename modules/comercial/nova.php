@@ -16,9 +16,18 @@ verificar_sessao();
 exigirAcesso('comercial');
 
 $escritoriosProposta = financeiroEscritoriosPermitidos($pdo);
-$escritorioProposta = financeiroResolverEscritorio($pdo, $_GET['escritorio_id'] ?? null);
+$escritorioProposta = '';
+try {
+    $escritorioProposta = financeiroResolverEscritorio($pdo, $_GET['escritorio_id'] ?? null);
+} catch (RuntimeException $e) {
+    // A tela deve orientar o usuário em vez de responder HTTP 500 quando falta vínculo.
+    error_log('Nova proposta sem escritorio disponivel: ' . $e->getMessage());
+}
 if ($escritorioProposta === 'todos') $escritorioProposta = financeiroEscritorioUsuario($pdo) ?: ($escritoriosProposta[0]['id'] ?? '');
-$selecionarEscritorioProposta = count($escritoriosProposta) > 1;
+$idsEscritoriosProposta = array_column($escritoriosProposta, 'id');
+if (!in_array($escritorioProposta, $idsEscritoriosProposta, true)) $escritorioProposta = (string)($idsEscritoriosProposta[0] ?? '');
+$selecionarEscritorioProposta = financeiroEhAdmin() || count($escritoriosProposta) > 1;
+$escritorioPropostaDisponivel = $escritorioProposta !== '';
 
 // Buscar proprietarios ativos
 try {
@@ -114,7 +123,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <div class="card-body">
                     <div class="form-group" style="margin-bottom:18px">
                         <label for="escritorio_id"><i class="fas fa-building"></i> Escritório da proposta *</label>
-                        <?php if($selecionarEscritorioProposta): ?>
+                        <?php if(!$escritorioPropostaDisponivel): ?>
+                        <div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Nenhum escritório ativo está vinculado ao seu usuário. <?php if(financeiroEhAdmin()): ?><a href="<?= APP_URL ?>configuracoes/financeiro">Cadastrar ou ativar um escritório</a>.<?php else: ?>Solicite o vínculo a um administrador.<?php endif ?></div>
+                        <?php elseif($selecionarEscritorioProposta): ?>
                         <select id="escritorio_id" name="escritorio_id" required><?php foreach($escritoriosProposta as $e): ?><option value="<?= h($e['id']) ?>" <?= $e['id']===$escritorioProposta?'selected':'' ?>><?= h($e['nome'].' · '.$e['cidade'].'/'.$e['uf']) ?></option><?php endforeach ?></select>
                         <small class="text-muted">A receita gerada pela proposta ficará vinculada a este escritório.</small>
                         <?php else: ?>
@@ -528,7 +539,7 @@ function clienteSelecionado(radio) {
 function atualizarPasso1() {
     responsavelFechamentoNomeData = document.getElementById('responsavel_fechamento_nome')?.value?.trim() || '';
     responsavelFechamentoTelefoneData = document.getElementById('responsavel_fechamento_telefone')?.value?.trim() || '';
-    document.getElementById('btnPasso1').disabled = !clienteSelecionadoData;
+    document.getElementById('btnPasso1').disabled = !clienteSelecionadoData || !<?= $escritorioPropostaDisponivel ? 'true' : 'false' ?>;
 }
 
 function formatarTelefoneResponsavel(input) {

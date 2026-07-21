@@ -26,6 +26,13 @@ if ($usuario) {
     if (financeiroResolverEscritorio($pdo, 'todos') !== $usuario['escritorio_id']) throw new RuntimeException('Usuario comum escapou do proprio escritorio.');
     if (financeiroResolverEscritorio($pdo, '99999999-9999-4999-8999-999999999999') !== $usuario['escritorio_id']) throw new RuntimeException('Parametro adulterado alterou o escritorio do usuario.');
 
+    $pdo->beginTransaction();
+    $pdo->prepare('DELETE FROM usuario_escritorios WHERE usuario_id=:u')->execute([':u'=>$usuario['id']]);
+    if (financeiroResolverEscritorio($pdo, null) !== $usuario['escritorio_id']) {
+        throw new RuntimeException('O vinculo legado de usuarios.escritorio_id nao foi reconhecido.');
+    }
+    $pdo->rollBack();
+
     $outroEscritorio = $pdo->prepare('SELECT id FROM escritorios WHERE ativo=1 AND id<>:id LIMIT 1');
     $outroEscritorio->execute([':id'=>$usuario['escritorio_id']]);
     $outroId = $outroEscritorio->fetchColumn();
