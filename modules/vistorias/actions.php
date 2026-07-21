@@ -377,7 +377,7 @@ switch ($action) {
 
         // Status alinhados com o fluxo real do relatorio tecnico
         // (salvar_relatorio / aprovacao_relatorios usam os mesmos valores).
-        $statusesValidos = ['PENDENTE', 'AGUARDANDO_APROVACAO', 'APROVADA', 'APROVADA_COM_EXIGENCIAS', 'REPROVADA', 'CANCELADA'];
+        $statusesValidos = ['PENDENTE', 'AGUARDANDO_APROVACAO', 'REPROVADA', 'CANCELADA'];
 
         $erros = [];
         if (empty($id)) $erros[] = 'ID da vistoria invalido.';
@@ -490,13 +490,13 @@ switch ($action) {
             redirecionar(APP_URL . 'agendamentos');
         }
 
-        $statusValidos = ['PENDENTE', 'AGUARDANDO_APROVACAO', 'APROVADA', 'APROVADA_COM_EXIGENCIAS', 'REPROVADA', 'CANCELADA'];
+        $statusValidos = ['PENDENTE', 'AGUARDANDO_APROVACAO', 'REPROVADA', 'CANCELADA'];
         if (!in_array($status_vistoria, $statusValidos)) {
             setMensagem('error', 'Status de vistoria invalido.');
             redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id));
         }
         
-        if (getCargo() === 'VISTORIADOR' && in_array($status_vistoria, ['APROVADA', 'APROVADA_COM_EXIGENCIAS', 'REPROVADA', 'CANCELADA'])) {
+        if (getCargo() === 'VISTORIADOR' && in_array($status_vistoria, ['REPROVADA', 'CANCELADA'])) {
             setMensagem('error', 'Vistoriadores só podem salvar relatórios como Pendente ou Aguardando Aprovação.');
             redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id));
         }
@@ -966,7 +966,7 @@ switch ($action) {
         break;
 
     // ==============================
-    // APROVAR OU REPROVAR RELATORIO (ADMIN/ANALISTA)
+    // DECISOES ADMINISTRATIVAS SEM APROVACAO ELETRONICA (APENAS ADMIN)
     // ==============================
     case 'aprovar_ou_reprovar':
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -980,8 +980,8 @@ switch ($action) {
             redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
         }
 
-        if (!temPerfil('ANALISTA')) {
-            setMensagem('error', 'Apenas administradores e analistas podem revisar relatorios.');
+        if (getCargo() !== 'ADMIN') {
+            setMensagem('error', 'Apenas administradores podem tomar a decisao final do relatorio.');
             redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
         }
 
@@ -996,11 +996,9 @@ switch ($action) {
             redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
         }
 
-        $statusesValidosAdmin = ['PENDENTE', 'AGUARDANDO_APROVACAO', 'APROVADA', 'APROVADA_COM_EXIGENCIAS', 'REPROVADA', 'CANCELADA'];
+        $statusesValidosAdmin = ['PENDENTE', 'AGUARDANDO_APROVACAO', 'REPROVADA', 'CANCELADA'];
         if (empty($status_vistoria)) {
-            if ($decisao === 'aprovar') {
-                $status_vistoria = 'APROVADA';
-            } elseif ($decisao === 'reprovar') {
+            if ($decisao === 'reprovar') {
                 $status_vistoria = 'REPROVADA';
             }
         }
@@ -1034,16 +1032,7 @@ switch ($action) {
                 throw new Exception('Somente o relatorio vigente da cadeia pode receber uma decisao.');
             }
 
-            if ($decisao === 'aprovar' || in_array($status_vistoria, ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)) {
-                $stmtPendencias = $pdo->prepare("SELECT COUNT(*) FROM vistoria_exigencias
-                    WHERE vistoria_id = :id AND conforme = 'nao' AND status_item <> 'cumprida'");
-                $stmtPendencias->execute([':id' => $id]);
-                $status_vistoria = ((int)$stmtPendencias->fetchColumn() > 0)
-                    ? 'APROVADA_COM_EXIGENCIAS'
-                    : 'APROVADA';
-            }
-
-            $statusFinalizaFluxo = in_array($status_vistoria, ['APROVADA', 'APROVADA_COM_EXIGENCIAS', 'REPROVADA'], true);
+            $statusFinalizaFluxo = $status_vistoria === 'REPROVADA';
             $stmt = $pdo->prepare("
                 UPDATE vistorias
                 SET status = :status,
@@ -1072,8 +1061,6 @@ switch ($action) {
             $mensagensStatus = [
                 'PENDENTE' => 'Relatorio mantido como pendente.',
                 'AGUARDANDO_APROVACAO' => 'Relatorio mantido aguardando aprovacao.',
-                'APROVADA' => 'Relatorio aprovado com sucesso.',
-                'APROVADA_COM_EXIGENCIAS' => 'Relatorio aprovado com exigencias com sucesso.',
                 'REPROVADA' => 'Relatorio reprovado. Agendamento concluido.',
                 'CANCELADA' => 'Relatorio cancelado.'
             ];
@@ -1084,78 +1071,7 @@ switch ($action) {
             setMensagem('error', 'Erro ao processar decisao do relatorio. Tente novamente.');
         }
 
-        if (in_array($status_vistoria, ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true) && $agendamento_id) {
-            $liberacao = avaliarLiberacaoCertificacao($pdo, $id);
-            if (!empty($liberacao['permitido'])) {
-                log_atividade('certificacao_desbloqueada', "Certificacao liberada pela aprovacao do relatorio ID {$id}.");
-                redirecionar(APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode($agendamento_id));
-            }
-            setMensagem('warning', $liberacao['mensagem'] ?? 'Certificacao permanece bloqueada.');
-        }
         redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id) . '&vistoria_id=' . urlencode($id));
-        break;
-
-                if ($decisao === 'aprovar') {
-            try {
-                $pdo->beginTransaction();
-
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM vistoria_exigencias WHERE vistoria_id = :id AND conforme = 'nao'");
-                $stmt->execute([':id' => $id]);
-                $nao_conformes = (int)$stmt->fetchColumn();
-
-                $novo_status = ($nao_conformes > 0) ? 'APROVADA_COM_EXIGENCIAS' : 'APROVADA';
-                $stmt = $pdo->prepare("UPDATE vistorias SET status = :status, observacao_admin = :obs, aprovado_por = :aprovador, data_aprovacao = NOW() WHERE id = :id");
-                $stmt->execute([
-                    ':status' => $novo_status,
-                    ':obs' => $observacao ?: null,
-                    ':aprovador' => $_SESSION['usuario_id'],
-                    ':id' => $id
-                ]);
-
-                if (false && $agendamento_id) {
-                    $pdo->prepare("UPDATE ordens_servico SET status = 'executado' WHERE agendamento_id = :agendamento_id AND status IN ('pendente', 'em_andamento')")->execute([':agendamento_id' => $agendamento_id]);
-                    $pdo->prepare("UPDATE agendamentos SET status = 'concluido' WHERE id = :id")->execute([':id' => $agendamento_id]);
-                }
-
-                $pdo->commit();
-
-                log_atividade('relatorio_aprovado', "Relatorio ID {$id} aprovado. Status: {$novo_status}.");
-                setMensagem('success', 'Relatorio aprovado com sucesso.');
-            } catch (Exception $e) {
-                if ($pdo->inTransaction()) $pdo->rollBack();
-                error_log('Erro ao aprovar vistoria: ' . $e->getMessage());
-                setMensagem('error', 'Erro ao processar aprovação. Tente novamente.');
-            }
-        } else {
-            try {
-                $pdo->beginTransaction();
-                $stmt = $pdo->prepare("UPDATE vistorias SET status = 'REPROVADA', observacao_admin = :obs, aprovado_por = :aprovador, data_aprovacao = NOW() WHERE id = :id");
-                $stmt->execute([
-                    ':obs' => $observacao ?: null,
-                    ':aprovador' => $_SESSION['usuario_id'],
-                    ':id' => $id
-                ]);
-                
-                if ($agendamento_id) {
-                    $pdo->prepare("UPDATE ordens_servico SET status = 'executado' WHERE agendamento_id = :agendamento_id AND status IN ('pendente', 'em_andamento')")->execute([':agendamento_id' => $agendamento_id]);
-                    $pdo->prepare("UPDATE agendamentos SET status = 'concluido' WHERE id = :id")->execute([':id' => $agendamento_id]);
-                }
-                
-                $pdo->commit();
-                log_atividade('relatorio_reprovado', "Relatorio ID {$id} reprovado.");
-                setMensagem('error', 'Relatorio reprovado. Agendamento concluído.');
-            } catch (Exception $e) {
-                if ($pdo->inTransaction()) $pdo->rollBack();
-                error_log('Erro ao reprovar vistoria: ' . $e->getMessage());
-                setMensagem('error', 'Erro ao reprovar relatório.');
-            }
-        }
-
-        if ($decisao === 'aprovar' && $agendamento_id) {
-            redirecionar(APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode($agendamento_id));
-        } else {
-            redirecionar(APP_URL . 'agendamentos');
-        }
         break;
 
     default:

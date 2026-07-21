@@ -158,6 +158,13 @@ $exigencias_relatorio = [];
 $total_exigencias_relatorio = 0;
 $total_nao_conformes_relatorio = 0;
 $armador_relatorio_nome = '';
+$resumo_aprovacao_relatorio = [
+    'pendentes' => 0,
+    'pendentes_as' => 0,
+    'pendentes_comuns' => 0,
+    'status_esperado' => 'APROVADA',
+    'versao' => '',
+];
 
 if ($admin_review_mode) {
     try {
@@ -182,6 +189,7 @@ if ($admin_review_mode) {
                 $total_nao_conformes_relatorio++;
             }
         }
+        $resumo_aprovacao_relatorio = aprovacaoRelatorioResumoExigencias($pdo, (string)$vistoria['id']);
     } catch (Exception $e) {
         error_log('Erro ao carregar revisao admin do relatorio: ' . $e->getMessage());
         $exigencias_relatorio = [];
@@ -607,34 +615,63 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <div class="admin-review-panel admin-decision-card">
                         <h4><i class="fas fa-gavel"></i> Resultado final da vistoria</h4>
                         <div class="admin-review-body">
-                            <?php if (($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO'): ?>
+                            <?php if (($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO' && $cargo === 'ADMIN'): ?>
                                 <form method="POST" action="<?= APP_URL ?>vistorias/actions?action=aprovar_ou_reprovar" id="formDecisaoAdmin">
                                     <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()); ?>">
                                     <input type="hidden" name="id" value="<?= h($vistoria['id']); ?>">
+                                    <input type="hidden" name="versao_relatorio" value="<?= h($resumo_aprovacao_relatorio['versao']); ?>">
                                     <div class="form-group mb-3">
-                                        <label for="status_vistoria_admin">Resultado Final da Vistoria *</label>
+                                        <label>Resultado da aprova&ccedil;&atilde;o *</label>
+                                        <div style="display:grid;gap:9px;margin-top:8px">
+                                            <label style="display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid #b9ded2;border-radius:9px;background:#f2fbf8;<?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'opacity:.55' : '' ?>">
+                                                <input type="radio" name="resultado_relatorio" value="APROVADA" <?= $resumo_aprovacao_relatorio['pendentes'] === 0 ? 'checked' : 'disabled' ?>>
+                                                <span><strong>Aprovada</strong><br><small>Libera certificados Provis&oacute;rio, Condicional e Definitivo.</small></span>
+                                            </label>
+                                            <label style="display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid #efd39e;border-radius:9px;background:#fff9ed;<?= $resumo_aprovacao_relatorio['pendentes'] === 0 ? 'opacity:.55' : '' ?>">
+                                                <input type="radio" name="resultado_relatorio" value="APROVADA_COM_EXIGENCIAS" <?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'checked' : 'disabled' ?>>
+                                                <span><strong>Aprovada com exig&ecirc;ncias</strong><br><small>Permite apenas certificados Provis&oacute;rio e Condicional.</small></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="admin-review-text" style="margin-bottom:14px">
+                                        <strong><?= (int)$resumo_aprovacao_relatorio['pendentes'] ?> exig&ecirc;ncia(s) aberta(s)</strong>:
+                                        <?= (int)$resumo_aprovacao_relatorio['pendentes_comuns'] ?> comum(ns) e
+                                        <?= (int)$resumo_aprovacao_relatorio['pendentes_as'] ?> A/S.
+                                        <?php if ($resumo_aprovacao_relatorio['pendentes_as'] > 0): ?>
+                                            <br><span style="color:#a52b22">Exig&ecirc;ncia A/S bloqueia toda certifica&ccedil;&atilde;o at&eacute; o cumprimento.</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div style="margin-bottom:16px">
+                                        <?php renderBotaoAprovacaoDocumento($pdo,'RELATORIO',$vistoria['id'],$vistoria['status'],false,!empty($vistoria['responsavel_assinatura_id'])?(int)$vistoria['responsavel_assinatura_id']:null); ?>
+                                    </div>
+                                    <hr style="border:0;border-top:1px solid #dfe9e5;margin:16px 0">
+                                    <div class="form-group mb-3">
+                                        <label for="status_vistoria_admin">Outras decis&otilde;es administrativas</label>
                                         <select id="status_vistoria_admin" name="status_vistoria" class="form-control" required>
-                                            <option value="">Selecione o resultado...</option>
-                                            <option value="PENDENTE" <?= ($vistoria['status'] ?? '') === 'PENDENTE' ? 'selected' : '' ?>>Pendente (relatorio em andamento)</option>
-                                            <option value="AGUARDANDO_APROVACAO" <?= ($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO' ? 'selected' : '' ?>>Aguardando Aprovacao</option>
+                                            <option value="AGUARDANDO_APROVACAO" selected>Manter aguardando aprova&ccedil;&atilde;o</option>
+                                            <option value="PENDENTE">Devolver para corre&ccedil;&atilde;o</option>
                                             <option value="REPROVADA" <?= ($vistoria['status'] ?? '') === 'REPROVADA' ? 'selected' : '' ?>>Reprovada</option>
                                             <option value="CANCELADA" <?= ($vistoria['status'] ?? '') === 'CANCELADA' ? 'selected' : '' ?>>Cancelada</option>
                                         </select>
                                     </div>
                                     <div class="form-group mb-3">
-                                        <label for="observacao_admin">Observacao do analista</label>
-                                        <textarea id="observacao_admin" name="observacao_admin" class="form-control" rows="4" placeholder="Obrigatoria para reprovar. Opcional para aprovar."></textarea>
+                                        <label for="observacao_admin">Observa&ccedil;&atilde;o do administrador</label>
+                                        <textarea id="observacao_admin" name="observacao_admin" class="form-control" rows="4" placeholder="Obrigat&oacute;ria para reprovar."></textarea>
                                     </div>
                                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                                         <button type="submit" class="btn btn-success">
-                                            <i class="fas fa-save"></i> Salvar sem aprovar
+                                            <i class="fas fa-save"></i> Salvar decis&atilde;o sem aprovar
                                         </button>
-                                        <?php renderBotaoAprovacaoDocumento($pdo,'RELATORIO',$vistoria['id'],$vistoria['status'],false,!empty($vistoria['responsavel_assinatura_id'])?(int)$vistoria['responsavel_assinatura_id']:null); ?>
                                         <a href="<?= APP_URL ?>documentacao/aprovacao_relatorios" class="btn btn-secondary">
                                             Voltar para aprovacoes
                                         </a>
                                     </div>
                                 </form>
+                            <?php elseif (($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO'): ?>
+                                <div class="admin-review-text">
+                                    A revis&atilde;o t&eacute;cnica e a inclus&atilde;o de exig&ecirc;ncias est&atilde;o dispon&iacute;veis abaixo.
+                                    A decis&atilde;o final e a assinatura pertencem exclusivamente ao administrador.
+                                </div>
                             <?php else: ?>
                                 <div class="admin-review-text">
                                     Este relatorio ja foi finalizado como <strong><?= h($statusLabelsAdmin[$vistoria['status'] ?? ''] ?? ($vistoria['status'] ?? '-')) ?></strong>.
@@ -1038,8 +1075,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <option value="PENDENTE" <?php echo ($vistoria['status'] ?? '') === 'PENDENTE' ? 'selected' : ''; ?>>Pendente (relatório em andamento)</option>
                         <option value="AGUARDANDO_APROVACAO" <?php echo ($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO' ? 'selected' : ''; ?>>Aguardando Aprovação</option>
                         <?php if (getCargo() === 'ADMIN'): ?>
-                        <option value="APROVADA" <?php echo ($vistoria['status'] ?? '') === 'APROVADA' ? 'selected' : ''; ?>>Aprovada</option>
-                        <option value="APROVADA_COM_EXIGENCIAS" <?php echo ($vistoria['status'] ?? '') === 'APROVADA_COM_EXIGENCIAS' ? 'selected' : ''; ?>>Aprovada c/ Exigências</option>
                         <option value="REPROVADA" <?php echo ($vistoria['status'] ?? '') === 'REPROVADA' ? 'selected' : ''; ?>>Reprovada</option>
                         <option value="CANCELADA" <?php echo ($vistoria['status'] ?? '') === 'CANCELADA' ? 'selected' : ''; ?>>Cancelada</option>
                         <?php endif; ?>
@@ -1428,26 +1463,4 @@ document.getElementById('formDecisaoAdmin')?.addEventListener('submit', function
 </script>
 <?php endif; ?>
 
-<?php if (!$admin_review_mode && temPerfil('ANALISTA') && ($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO'): ?>
-<div class="card mt-4" style="border: 2px solid #f39c12; max-width: 950px; margin: 20px auto;">
-    <div class="card-header" style="background:#f39c12;color:#000">
-        <h4><i class="fas fa-gavel"></i> Decisão de Aprovação</h4>
-    </div>
-    <div class="card-body">
-        <form method="POST" action="<?= APP_URL ?>vistorias/actions?action=aprovar_ou_reprovar">
-            <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()); ?>">
-            <input type="hidden" name="id" value="<?= h($vistoria['id']); ?>">
-            <div class="form-group mb-3">
-                <label>Observação (obrigatória para reprovar, opcional para aprovar):</label>
-                <textarea name="observacao_admin" class="form-control" rows="3"></textarea>
-            </div>
-            <?php renderBotaoAprovacaoDocumento($pdo,'RELATORIO',$vistoria['id'],$vistoria['status'],false,!empty($vistoria['responsavel_assinatura_id'])?(int)$vistoria['responsavel_assinatura_id']:null); ?>
-            <button type="submit" name="decisao" value="reprovar" class="btn btn-danger ms-2"
-                onclick="return confirm('Confirmar REPROVAÇ?O? A observação é obrigatória.')">
-                <i class="fas fa-times"></i> Reprovar Relatório
-            </button>
-        </form>
-    </div>
-</div>
-<?php endif; ?>
 <?php renderAprovacaoUi($pdo); require_once __DIR__ . '/../../includes/footer.php'; ?>

@@ -107,13 +107,69 @@ function aprovacaoDocumentoValidarEstado(string $tipo, array $documento): void
     }
 }
 
-function aprovacaoDocumentoFinalizarEstado(PDO $pdo, string $tipo, string $id, int $responsavelId, array $audit, string $relativeFinal): void
+function aprovacaoRelatorioResumoExigencias(PDO $pdo, string $vistoriaId): array
+{
+    $stmtVistoria = $pdo->prepare("SELECT * FROM vistorias WHERE id = :id");
+    $stmtVistoria->execute([':id' => $vistoriaId]);
+    $vistoria = $stmtVistoria->fetch(PDO::FETCH_ASSOC);
+    if (!$vistoria) {
+        throw new RuntimeException('Relatorio nao encontrado.');
+    }
+
+    $stmt = $pdo->prepare("SELECT id, catalogo_id, bloco_vistoria, ordem, item, descricao, conforme,
+                                  observacao, item_normam, vencimento, antes_de_suspender, status_item
+                             FROM vistoria_exigencias
+                            WHERE vistoria_id = :id
+                            ORDER BY id");
+    $stmt->execute([':id' => $vistoriaId]);
+    $exigencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $pendentes = 0;
+    $pendentesAs = 0;
+
+    foreach ($exigencias as $exigencia) {
+        $aberta = (string)($exigencia['conforme'] ?? '') === 'nao'
+            && (string)($exigencia['status_item'] ?? '') !== 'cumprida';
+        if (!$aberta) continue;
+        $pendentes++;
+        if ((int)($exigencia['antes_de_suspender'] ?? 0) === 1) $pendentesAs++;
+    }
+
+    return [
+        'pendentes' => $pendentes,
+        'pendentes_as' => $pendentesAs,
+        'pendentes_comuns' => $pendentes - $pendentesAs,
+        'status_esperado' => $pendentes > 0 ? 'APROVADA_COM_EXIGENCIAS' : 'APROVADA',
+        'versao' => hash('sha256', json_encode(
+            ['vistoria' => $vistoria, 'exigencias' => $exigencias],
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        )),
+    ];
+}
+
+function aprovacaoRelatorioValidarResultado(array $resumo, string $resultado, string $versao): void
+{
+    $permitidos = ['APROVADA', 'APROVADA_COM_EXIGENCIAS'];
+    if (!in_array($resultado, $permitidos, true)) {
+        throw new InvalidArgumentException('Selecione um resultado valido para aprovar o relatorio.');
+    }
+    if ($versao === '' || !hash_equals((string)$resumo['versao'], $versao)) {
+        throw new RuntimeException('O relatorio ou suas exigencias foram alterados. Atualize a pagina e revise novamente antes de aprovar.');
+    }
+    if ($resultado !== (string)$resumo['status_esperado']) {
+        $mensagem = ((int)$resumo['pendentes'] > 0)
+            ? 'O relatorio possui exigencias abertas e deve ser aprovado com exigencias.'
+            : 'O relatorio nao possui exigencias abertas e deve ser aprovado sem exigencias.';
+        throw new RuntimeException($mensagem);
+    }
+}
+
+function aprovacaoDocumentoFinalizarEstado(PDO $pdo, string $tipo, string $id, int $responsavelId, array $audit, string $relativeFinal, ?string $resultadoRelatorio = null, ?string $versaoRelatorio = null): ?string
 {
     $mapa = aprovacaoDocumentoMapa($tipo);
     if ($tipo === 'RELATORIO') {
-        $stmtPend = $pdo->prepare("SELECT COUNT(*) FROM vistoria_exigencias WHERE vistoria_id = :id AND conforme = 'nao' AND status_item <> 'cumprida'");
-        $stmtPend->execute([':id' => $id]);
-        $status = ((int)$stmtPend->fetchColumn() > 0) ? 'APROVADA_COM_EXIGENCIAS' : 'APROVADA';
+        $resumo = aprovacaoRelatorioResumoExigencias($pdo, $id);
+        aprovacaoRelatorioValidarResultado($resumo, (string)$resultadoRelatorio, (string)$versaoRelatorio);
+        $status = (string)$resumo['status_esperado'];
         $stmt = $pdo->prepare("UPDATE vistorias SET status = :status, aprovado_por = :usuario, responsavel_assinatura_id = :responsavel, data_aprovacao = :data WHERE id = :id");
         $stmt->execute([
             ':status' => $status,
@@ -128,7 +184,7 @@ function aprovacaoDocumentoFinalizarEstado(PDO $pdo, string $tipo, string $id, i
             $pdo->prepare("UPDATE ordens_servico SET status = 'executado' WHERE agendamento_id = :id AND status IN ('pendente','em_andamento')")->execute([':id' => $doc['agendamento_id']]);
             $pdo->prepare("UPDATE agendamentos SET status = 'concluido' WHERE id = :id")->execute([':id' => $doc['agendamento_id']]);
         }
-        return;
+        return $status;
     }
     if ($tipo === 'PARECER_PLANOS') {
         $stmt = $pdo->prepare("UPDATE analise_planos_pareceres SET status='PUBLICADO', responsavel_assinatura_id=:responsavel, publicado_em=:data WHERE id=:id AND status='AGUARDANDO_APROVACAO'");
@@ -142,7 +198,7 @@ function aprovacaoDocumentoFinalizarEstado(PDO $pdo, string $tipo, string $id, i
         };
         $pdo->prepare('UPDATE analises_planos SET status=:status, responsavel_assinatura_id=:responsavel WHERE id=:id')->execute([':status'=>$novoStatus, ':responsavel'=>$responsavelId, ':id'=>$parecer['analise_id']]);
         $pdo->prepare("INSERT INTO analise_planos_historico (analise_id,usuario_id,evento,status_anterior,status_novo,detalhe) VALUES (:analise,:usuario,'PARECER_PUBLICADO','AGUARDANDO_APROVACAO',:novo,:detalhe)")->execute([':analise'=>$parecer['analise_id'], ':usuario'=>$audit['aprovador_usuario_id'], ':novo'=>$novoStatus, ':detalhe'=>'Parecer v'.$parecer['versao'].' aprovado e publicado.']);
-        return;
+        return null;
     }
 
     $stmt = $pdo->prepare("UPDATE {$mapa['table']} SET responsavel_assinatura_id = :responsavel, assinatura_imagem = :assinatura, assinatura_ip = :ip, assinatura_em = :data, assinado = 1, status = 'assinado', caminho_arquivo_pdf = :caminho, hash_arquivo_pdf = :hash WHERE id = :id AND assinado = 0 AND status = 'emitido'");
@@ -158,6 +214,7 @@ function aprovacaoDocumentoFinalizarEstado(PDO $pdo, string $tipo, string $id, i
     if ($stmt->rowCount() !== 1) {
         throw new RuntimeException('O documento foi alterado durante a aprovacao.');
     }
+    return null;
 }
 
 function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
@@ -168,6 +225,8 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
     $latitude = filter_var($input['latitude'] ?? null, FILTER_VALIDATE_FLOAT);
     $longitude = filter_var($input['longitude'] ?? null, FILTER_VALIDATE_FLOAT);
     $precisao = filter_var($input['geo_precisao_m'] ?? null, FILTER_VALIDATE_FLOAT);
+    $resultadoRelatorio = strtoupper(trim((string)($input['resultado_relatorio'] ?? '')));
+    $versaoRelatorio = trim((string)($input['versao_relatorio'] ?? ''));
 
     if ($id === '' || $responsavelId < 1 || $latitude === false || $longitude === false) {
         throw new InvalidArgumentException('Documento, responsavel e geolocalizacao sao obrigatorios.');
@@ -194,6 +253,13 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
     try {
         $documento = aprovacaoDocumentoCarregar($pdo, $tipo, $id, true);
         aprovacaoDocumentoValidarEstado($tipo, $documento);
+        if ($tipo === 'RELATORIO') {
+            aprovacaoRelatorioValidarResultado(
+                aprovacaoRelatorioResumoExigencias($pdo, $id),
+                $resultadoRelatorio,
+                $versaoRelatorio
+            );
+        }
 
         $existing = $pdo->prepare("SELECT id FROM documento_aprovacoes WHERE documento_tipo = :tipo AND documento_id = :id AND status IN ('PROCESSANDO','APROVADO') LIMIT 1 FOR UPDATE");
         $existing->execute([':tipo' => $tipo, ':id' => $id]);
@@ -281,14 +347,23 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
         $pdo->beginTransaction();
         $locked = aprovacaoDocumentoCarregar($pdo, $tipo, $id, true);
         aprovacaoDocumentoValidarEstado($tipo, $locked);
-        aprovacaoDocumentoFinalizarEstado($pdo, $tipo, $id, $responsavelId, $audit, $finalRelative);
+        $statusRelatorio = aprovacaoDocumentoFinalizarEstado(
+            $pdo,
+            $tipo,
+            $id,
+            $responsavelId,
+            $audit,
+            $finalRelative,
+            $resultadoRelatorio,
+            $versaoRelatorio
+        );
         $update = $pdo->prepare("UPDATE documento_aprovacoes SET hash_pdf_original=:original, hash_pdf_final=:final, caminho_pdf_original=:caminho_original, caminho_pdf_final=:caminho_final, status='APROVADO', padrao_assinatura=:padrao, status_pades=:pades, provedor_assinatura=:provedor WHERE id=:id AND status='PROCESSANDO'");
         $update->execute([':original'=>$hashOriginal, ':final'=>$hashFinal, ':caminho_original'=>$originalRelative, ':caminho_final'=>$finalRelative, ':padrao'=>$providerResult['standard'], ':pades'=>$providerResult['pades_status'], ':provedor'=>$providerResult['provider'], ':id'=>$approvalId]);
         if ($update->rowCount() !== 1) throw new RuntimeException('A aprovacao perdeu seu estado de processamento.');
         $pdo->commit();
 
         if (function_exists('log_atividade')) log_atividade('documento_aprovado_eletronicamente', "{$mapa['label']} {$id} aprovado. Hash final: {$hashFinal}");
-        return ['id'=>$approvalId, 'token'=>$token, 'validation_url'=>aprovacaoPdfUrlValidacao($token), 'hash_final'=>$hashFinal];
+        return ['id'=>$approvalId, 'token'=>$token, 'validation_url'=>aprovacaoPdfUrlValidacao($token), 'hash_final'=>$hashFinal, 'status_relatorio'=>$statusRelatorio];
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         @unlink($originalTmp); @unlink($visualTmp); @unlink($finalTmp); @unlink($originalAbsolute); @unlink($finalAbsolute);

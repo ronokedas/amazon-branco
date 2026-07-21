@@ -45,7 +45,9 @@ try {
         $params[':agend_vendedor_id'] = $_SESSION['usuario_id'];
     }
 
-    if (!empty($filtro_status) && in_array($filtro_status, ['PENDENTE', 'APROVADA', 'REPROVADA', 'CANCELADA'])) {
+    if ($filtro_status === 'APROVADA') {
+        $sql .= " WHERE v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')" . $where_extra;
+    } elseif (!empty($filtro_status) && in_array($filtro_status, ['PENDENTE', 'REPROVADA', 'CANCELADA'], true)) {
         $sql .= " WHERE v.status = :status" . $where_extra;
         $params[':status'] = $filtro_status;
     } elseif ($where_extra !== '') {
@@ -124,7 +126,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         $statusFilters = [
             '' => ['fa-list', 'Todas', $total_geral],
             'PENDENTE' => ['fa-clock', 'Pendentes', $contadores['PENDENTE'] ?? 0],
-            'APROVADA' => ['fa-check-circle', 'Aprovadas', $contadores['APROVADA'] ?? 0],
+            'APROVADA' => ['fa-check-circle', 'Aprovadas', ($contadores['APROVADA'] ?? 0) + ($contadores['APROVADA_COM_EXIGENCIAS'] ?? 0)],
             'REPROVADA' => ['fa-times-circle', 'Reprovadas', $contadores['REPROVADA'] ?? 0],
             'CANCELADA' => ['fa-ban', 'Canceladas', $contadores['CANCELADA'] ?? 0],
         ];

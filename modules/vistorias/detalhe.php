@@ -133,7 +133,9 @@ $csrf = gerarCSRF();
 // Status labels
 $statusConfig = [
     'PENDENTE'  => ['class' => 'badge-warning', 'icon' => 'fa-clock',  'cor' => '#ffc107'],
+    'AGUARDANDO_APROVACAO' => ['class' => 'badge-warning', 'icon' => 'fa-hourglass-half', 'cor' => '#d99700'],
     'APROVADA'  => ['class' => 'badge-success', 'icon' => 'fa-check-circle', 'cor' => '#28a745'],
+    'APROVADA_COM_EXIGENCIAS' => ['class' => 'badge-info', 'icon' => 'fa-clipboard-check', 'cor' => '#0d8aa6'],
     'REPROVADA' => ['class' => 'badge-danger',  'icon' => 'fa-times-circle', 'cor' => '#dc3545'],
     'CANCELADA' => ['class' => 'badge-secondary', 'icon' => 'fa-ban',  'cor' => '#6c757d'],
 ];
@@ -530,7 +532,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             </label>
                             <select id="status" name="status" required>
                                 <option value="PENDENTE" <?php echo $vistoria['status'] === 'PENDENTE' ? 'selected' : ''; ?>>Pendente</option>
-                                <option value="APROVADA" <?php echo $vistoria['status'] === 'APROVADA' ? 'selected' : ''; ?>>Aprovada</option>
                                 <option value="REPROVADA" <?php echo $vistoria['status'] === 'REPROVADA' ? 'selected' : ''; ?>>Reprovada</option>
                                 <option value="CANCELADA" <?php echo $vistoria['status'] === 'CANCELADA' ? 'selected' : ''; ?>>Cancelada</option>
                             </select>
