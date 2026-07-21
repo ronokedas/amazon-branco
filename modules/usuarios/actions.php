@@ -166,22 +166,22 @@ switch ($action) {
                 // Atualizar
                 if (!empty($senha)) {
                     $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, senha_hash = :senha, ativo = :ativo, gestor_id=:gestor WHERE id = :id AND excluido_em IS NULL");
+                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, senha_hash = :senha, ativo = :ativo, gestor_id=:gestor, escritorio_id=:escritorio WHERE id = :id AND excluido_em IS NULL");
                     $stmt->execute([
                         ':nome'   => $nome,
                         ':email'  => $email,
                         ':cargo'  => $cargo,
                         ':senha'  => $senhaHash,
-                        ':ativo'  => $ativo, ':gestor'=>$gestorId,
+                        ':ativo'  => $ativo, ':gestor'=>$gestorId, ':escritorio'=>$escritorioPrincipalId,
                         ':id'     => $id
                     ]);
                 } else {
-                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, ativo = :ativo, gestor_id=:gestor WHERE id = :id AND excluido_em IS NULL");
+                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, ativo = :ativo, gestor_id=:gestor, escritorio_id=:escritorio WHERE id = :id AND excluido_em IS NULL");
                     $stmt->execute([
                         ':nome'   => $nome,
                         ':email'  => $email,
                         ':cargo'  => $cargo,
-                        ':ativo'  => $ativo, ':gestor'=>$gestorId,
+                        ':ativo'  => $ativo, ':gestor'=>$gestorId, ':escritorio'=>$escritorioPrincipalId,
                         ':id'     => $id
                     ]);
                 }
@@ -200,14 +200,14 @@ switch ($action) {
                 // Criar
                 $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
                 $novoUsuarioId = gerarUUID();
-                $stmt = $pdo->prepare("INSERT INTO usuarios (id, nome, email, senha_hash, cargo, ativo, gestor_id) VALUES (:id, :nome, :email, :senha, :cargo, :ativo, :gestor)");
+                $stmt = $pdo->prepare("INSERT INTO usuarios (id, nome, email, senha_hash, cargo, ativo, gestor_id, escritorio_id) VALUES (:id, :nome, :email, :senha, :cargo, :ativo, :gestor, :escritorio)");
                 $stmt->execute([
                     ':id'     => $novoUsuarioId,
                     ':nome'   => $nome,
                     ':email'  => $email,
                     ':senha'  => $senhaHash,
                     ':cargo'  => $cargo,
-                    ':ativo'  => $ativo, ':gestor'=>$gestorId
+                    ':ativo'  => $ativo, ':gestor'=>$gestorId, ':escritorio'=>$escritorioPrincipalId
                 ]);
                 try {
                     $stmtPerfil = $pdo->prepare("INSERT IGNORE INTO usuario_perfis (usuario_id, perfil) VALUES (:usuario_id, :perfil)");
@@ -223,7 +223,10 @@ switch ($action) {
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao salvar usuario: ' . $e->getMessage());
-            setMensagem('error', $e instanceof RuntimeException ? $e->getMessage() : 'Erro ao salvar usuario. Tente novamente.');
+            $mensagem = $e instanceof PDOException
+                ? 'Erro ao salvar usuario. Verifique os dados e tente novamente.'
+                : ($e instanceof RuntimeException ? $e->getMessage() : 'Erro ao salvar usuario. Tente novamente.');
+            setMensagem('error', $mensagem);
         }
 
         redirecionar(APP_URL . 'usuarios');

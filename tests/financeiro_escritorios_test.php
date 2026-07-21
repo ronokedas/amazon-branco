@@ -54,4 +54,10 @@ if (!str_contains($formFinanceiro, 'name="comprovantes[]"')
     throw new RuntimeException('O upload de comprovantes nao esta disponivel na criacao do lancamento.');
 }
 
+$actionsUsuarios = file_get_contents(__DIR__ . '/../modules/usuarios/actions.php');
+if ($actionsUsuarios === false
+    || !preg_match('/INSERT INTO usuarios\s*\([^)]*escritorio_id[^)]*\)\s*VALUES\s*\([^)]*:escritorio[^)]*\)/s', $actionsUsuarios)) {
+    throw new RuntimeException('A criacao de usuario nao grava o escritorio principal no INSERT inicial.');
+}
+
 echo "OK: Matriz, vinculos multiplos e isolamento por escritorio validados.\n";
