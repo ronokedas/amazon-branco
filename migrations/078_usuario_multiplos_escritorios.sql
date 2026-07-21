@@ -1,6 +1,6 @@
 -- Permite vincular um usuario a um ou mais escritorios.
 -- usuarios.escritorio_id continua representando o escritorio principal.
-CREATE TABLE usuario_escritorios (
+CREATE TABLE IF NOT EXISTS usuario_escritorios (
   usuario_id CHAR(36) NOT NULL,
   escritorio_id CHAR(36) NOT NULL,
   principal TINYINT(1) NOT NULL DEFAULT 0,
@@ -12,7 +12,7 @@ CREATE TABLE usuario_escritorios (
   CONSTRAINT fk_usuario_escritorios_escritorio FOREIGN KEY (escritorio_id) REFERENCES escritorios(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT INTO usuario_escritorios (usuario_id, escritorio_id, principal)
+INSERT IGNORE INTO usuario_escritorios (usuario_id, escritorio_id, principal)
 SELECT id, escritorio_id, 1
 FROM usuarios
 WHERE escritorio_id IS NOT NULL AND excluido_em IS NULL;
