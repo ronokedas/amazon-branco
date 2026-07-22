@@ -561,7 +561,7 @@ switch ($action) {
             }
 
             $assinanteNome = 'Autorização interna - ' . ($_SESSION['usuario_nome'] ?? 'Usuário responsável');
-            $assinaturaIp = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+            $assinaturaIp = obterIpCliente();
             $dataAssinatura = date('Y-m-d H:i:s');
 
             $stmtUpdate = $pdo->prepare("

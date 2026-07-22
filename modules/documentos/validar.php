@@ -62,6 +62,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 function validarDocumentoH($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 $statusClass = ($approval['status'] === 'APROVADO' && $integrityOk) ? 'ok' : 'bad';
 $statusText = $approval['status'] === 'CANCELADO' ? 'Documento cancelado' : (($approval['status'] === 'APROVADO' && $integrityOk) ? 'Documento válido e íntegro' : 'Documento com validação pendente ou inconsistente');
+$usuarioErpLogado = !empty($_SESSION['usuario_logado']);
+$rotasRetorno = [
+    'CSN' => 'documentacao/certificados',
+    'CNBL' => 'documentacao/cnbl',
+    'CNARQ' => 'documentacao/cnarq',
+    'LP' => 'documentacao/lp',
+    'LC' => 'documentacao/lc',
+    'CHT' => 'documentacao/cht',
+    'PARECER_PLANOS' => 'analises-planos',
+    'RELATORIO' => 'vistorias',
+];
+$rotaRetorno = $rotasRetorno[strtoupper((string)$approval['documento_tipo'])] ?? 'dashboard';
+$urlRetorno = rtrim(APP_URL, '/') . '/' . ltrim($rotaRetorno, '/');
 ?>
 <!doctype html>
 <html lang="pt-BR">
@@ -93,7 +106,10 @@ $statusText = $approval['status'] === 'CANCELADO' ? 'Documento cancelado' : (($a
     </div>
     <h2 style="font-size:15px;margin-top:22px">SHA-256 do PDF original</h2><div class="hash"><?= validarDocumentoH($approval['hash_pdf_original']) ?></div>
     <h2 style="font-size:15px">SHA-256 do PDF final</h2><div class="hash"><?= validarDocumentoH($approval['hash_pdf_final']) ?></div>
-    <div class="actions"><?php if($integrityOk): ?><a class="btn" href="?token=<?= validarDocumentoH($token) ?>&download=1">Baixar PDF oficial</a><?php endif; ?></div>
+    <div class="actions">
+      <?php if($usuarioErpLogado): ?><a class="btn secondary" id="documentReturnButton" href="<?= validarDocumentoH($urlRetorno) ?>">Voltar para o sistema</a><?php endif; ?>
+      <?php if($integrityOk): ?><a class="btn" href="?token=<?= validarDocumentoH($token) ?>&download=1">Baixar PDF oficial</a><?php endif; ?>
+    </div>
   </section>
   <section class="card">
     <h2 style="margin-top:0;font-size:19px">Verificar um arquivo recebido</h2>
@@ -102,4 +118,25 @@ $statusText = $approval['status'] === 'CANCELADO' ? 'Documento cancelado' : (($a
     <?php if($uploadResult): ?><div class="result <?= $uploadResult['ok']?'ok':'bad' ?>"><?= validarDocumentoH($uploadResult['message']) ?><?php if(!empty($uploadResult['hash'])): ?><div class="hash" style="margin-top:8px"><?= validarDocumentoH($uploadResult['hash']) ?></div><?php endif; ?></div><?php endif; ?>
   </section>
 </main>
+<?php if($usuarioErpLogado): ?>
+<script>
+(function(){
+  const button=document.getElementById('documentReturnButton');
+  if(!button)return;
+  const key=<?= json_encode('amazon-document-return:'.$token) ?>;
+  try{
+    const saved=sessionStorage.getItem(key);
+    if(saved){
+      const target=new URL(saved,window.location.origin);
+      const appBase=new URL(<?= json_encode(rtrim(APP_URL, '/').'/') ?>,window.location.origin);
+      const validationPath=new URL(<?= json_encode(rtrim(APP_URL, '/').'/validar/') ?>,window.location.origin).pathname;
+      if(target.origin===window.location.origin&&target.pathname.startsWith(appBase.pathname)&&!target.pathname.startsWith(validationPath)){
+        button.href=target.pathname+target.search+target.hash;
+      }
+    }
+    button.addEventListener('click',function(){sessionStorage.removeItem(key)});
+  }catch(ignored){}
+})();
+</script>
+<?php endif; ?>
 </body></html>

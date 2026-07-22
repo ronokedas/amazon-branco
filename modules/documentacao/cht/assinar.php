@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     if(empty($nome))$erro='Informe seu nome.';elseif(strlen($cpf)!==11)$erro='CPF inválido.';elseif(!$termos)$erro='Aceite os termos.';elseif(empty($sig))$erro='Desenhe sua assinatura.';
     if(empty($erro)){
         try{
-            $ip=$_SERVER['REMOTE_ADDR']??'0.0.0.0';$d=date('Y-m-d H:i:s');
+            $ip=obterIpCliente();$d=date('Y-m-d H:i:s');
             $pdo->prepare("UPDATE certificados_cht SET assinante_nome=:n,assinatura_imagem=:i,assinatura_ip=:ip,assinatura_em=:d,assinado=1,status='assinado' WHERE id=:id")->execute([':n'=>$nome,':i'=>$sig,':ip'=>$ip,':d'=>$d,':id'=>$cert['id']]);
             
             // Gerar e salvar PDF imediatamente

@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($erro)) {
         try {
-            $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+            $ip = obterIpCliente();
             $data = date('Y-m-d H:i:s');
             $stmt = $pdo->prepare("UPDATE certificados_lc SET assinante_nome=:nome, assinatura_imagem=:imagem, assinatura_ip=:ip, assinatura_em=:data, assinado=1, status='assinado' WHERE id=:id AND ativo=1");
             $stmt->execute([':nome'=>$nome_assinante,':imagem'=>$assinatura_dados,':ip'=>$ip,':data'=>$data,':id'=>$licenca['id']]);

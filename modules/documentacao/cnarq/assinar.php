@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
         exit;
     }
 
-    $ip_assinatura = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $ip_assinatura = obterIpCliente();
     $data_assinatura = date('Y-m-d H:i:s');
 
     try {

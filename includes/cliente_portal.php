@@ -59,7 +59,7 @@ function clientePortalAuditar(PDO $pdo, string $evento, ?string $clienteId = nul
 {
     try {
         $stmt=$pdo->prepare('INSERT INTO portal_auditoria (cliente_id,perfil,evento,embarcacao_id,documento_tipo,documento_id,sucesso,detalhe,ip,user_agent) VALUES (:cliente,:perfil,:evento,:embarcacao,:tipo,:documento,:sucesso,:detalhe,:ip,:ua)');
-        $stmt->execute([':cliente'=>$clienteId ?: clientePortalId(), ':perfil'=>$clienteId ? null : clientePortalPerfil(), ':evento'=>$evento, ':embarcacao'=>$embarcacaoId, ':tipo'=>$documentoTipo, ':documento'=>$documentoId, ':sucesso'=>$sucesso?1:0, ':detalhe'=>$detalhe?substr($detalhe,0,500):null, ':ip'=>substr($_SERVER['REMOTE_ADDR']??'',0,45), ':ua'=>substr($_SERVER['HTTP_USER_AGENT']??'',0,500)]);
+        $stmt->execute([':cliente'=>$clienteId ?: clientePortalId(), ':perfil'=>$clienteId ? null : clientePortalPerfil(), ':evento'=>$evento, ':embarcacao'=>$embarcacaoId, ':tipo'=>$documentoTipo, ':documento'=>$documentoId, ':sucesso'=>$sucesso?1:0, ':detalhe'=>$detalhe?substr($detalhe,0,500):null, ':ip'=>substr(obterIpCliente(),0,45), ':ua'=>substr($_SERVER['HTTP_USER_AGENT']??'',0,500)]);
     } catch (Throwable $e) { error_log('Falha na auditoria do portal: '.$e->getMessage()); }
 }
 

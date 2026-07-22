@@ -30,15 +30,7 @@ function aprovacaoDocumentoMapa(string $tipo): array
 
 function aprovacaoDocumentoIp(): string
 {
-    $remote = trim((string)($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'));
-    $trusted = array_filter(array_map('trim', explode(',', (string)(getenv('TRUSTED_PROXY_IPS') ?: ''))));
-    if (in_array($remote, $trusted, true) && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        $candidate = trim(explode(',', (string)$_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
-        if (filter_var($candidate, FILTER_VALIDATE_IP)) {
-            return $candidate;
-        }
-    }
-    return filter_var($remote, FILTER_VALIDATE_IP) ? $remote : '0.0.0.0';
+    return obterIpCliente();
 }
 
 function aprovacaoDocumentoGerarOriginal(string $tipo, string $id, string $destino): void

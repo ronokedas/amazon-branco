@@ -30,7 +30,7 @@ function campoInput(): array {
 }
 
 function campoIpHash(): string {
-    return hash('sha256', (string)($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'));
+    return hash('sha256', obterIpCliente());
 }
 
 function campoSessaoId(): string {

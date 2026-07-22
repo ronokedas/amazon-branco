@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
     }
     $assinatura_imagem = 'data:image/png;base64,' . base64_encode($imagem_assinatura['bytes']);
 
-    $ip_assinatura = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $ip_assinatura = obterIpCliente();
     $data_assinatura = date('Y-m-d H:i:s');
 
     // Fazer upload do binário para o Storage (MinIO)

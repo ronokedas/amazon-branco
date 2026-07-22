@@ -49,7 +49,7 @@ if (isset($_POST['assinar'])) {
         redirecionar(APP_URL . "contratos/view?id=$id");
     }
 
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    $ip = obterIpCliente();
     $nome = $_SESSION['usuario_nome'] ?? 'Interno';
 
     $stmtAssinar = $pdo->prepare("

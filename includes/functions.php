@@ -82,6 +82,100 @@ function verificarCSRF($token) {
 }
 
 /**
+ * Verifica se um endereco IP pertence a um IP ou bloco CIDR confiavel.
+ */
+function ipPertenceAoBloco(string $ip, string $bloco): bool
+{
+    $ip = trim($ip);
+    $bloco = trim($bloco);
+    if (!filter_var($ip, FILTER_VALIDATE_IP) || $bloco === '') {
+        return false;
+    }
+
+    if (!str_contains($bloco, '/')) {
+        return filter_var($bloco, FILTER_VALIDATE_IP) !== false && $ip === $bloco;
+    }
+
+    [$rede, $prefixo] = array_pad(explode('/', $bloco, 2), 2, null);
+    if (!filter_var($rede, FILTER_VALIDATE_IP) || !is_numeric($prefixo)) {
+        return false;
+    }
+
+    $ipBinario = inet_pton($ip);
+    $redeBinaria = inet_pton($rede);
+    if ($ipBinario === false || $redeBinaria === false || strlen($ipBinario) !== strlen($redeBinaria)) {
+        return false;
+    }
+
+    $totalBits = strlen($ipBinario) * 8;
+    $prefixo = (int)$prefixo;
+    if ($prefixo < 0 || $prefixo > $totalBits) {
+        return false;
+    }
+
+    $bytesCompletos = intdiv($prefixo, 8);
+    if ($bytesCompletos > 0 && substr($ipBinario, 0, $bytesCompletos) !== substr($redeBinaria, 0, $bytesCompletos)) {
+        return false;
+    }
+
+    $bitsRestantes = $prefixo % 8;
+    if ($bitsRestantes === 0) {
+        return true;
+    }
+
+    $mascara = (0xFF << (8 - $bitsRestantes)) & 0xFF;
+    return (ord($ipBinario[$bytesCompletos]) & $mascara) === (ord($redeBinaria[$bytesCompletos]) & $mascara);
+}
+
+/**
+ * Retorna o IP publico do cliente sem confiar em cabecalhos de proxies arbitrarios.
+ * As faixas padrao sao as publicadas pela Cloudflare em https://www.cloudflare.com/ips/.
+ */
+function obterIpCliente(): string
+{
+    $remote = trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    if (!filter_var($remote, FILTER_VALIDATE_IP)) {
+        return '0.0.0.0';
+    }
+
+    $cloudflarePadrao = implode(',', [
+        '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+        '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+        '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+        '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22', '2400:cb00::/32',
+        '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32',
+        '2a06:98c0::/29', '2c0f:f248::/32',
+    ]);
+    $configurada = trim((string)(getenv('TRUSTED_PROXY_CIDRS') ?: ''));
+    $blocos = preg_split('/[\s,;]+/', $configurada !== '' ? $configurada : $cloudflarePadrao, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $proxyConfiavel = false;
+    foreach ($blocos as $bloco) {
+        if (ipPertenceAoBloco($remote, $bloco)) {
+            $proxyConfiavel = true;
+            break;
+        }
+    }
+
+    if (!$proxyConfiavel) {
+        return $remote;
+    }
+
+    $cfIp = trim((string)($_SERVER['HTTP_CF_CONNECTING_IP'] ?? ''));
+    if (filter_var($cfIp, FILTER_VALIDATE_IP)) {
+        return $cfIp;
+    }
+
+    foreach (explode(',', (string)($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')) as $encaminhado) {
+        $encaminhado = trim($encaminhado);
+        if (filter_var($encaminhado, FILTER_VALIDATE_IP)) {
+            return $encaminhado;
+        }
+    }
+
+    return $remote;
+}
+
+/**
  * Registra um envio mutavel e rejeita a reutilizacao do mesmo identificador.
  *
  * O token e criado no navegador para cada formulario POST. Como a sessao PHP
@@ -612,7 +706,7 @@ function getTotalPorMes($tabela, $campo_data, $ano) {
 function log_atividade($acao, $descricao = '', $usuario_id = null) {
     global $pdo;
     $usuario_id = $usuario_id ?? ($_SESSION['usuario_id'] ?? 'sistema');
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $ip = obterIpCliente();
     $data = date('Y-m-d H:i:s');
     
     // Tentar salvar no banco se a tabela existir

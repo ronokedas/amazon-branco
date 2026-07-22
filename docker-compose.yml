@@ -18,6 +18,7 @@ services:
       - DB_PASS=${DB_PASS:-erp_pass_2026}
       - APP_URL=${APP_URL:-http://localhost:8082/}
       - APP_DEBUG=${APP_DEBUG:-0}
+      - TRUSTED_PROXY_CIDRS=${TRUSTED_PROXY_CIDRS:-}
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-erp_minio_admin}
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-erp_minio_pass_2026}
@@ -69,6 +70,7 @@ services:
       - DB_PASS=${DB_PASS:-erp_pass_2026}
       - APP_URL=${APP_URL:-http://localhost:8082/}
       - APP_DEBUG=${APP_DEBUG:-0}
+      - TRUSTED_PROXY_CIDRS=${TRUSTED_PROXY_CIDRS:-}
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-erp_minio_admin}
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-erp_minio_pass_2026}
