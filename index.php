@@ -52,6 +52,7 @@ $rotas = [
     'portal/trocar-senha' => 'modules/portal/trocar_senha.php',
     'portal' => 'modules/portal/index.php',
     'portal/documentos' => 'modules/portal/documentos.php',
+    'portal/embarcacoes' => 'modules/portal/embarcacoes.php',
     'portal/documentos/pdf' => 'modules/portal/pdf.php',
     'portal/analises-planos' => 'modules/portal/analises_planos.php',
     'portal/analises-planos/actions' => 'modules/portal/analises_planos_actions.php',

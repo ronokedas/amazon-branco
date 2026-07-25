@@ -48,13 +48,21 @@ require_once __DIR__ . '/../../includes/portal_header.php';
             <div class="portal-expiry-list">
                 <?php foreach (array_slice($vencendo, 0, 4) as $doc): ?>
                     <?php $dias = $diasAteVencer($doc['data_validade']); ?>
-                    <a class="portal-expiry-row" href="<?php echo APP_URL; ?>portal/documentos/pdf?tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>" target="_blank">
+                    <a class="portal-expiry-row <?php echo ($dias !== null && $dias < 0) ? 'is-expired' : ''; ?>" href="<?php echo APP_URL; ?>portal/documentos/pdf?tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>" target="_blank">
                         <i class="fa-solid fa-triangle-exclamation"></i>
                         <span>
                             <strong><?php echo h($doc['tipo_label'] . ' - ' . $doc['numero']); ?></strong>
                             <small><?php echo h($doc['embarcacao_nome']); ?></small>
                         </span>
-                        <em>Vence em<br><strong><?php echo $dias !== null ? h((string)$dias) : '-'; ?> dias</strong></em>
+                        <em>
+                            <?php if ($dias === null): ?>
+                                Validade<br><strong>Sem data</strong>
+                            <?php elseif ($dias < 0): ?>
+                                Vencido há<br><strong><?php echo h((string)abs($dias)); ?> dias</strong>
+                            <?php else: ?>
+                                Vence em<br><strong><?php echo h((string)$dias); ?> dias</strong>
+                            <?php endif; ?>
+                        </em>
                     </a>
                 <?php endforeach; ?>
             </div>
@@ -88,7 +96,7 @@ require_once __DIR__ . '/../../includes/portal_header.php';
     <section class="portal-panel portal-boats-panel">
         <div class="portal-panel-header">
             <h2>Embarcações</h2>
-            <a href="<?php echo APP_URL; ?>portal/documentos">Ver todas</a>
+            <a href="<?php echo APP_URL; ?>portal/embarcacoes">Ver todas</a>
         </div>
         <?php if (empty($embarcacoes)): ?>
             <div class="portal-empty">Nenhuma embarcação vinculada ao seu cadastro.</div>
@@ -107,20 +115,20 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                     <tbody>
                         <?php foreach (array_slice($embarcacoes, 0, 4) as $emb): ?>
                             <tr>
-                                <td>
+                                <td data-label="Embarcação">
                                     <i class="fa-solid fa-ship portal-table-icon"></i>
                                     <strong><?php echo h($emb['nome']); ?></strong>
                                 </td>
-                                <td><?php echo h($emb['registro'] ?: ($emb['numero_inscricao'] ?: '-')); ?></td>
-                                <td><?php echo h($emb['tipo_embarcacao'] ?: '-'); ?></td>
-                                <td><span class="portal-status is-valid">Ativa</span></td>
-                                <td><i class="fa-solid fa-ellipsis-vertical portal-muted-icon"></i></td>
+                                <td data-label="Registro"><?php echo h($emb['registro'] ?: ($emb['numero_inscricao'] ?: '-')); ?></td>
+                                <td data-label="Tipo"><?php echo h($emb['tipo_embarcacao'] ?: '-'); ?></td>
+                                <td data-label="Situação"><span class="portal-status is-valid">Ativa</span></td>
+                                <td data-label="Documentos"><a class="portal-icon-action" href="<?php echo APP_URL; ?>portal/documentos?embarcacao_id=<?php echo urlencode($emb['id']); ?>" title="Ver documentos"><i class="fa-solid fa-arrow-right"></i></a></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
-            <a class="portal-panel-footer-link" href="<?php echo APP_URL; ?>portal/documentos">Ver todas as embarcações</a>
+            <a class="portal-panel-footer-link" href="<?php echo APP_URL; ?>portal/embarcacoes">Ver todas as embarcações</a>
         <?php endif; ?>
     </section>
 
@@ -148,19 +156,19 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                         <?php foreach ($documentosRecentes as $doc): ?>
                             <?php $dias = $diasAteVencer($doc['data_validade']); ?>
                             <tr>
-                                <td>
+                                <td data-label="Documento">
                                     <i class="fa-regular fa-file-lines portal-table-icon"></i>
                                     <strong><?php echo h($doc['tipo_label'] . ' - ' . $doc['numero']); ?></strong>
                                 </td>
-                                <td><?php echo h($doc['embarcacao_nome']); ?></td>
-                                <td><?php echo formatarData($doc['data_emissao']); ?></td>
-                                <td><?php echo formatarData($doc['data_validade']); ?></td>
-                                <td>
-                                    <span class="portal-status <?php echo ($dias !== null && $dias <= 90) ? 'is-warning' : 'is-valid'; ?>">
-                                        <?php echo ($dias !== null && $dias <= 90) ? 'A vencer' : 'Válido'; ?>
+                                <td data-label="Embarcação"><?php echo h($doc['embarcacao_nome']); ?></td>
+                                <td data-label="Emissão"><?php echo formatarData($doc['data_emissao']); ?></td>
+                                <td data-label="Validade"><?php echo formatarData($doc['data_validade']); ?></td>
+                                <td data-label="Situação">
+                                    <span class="portal-status <?php echo ($dias !== null && $dias < 0) ? 'is-expired' : (($dias !== null && $dias <= 90) ? 'is-warning' : 'is-valid'); ?>">
+                                        <?php echo ($dias !== null && $dias < 0) ? 'Vencido' : (($dias !== null && $dias <= 90) ? 'A vencer' : 'Válido'); ?>
                                     </span>
                                 </td>
-                                <td>
+                                <td data-label="Ação">
                                     <a class="portal-icon-action" target="_blank" href="<?php echo APP_URL; ?>portal/documentos/pdf?tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>" title="Visualizar PDF">
                                         <i class="fa-solid fa-ellipsis-vertical"></i>
                                     </a>

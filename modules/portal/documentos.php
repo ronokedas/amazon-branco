@@ -96,20 +96,20 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                 <tbody>
                     <?php foreach ($documentos as $doc): ?>
                         <tr>
-                            <td>
+                            <td data-label="Documento">
                                 <strong><?php echo h($doc['tipo_label']); ?></strong>
                                 <small><?php echo h($doc['numero']); ?></small>
                             </td>
-                            <td><?php echo h($doc['embarcacao_nome']); ?></td>
-                            <td><?php echo formatarData($doc['data_emissao']); ?></td>
-                            <td><?php echo formatarData($doc['data_validade']); ?></td>
-                            <td><span class="portal-status is-valid"><?php echo h(ucfirst(strtolower(str_replace('_', ' ', $doc['status'])))); ?></span></td>
-                            <td>
+                            <td data-label="Embarcação"><?php echo h($doc['embarcacao_nome']); ?></td>
+                            <td data-label="Emissão"><?php echo formatarData($doc['data_emissao']); ?></td>
+                            <td data-label="Validade"><?php echo formatarData($doc['data_validade']); ?></td>
+                            <td data-label="Status"><span class="portal-status <?php echo strtolower((string)$doc['status']) === 'assinado' ? 'is-valid' : 'is-issued'; ?>"><?php echo h(ucfirst(strtolower(str_replace('_', ' ', $doc['status'])))); ?></span></td>
+                            <td data-label="Ação"><div class="portal-table-actions">
                                 <a class="btn btn-primary btn-sm" target="_blank" href="<?php echo APP_URL; ?>portal/documentos/pdf?acao=visualizar&tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>">
                                     <i class="fas fa-eye"></i> Visualizar
                                 </a>
                                 <a class="btn btn-secondary btn-sm" href="<?php echo APP_URL; ?>portal/documentos/pdf?acao=download&tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>"><i class="fas fa-download"></i> PDF</a>
-                            </td>
+                            </div></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
