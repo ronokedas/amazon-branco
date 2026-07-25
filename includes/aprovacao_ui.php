@@ -16,7 +16,7 @@ function renderBotaoAprovacaoDocumento(PDO $pdo,string $tipo,string $id,string $
         echo '<a class="btn btn-sm btn-success" target="_blank" title="Validar documento aprovado" aria-label="Validar documento aprovado" href="'.h(APP_URL.'validar/'.$audit['token_validacao']).'"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></a>';
         echo '<button type="button" class="btn btn-sm btn-outline-danger js-cancelar-aprovacao" title="Cancelar documento aprovado" data-tipo="'.h($tipo).'" data-id="'.h($id).'"><i class="fas fa-ban"></i></button>';return;
     }
-    $allowed=$tipo==='RELATORIO'?false:($tipo==='PARECER_PLANOS'?($status==='AGUARDANDO_APROVACAO'):($status==='emitido'&&!$assinado));
+    $allowed=$tipo==='RELATORIO'?false:($tipo==='PARECER_PLANOS'?false:($status==='emitido'&&!$assinado));
     if(!$allowed)return;
     $label=$tipo==='PARECER_PLANOS'?' Aprovar e assinar':'';
     echo '<button type="button" class="btn btn-sm btn-warning js-aprovar-documento" title="Aprovar e assinar" data-tipo="'.h($tipo).'" data-id="'.h($id).'" data-responsavel="'.h((string)($responsavelId?:'')).'"><i class="fas fa-file-signature"></i>'.$label.'</button>';

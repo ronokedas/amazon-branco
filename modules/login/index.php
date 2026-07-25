@@ -46,8 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Login bem-sucedido - usar funcao do auth.php
                 login($usuario);
                 
-                // Redirecionar para dashboard (agora disponivel para todos)
-                header('Location: ' . APP_URL . 'dashboard');
+                $retorno = (string)($_SESSION['login_return_to'] ?? '');
+                unset($_SESSION['login_return_to']);
+                $destino = str_starts_with($retorno, 'minhas-assinaturas') ? $retorno : 'dashboard';
+                header('Location: ' . APP_URL . $destino);
                 exit;
             } else {
                 $erro_msg = 'Email ou senha incorretos.';

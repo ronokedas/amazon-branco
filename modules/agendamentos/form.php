@@ -14,6 +14,7 @@ exigirAcesso('agendamentos');
 
 $id = $_GET['id'] ?? null;
 $editando = !empty($id);
+$relatorioOrigemId = trim((string)($_GET['relatorio_origem_id'] ?? ''));
 
 $agendamento = [
     'id'               => '',
@@ -31,7 +32,51 @@ $agendamento = [
     'contato_telefone' => '',
     'status'           => 'pendente',
     'observacoes'      => '',
+    'relatorio_origem_id' => '',
 ];
+
+if (!$editando && $relatorioOrigemId !== '') {
+    if ($cargo !== 'ADMIN') {
+        setMensagem('error', 'Somente o administrador pode agendar retorno de cumprimento A/S.');
+        redirecionar(APP_URL . 'vistorias');
+    }
+    $stmtRetorno = $pdo->prepare("SELECT v.id,v.numero,v.agendamento_id,v.embarcacao_id,v.pessoa_id,v.armador_id,
+            v.operador_nome,a.proposta_id,a.cliente_id,a.local,a.contato_nome,a.contato_telefone
+        FROM vistorias v
+        LEFT JOIN agendamentos a ON a.id=v.agendamento_id
+        WHERE v.id=:id AND v.status='APROVADA_COM_EXIGENCIAS'
+          AND EXISTS (
+            SELECT 1 FROM vistoria_exigencias ve
+            WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1
+              AND ve.conforme='nao' AND ve.status_item<>'cumprida'
+          )
+        LIMIT 1");
+    $stmtRetorno->execute([':id' => $relatorioOrigemId]);
+    $origemRetorno = $stmtRetorno->fetch(PDO::FETCH_ASSOC);
+    if (!$origemRetorno) {
+        setMensagem('error', 'O relatório informado não possui A/S pendente para agendamento.');
+        redirecionar(APP_URL . 'vistorias');
+    }
+    $stmtPendencia = $pdo->prepare("SELECT status FROM vistoria_retornos WHERE relatorio_origem_id=:id LIMIT 1");
+    $stmtPendencia->execute([':id' => $relatorioOrigemId]);
+    if ($stmtPendencia->fetchColumn() !== 'PENDENTE_AGENDAMENTO') {
+        setMensagem('error', 'Este retorno A/S não está disponível para um novo agendamento.');
+        redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode((string)($origemRetorno['agendamento_id'] ?? '')) . '&vistoria_id=' . urlencode($relatorioOrigemId));
+    }
+    $agendamento = array_merge($agendamento, [
+        'proposta_id' => $origemRetorno['proposta_id'] ?? '',
+        'embarcacao_id' => $origemRetorno['embarcacao_id'],
+        'cliente_id' => $origemRetorno['cliente_id'] ?: $origemRetorno['pessoa_id'],
+        'armador_id' => $origemRetorno['armador_id'] ?? '',
+        'operador_nome' => $origemRetorno['operador_nome'] ?? '',
+        'tipo_vistoria' => 'Cumprimento de A/S — relatório ' . ($origemRetorno['numero'] ?: $relatorioOrigemId),
+        'local' => $origemRetorno['local'] ?? '',
+        'contato_nome' => $origemRetorno['contato_nome'] ?? '',
+        'contato_telefone' => $origemRetorno['contato_telefone'] ?? '',
+        'observacoes' => 'Retorno obrigatório para verificar o cumprimento das exigências A/S.',
+        'relatorio_origem_id' => $relatorioOrigemId,
+    ]);
+}
 
 if ($editando) {
     if ($cargo === 'VISTORIADOR') {
@@ -44,6 +89,10 @@ if ($editando) {
         $stmt->execute([':id' => $id]);
         $dados = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($dados) {
+            if (!empty($dados['relatorio_origem_id']) && $cargo !== 'ADMIN') {
+                setMensagem('error', 'Somente o administrador pode editar um retorno A/S.');
+                redirecionar(APP_URL . 'agendamentos');
+            }
             $agendamento = array_merge($agendamento, $dados);
         } else {
             setMensagem('error', 'Agendamento não encontrado.');
@@ -91,7 +140,7 @@ require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 
 $servicosTravados = !empty($agendamento['proposta_id']);
-$origemTravada = $editando && !empty($agendamento['proposta_id']);
+$origemTravada = ($editando && !empty($agendamento['proposta_id'])) || !empty($agendamento['relatorio_origem_id']);
 $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['hora_vistoria'], 0, 5) : '';
 
 ?>
@@ -134,6 +183,13 @@ $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['
         <form action="<?php echo APP_URL; ?>agendamentos/actions" method="POST" class="form-padrao">
             <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
             <input type="hidden" name="action" value="<?php echo $editando ? 'editar' : 'inserir'; ?>">
+            <input type="hidden" name="relatorio_origem_id" value="<?php echo h($agendamento['relatorio_origem_id']); ?>">
+            <?php if (!empty($agendamento['relatorio_origem_id'])): ?>
+                <div class="alert alert-warning">
+                    <strong>Retorno obrigatório A/S.</strong>
+                    Este agendamento gerará uma nova OS e um novo relatório numerado, vinculado ao relatório de origem.
+                </div>
+            <?php endif; ?>
             <?php if ($cargo === 'VENDEDOR'): ?>
                 <input type="hidden" name="vendedor_id" value="<?php echo h($_SESSION['usuario_id']); ?>">
             <?php endif; ?>

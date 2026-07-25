@@ -55,7 +55,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
         <h2><i class="fas fa-file-certificate"></i> Certificados de Segurança da Navegação (CSN)</h2>
         <div class="d-flex gap-2">
             <?php if ($_SESSION['usuario_cargo'] ?? '' === 'ADMIN'): ?>
-            <a href="<?php echo APP_URL; ?>documentacao/certificados/form" class="btn btn-success">
+            <a href="<?php echo APP_URL; ?>certificados" class="btn btn-success">
                 <i class="fas fa-plus"></i> Novo Certificado
             </a>
             <?php endif; ?>
@@ -100,7 +100,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
             <div class="tabela-vazia">
                 <i class="fas fa-file-certificate" style="font-size: 3rem; opacity: 0.3;"></i>
                 <p>Nenhum certificado CSN encontrado.</p>
-                <a href="<?php echo APP_URL; ?>documentacao/certificados/form" class="btn btn-success btn-sm">
+                <a href="<?php echo APP_URL; ?>certificados" class="btn btn-success btn-sm">
                     <i class="fas fa-plus"></i> Criar Primeiro Certificado
                 </a>
             </div>
@@ -171,18 +171,6 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                             <i class="fas fa-envelope"></i>
                                         </button>
                                     </form>
-
-                                    <!-- Link de Assinatura -->
-                                    <?php
-                                    $token_stmt = $pdo->prepare("SELECT token_assinatura FROM certificados_csn WHERE id = :id");
-                                    $token_stmt->execute([':id' => $c['id']]);
-                                    $token_row = $token_stmt->fetch();
-                                    $link_assinatura = APP_URL . 'assinar/' . $token_row['token_assinatura'];
-                                    ?>
-                                    <button type="button" class="btn btn-sm btn-info" title="Copiar Link de Assinatura"
-                                            onclick="copiarLink('<?php echo h($link_assinatura); ?>', this)">
-                                        <i class="fas fa-link"></i>
-                                    </button>
 
                                     <!-- Enviar Link de Assinatura por E-mail -->
                                     <form method="POST" action="<?php echo APP_URL; ?>documentacao/certificados/actions" 

@@ -67,6 +67,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <tr>
                         <th>Nome</th>
                         <th>Descrição</th>
+                        <th>Certificado</th>
                         <th>Preço Padrão</th>
                         <th>Status</th>
                         <th>Ações</th>
@@ -81,6 +82,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                         <td>
                             <small class="text-muted"><?php echo h(mb_strlen($s['descricao'] ?? '') > 80 ? mb_substr($s['descricao'], 0, 80) . '...' : ($s['descricao'] ?? '-')); ?></small>
                         </td>
+                        <td><?php echo !empty($s['certificado_modelo']) ? '<span class="badge badge-info">' . h($s['certificado_modelo']) . '</span>' : '<span class="text-muted">-</span>'; ?></td>
                         <td>
                             <span class="preco-destaque"><?php echo formatarMoeda($s['preco_padrao']); ?></span>
                         </td>

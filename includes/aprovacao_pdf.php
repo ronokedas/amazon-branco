@@ -45,14 +45,93 @@ function aprovacaoPdfCriarComBloco(string $origem, string $destino, array $a): v
         $pdf->useTemplate($template, 0, 0, $size['width'], $size['height'], true);
     }
 
-    // Estes certificados reservam o rodape do verso para a auditoria. Os demais
-    // modelos continuam usando pagina exclusiva ate terem uma area segura equivalente.
+    // Estes certificados reservam uma area segura no rodape da primeira pagina.
+    // Os demais modelos continuam usando pagina exclusiva ate terem uma area
+    // equivalente definida em seus respectivos layouts.
     $tipoDocumento = strtoupper((string)($a['documento_tipo'] ?? ''));
+    $tiposBlocoCompacto = ['CSN', 'CNBL', 'CNARQ', 'RELATORIO'];
     if (in_array($tipoDocumento, ['CSN', 'CNBL', 'CNARQ'], true)) {
-        $pdf->setPage($pageCount);
+        $pdf->setPage(1);
+    } elseif ($tipoDocumento === 'RELATORIO') {
+        $paginaBloco = (int)($a['bloco_pagina'] ?? $pageCount);
+        $pdf->setPage(max(1, min($pageCount, $paginaBloco)));
     } else {
         $pdf->AddPage('P', 'A4');
     }
+
+    if (in_array($tipoDocumento, $tiposBlocoCompacto, true)) {
+        $yPorDocumento = [
+            'CSN' => 247.0,
+            'CNBL' => 252.0,
+            'CNARQ' => 248.0,
+        ];
+        $x = 15.0;
+        $y = $tipoDocumento === 'RELATORIO'
+            ? (float)($a['bloco_y'] ?? 222.0)
+            : $yPorDocumento[$tipoDocumento];
+        $w = 180.0;
+        $h = 39.0;
+        $signatureColumn = 42.0;
+        $qrColumn = 29.0;
+        $padding = 3.0;
+
+        $pdf->SetDrawColor(160, 166, 163);
+        $pdf->SetLineWidth(0.25);
+        $pdf->Rect($x, $y, $w, $h);
+        $pdf->Line($x + $signatureColumn, $y, $x + $signatureColumn, $y + $h);
+        $pdf->Line($x + $w - $qrColumn, $y, $x + $w - $qrColumn, $y + $h);
+
+        $signature = (string)($a['assinatura_caminho_absoluto'] ?? '');
+        if ($signature !== '' && is_file($signature)) {
+            $pdf->Image($signature, $x + 4, $y + 7, 34, 11, '', '', '', true, 300, '', false, false, 0, true, false, false);
+        }
+        $pdf->SetTextColor(65, 70, 68);
+        $pdf->SetFont('helvetica', 'I', 5.1);
+        $pdf->SetXY($x + 2, $y + 21);
+        $pdf->MultiCell($signatureColumn - 4, 2.8, 'Representação visual da assinatura', 0, 'C');
+
+        $rx = $x + $signatureColumn + $padding;
+        $rw = $w - $signatureColumn - $qrColumn - (2 * $padding);
+        $pdf->SetTextColor(20, 35, 31);
+        $pdf->SetXY($rx, $y + 2);
+        $pdf->SetFont('helvetica', 'B', 7.0);
+        $pdf->MultiCell($rw, 3.2, 'DOCUMENTO APROVADO E ASSINADO ELETRONICAMENTE', 0, 'L');
+
+        $lines = [
+            'Responsável técnico: ' . aprovacaoPdfTextoSeguro($a['responsavel_nome'] ?? ''),
+            'CPF/CNPJ: ' . aprovacaoPdfTextoSeguro($a['responsavel_cpf_cnpj'] ?? ''),
+            'Cargo/função: ' . aprovacaoPdfTextoSeguro($a['responsavel_cargo'] ?? ''),
+            !empty($a['responsavel_registro']) ? 'Registro profissional: ' . aprovacaoPdfTextoSeguro($a['responsavel_registro']) : null,
+            'Aprovado por: ' . aprovacaoPdfTextoSeguro($a['aprovador_nome'] ?? ''),
+            'Data e hora: ' . aprovacaoPdfTextoSeguro($a['data_hora_formatada'] ?? ''),
+            'Geolocalização: ' . aprovacaoPdfTextoSeguro($a['latitude'] ?? '') . ', ' . aprovacaoPdfTextoSeguro($a['longitude'] ?? '') . (!empty($a['geo_precisao_m']) ? ' (precisão ' . aprovacaoPdfTextoSeguro($a['geo_precisao_m']) . ' m)' : ''),
+            'Endereço IP: ' . aprovacaoPdfTextoSeguro($a['ip'] ?? ''),
+        ];
+        $lines = array_values(array_filter($lines, static fn($v) => $v !== null));
+        $pdf->SetXY($rx, $y + 6);
+        $pdf->SetFont('helvetica', '', 5.4);
+        $pdf->MultiCell($rw, 2.45, implode("\n", $lines), 0, 'L');
+
+        $pdf->SetXY($rx, $y + 27.5);
+        $pdf->SetFont('helvetica', 'B', 5.2);
+        $pdf->Cell($rw, 2.5, 'SHA-256 DO PDF ORIGINAL APROVADO', 0, 1, 'L');
+        $pdf->SetX($rx);
+        $pdf->SetFont('courier', '', 4.8);
+        $pdf->MultiCell($rw, 2.4, aprovacaoPdfTextoSeguro($a['hash_pdf_original'] ?? ''), 0, 'L');
+
+        $validationUrl = aprovacaoPdfUrlValidacao((string)$a['token_validacao']);
+        $qrStyle = ['border' => 0, 'padding' => 0, 'fgcolor' => [0, 0, 0], 'bgcolor' => false];
+        $qrX = $x + $w - $qrColumn + (($qrColumn - 20.0) / 2);
+        $pdf->write2DBarcode($validationUrl, 'QRCODE,M', $qrX, $y + 5, 20, 20, $qrStyle, 'N');
+        $pdf->SetFont('helvetica', '', 5.1);
+        $pdf->SetTextColor(65, 70, 68);
+        $pdf->SetXY($x + $w - $qrColumn + 1, $y + 27);
+        $pdf->MultiCell($qrColumn - 2, 3, 'Escaneie para validar', 0, 'C');
+
+        $pdf->Output($destino, 'F');
+        return;
+    }
+
     $x = 15.0;
     $y = 222.0;
     $w = 180.0;

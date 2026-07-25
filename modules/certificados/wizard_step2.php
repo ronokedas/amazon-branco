@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/assinaturas_usuarios.php';
 
 exigirAcesso('certificados');
 
@@ -26,6 +27,15 @@ if (!empty($modelo) && in_array($modelo, $modelos_sem_tipo, true) && empty($tipo
 if (empty($modelo) || empty($tipo)) {
     header('Location: ' . APP_URL . 'certificados');
     exit;
+}
+
+if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true)
+    && ($agendamento_id === '' || !certificadoModeloPermitidoPorAgendamento($pdo, (string)$agendamento_id, $modelo))) {
+    unset($_SESSION['wizard_certificado']);
+    setMensagem('error', certificadoMensagemServicoObrigatorio($modelo));
+    redirecionar($agendamento_id !== ''
+        ? APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id)
+        : APP_URL . 'certificados');
 }
 
 if ($modelo === 'CHT') {
@@ -59,6 +69,11 @@ function buscarDadosVistoriaCertificado(PDO $pdo, string $vistoria_id): ?array
     ");
     $stmtDados->execute([':id' => $vistoria_id]);
     $dados = $stmtDados->fetch(PDO::FETCH_ASSOC);
+    if ($dados) {
+        $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
+        $dados['relatorio_numero'] = relatorioNumerosReferenciaCertificado($pdo, $vistoria_id);
+        $dados['relatorio_status'] = $liberacao['status'] ?? $dados['relatorio_status'];
+    }
 
     return $dados ?: null;
 }
@@ -75,12 +90,17 @@ function calcularValidadeCsnDoRelatorio(array $dados): ?string
     return $dataBase ? $dataBase->modify('+' . $prazo . ' days')->format('Y-m-d') : null;
 }
 
-$stmtResponsaveis = $pdo->query("
-    SELECT id, nome_completo as nome, cargo_titulo as cargo, registro_profissional as conselho_classe
-    FROM responsaveis_assinatura
-    WHERE ativo = 1
-    ORDER BY nome_completo ASC
+$stmtResponsaveis = $pdo->prepare("
+    SELECT ra.id, ra.nome_completo as nome, ra.cargo_titulo as cargo, ra.registro_profissional as conselho_classe
+    FROM responsaveis_assinatura ra JOIN usuarios u ON u.id=ra.usuario_id
+    WHERE ra.ativo=1 AND u.ativo=1 AND u.excluido_em IS NULL
+      AND ra.email IS NOT NULL AND ra.email<>''
+      AND ra.assinatura_arquivo IS NOT NULL AND ra.assinatura_arquivo<>''
+      AND ra.assinatura_hash IS NOT NULL AND ra.assinatura_hash<>''
+      AND (u.cargo<>'ANALISTA' OR u.id=:criador)
+    ORDER BY ra.nome_completo ASC
 ");
+$stmtResponsaveis->execute([':criador'=>(string)($_SESSION['usuario_id']??'')]);
 $responsaveis = $stmtResponsaveis->fetchAll(PDO::FETCH_ASSOC);
 
 $erro = '';
@@ -110,11 +130,11 @@ if ($responsavel_id_selecionado === '' && count($responsaveis) === 1) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $vistoria_id_post = $_POST['vistoria_id'] ?? '';
-    if ($modelo_csn && $vistoria_id_post !== '') {
+    if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true) && $vistoria_id_post !== '') {
         $dadosValidadeCsn = buscarDadosVistoriaCertificado($pdo, $vistoria_id_post);
         $validadeCalculadaCsn = $dadosValidadeCsn ? calcularValidadeCsnDoRelatorio($dadosValidadeCsn) : null;
         if ($validadeCalculadaCsn === null) {
-            $erro = 'O relatório precisa ter prazo de validade de 60 ou 90 dias antes de gerar o CSN.';
+            $erro = 'O relatório precisa ter prazo de validade de 60 ou 90 dias antes de gerar o ' . $modelo . '.';
         } else {
             $data_validade_valor = $validadeCalculadaCsn;
         }
@@ -123,6 +143,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $liberacaoCertificacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id_post);
         if (empty($liberacaoCertificacao['permitido'])) {
             $erro = $liberacaoCertificacao['mensagem'];
+        }
+        if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true)
+            && !certificadoModeloPermitidoPorVistoria($pdo, (string)$vistoria_id_post, $modelo)) {
+            $erro = certificadoMensagemServicoObrigatorio($modelo);
         }
     }
 
@@ -157,8 +181,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($tipo === 'Definitivo' && $dados_emb['relatorio_status'] === 'APROVADA_COM_EXIGENCIAS') {
             $erro = 'Não é possível emitir um Certificado Definitivo para um relatório aprovado com exigências. Use Provisório ou Condicional.';
         } else {
-            $stmtResp = $pdo->prepare("SELECT nome_completo, cargo_titulo, registro_profissional FROM responsaveis_assinatura WHERE id = :id AND ativo = 1");
-            $stmtResp->execute([':id' => $responsavel_id_selecionado]);
+            $stmtResp = $pdo->prepare("SELECT ra.nome_completo,ra.cargo_titulo,ra.registro_profissional FROM responsaveis_assinatura ra JOIN usuarios u ON u.id=ra.usuario_id WHERE ra.id=:id AND ra.ativo=1 AND u.ativo=1 AND u.excluido_em IS NULL AND ra.email<>'' AND ra.assinatura_arquivo<>'' AND ra.assinatura_hash<>'' AND (u.cargo<>'ANALISTA' OR u.id=:criador)");
+            $stmtResp->execute([':id' => $responsavel_id_selecionado, ':criador'=>(string)($_SESSION['usuario_id']??'')]);
             $respData = $stmtResp->fetch(PDO::FETCH_ASSOC);
 
             if (!$respData) {
@@ -308,10 +332,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     $pdo->prepare('UPDATE certificados_csn SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
+                    $convite_assinatura = assinaturaCriarConviteCertificado($pdo, 'CSN', $certificado_id, (int)$responsavel_id_selecionado);
                     $pdo->commit();
 
                     log_atividade('certificado_csn_criado', "Certificado {$numero_cert} ({$tipo}) - " . ($dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? ''));
-                    setMensagem('success', "Certificado CSN {$tipo} criado com sucesso! Número: {$numero_cert}");
+                    try {
+                        $envio = assinaturaEnviarConviteCertificado($pdo, 'CSN', $certificado_id, $convite_assinatura);
+                        setMensagem($envio['success'] ? 'success' : 'warning', "Certificado CSN {$tipo} criado. " . $envio['message']);
+                    } catch (Throwable $mailError) {
+                        assinaturaRegistrarEmail($pdo, '', 'CSN', $certificado_id, false, $mailError->getMessage());
+                        setMensagem('warning', 'Certificado criado, mas o convite de assinatura não foi enviado: ' . $mailError->getMessage());
+                    }
                     redirecionar(APP_URL . 'documentacao/certificados');
                 } catch (Exception $e) {
                     $pdo->rollBack();
@@ -329,8 +360,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($tipo === 'Definitivo' && $dados_emb['relatorio_status'] === 'APROVADA_COM_EXIGENCIAS') {
             $erro = 'Não é possível emitir um Certificado Definitivo para um relatório aprovado com exigências. Use Provisório ou Condicional.';
         } else {
-            $stmtResp = $pdo->prepare("SELECT nome_completo, cargo_titulo, registro_profissional FROM responsaveis_assinatura WHERE id = :id");
-            $stmtResp->execute([':id' => $responsavel_id_selecionado]);
+            $stmtResp = $pdo->prepare("SELECT ra.nome_completo,ra.cargo_titulo,ra.registro_profissional FROM responsaveis_assinatura ra JOIN usuarios u ON u.id=ra.usuario_id WHERE ra.id=:id AND ra.ativo=1 AND u.ativo=1 AND u.excluido_em IS NULL AND ra.email<>'' AND ra.assinatura_arquivo<>'' AND ra.assinatura_hash<>'' AND (u.cargo<>'ANALISTA' OR u.id=:criador)");
+            $stmtResp->execute([':id' => $responsavel_id_selecionado, ':criador'=>(string)($_SESSION['usuario_id']??'')]);
             $respData = $stmtResp->fetch(PDO::FETCH_ASSOC);
 
             if (!$respData) {
@@ -367,6 +398,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 dist_linha_conves_bico_proa, dist_linha_conves_abaixo_disco,
                                 marca_linha_carga_area1, marca_linha_carga_area2, acrescimo_agua_salgada,
                                 relatorio_numero, data_vistoria, local_vistoria,
+                                tipo_vistoria_certificado, observacoes_verso,
                                 data_emissao, data_validade, local_emissao,
                                 assinante_nome, assinante_titulo, assinante_registro,
                                 status, ativo, criado_por, vistoria_id
@@ -381,6 +413,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 :dist_linha_conves_bico_proa, :dist_linha_conves_abaixo_disco,
                                 :marca_linha_carga_area1, :marca_linha_carga_area2, :acrescimo_agua_salgada,
                                 :relatorio_numero, :data_vistoria, :local_vistoria,
+                                :tipo_vistoria_certificado, :observacoes_verso,
                                 :data_emissao, :data_validade, :local_emissao,
                                 :assinante_nome, :assinante_titulo, :assinante_registro,
                                 :status, 1, :criado_por, :vistoria_id
@@ -420,6 +453,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':relatorio_numero' => $dados_emb['relatorio_numero'] ?? '',
                         ':data_vistoria' => $dados_emb['data_vistoria'] ?? date('Y-m-d'),
                         ':local_vistoria' => $dados_emb['local_vistoria'] ?? '',
+                        ':tipo_vistoria_certificado' => $tipo_vistoria_certificado_valor,
+                        ':observacoes_verso' => $observacoes_verso_valor,
                         ':data_emissao' => date('Y-m-d'),
                         ':data_validade' => $data_validade_valor,
                         ':local_emissao' => $local_emissao_valor,
@@ -457,10 +492,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     $pdo->prepare('UPDATE certificados_cnbl SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
+                    $convite_assinatura = assinaturaCriarConviteCertificado($pdo, 'CNBL', $certificado_id, (int)$responsavel_id_selecionado);
                     $pdo->commit();
 
                     log_atividade('certificado_cnbl_criado', "Certificado {$numero_cert} ({$tipo}) - " . ($dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? ''));
-                    setMensagem('success', "Certificado CNBL {$tipo} criado com sucesso! Número: {$numero_cert}");
+                    try {
+                        $envio = assinaturaEnviarConviteCertificado($pdo, 'CNBL', $certificado_id, $convite_assinatura);
+                        setMensagem($envio['success'] ? 'success' : 'warning', "Certificado CNBL {$tipo} criado. " . $envio['message']);
+                    } catch (Throwable $mailError) {
+                        assinaturaRegistrarEmail($pdo, '', 'CNBL', $certificado_id, false, $mailError->getMessage());
+                        setMensagem('warning', 'Certificado criado, mas o convite de assinatura não foi enviado: ' . $mailError->getMessage());
+                    }
                     redirecionar(APP_URL . 'documentacao/cnbl');
                 } catch (Exception $e) {
                     $pdo->rollBack();
@@ -478,8 +520,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($tipo === 'Definitivo' && $dados_emb['relatorio_status'] === 'APROVADA_COM_EXIGENCIAS') {
             $erro = 'Não é possível emitir um Certificado Definitivo para um relatório aprovado com exigências. Use Provisório ou Condicional.';
         } else {
-            $stmtResp = $pdo->prepare("SELECT nome_completo, cargo_titulo, registro_profissional FROM responsaveis_assinatura WHERE id = :id");
-            $stmtResp->execute([':id' => $responsavel_id_selecionado]);
+            $stmtResp = $pdo->prepare("SELECT ra.nome_completo,ra.cargo_titulo,ra.registro_profissional FROM responsaveis_assinatura ra JOIN usuarios u ON u.id=ra.usuario_id WHERE ra.id=:id AND ra.ativo=1 AND u.ativo=1 AND u.excluido_em IS NULL AND ra.email<>'' AND ra.assinatura_arquivo<>'' AND ra.assinatura_hash<>'' AND (u.cargo<>'ANALISTA' OR u.id=:criador)");
+            $stmtResp->execute([':id' => $responsavel_id_selecionado, ':criador'=>(string)($_SESSION['usuario_id']??'')]);
             $respData = $stmtResp->fetch(PDO::FETCH_ASSOC);
 
             if (!$respData) {
@@ -516,6 +558,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 espacos_incluidos_ab, espacos_incluidos_al, espacos_excluidos_m3,
                                 data_local_arqueacao_original, data_local_ultima_rearqueacao,
                                 relatorio_numero, data_vistoria, local_vistoria,
+                                tipo_vistoria_certificado, observacoes_verso,
                                 data_emissao, data_validade, local_emissao,
                                 assinante_nome, assinante_titulo, assinante_registro,
                                 status, ativo, criado_por, vistoria_id
@@ -531,6 +574,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 :espacos_incluidos_ab, :espacos_incluidos_al, :espacos_excluidos_m3,
                                 :data_local_arqueacao_original, :data_local_ultima_rearqueacao,
                                 :relatorio_numero, :data_vistoria, :local_vistoria,
+                                :tipo_vistoria_certificado, :observacoes_verso,
                                 :data_emissao, :data_validade, :local_emissao,
                                 :assinante_nome, :assinante_titulo, :assinante_registro,
                                 :status, 1, :criado_por, :vistoria_id
@@ -571,6 +615,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':relatorio_numero' => $dados_emb['relatorio_numero'] ?? '',
                         ':data_vistoria' => $dados_emb['data_vistoria'] ?? date('Y-m-d'),
                         ':local_vistoria' => $dados_emb['local_vistoria'] ?? '',
+                        ':tipo_vistoria_certificado' => $tipo_vistoria_certificado_valor,
+                        ':observacoes_verso' => $observacoes_verso_valor,
                         ':data_emissao' => date('Y-m-d'),
                         ':data_validade' => $data_validade_valor,
                         ':local_emissao' => $local_emissao_valor,
@@ -583,10 +629,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
 
                     $pdo->prepare('UPDATE certificados_cnarq SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
+                    $convite_assinatura = assinaturaCriarConviteCertificado($pdo, 'CNARQ', $certificado_id, (int)$responsavel_id_selecionado);
                     $pdo->commit();
 
                     log_atividade('certificado_cnarq_criado', "Certificado {$numero_cert} ({$tipo}) - " . ($dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? ''));
-                    setMensagem('success', "Certificado CNARQ {$tipo} criado com sucesso! Número: {$numero_cert}");
+                    try {
+                        $envio = assinaturaEnviarConviteCertificado($pdo, 'CNARQ', $certificado_id, $convite_assinatura);
+                        setMensagem($envio['success'] ? 'success' : 'warning', "Certificado CNARQ {$tipo} criado. " . $envio['message']);
+                    } catch (Throwable $mailError) {
+                        assinaturaRegistrarEmail($pdo, '', 'CNARQ', $certificado_id, false, $mailError->getMessage());
+                        setMensagem('warning', 'Certificado criado, mas o convite de assinatura não foi enviado: ' . $mailError->getMessage());
+                    }
                     redirecionar(APP_URL . 'documentacao/cnarq');
                 } catch (Exception $e) {
                     $pdo->rollBack();
@@ -804,7 +857,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $dados_preenchidos = buscarDadosVistoriaCertificado($pdo, $vistoria_id);
-if ($modelo_csn && $dados_preenchidos && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true) && $dados_preenchidos && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     $data_validade_valor = calcularValidadeCsnDoRelatorio($dados_preenchidos) ?? '';
 }
 $relatorio_label = '';
@@ -974,9 +1027,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <?php if ($modelo !== 'LC'): ?>
                             <div class="form-group col-3">
                                 <label for="data_validade"><i class="fas fa-calendar-check"></i> Validade <span class="text-danger">*</span></label>
-                                <input type="date" name="data_validade" id="data_validade" class="form-control" value="<?= h($data_validade_valor) ?>" required <?= $modelo_csn ? 'readonly' : '' ?>>
-                                <?php if ($modelo_csn): ?>
-                                    <small>Calculada automaticamente pela data da vistoria.</small>
+                                <input type="date" name="data_validade" id="data_validade" class="form-control" value="<?= h($data_validade_valor) ?>" required <?= in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true) ? 'readonly' : '' ?>>
+                                <?php if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true)): ?>
+                                    <small>Calculada automaticamente pela data e pelo prazo do relatório de vistoria.</small>
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
@@ -992,9 +1045,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </div>
                     </div>
 
-                    <?php if ($modelo === 'CSN' || $modelo === 'Certificado de Segurança da Navegação'): ?>
-                        <input type="hidden" name="emitente" value="AMAZON NAVAL">
-                        <input type="hidden" name="normam_aplicavel" value="NORMAM-202">
+                    <?php if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ', 'Certificado de Segurança da Navegação'], true)): ?>
+                        <?php if ($modelo_csn): ?>
+                            <input type="hidden" name="emitente" value="AMAZON NAVAL">
+                            <input type="hidden" name="normam_aplicavel" value="NORMAM-202">
+                        <?php endif; ?>
                         <div class="form-row">
                             <div class="form-group col-6">
                                 <label for="tipo_vistoria_certificado"><i class="fas fa-clipboard-check"></i> Tipo de vistoria</label>
@@ -1008,7 +1063,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </div>
                         <div class="form-row">
                             <div class="form-group col-12">
-                                <label for="observacoes_verso"><i class="fas fa-note-sticky"></i> Observações do verso do CSN</label>
+                                <label for="observacoes_verso"><i class="fas fa-note-sticky"></i> Observações do verso do <?= h($modelo) ?></label>
                                 <textarea name="observacoes_verso" id="observacoes_verso" class="form-control" rows="3"><?= h($observacoes_verso_valor) ?></textarea>
                             </div>
                         </div>

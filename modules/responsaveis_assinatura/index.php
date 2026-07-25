@@ -9,7 +9,7 @@ exigirAcesso('responsaveis_assinatura');
 $page_title = "Responsáveis pela Assinatura";
 require_once __DIR__ . '/../../includes/header.php';
 
-$stmt = $pdo->query("SELECT * FROM responsaveis_assinatura ORDER BY nome_completo ASC");
+$stmt = $pdo->query("SELECT r.*, u.nome AS usuario_nome, u.cargo AS usuario_cargo, u.email AS usuario_email FROM responsaveis_assinatura r LEFT JOIN usuarios u ON u.id=r.usuario_id ORDER BY r.nome_completo ASC");
 $responsaveis = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -31,6 +31,8 @@ $responsaveis = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <tr>
                             <th>Nome Completo</th>
                             <th>Cargo/Título</th>
+                            <th>UsuÃ¡rio vinculado</th>
+                            <th>E-mail de notificaÃ§Ã£o</th>
                             <th>CPF/CNPJ</th>
                             <th>Registro Profissional</th>
                             <th>Assinatura</th>
@@ -43,6 +45,8 @@ $responsaveis = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <tr>
                                 <td><?= htmlspecialchars($resp['nome_completo']) ?></td>
                                 <td><?= htmlspecialchars($resp['cargo_titulo']) ?></td>
+                                <td><?= htmlspecialchars(($resp['usuario_nome'] ?? '-') . (!empty($resp['usuario_cargo']) ? ' · ' . $resp['usuario_cargo'] : '')) ?><br><small><?= htmlspecialchars($resp['usuario_email'] ?? '') ?></small></td>
+                                <td><?= htmlspecialchars($resp['email'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($resp['cpf_cnpj'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($resp['registro_profissional'] ?? '-') ?></td>
                                 <td><?= !empty($resp['assinatura_arquivo']) && !empty($resp['assinatura_hash']) ? '<span class="badge badge-success"><i class="fas fa-check"></i> Cadastrada</span>' : '<span class="badge badge-warning">Pendente</span>' ?></td>

@@ -105,9 +105,17 @@ if ($cargo === 'VISTORIADOR' && ($vistoria['vistoriador_id'] ?? '') !== $usuario
     redirecionar(APP_URL . 'vistorias');
 }
 
-if ($cargo === 'ANALISTA' && ($vistoria['status'] ?? '') !== 'AGUARDANDO_APROVACAO') {
-    setMensagem('error', 'O analista só pode acessar vistorias aguardando aprovação.');
-    redirecionar(APP_URL . 'vistorias');
+if ($cargo === 'ANALISTA') {
+    $stmtAnalista = $pdo->prepare('SELECT 1 FROM analises_planos
+        WHERE embarcacao_id=:embarcacao AND analista_id=:usuario LIMIT 1');
+    $stmtAnalista->execute([
+        ':embarcacao' => $vistoria['embarcacao_id'] ?? '',
+        ':usuario' => $usuario_id,
+    ]);
+    if (!$stmtAnalista->fetchColumn()) {
+        setMensagem('error', 'Consulta indisponível: a embarcação não pertence a uma análise atribuída a você.');
+        redirecionar(APP_URL . 'vistorias');
+    }
 }
 
 // Vendedor ve apenas vistorias de agendamentos que ele criou
@@ -139,6 +147,8 @@ $statusConfig = [
     'REPROVADA' => ['class' => 'badge-danger',  'icon' => 'fa-times-circle', 'cor' => '#dc3545'],
     'CANCELADA' => ['class' => 'badge-secondary', 'icon' => 'fa-ban',  'cor' => '#6c757d'],
 ];
+$protocolos_vistoria=[];
+if(podeAcessar('protocolos_documentais')){try{$stmtProt=$pdo->prepare('SELECT id,numero,assunto,status FROM protocolo_dossies WHERE vistoria_id=:id ORDER BY criado_em');$stmtProt->execute([':id'=>$id]);$protocolos_vistoria=$stmtProt->fetchAll(PDO::FETCH_ASSOC);}catch(Throwable $e){}}
 
 $osStatusLabels = [
     'pendente'     => ['class' => 'badge-warning', 'label' => 'Pendente'],
@@ -176,6 +186,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
         </div>
         <div class="card-body">
+            <?php if (podeAcessar('protocolos_documentais')): ?>
+            <section style="border:1px solid #dce7e2;border-radius:10px;padding:14px;margin-bottom:18px;background:#f7fbf9">
+                <h4 style="margin-top:0"><i class="fas fa-arrow-right-arrow-left"></i> Tramitação documental</h4>
+                <?php foreach($protocolos_vistoria as $prot): ?><p style="margin:6px 0"><a href="<?= APP_URL ?>protocolos/form?id=<?= urlencode($prot['id']) ?>"><strong><?= h($prot['numero']) ?></strong> · <?= h($prot['assunto']) ?></a> <span class="badge badge-info"><?= h($prot['status']) ?></span></p><?php endforeach; ?>
+                <?php if(!$protocolos_vistoria): ?><p class="text-muted">Nenhum protocolo vinculado a esta vistoria.</p><?php endif; ?>
+                <a class="btn btn-secondary btn-sm" href="<?= APP_URL ?>protocolos/form?vistoria_id=<?= urlencode($id) ?>&embarcacao_id=<?= urlencode($vistoria['embarcacao_id']) ?>"><i class="fas fa-plus"></i> Abrir protocolo desta vistoria</a>
+            </section>
+            <?php endif; ?>
 
             <!-- Informacoes da Vistoria -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">

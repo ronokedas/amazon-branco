@@ -34,6 +34,15 @@ $modelos_sem_tipo = ['LP', 'LC', 'CHT'];
 $relatorio_status = '';
 $vistoria_id = '';
 
+if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true)) {
+    if ($agendamento_id === '' || !certificadoModeloPermitidoPorAgendamento($pdo, (string)$agendamento_id, $modelo)) {
+        setMensagem('error', certificadoMensagemServicoObrigatorio($modelo));
+        redirecionar($agendamento_id !== ''
+            ? APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id)
+            : APP_URL . 'certificados');
+    }
+}
+
 if (!empty($agendamento_id)) {
     try {
         $stmtRelatorioStatus = $pdo->prepare("

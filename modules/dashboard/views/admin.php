@@ -6,7 +6,7 @@ $progressoVistorias = $resumo['vistorias_planejadas'] > 0 ? min(100, round(($res
 $certVariacao = $resumo['certificados_anterior'] > 0 ? round((($resumo['certificados_mes'] - $resumo['certificados_anterior']) / $resumo['certificados_anterior']) * 100, 1) : null;
 $chartMax = max((float)$meta['valor'] * 1.08, max(array_column($dashboard['meses'], 'valor') ?: [1]), 1);
 $goalLine = min(96, round(((float)$meta['valor'] / $chartMax) * 100, 1));
-$decisoesPendentes = (int)$dashboard['acoes']['assinadas'] + (int)$dashboard['acoes']['aprovacao'];
+$decisoesPendentes = (int)$dashboard['acoes']['assinadas'] + (int)$dashboard['acoes']['aprovacao'] + (int)$dashboard['acoes']['retornos_as'];
 ?>
 
 <section class="admin-flow-focus<?= $decisoesPendentes === 0 ? ' is-clear' : '' ?>" aria-labelledby="admin-flow-focus-title">
@@ -39,6 +39,19 @@ $decisoesPendentes = (int)$dashboard['acoes']['assinadas'] + (int)$dashboard['ac
                     <span><strong><?= h($item['embarcacao']) ?></strong><small><?= h($item['numero'] ?: 'Relatório técnico') ?> · <?= h($item['vistoriador']) ?></small></span>
                     <em><?= (int)$item['horas'] < 1 ? 'Enviado agora' : 'Aguardando há '.(int)$item['horas'].'h' ?> · <?= (int)$item['nao_conformes'] ?> exigência<?= (int)$item['nao_conformes'] === 1 ? '' : 's' ?></em>
                     <b>Analisar relatório <i class="fa-solid fa-arrow-right"></i></b>
+                </a>
+                <?php endforeach; ?>
+            </div>
+        </article>
+        <article class="admin-flow-lane is-commercial">
+            <div class="admin-flow-lane__heading"><i class="fa-solid fa-calendar-plus"></i><span><strong>Retornos A/S</strong><small>Próxima ação: agendar nova visita</small></span><b><?= (int)$dashboard['acoes']['retornos_as'] ?></b></div>
+            <div class="admin-flow-items">
+                <?php if (!$dashboard['fluxo_retornos_as']): ?><p class="admin-flow-empty"><i class="fa-solid fa-circle-check"></i>Nenhum retorno A/S aguardando agendamento.</p><?php endif; ?>
+                <?php foreach ($dashboard['fluxo_retornos_as'] as $item): ?>
+                <a class="admin-flow-item" href="<?= APP_URL ?>agendamentos/form?relatorio_origem_id=<?= urlencode($item['relatorio_origem_id']) ?>">
+                    <span><strong><?= h($item['embarcacao']) ?></strong><small><?= h($item['numero']) ?> · certificação bloqueada</small></span>
+                    <em>Pendente desde <?= date('d/m/Y', strtotime($item['criado_em'])) ?></em>
+                    <b>Agendar retorno <i class="fa-solid fa-arrow-right"></i></b>
                 </a>
                 <?php endforeach; ?>
             </div>
@@ -92,6 +105,7 @@ $decisoesPendentes = (int)$dashboard['acoes']['assinadas'] + (int)$dashboard['ac
                 ['Propostas assinadas sem agendamento',$dashboard['acoes']['assinadas'],'agendamentos','fa-file','amber','Ver propostas'],
                 ['Vistorias vencidas',$dashboard['acoes']['vencidas'],'agendamentos','fa-calendar-xmark','red','Ver vistorias'],
                 ['Aguardando aprovação',$dashboard['acoes']['aprovacao'],'documentacao/aprovacao_relatorios','fa-users','amber','Ver aprovações'],
+                ['Retornos A/S sem agendamento',$dashboard['acoes']['retornos_as'],'dashboard','fa-calendar-plus','red','Ver pendências'],
                 ['Documentos para emitir',$dashboard['acoes']['emitir'],'documentacao','fa-file-lines','green','Ver documentos'],
             ] as [$label,$value,$url,$icon,$color,$cta]): ?>
                 <a class="admin-action-card is-<?= $color ?>" href="<?= APP_URL . $url ?>">
@@ -175,6 +189,10 @@ $decisoesPendentes = (int)$dashboard['acoes']['assinadas'] + (int)$dashboard['ac
                     'CANCELADA' => ['Cancelada', 'cancelled'],
                 ];
                 [$statusLabel, $statusClass] = $statusMap[$vistoria['status']] ?? ['Em andamento', 'progress'];
+                if (!empty($vistoria['possui_as']) && $vistoria['status'] === 'APROVADA_COM_EXIGENCIAS') {
+                    $statusLabel = 'Validado com A/S — bloqueado';
+                    $statusClass = 'rejected';
+                }
                 $dataVistoria = new DateTimeImmutable($vistoria['data_vistoria']);
                 $hoje = new DateTimeImmutable('today');
                 $dias = (int)$hoje->diff($dataVistoria)->format('%r%a');

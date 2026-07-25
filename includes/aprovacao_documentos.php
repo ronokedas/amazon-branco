@@ -33,7 +33,7 @@ function aprovacaoDocumentoIp(): string
     return obterIpCliente();
 }
 
-function aprovacaoDocumentoGerarOriginal(string $tipo, string $id, string $destino): void
+function aprovacaoDocumentoGerarOriginal(string $tipo, string $id, string $destino): array
 {
     global $pdo;
     $mapa = aprovacaoDocumentoMapa($tipo);
@@ -46,6 +46,7 @@ function aprovacaoDocumentoGerarOriginal(string $tipo, string $id, string $desti
     $_GET = ['id' => $id];
     $salvar_pdf_caminho = $destino;
     $return_pdf_string = false;
+    $aprovacao_pdf_layout = [];
     ob_start();
     require $script;
     $unexpected = ob_get_clean();
@@ -57,6 +58,7 @@ function aprovacaoDocumentoGerarOriginal(string $tipo, string $id, string $desti
     if (!is_file($destino) || filesize($destino) < 200) {
         throw new RuntimeException('Nao foi possivel gerar o PDF original.');
     }
+    return is_array($aprovacao_pdf_layout) ? $aprovacao_pdf_layout : [];
 }
 
 function aprovacaoDocumentoCarregar(PDO $pdo, string $tipo, string $id, bool $lock = false): array
@@ -83,10 +85,7 @@ function aprovacaoDocumentoValidarEstado(string $tipo, array $documento): void
         return;
     }
     if ($tipo === 'PARECER_PLANOS') {
-        if ((string)$documento['status'] !== 'AGUARDANDO_APROVACAO') {
-            throw new RuntimeException('O parecer nao esta aguardando aprovacao.');
-        }
-        return;
+        throw new RuntimeException('Pareceres de análise devem ser assinados pelo próprio analista no fluxo de Análise de Planos.');
     }
     if (!empty($documento['assinado']) || (string)$documento['status'] === 'assinado') {
         throw new RuntimeException('Este documento ja foi aprovado e assinado.');
@@ -179,18 +178,7 @@ function aprovacaoDocumentoFinalizarEstado(PDO $pdo, string $tipo, string $id, i
         return $status;
     }
     if ($tipo === 'PARECER_PLANOS') {
-        $stmt = $pdo->prepare("UPDATE analise_planos_pareceres SET status='PUBLICADO', responsavel_assinatura_id=:responsavel, publicado_em=:data WHERE id=:id AND status='AGUARDANDO_APROVACAO'");
-        $stmt->execute([':responsavel'=>$responsavelId, ':data'=>$audit['aprovado_em_local'], ':id'=>$id]);
-        if ($stmt->rowCount() !== 1) throw new RuntimeException('O parecer foi alterado durante a aprovacao.');
-        $parecer = aprovacaoDocumentoCarregar($pdo, $tipo, $id, false);
-        $novoStatus = match ($parecer['resultado']) {
-            'EXIGENCIAS' => 'AGUARDANDO_CORRECAO',
-            'REPROVADO' => 'REPROVADA',
-            default => 'CONCLUIDA',
-        };
-        $pdo->prepare('UPDATE analises_planos SET status=:status, responsavel_assinatura_id=:responsavel WHERE id=:id')->execute([':status'=>$novoStatus, ':responsavel'=>$responsavelId, ':id'=>$parecer['analise_id']]);
-        $pdo->prepare("INSERT INTO analise_planos_historico (analise_id,usuario_id,evento,status_anterior,status_novo,detalhe) VALUES (:analise,:usuario,'PARECER_PUBLICADO','AGUARDANDO_APROVACAO',:novo,:detalhe)")->execute([':analise'=>$parecer['analise_id'], ':usuario'=>$audit['aprovador_usuario_id'], ':novo'=>$novoStatus, ':detalhe'=>'Parecer v'.$parecer['versao'].' aprovado e publicado.']);
-        return null;
+        throw new RuntimeException('Pareceres não podem ser publicados pela aprovação genérica.');
     }
 
     $stmt = $pdo->prepare("UPDATE {$mapa['table']} SET responsavel_assinatura_id = :responsavel, assinatura_imagem = :assinatura, assinatura_ip = :ip, assinatura_em = :data, assinado = 1, status = 'assinado', caminho_arquivo_pdf = :caminho, hash_arquivo_pdf = :hash WHERE id = :id AND assinado = 0 AND status = 'emitido'");
@@ -209,7 +197,7 @@ function aprovacaoDocumentoFinalizarEstado(PDO $pdo, string $tipo, string $id, i
     return null;
 }
 
-function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
+function aprovarDocumentoEletronicamente(PDO $pdo, array $input, array $autenticacao = []): array
 {
     $tipo = strtoupper(trim((string)($input['documento_tipo'] ?? '')));
     if ($tipo === 'RELATORIO') {
@@ -231,8 +219,10 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
     }
 
     $mapa = aprovacaoDocumentoMapa($tipo);
-    $userId = (string)($_SESSION['usuario_id'] ?? '');
-    $userName = trim((string)($_SESSION['usuario_nome'] ?? $_SESSION['nome'] ?? 'Administrador'));
+    $userId = (string)($autenticacao['usuario_id'] ?? $_SESSION['usuario_id'] ?? '');
+    $userName = trim((string)($autenticacao['usuario_nome'] ?? $_SESSION['usuario_nome'] ?? $_SESSION['nome'] ?? 'Administrador'));
+    $autenticacaoMetodo = (string)($autenticacao['metodo'] ?? 'SESSAO');
+    $assinaturaConviteId = ($autenticacao['convite_id'] ?? '') !== '' ? (string)$autenticacao['convite_id'] : null;
     if ($userId === '') {
         throw new RuntimeException('Sessao administrativa invalida.');
     }
@@ -248,6 +238,29 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
     try {
         $documento = aprovacaoDocumentoCarregar($pdo, $tipo, $id, true);
         aprovacaoDocumentoValidarEstado($tipo, $documento);
+        if ($tipo === 'LC' && !empty($documento['analise_id'])) {
+            if ((int)($documento['responsavel_assinatura_id'] ?? 0) !== $responsavelId) {
+                throw new RuntimeException('A licença deve ser assinada pelo responsável técnico definido na análise.');
+            }
+            $stmtVinculoAnalise = $pdo->prepare("SELECT ra.usuario_id
+                FROM responsaveis_assinatura ra
+                INNER JOIN analises_planos ap ON ap.analista_id=ra.usuario_id
+                WHERE ra.id=:responsavel AND ap.id=:analise AND ra.ativo=1 LIMIT 1");
+            $stmtVinculoAnalise->execute([':responsavel'=>$responsavelId, ':analise'=>$documento['analise_id']]);
+            if ((string)$stmtVinculoAnalise->fetchColumn() !== $userId) {
+                throw new RuntimeException('O admin não pode aplicar a assinatura do analista. O responsável deve assinar em sua própria conta.');
+            }
+        }
+        if (in_array($tipo, ['CSN','CNBL','CNARQ'], true)) {
+            if ((int)($documento['responsavel_assinatura_id'] ?? 0) !== $responsavelId) {
+                throw new RuntimeException('A assinatura deve ser feita pelo responsavel atribuido na emissao.');
+            }
+            $stmtVinculo = $pdo->prepare("SELECT usuario_id FROM responsaveis_assinatura WHERE id=:id AND ativo=1");
+            $stmtVinculo->execute([':id'=>$responsavelId]);
+            if ((string)$stmtVinculo->fetchColumn() !== $userId) {
+                throw new RuntimeException('Este documento nao esta atribuido ao seu perfil de assinatura.');
+            }
+        }
         if ($tipo === 'RELATORIO') {
             aprovacaoRelatorioValidarResultado(
                 aprovacaoRelatorioResumoExigencias($pdo, $id),
@@ -277,7 +290,7 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
         $versionStmt->execute([':tipo' => $tipo, ':id' => $id]);
         $version = (int)$versionStmt->fetchColumn();
 
-        $insert = $pdo->prepare("INSERT INTO documento_aprovacoes (id, documento_tipo, documento_id, versao, responsavel_id, aprovador_usuario_id, responsavel_nome, responsavel_cpf_cnpj, responsavel_cargo, responsavel_registro, aprovador_nome, assinatura_arquivo, assinatura_hash, aprovado_em_utc, aprovado_em_local, fuso_horario, utc_offset, latitude, longitude, geo_precisao_m, ip, user_agent, token_validacao, status) VALUES (:id,:tipo,:documento,:versao,:responsavel,:usuario,:nome,:cpf,:cargo,:registro,:aprovador,:assinatura,:assinatura_hash,:utc,:local,'America/Sao_Paulo',:offset,:lat,:lng,:precisao,:ip,:ua,:token,'PROCESSANDO')");
+        $insert = $pdo->prepare("INSERT INTO documento_aprovacoes (id, documento_tipo, documento_id, versao, responsavel_id, aprovador_usuario_id, responsavel_nome, responsavel_cpf_cnpj, responsavel_cargo, responsavel_registro, aprovador_nome, assinatura_arquivo, assinatura_hash, aprovado_em_utc, aprovado_em_local, fuso_horario, utc_offset, latitude, longitude, geo_precisao_m, ip, user_agent, autenticacao_metodo, assinatura_convite_id, token_validacao, status) VALUES (:id,:tipo,:documento,:versao,:responsavel,:usuario,:nome,:cpf,:cargo,:registro,:aprovador,:assinatura,:assinatura_hash,:utc,:local,'America/Sao_Paulo',:offset,:lat,:lng,:precisao,:ip,:ua,:metodo,:convite,:token,'PROCESSANDO')");
         $insert->execute([
             ':id'=>$approvalId, ':tipo'=>$tipo, ':documento'=>$id, ':versao'=>$version,
             ':responsavel'=>$responsavelId, ':usuario'=>$userId, ':nome'=>$resp['nome_completo'],
@@ -285,7 +298,7 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
             ':aprovador'=>$userName, ':assinatura'=>$resp['assinatura_arquivo'], ':assinatura_hash'=>$resp['assinatura_hash'],
             ':utc'=>$nowUtc->format('Y-m-d H:i:s'), ':local'=>$nowLocal->format('Y-m-d H:i:s'), ':offset'=>$nowLocal->format('P'),
             ':lat'=>$latitude, ':lng'=>$longitude, ':precisao'=>$precisao === false ? null : $precisao,
-            ':ip'=>$ip, ':ua'=>substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''),0,500), ':token'=>$token,
+            ':ip'=>$ip, ':ua'=>substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''),0,500), ':metodo'=>$autenticacaoMetodo, ':convite'=>$assinaturaConviteId, ':token'=>$token,
         ]);
         $pdo->commit();
     } catch (Throwable $e) {
@@ -310,7 +323,7 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
 
     try {
         $GLOBALS['APROVACAO_RESPONSAVEL_PDF'] = $resp;
-        aprovacaoDocumentoGerarOriginal($tipo, $id, $originalTmp);
+        $pdfLayout = aprovacaoDocumentoGerarOriginal($tipo, $id, $originalTmp);
         unset($GLOBALS['APROVACAO_RESPONSAVEL_PDF']);
         $hashOriginal = hash_file('sha256', $originalTmp);
         $context = [
@@ -321,6 +334,7 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input): array
             'latitude'=>number_format((float)$latitude,8,'.',''), 'longitude'=>number_format((float)$longitude,8,'.',''),
             'geo_precisao_m'=>$precisao === false ? null : number_format((float)$precisao,2,'.',''), 'ip'=>$ip,
             'hash_pdf_original'=>$hashOriginal, 'assinatura_caminho_absoluto'=>$signatureAbs,
+            'bloco_pagina'=>$pdfLayout['bloco_pagina'] ?? null, 'bloco_y'=>$pdfLayout['bloco_y'] ?? null,
         ];
         aprovacaoPdfCriarComBloco($originalTmp, $visualTmp, $context);
         $provider = new AuditOnlyPdfSignatureProvider();

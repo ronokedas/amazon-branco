@@ -38,7 +38,8 @@ try {
         $where_extra = " AND a.vistoriador_id = :vistoriador_id";
         $params[':vistoriador_id'] = $_SESSION['usuario_id'];
     } elseif (getCargo() === 'ANALISTA') {
-        $where_extra = " AND v.status = 'AGUARDANDO_APROVACAO'";
+        $where_extra = " AND EXISTS (SELECT 1 FROM analises_planos ap WHERE ap.embarcacao_id=v.embarcacao_id AND ap.analista_id=:analista_id)";
+        $params[':analista_id'] = $_SESSION['usuario_id'];
     } elseif (getCargo() === 'VENDEDOR') {
         $where_extra = " AND (a.vendedor_id = :vendedor_id OR a.id IN (SELECT id FROM agendamentos WHERE vendedor_id = :agend_vendedor_id))";
         $params[':vendedor_id'] = $_SESSION['usuario_id'];
@@ -70,7 +71,7 @@ try {
     if ($cargo === 'VISTORIADOR') {
         $sql_contadores .= " AND a.vistoriador_id = :vistoriador_id";
     } elseif ($cargo === 'ANALISTA') {
-        $sql_contadores .= " AND v.status = 'AGUARDANDO_APROVACAO'";
+        $sql_contadores .= " AND EXISTS (SELECT 1 FROM analises_planos ap WHERE ap.embarcacao_id=v.embarcacao_id AND ap.analista_id=:analista_id)";
     } elseif ($cargo === 'VENDEDOR') {
         $sql_contadores .= " AND (a.vendedor_id = :vendedor_id OR a.id IN (SELECT id FROM agendamentos WHERE vendedor_id = :agend_vendedor_id))";
     }
@@ -79,6 +80,9 @@ try {
     if ($cargo === 'VISTORIADOR') {
         $stmt = $pdo->prepare($sql_contadores);
         $stmt->execute([':vistoriador_id' => $_SESSION['usuario_id']]);
+    } elseif ($cargo === 'ANALISTA') {
+        $stmt = $pdo->prepare($sql_contadores);
+        $stmt->execute([':analista_id' => $_SESSION['usuario_id']]);
     } elseif ($cargo === 'VENDEDOR') {
         $stmt = $pdo->prepare($sql_contadores);
         $stmt->execute([':vendedor_id' => $_SESSION['usuario_id'], ':agend_vendedor_id' => $_SESSION['usuario_id']]);

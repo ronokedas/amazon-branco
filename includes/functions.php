@@ -5,7 +5,7 @@
 
 // Sanitizar input
 function sanitizar($dados) {
-    $dados = trim($dados);
+    $dados = trim((string)($dados ?? ''));
     $dados = stripslashes($dados);
     $dados = htmlspecialchars($dados, ENT_QUOTES, 'UTF-8');
     return $dados;
@@ -937,7 +937,219 @@ function obterRelatorioVigenteAgendamento(PDO $pdo, string $agendamentoId): ?arr
 {
     $stmt = $pdo->prepare("SELECT * FROM vistorias WHERE agendamento_id = :agendamento_id ORDER BY criado_em DESC, id DESC LIMIT 1");
     $stmt->execute([':agendamento_id' => $agendamentoId]);
-    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    $relatorio = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    return $relatorio ? obterRelatorioVigenteCadeia($pdo, (string)$relatorio['id']) : null;
+}
+
+/** Retorna a raiz imutavel da cadeia de relatorios. */
+function obterRelatorioRaizCadeia(PDO $pdo, string $vistoriaId): ?array
+{
+    $visitados = [];
+    $atualId = $vistoriaId;
+    $atual = null;
+    while ($atualId !== '' && !isset($visitados[$atualId])) {
+        $visitados[$atualId] = true;
+        $stmt = $pdo->prepare('SELECT * FROM vistorias WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $atualId]);
+        $atual = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if (!$atual || empty($atual['relatorio_anterior_id'])) break;
+        $atualId = (string)$atual['relatorio_anterior_id'];
+    }
+    return $atual;
+}
+
+/** Retorna o ultimo descendente da cadeia, independentemente do agendamento. */
+function obterRelatorioVigenteCadeia(PDO $pdo, string $vistoriaId): ?array
+{
+    $atual = obterRelatorioRaizCadeia($pdo, $vistoriaId);
+    if (!$atual) return null;
+    $visitados = [];
+    while (!isset($visitados[$atual['id']])) {
+        $visitados[$atual['id']] = true;
+        $stmt = $pdo->prepare("SELECT * FROM vistorias
+            WHERE relatorio_anterior_id = :id AND status<>'CANCELADA'
+            ORDER BY criado_em DESC, id DESC LIMIT 1");
+        $stmt->execute([':id' => $atual['id']]);
+        $filho = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$filho) break;
+        $atual = $filho;
+    }
+    return $atual;
+}
+
+/** Lista a cadeia da raiz ao relatorio vigente. */
+function obterCadeiaRelatorios(PDO $pdo, string $vistoriaId): array
+{
+    $raiz = obterRelatorioRaizCadeia($pdo, $vistoriaId);
+    if (!$raiz) return [];
+    $cadeia = [$raiz];
+    $visitados = [$raiz['id'] => true];
+    $atual = $raiz;
+    while (true) {
+        $stmt = $pdo->prepare("SELECT * FROM vistorias
+            WHERE relatorio_anterior_id = :id AND status<>'CANCELADA'
+            ORDER BY criado_em DESC, id DESC LIMIT 1");
+        $stmt->execute([':id' => $atual['id']]);
+        $filho = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$filho || isset($visitados[$filho['id']])) break;
+        $visitados[$filho['id']] = true;
+        $cadeia[] = $filho;
+        $atual = $filho;
+    }
+    return $cadeia;
+}
+
+function relatorioNumerosReferenciaCertificado(PDO $pdo, string $vistoriaId): string
+{
+    $cadeia = obterCadeiaRelatorios($pdo, $vistoriaId);
+    if (!$cadeia) return '';
+    $primeiro = trim((string)($cadeia[0]['numero'] ?? ''));
+    $ultimo = trim((string)($cadeia[count($cadeia) - 1]['numero'] ?? ''));
+    if ($ultimo === '' || $ultimo === $primeiro) return $primeiro;
+    return $primeiro . ' e ' . $ultimo;
+}
+
+function relatorioPossuiExigenciaComumPendenteNaRaiz(PDO $pdo, string $vistoriaId): bool
+{
+    $raiz = obterRelatorioRaizCadeia($pdo, $vistoriaId);
+    if (!$raiz) return false;
+    $stmt = $pdo->prepare("SELECT EXISTS(
+        SELECT 1 FROM vistoria_exigencias
+        WHERE vistoria_id=:id AND antes_de_suspender=0
+          AND conforme='nao' AND status_item<>'cumprida'
+    )");
+    $stmt->execute([':id' => $raiz['id']]);
+    return (bool)$stmt->fetchColumn();
+}
+
+function criarPendenciaRetornoAS(PDO $pdo, string $relatorioOrigemId, ?string $usuarioId): string
+{
+    $stmt = $pdo->prepare('SELECT id,status FROM vistoria_retornos WHERE relatorio_origem_id=:id LIMIT 1');
+    $stmt->execute([':id' => $relatorioOrigemId]);
+    $retorno = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($retorno) {
+        if ($retorno['status'] === 'CANCELADO') {
+            $pdo->prepare("UPDATE vistoria_retornos SET status='PENDENTE_AGENDAMENTO',
+                agendamento_id=NULL,relatorio_resultado_id=NULL,motivo_cancelamento=NULL,
+                cancelado_por=NULL,cancelado_em=NULL WHERE id=:id")
+                ->execute([':id' => $retorno['id']]);
+        }
+        return (string)$retorno['id'];
+    }
+    $id = gerarUUID();
+    $stmt = $pdo->prepare("INSERT INTO vistoria_retornos
+        (id,relatorio_origem_id,status,criado_por)
+        VALUES (:id,:origem,'PENDENTE_AGENDAMENTO',:usuario)");
+    $stmt->execute([':id' => $id, ':origem' => $relatorioOrigemId, ':usuario' => $usuarioId ?: null]);
+    return $id;
+}
+
+function concluirRetornoDoRelatorio(PDO $pdo, string $relatorioId): void
+{
+    $stmt = $pdo->prepare("UPDATE vistoria_retornos
+        SET status='CONCLUIDO', relatorio_resultado_id=:relatorio
+        WHERE agendamento_id=(SELECT agendamento_id FROM vistorias WHERE id=:relatorio2)
+           OR relatorio_resultado_id=:relatorio3");
+    $stmt->execute([
+        ':relatorio' => $relatorioId,
+        ':relatorio2' => $relatorioId,
+        ':relatorio3' => $relatorioId,
+    ]);
+}
+
+/** Cria, uma unica vez, o relatorio numerado do agendamento de retorno A/S. */
+function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, string $usuarioId): ?string
+{
+    $origemId = trim((string)($agendamento['relatorio_origem_id'] ?? ''));
+    if ($origemId === '') return null;
+
+    $stmt = $pdo->prepare('SELECT id FROM vistorias WHERE agendamento_id=:agendamento LIMIT 1');
+    $stmt->execute([':agendamento' => $agendamento['id']]);
+    $existente = (string)$stmt->fetchColumn();
+    if ($existente !== '') return $existente;
+
+    $stmt = $pdo->prepare('SELECT * FROM vistorias WHERE id=:id FOR UPDATE');
+    $stmt->execute([':id' => $origemId]);
+    $origem = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$origem || !in_array($origem['status'], ['APROVADA','APROVADA_COM_EXIGENCIAS'], true)) {
+        throw new RuntimeException('O relatorio de origem do retorno nao esta validado.');
+    }
+    $vigente = obterRelatorioVigenteCadeia($pdo, $origemId);
+    if (!$vigente || $vigente['id'] !== $origemId) {
+        throw new RuntimeException('O relatorio de origem ja possui um retorno mais recente.');
+    }
+    if (!relatorioPossuiASPendente($pdo, $origemId)) {
+        throw new RuntimeException('O relatorio de origem nao possui A/S pendente.');
+    }
+
+    $novoId = gerarUUID();
+    $isArqueacao = stripos((string)$origem['numero'], 'REL-AP') !== false
+        || stripos((string)($agendamento['tipo_vistoria'] ?? ''), 'arquea') !== false;
+    $numero = $isArqueacao
+        ? gerarNumeroDocumento('REL-AP', 'AM-REL-AP')
+        : gerarNumeroDocumento('REL-V', 'AM-REL-V');
+
+    $stmt = $pdo->prepare("INSERT INTO vistorias
+        (id,numero,embarcacao_id,pessoa_id,armador_id,operador_nome,agendamento_id,
+         relatorio_anterior_id,finalidade,data_vistoria,prazo_exigencias_dias,
+         observacoes_tecnicas,status,criado_por)
+        VALUES
+        (:id,:numero,:embarcacao,:pessoa,:armador,:operador,:agendamento,
+         :anterior,'CUMPRIMENTO_EXIGENCIAS',:data,:prazo,
+         :observacoes,'PENDENTE',:usuario)");
+    $stmt->execute([
+        ':id' => $novoId,
+        ':numero' => $numero,
+        ':embarcacao' => $origem['embarcacao_id'],
+        ':pessoa' => $origem['pessoa_id'],
+        ':armador' => $origem['armador_id'],
+        ':operador' => $origem['operador_nome'],
+        ':agendamento' => $agendamento['id'],
+        ':anterior' => $origemId,
+        ':data' => $agendamento['data_vistoria'],
+        ':prazo' => $origem['prazo_exigencias_dias'],
+        ':observacoes' => 'Cumprimento das exigencias A/S do relatorio ' . ($origem['numero'] ?: $origemId),
+        ':usuario' => $usuarioId,
+    ]);
+
+    $stmt = $pdo->prepare("INSERT INTO vistoria_exigencias
+        (id,vistoria_id,catalogo_id,bloco_vistoria,ordem,item,descricao,conforme,
+         observacao,item_normam,vencimento,antes_de_suspender,status_item,exigencia_origem_id)
+        SELECT UUID(),:novo,catalogo_id,bloco_vistoria,ordem,item,descricao,'nao',
+               observacao,item_normam,vencimento,1,'pendente',id
+        FROM vistoria_exigencias
+        WHERE vistoria_id=:origem AND antes_de_suspender=1
+          AND conforme='nao' AND status_item<>'cumprida'");
+    $stmt->execute([':novo' => $novoId, ':origem' => $origemId]);
+    if ($stmt->rowCount() === 0) {
+        throw new RuntimeException('Nenhuma A/S pendente foi encontrada para o retorno.');
+    }
+    $pdo->prepare("UPDATE vistoria_retornos
+        SET status='AGENDADO',agendamento_id=:agendamento,relatorio_resultado_id=:relatorio
+        WHERE relatorio_origem_id=:origem")
+        ->execute([':agendamento' => $agendamento['id'], ':relatorio' => $novoId, ':origem' => $origemId]);
+    return $novoId;
+}
+
+/** Regra unica para permitir alteracoes no conteudo de um relatorio tecnico. */
+function avaliarEdicaoRelatorio(PDO $pdo, array $vistoria, string $usuarioId, string $cargo): array
+{
+    if ($cargo !== 'VISTORIADOR') return ['permitido' => false, 'mensagem' => 'Somente o vistoriador atribuido pode alterar o conteudo do relatorio.'];
+    if (!in_array((string)($vistoria['status'] ?? ''), ['PENDENTE', 'AGUARDANDO_APROVACAO'], true)) return ['permitido' => false, 'mensagem' => 'Este relatorio esta finalizado e nao pode mais ser alterado.'];
+    if (($vistoria['assinatura_status'] ?? '') === 'ASSINADO') return ['permitido' => false, 'mensagem' => 'Este relatorio ja foi assinado e esta congelado.'];
+    if (!empty($vistoria['id'])) {
+        $stmt = $pdo->prepare("SELECT 1 FROM documento_assinaturas WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='ASSINADO' LIMIT 1");
+        $stmt->execute([':id' => $vistoria['id']]);
+        if ($stmt->fetchColumn()) return ['permitido' => false, 'mensagem' => 'Este relatorio ja foi assinado e esta congelado.'];
+    }
+    $vistoriadorId = (string)($vistoria['vistoriador_id'] ?? '');
+    if ($vistoriadorId === '' && !empty($vistoria['agendamento_id'])) {
+        $stmt = $pdo->prepare('SELECT vistoriador_id FROM agendamentos WHERE id=:id LIMIT 1');
+        $stmt->execute([':id' => $vistoria['agendamento_id']]);
+        $vistoriadorId = (string)$stmt->fetchColumn();
+    }
+    if ($vistoriadorId === '' || !hash_equals($vistoriadorId, $usuarioId)) return ['permitido' => false, 'mensagem' => 'Este relatorio nao esta atribuido a voce.'];
+    return ['permitido' => true, 'mensagem' => ''];
 }
 
 /** Uma A/S deixa de bloquear apenas quando foi efetivamente marcada como cumprida. */
@@ -967,7 +1179,7 @@ function avaliarLiberacaoCertificacao(PDO $pdo, string $vistoriaId): array
         return ['permitido' => false, 'mensagem' => 'Relatorio invalido ou sem agendamento vinculado.', 'vistoria_id' => null];
     }
 
-    $vigente = obterRelatorioVigenteAgendamento($pdo, $selecionado['agendamento_id']);
+    $vigente = obterRelatorioVigenteCadeia($pdo, $vistoriaId);
     if (!$vigente) {
         return ['permitido' => false, 'mensagem' => 'Nenhum relatorio vigente foi encontrado.', 'vistoria_id' => null];
     }
@@ -997,11 +1209,63 @@ function avaliarLiberacaoCertificacao(PDO $pdo, string $vistoriaId): array
         ];
     }
 
+    $possuiExigenciasComuns = relatorioPossuiExigenciaComumPendenteNaRaiz($pdo, $vigente['id']);
     return [
         'permitido' => true,
         'mensagem' => '',
         'vistoria_id' => $vigente['id'],
-        'status' => $vigente['status'],
+        'status' => $possuiExigenciasComuns ? 'APROVADA_COM_EXIGENCIAS' : $vigente['status'],
         'possui_as' => false,
+        'possui_exigencias_comuns' => $possuiExigenciasComuns,
+        'relatorios_referencia' => relatorioNumerosReferenciaCertificado($pdo, $vigente['id']),
     ];
+}
+
+/** Modelos contratados na proposta para a embarcacao deste agendamento. */
+function certificadoModelosPermitidosPorAgendamento(PDO $pdo, string $agendamentoId): array
+{
+    $permitidos = ['CSN' => false, 'CNBL' => false, 'CNARQ' => false];
+    if ($agendamentoId === '') return $permitidos;
+
+    $stmt = $pdo->prepare("SELECT DISTINCT s.certificado_modelo
+        FROM agendamentos a
+        JOIN propostas_servicos ps
+          ON ps.proposta_id = a.proposta_id
+         AND (ps.embarcacao_id = a.embarcacao_id OR ps.embarcacao_id IS NULL)
+        JOIN servicos s ON s.id = ps.servico_id
+        WHERE a.id = :agendamento_id
+          AND s.certificado_modelo IS NOT NULL");
+    $stmt->execute([':agendamento_id' => $agendamentoId]);
+    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $modelo) {
+        $modelo = strtoupper((string)$modelo);
+        if (array_key_exists($modelo, $permitidos)) $permitidos[$modelo] = true;
+    }
+    return $permitidos;
+}
+
+function certificadoModeloPermitidoPorAgendamento(PDO $pdo, string $agendamentoId, string $modelo): bool
+{
+    $modelo = strtoupper(trim($modelo));
+    $permitidos = certificadoModelosPermitidosPorAgendamento($pdo, $agendamentoId);
+    return ($permitidos[$modelo] ?? false) === true;
+}
+
+function certificadoModeloPermitidoPorVistoria(PDO $pdo, string $vistoriaId, string $modelo): bool
+{
+    if ($vistoriaId === '') return false;
+    $stmt = $pdo->prepare('SELECT agendamento_id FROM vistorias WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $vistoriaId]);
+    $agendamentoId = (string)$stmt->fetchColumn();
+    return $agendamentoId !== '' && certificadoModeloPermitidoPorAgendamento($pdo, $agendamentoId, $modelo);
+}
+
+function certificadoMensagemServicoObrigatorio(string $modelo): string
+{
+    $servicos = [
+        'CSN' => 'Vistoria Inicial Seco ou Vistoria Inicial Flutuando',
+        'CNBL' => 'Vistoria Inicial de Borda Livre',
+        'CNARQ' => 'Vistoria Inicial de Arqueação',
+    ];
+    $modelo = strtoupper(trim($modelo));
+    return 'O certificado ' . $modelo . ' só pode ser emitido quando a proposta da embarcação inclui o serviço ' . ($servicos[$modelo] ?? 'correspondente') . '.';
 }

@@ -187,8 +187,13 @@ switch ($action) {
             $observacoes     = sanitizar($_POST['observacoes'] ?? '');
             $vistoriador_id  = $_POST['vistoriador_id'] ?? null;
             $vendedor_id     = $_POST['vendedor_id'] ?? null;
+            $relatorio_origem_id = trim((string)($_POST['relatorio_origem_id'] ?? ''));
 
-            if (!empty($proposta_id)) {
+            if ($relatorio_origem_id !== '' && $cargo !== 'ADMIN') {
+                throw new RuntimeException('Somente o administrador pode criar retorno de cumprimento A/S.');
+            }
+
+            if (!empty($proposta_id) && $relatorio_origem_id === '') {
                 $tipoVistoriaProposta = obterTipoVistoriaDaProposta($pdo, $proposta_id);
                 if (!empty($tipoVistoriaProposta)) {
                     $tipo_vistoria = $tipoVistoriaProposta;
@@ -236,19 +241,45 @@ switch ($action) {
                 $vendedor_id = $_SESSION['usuario_id'];
             }
 
+            if ($relatorio_origem_id !== '') {
+                $stmtOrigem = $pdo->prepare("SELECT v.embarcacao_id,COALESCE(a.cliente_id,v.pessoa_id) cliente_id
+                    FROM vistorias v LEFT JOIN agendamentos a ON a.id=v.agendamento_id
+                    WHERE v.id=:id AND v.status='APROVADA_COM_EXIGENCIAS'
+                      AND EXISTS (
+                        SELECT 1 FROM vistoria_exigencias ve
+                        WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1
+                          AND ve.conforme='nao' AND ve.status_item<>'cumprida'
+                      ) LIMIT 1");
+                $stmtOrigem->execute([':id' => $relatorio_origem_id]);
+                $origem = $stmtOrigem->fetch(PDO::FETCH_ASSOC);
+                if (!$origem || $origem['embarcacao_id'] !== $embarcacao_id || $origem['cliente_id'] !== $cliente_id) {
+                    throw new RuntimeException('Os dados do retorno A/S não correspondem ao relatório de origem.');
+                }
+                $stmtRetorno = $pdo->prepare("SELECT status FROM vistoria_retornos WHERE relatorio_origem_id=:id LIMIT 1");
+                $stmtRetorno->execute([':id' => $relatorio_origem_id]);
+                if ($stmtRetorno->fetchColumn() !== 'PENDENTE_AGENDAMENTO') {
+                    throw new RuntimeException('Este retorno A/S já possui agendamento ou foi concluído.');
+                }
+                $tipo_vistoria = 'Cumprimento de A/S';
+            }
+
+            $pdo->beginTransaction();
+            $novoAgendamentoId = gerarUUID();
             $stmt = $pdo->prepare("
                 INSERT INTO agendamentos (
-                    id, proposta_id, embarcacao_id, cliente_id, armador_id, operador_nome, vistoriador_id, vendedor_id,
+                    id, proposta_id, relatorio_origem_id, embarcacao_id, cliente_id, armador_id, operador_nome, vistoriador_id, vendedor_id,
                     tipo_vistoria, data_vistoria, hora_vistoria, local,
                     contato_nome, contato_telefone, status, observacoes, criado_por
                 ) VALUES (
-                    UUID(), :proposta_id, :embarcacao_id, :cliente_id, :armador_id, :operador_nome, :vistoriador_id, :vendedor_id,
+                    :id, :proposta_id, :relatorio_origem_id, :embarcacao_id, :cliente_id, :armador_id, :operador_nome, :vistoriador_id, :vendedor_id,
                     :tipo_vistoria, :data_vistoria, :hora_vistoria, :local,
                     :contato_nome, :contato_telefone, 'pendente', :observacoes, :criado_por
                 )
             ");
             $stmt->execute([
+                ':id'               => $novoAgendamentoId,
                 ':proposta_id'     => $proposta_id,
+                ':relatorio_origem_id' => $relatorio_origem_id ?: null,
                 ':embarcacao_id'   => $embarcacao_id,
                 ':cliente_id'      => $cliente_id,
                 ':armador_id'      => $armador_id ?: null,
@@ -264,12 +295,20 @@ switch ($action) {
                 ':observacoes'     => $observacoes ?: null,
                 ':criado_por'      => $_SESSION['usuario_id'],
             ]);
+            if ($relatorio_origem_id !== '') {
+                $pdo->prepare("UPDATE vistoria_retornos
+                    SET status='AGENDADO',agendamento_id=:agendamento
+                    WHERE relatorio_origem_id=:origem AND status='PENDENTE_AGENDAMENTO'")
+                    ->execute([':agendamento' => $novoAgendamentoId, ':origem' => $relatorio_origem_id]);
+            }
+            $pdo->commit();
 
             log_atividade('agendamento_criado', "Agendamento de {$tipo_vistoria} criado para data {$data_vistoria}.");
             setMensagem('success', 'Agendamento criado com sucesso!');
             redirecionar(APP_URL . 'agendamentos');
 
         } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao inserir agendamento: ' . $e->getMessage());
             setMensagem('error', 'Erro ao criar agendamento.');
             redirecionar(APP_URL . 'agendamentos/form');
@@ -301,6 +340,9 @@ switch ($action) {
             $vendedor_id     = $_POST['vendedor_id'] ?? null;
 
             $agendamentoAtual = !empty($id) ? obterAgendamento($pdo, $id) : null;
+            if ($agendamentoAtual && !empty($agendamentoAtual['relatorio_origem_id']) && $cargo !== 'ADMIN') {
+                throw new RuntimeException('Somente o administrador pode alterar um retorno A/S.');
+            }
             if ($agendamentoAtual && !empty($agendamentoAtual['proposta_id'])) {
                 $proposta_id = $agendamentoAtual['proposta_id'];
                 $embarcacao_id = $agendamentoAtual['embarcacao_id'];
@@ -427,6 +469,10 @@ switch ($action) {
                 setMensagem('error', 'Agendamento não encontrado.');
                 redirecionar(APP_URL . 'agendamentos');
             }
+            if (!empty($ag['relatorio_origem_id']) && $cargo !== 'ADMIN') {
+                setMensagem('error', 'Somente o administrador pode confirmar e gerar a OS de um retorno A/S.');
+                redirecionar(APP_URL . 'agendamentos');
+            }
 
             if ($ag['status'] !== 'pendente') {
                 setMensagem('error', 'Apenas agendamentos pendentes podem ser confirmados. Status atual: ' . $ag['status']);
@@ -488,10 +534,17 @@ switch ($action) {
                 ':criado_por'       => $_SESSION['usuario_id'],
             ]);
 
+            $relatorioCumprimentoId = criarRelatorioCumprimentoAgendamento(
+                $pdo,
+                $ag,
+                (string)($_SESSION['usuario_id'] ?? '')
+            );
             $pdo->commit();
 
             log_atividade('os_gerada', "OS {$numero_os} gerada a partir do agendamento ID: {$id}.");
-
+            if ($relatorioCumprimentoId) {
+                log_atividade('relatorio_cumprimento_criado', "Relatorio {$relatorioCumprimentoId} criado para o retorno A/S do agendamento {$id}.");
+            }
             // ============================================================
             // DISPARO AUTOMÁTICO DE E-MAIL DE CONFIRMAÇÃO
             // ============================================================
@@ -588,7 +641,8 @@ switch ($action) {
             setMensagem('error', 'Acesso negado. Vistoriadores não podem cancelar agendamentos.');
             redirecionar(APP_URL . 'agendamentos');
         }
-                    $id = $_POST['id'] ?? '';
+            $id = $_POST['id'] ?? '';
+            $motivoCancelamento = trim(sanitizar($_POST['motivo_cancelamento'] ?? ''));
 
             if (empty($id)) {
                 setMensagem('error', 'ID do agendamento não informado.');
@@ -609,6 +663,14 @@ switch ($action) {
                 setMensagem('error', 'Apenas agendamentos pendentes ou confirmados podem ser cancelados.');
                 redirecionar(APP_URL . 'agendamentos');
             }
+            if (!empty($ag['relatorio_origem_id']) && $cargo !== 'ADMIN') {
+                setMensagem('error', 'Somente o administrador pode cancelar um retorno A/S.');
+                redirecionar(APP_URL . 'agendamentos');
+            }
+            if (!empty($ag['relatorio_origem_id']) && $motivoCancelamento === '') {
+                setMensagem('error', 'Informe o motivo do cancelamento do retorno A/S.');
+                redirecionar(APP_URL . 'agendamentos');
+            }
 
             $pdo->beginTransaction();
 
@@ -619,6 +681,22 @@ switch ($action) {
             // Cancelar OS vinculada se existir
             $stmtOs = $pdo->prepare("UPDATE ordens_servico SET status = 'cancelado' WHERE agendamento_id = :agendamento_id AND status != 'cancelado'");
             $stmtOs->execute([':agendamento_id' => $id]);
+            if (!empty($ag['relatorio_origem_id'])) {
+                $pdo->prepare("UPDATE vistorias v
+                    JOIN vistoria_retornos vr ON vr.relatorio_resultado_id=v.id
+                    SET v.status='CANCELADA'
+                    WHERE vr.agendamento_id=:agendamento AND v.status='PENDENTE'")
+                    ->execute([':agendamento' => $id]);
+                $pdo->prepare("UPDATE vistoria_retornos
+                    SET status='CANCELADO',motivo_cancelamento=:motivo,
+                        cancelado_por=:usuario,cancelado_em=NOW()
+                    WHERE agendamento_id=:agendamento")
+                    ->execute([
+                        ':motivo' => $motivoCancelamento,
+                        ':usuario' => $_SESSION['usuario_id'],
+                        ':agendamento' => $id,
+                    ]);
+            }
 
             $pdo->commit();
 

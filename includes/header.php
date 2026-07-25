@@ -113,6 +113,18 @@ header('Content-Type: text/html; charset=UTF-8');
                 <?php endif; ?>
                 <div class="topbar-right">
                     <?php if ($isAdminDashboard): ?><time class="topbar-current-date"><i class="fa-regular fa-calendar"></i><?= date('d/m/Y') ?></time><div class="topbar-separator"></div><?php endif; ?>
+                    <?php
+                    $notificacoesNaoLidas = 0;
+                    try {
+                        $stmtNotificacao = $pdo->prepare('SELECT COUNT(*) FROM notificacoes WHERE usuario_id=:usuario AND lida_em IS NULL');
+                        $stmtNotificacao->execute([':usuario'=>(string)($_SESSION['usuario_id']??'')]);
+                        $notificacoesNaoLidas = (int)$stmtNotificacao->fetchColumn();
+                    } catch (Throwable $ignored) {}
+                    ?>
+                    <a class="btn-notification" title="Alertas do fluxo" href="<?php echo APP_URL; ?>notificacoes" aria-label="Alertas do fluxo: <?= $notificacoesNaoLidas ?>">
+                        <i class="fa-solid fa-bell"></i>
+                        <span<?= !$notificacoesNaoLidas ? ' hidden' : '' ?>><?= $notificacoesNaoLidas ?></span>
+                    </a>
                     <?php $feedbackGlobal = feedbackResumoNaoLidas($pdo, (string)($_SESSION['usuario_id'] ?? ''), 3); ?>
                     <a class="btn-notification feedback-bell" title="Mensagens internas" href="<?php echo APP_URL; ?>feedback" aria-label="Mensagens internas: <?= (int)$feedbackGlobal['count'] ?> não lidas">
                         <i class="fa-regular fa-bell"></i>

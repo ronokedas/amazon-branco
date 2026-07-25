@@ -139,12 +139,17 @@ if ($action === 'salvar') {
 
     // Validações
     $vistoria_id = $_POST['vistoria_id'] ?? null;
+    if (!$editando && $vistoria_id && !certificadoModeloPermitidoPorVistoria($pdo, (string)$vistoria_id, 'CNBL')) {
+        setMensagem('error', certificadoMensagemServicoObrigatorio('CNBL'));
+        redirecionar(APP_URL . 'certificados');
+    }
     if ($vistoria_id) {
         $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
         if (empty($liberacao['permitido'])) {
             setMensagem('error', $liberacao['mensagem']);
             redirecionar(APP_URL . 'documentacao/cnbl/form' . ($editando ? "?id={$id}" : ''));
         }
+        $relatorio_numero = relatorioNumerosReferenciaCertificado($pdo, (string)$vistoria_id);
     }
     if (empty($vistoria_id)) {
         setMensagem('error', 'É obrigatório selecionar um relatório aprovado para emitir o certificado.');
@@ -414,14 +419,9 @@ if ($action === 'enviar_assinatura') {
         redirecionar(APP_URL . 'documentacao/cnbl');
     }
 
-    require_once __DIR__ . '/../../../includes/enviar_assinatura.php';
-
-    $resultado = enviarAssinaturaEmail(
-        $pdo,
-        $id,
-        'certificados_cnbl',
-        'CNBL'
-    );
+    require_once __DIR__ . '/../../../includes/assinaturas_usuarios.php';
+    try { $resultado = assinaturaEnviarConviteCertificado($pdo, 'CNBL', $id); }
+    catch (Throwable $e) { $resultado = ['success'=>false,'message'=>$e->getMessage()]; }
 
     if ($resultado['success']) {
         log_atividade('certificado_cnbl_assinatura_enviada', "Link de assinatura CNBL ID: {$id} enviado por e-mail.");

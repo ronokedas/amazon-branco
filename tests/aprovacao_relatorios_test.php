@@ -1,6 +1,8 @@
 <?php
 
+require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/aprovacao_documentos.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 function assertAprovacao(bool $condicao, string $mensagem): void
 {
@@ -70,6 +72,8 @@ assertAprovacao(str_contains($relatorio, 'Aprovar com exig&ecirc;ncias'), 'O bot
 assertAprovacao(!str_contains($relatorio, "renderBotaoAprovacaoDocumento(\$pdo,'RELATORIO'"), 'O relatorio ainda oferece assinatura eletronica.');
 assertAprovacao(!str_contains($relatorio, 'renderAprovacaoUi'), 'O modal de assinatura ainda e carregado no relatorio.');
 assertAprovacao(str_contains($actions, 'aprovacaoRelatorioValidarResultado'), 'A aprovacao direta nao valida status e versao no servidor.');
+assertAprovacao(str_contains($actions, "assinatura_status'] ?? 'PENDENTE') !== 'ASSINADO'"), 'A aprovacao administrativa nao exige assinatura previa do relatorio.');
+assertAprovacao(str_contains($actions, "UPDATE documento_assinaturas SET status='CANCELADO'"), 'A devolucao nao cancela a assinatura anterior do relatorio.');
 assertAprovacao(str_contains($actions, 'documentacao/novo_certificado?agendamento_id='), 'A aprovacao liberada nao segue para os certificados.');
 assertAprovacao(str_contains($endpoint, "=== 'RELATORIO'"), 'O endpoint de assinatura ainda aceita novas aprovacoes de relatorios.');
 assertAprovacao(str_contains($approvalDomain, 'Relatorios de vistoria nao exigem assinatura eletronica.'), 'O dominio de assinatura ainda aceita relatorios diretamente.');
@@ -80,5 +84,19 @@ assertAprovacao(str_contains($wizard, "\$bloquear_definitivo = (\$relatorio_stat
 assertAprovacao(substr_count($wizardStep2, "\$tipo === 'Definitivo' && \$dados_emb['relatorio_status'] === 'APROVADA_COM_EXIGENCIAS'") >= 3, 'O backend nao protege CSN, CNBL e CNARQ contra emissao definitiva.');
 assertAprovacao(str_contains($funcoes, 'relatorioPossuiASPendente'), 'A regra central nao verifica exigencia A/S.');
 assertAprovacao(str_contains($funcoes, 'Certificacao bloqueada por exigencia A/S'), 'A regra central nao bloqueia certificacao por A/S.');
+
+$baseEditavel = ['status'=>'PENDENTE','assinatura_status'=>'PENDENTE','vistoriador_id'=>'vistoriador-teste'];
+assertAprovacao(avaliarEdicaoRelatorio($pdo, $baseEditavel, 'vistoriador-teste', 'VISTORIADOR')['permitido'], 'Relatorio pendente deveria permanecer editavel pelo vistoriador atribuido.');
+$aguardandoEditavel = array_merge($baseEditavel, ['status'=>'AGUARDANDO_APROVACAO']);
+assertAprovacao(avaliarEdicaoRelatorio($pdo, $aguardandoEditavel, 'vistoriador-teste', 'VISTORIADOR')['permitido'], 'Aguardando aprovacao sem assinatura deveria permanecer editavel.');
+assertAprovacao(!avaliarEdicaoRelatorio($pdo, array_merge($aguardandoEditavel, ['assinatura_status'=>'ASSINADO']), 'vistoriador-teste', 'VISTORIADOR')['permitido'], 'Relatorio assinado nao pode permanecer editavel.');
+foreach (['APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA','CANCELADA'] as $statusFinal) {
+    assertAprovacao(!avaliarEdicaoRelatorio($pdo, array_merge($baseEditavel, ['status'=>$statusFinal]), 'vistoriador-teste', 'VISTORIADOR')['permitido'], "Status final {$statusFinal} nao foi congelado.");
+}
+assertAprovacao(!avaliarEdicaoRelatorio($pdo, $aguardandoEditavel, 'admin-teste', 'ADMIN')['permitido'], 'Admin nao pode editar o conteudo do relatorio.');
+assertAprovacao(!avaliarEdicaoRelatorio($pdo, $aguardandoEditavel, 'analista-teste', 'ANALISTA')['permitido'], 'Analista nao pode editar o conteudo do relatorio.');
+assertAprovacao(str_contains($relatorio, 'Visualizar PDF do relat'), 'O PDF nao esta exposto para relatorio persistido.');
+assertAprovacao(str_contains($relatorio, 'Assinar como substituto e aprovar'), 'A revisao admin nao oferece assinatura substituta para relatorio sem assinatura.');
+assertAprovacao(str_contains($actions, "getCargo() !== 'VISTORIADOR'"), 'O endpoint de salvamento nao restringe alteracoes ao vistoriador.');
 
 echo "Testes do fluxo de aprovacao de relatorios concluidos com sucesso.\n";

@@ -82,17 +82,41 @@ if ($action === 'salvar') {
     }
 
     $vistoria_id = $_POST['vistoria_id'] ?? null;
-    if ($vistoria_id) {
+    $analise_id = null;
+    if ($editando) {
+        $stmtOrigem = $pdo->prepare('SELECT analise_id,tipo_licenca FROM certificados_lc WHERE id=:id LIMIT 1');
+        $stmtOrigem->execute([':id'=>$id]);
+        $origemDocumento = $stmtOrigem->fetch(PDO::FETCH_ASSOC);
+        $analise_id = $origemDocumento['analise_id'] ?? null;
+        if ($analise_id && $tipo_licenca !== $origemDocumento['tipo_licenca']) {
+            setMensagem('error', 'O tipo da licença vinculada à análise não pode ser alterado.');
+            redirecionar(APP_URL . 'documentacao/lc/form?id=' . urlencode($id));
+        }
+    }
+    if ($analise_id) {
+        $stmtAnalise = $pdo->prepare("SELECT ap.status,ap.tipo_processo,
+            EXISTS(SELECT 1 FROM analise_planos_pareceres p WHERE p.analise_id=ap.id
+                AND p.status='PUBLICADO' AND p.resultado='APROVADO' AND p.finalidade='CONCLUSIVO') parecer_valido,
+            EXISTS(SELECT 1 FROM analise_planos_exigencias x WHERE x.analise_id=ap.id
+                AND (x.status<>'CUMPRIDA' OR x.saneamento_pendente=1)) pendencia_impeditiva
+            FROM analises_planos ap WHERE ap.id=:id LIMIT 1");
+        $stmtAnalise->execute([':id'=>$analise_id]);
+        $origemAnalise = $stmtAnalise->fetch(PDO::FETCH_ASSOC);
+        if (!$origemAnalise || $origemAnalise['status']!=='CONCLUIDA' || !(int)$origemAnalise['parecer_valido'] || (int)$origemAnalise['pendencia_impeditiva']) {
+            setMensagem('error', 'A cadeia da análise de planos ainda não autoriza a licença.');
+            redirecionar(APP_URL . 'documentacao/lc/form?id=' . urlencode($id));
+        }
+    } elseif ($vistoria_id) {
         $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
         if (empty($liberacao['permitido'])) {
             setMensagem('error', $liberacao['mensagem']);
             redirecionar(APP_URL . 'documentacao/lc/form' . ($editando ? "?id={$id}" : ''));
         }
     }
-    if (empty($vistoria_id)) {
+    if (empty($analise_id) && empty($vistoria_id)) {
         setMensagem('error', 'É obrigatório selecionar um relatório aprovado para emitir o certificado.');
         redirecionar(APP_URL . 'documentacao/lc/form' . ($editando ? "?id={$id}" : ''));
-    } else {
+    } elseif (!$analise_id) {
         $stmtStatus = $pdo->prepare("SELECT status FROM vistorias WHERE id = :vid");
         $stmtStatus->execute([':vid' => $vistoria_id]);
         $vistData = $stmtStatus->fetch(PDO::FETCH_ASSOC);

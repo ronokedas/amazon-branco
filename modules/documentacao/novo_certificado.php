@@ -56,11 +56,14 @@ if (empty($liberacao['permitido'])) {
     redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id) . '&vistoria_id=' . urlencode((string)$liberacao['vistoria_id']));
 }
 
+$modelos_permitidos = certificadoModelosPermitidosPorAgendamento($pdo, (string)$agendamento_id);
+
 $tipos = [
     'CSN'   => ['label' => 'Certificado de Segurança da Navegação', 'icone' => 'fa-ship', 'url' => APP_URL . 'documentacao/certificados/form?agendamento_id=' . urlencode($agendamento_id)],
     'CNBL'  => ['label' => 'Certificado Nacional de Borda Livre', 'icone' => 'fa-water', 'url' => APP_URL . 'documentacao/cnbl/form?agendamento_id=' . urlencode($agendamento_id)],
     'CNARQ' => ['label' => 'Certificado Nacional de Arqueação', 'icone' => 'fa-ruler-combined', 'url' => APP_URL . 'documentacao/cnarq/form?agendamento_id=' . urlencode($agendamento_id)],
 ];
+$tipos = array_filter($tipos, static fn(array $info, string $tipo): bool => !empty($modelos_permitidos[$tipo]), ARRAY_FILTER_USE_BOTH);
 
 $titulo_page = 'Emitir Certificado - ' . APP_NAME;
 require_once __DIR__ . '/../../includes/header.php';
@@ -105,16 +108,23 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </div>
 
         <div class="smart-form-body">
-            <div class="certificate-choice-grid">
-                <?php foreach ($tipos as $tipo => $info): ?>
-                    <a href="<?= APP_URL ?>certificados/wizard?modelo=<?= urlencode($tipo) ?>&agendamento_id=<?= urlencode($agendamento_id) ?>" class="certificate-choice-card">
-                        <span class="certificate-choice-icon"><i class="fas <?= h($info['icone']) ?>"></i></span>
-                        <strong><?= h($tipo) ?></strong>
-                        <small><?= h($info['label']) ?></small>
-                        <span class="certificate-choice-action">Gerar <i class="fas fa-arrow-right"></i></span>
-                    </a>
-                <?php endforeach; ?>
-            </div>
+            <?php if (empty($tipos)): ?>
+                <div class="alert alert-warning" style="margin:0;">
+                    <strong>Nenhum certificado disponível.</strong>
+                    A proposta desta embarcação não possui serviço contratado classificado para emissão de CSN, CNBL ou CNARQ.
+                </div>
+            <?php else: ?>
+                <div class="certificate-choice-grid">
+                    <?php foreach ($tipos as $tipo => $info): ?>
+                        <a href="<?= APP_URL ?>certificados/wizard?modelo=<?= urlencode($tipo) ?>&agendamento_id=<?= urlencode($agendamento_id) ?>" class="certificate-choice-card">
+                            <span class="certificate-choice-icon"><i class="fas <?= h($info['icone']) ?>"></i></span>
+                            <strong><?= h($tipo) ?></strong>
+                            <small><?= h($info['label']) ?></small>
+                            <span class="certificate-choice-action">Gerar <i class="fas fa-arrow-right"></i></span>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>

@@ -79,6 +79,13 @@ if (!isset($salvar_pdf_caminho)) {
             exit;
         }
     }
+    $stmtAssinatura = $pdo->prepare("SELECT caminho_pdf_assinado,hash_pdf_assinado FROM documento_assinaturas WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='ASSINADO' ORDER BY versao DESC LIMIT 1");
+    $stmtAssinatura->execute([':id'=>$id]);
+    $assinaturaPdf=$stmtAssinatura->fetch(PDO::FETCH_ASSOC);
+    if($assinaturaPdf&&!empty($assinaturaPdf['caminho_pdf_assinado'])){
+        $arquivoAssinado=__DIR__.'/../../'.ltrim(str_replace(['../','..\\'],'',$assinaturaPdf['caminho_pdf_assinado']),'/\\');
+        if(is_file($arquivoAssinado)&&hash_equals((string)$assinaturaPdf['hash_pdf_assinado'],hash_file('sha256',$arquivoAssinado))){header('Content-Type: application/pdf');header('Content-Disposition: inline; filename="Relatorio-assinado.pdf"');header('Content-Length: '.filesize($arquivoAssinado));readfile($arquivoAssinado);exit;}
+    }
 }
 
 // Buscar exigências
@@ -493,11 +500,26 @@ $pdf->MultiCell(0, 4.5, "Obs. 2: " . $obs_2, 0, 'L');
 $pdf->Ln(8);
 
 // Rodapé de emissão e termo de responsabilidade
+$reservarBlocoAssinatura = isset($GLOBALS['APROVACAO_RESPONSAVEL_PDF']);
+$alturaBlocoAssinatura = 39.0;
+$alturaRodapeAssinado = 76.0;
+if ($reservarBlocoAssinatura
+    && $pdf->GetY() + $alturaRodapeAssinado > $pdf->getPageHeight() - $pdf->getBreakMargin()) {
+    $pdf->AddPage();
+}
 $pdf->SetFont('helvetica', 'B', 8);
 $emissao = $v['data_emissao'] ?? date('Y-m-d');
 $pdf->Cell(0, 6, 'RELATÓRIO EMITIDO EM: ' . mb_strtoupper(dataPorExtenso($emissao)), 0, 1, 'L');
 
-$pdf->Ln(4);
+if ($reservarBlocoAssinatura) {
+    $aprovacao_pdf_layout = [
+        'bloco_pagina' => $pdf->PageNo(),
+        'bloco_y' => $pdf->GetY() + 2.0,
+    ];
+    $pdf->SetY($aprovacao_pdf_layout['bloco_y'] + $alturaBlocoAssinatura + 3.0);
+} else {
+    $pdf->Ln(4);
+}
 
 $texto_responsabilidade = "A aprovação das vistorias realizadas para a emissão ou validação de um Certificado serão válidas apenas para o momento em que forem efetuadas. A partir de então, e durante todo o período de validade do Certificado, os proprietários, armadores, comandantes ou mestres segundo as circunstâncias do caso, serão os responsáveis pela manutenção das condições de segurança, de maneira a garantirem que a embarcação e seus equipamentos não constituam um perigo para sua própria segurança, para a de terceiros ou do meio ambiente.";
 $pdf->SetFont('helvetica', '', 8);

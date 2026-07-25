@@ -21,6 +21,7 @@ $servico = [
     'id'           => '',
     'nome'         => '',
     'descricao'    => '',
+    'certificado_modelo' => '',
     'preco_padrao' => '0,00',
     'ativo'        => 1,
 ];
@@ -76,6 +77,19 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <input type="text" id="nome" name="nome" required
                            value="<?php echo h($servico['nome']); ?>"
                            placeholder="Ex: Vistoria Inicial Seco">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-12">
+                    <label for="certificado_modelo">Certificado habilitado</label>
+                    <select id="certificado_modelo" name="certificado_modelo">
+                        <option value="">Não habilita certificado</option>
+                        <?php foreach (['CSN' => 'CSN - Segurança da Navegação', 'CNBL' => 'CNBL - Borda Livre', 'CNARQ' => 'CNARQ - Arqueação'] as $valor => $rotulo): ?>
+                            <option value="<?php echo h($valor); ?>" <?php echo ($servico['certificado_modelo'] ?? '') === $valor ? 'selected' : ''; ?>><?php echo h($rotulo); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted">Define qual certificado este serviço contratado permite emitir.</small>
                 </div>
             </div>
 

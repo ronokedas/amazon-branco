@@ -213,7 +213,7 @@ $pdf->SetDrawColor(0, 0, 0);
 $pdf->SetTextColor(0, 0, 0);
 
 $pdf->SetXY(160, 14);
-$pdf->Cell(35, 5, 'NORMAM-201/DPC', 0, 0, 'C');
+$pdf->Cell(35, 5, 'NORMAM-202/DPC', 0, 0, 'C');
 $pdf->SetFont('helvetica', 'B', 10);
 $pdf->SetXY(61, 20);
 $pdf->Cell(85, 5, 'CERTIFICADO DE SEGURANÇA DA NAVEGAÇÃO', 0, 0, 'C');
@@ -361,7 +361,7 @@ $pdf->AddPage();
 $pdf->SetLineWidth($line);
 $pdf->SetFont('helvetica', 'B', 10);
 $pdf->SetXY(160, 14);
-$pdf->Cell(35, 5, 'NORMAM-201/DPC', 0, 0, 'C');
+$pdf->Cell(35, 5, 'NORMAM-202/DPC', 0, 0, 'C');
 $pdf->SetFont('helvetica', 'B', 10);
 $pdf->SetXY(78, 20);
 $pdf->Cell(55, 5, 'CONVALIDAÇÕES', 0, 0, 'C');

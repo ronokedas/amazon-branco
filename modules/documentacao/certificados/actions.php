@@ -131,10 +131,19 @@ if ($action === 'salvar') {
 
     // Validações
     $vistoria_id = $_POST['vistoria_id'] ?? null;
+    if (!$editando && $vistoria_id && !certificadoModeloPermitidoPorVistoria($pdo, (string)$vistoria_id, 'CSN')) {
+        setMensagem('error', certificadoMensagemServicoObrigatorio('CSN'));
+        redirecionar(APP_URL . 'certificados');
+    }
     if ($vistoria_id) {
         $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
         if (empty($liberacao['permitido'])) {
             setMensagem('error', $liberacao['mensagem']);
+            redirecionar(APP_URL . 'documentacao/certificados/form' . ($editando ? "?id={$id}" : ''));
+        }
+        $relatorio_numero = relatorioNumerosReferenciaCertificado($pdo, (string)$vistoria_id);
+        if ($tipo === 'Definitivo' && ($liberacao['status'] ?? '') === 'APROVADA_COM_EXIGENCIAS') {
+            setMensagem('error', 'Certificado Definitivo bloqueado enquanto houver exigência comum pendente no relatório técnico original.');
             redirecionar(APP_URL . 'documentacao/certificados/form' . ($editando ? "?id={$id}" : ''));
         }
     }
@@ -501,14 +510,9 @@ if ($action === 'enviar_assinatura') {
         redirecionar(APP_URL . 'documentacao/certificados');
     }
 
-    require_once __DIR__ . '/../../../includes/enviar_assinatura.php';
-
-    $resultado = enviarAssinaturaEmail(
-        $pdo,
-        $id,
-        'certificados_csn',
-        'CSN'
-    );
+    require_once __DIR__ . '/../../../includes/assinaturas_usuarios.php';
+    try { $resultado = assinaturaEnviarConviteCertificado($pdo, 'CSN', $id); }
+    catch (Throwable $e) { $resultado = ['success'=>false,'message'=>$e->getMessage()]; }
 
     if ($resultado['success']) {
         log_atividade('certificado_csn_assinatura_enviada', "Link de assinatura CSN ID: {$id} enviado por e-mail.");

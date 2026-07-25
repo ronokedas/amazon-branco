@@ -53,6 +53,8 @@ $rotas = [
     'portal' => 'modules/portal/index.php',
     'portal/documentos' => 'modules/portal/documentos.php',
     'portal/documentos/pdf' => 'modules/portal/pdf.php',
+    'portal/analises-planos' => 'modules/portal/analises_planos.php',
+    'portal/analises-planos/actions' => 'modules/portal/analises_planos_actions.php',
     'dashboard'     => 'modules/dashboard/index.php',
     'armadores'          => 'modules/armadores/index.php',
     'armadores/form'     => 'modules/armadores/form.php',
@@ -79,6 +81,12 @@ $rotas = [
     'analises-planos/actions' => 'modules/analises_planos/actions.php',
     'analises-planos/arquivo' => 'modules/analises_planos/arquivo.php',
     'analises-planos/parecer-pdf' => 'modules/analises_planos/parecer_pdf.php',
+    'protocolos' => 'modules/protocolos/index.php',
+    'protocolos/form' => 'modules/protocolos/form.php',
+    'protocolos/actions' => 'modules/protocolos/actions.php',
+    'protocolos/pdf' => 'modules/protocolos/pdf.php',
+    'protocolos/arquivo' => 'modules/protocolos/arquivo.php',
+    'protocolos/configuracoes' => 'modules/protocolos/configuracoes.php',
     'financeiro'          => 'modules/financeiro/index.php',
     'financeiro/form'     => 'modules/financeiro/form.php',
     'financeiro/actions'  => 'modules/financeiro/actions.php',
@@ -147,6 +155,8 @@ $rotas = [
     'responsaveis_assinatura/form'    => 'modules/responsaveis_assinatura/form.php',
     'responsaveis_assinatura/actions' => 'modules/responsaveis_assinatura/actions.php',
     'responsaveis_assinatura/assinatura' => 'modules/responsaveis_assinatura/assinatura.php',
+    'minhas-assinaturas'                => 'modules/minhas_assinaturas/index.php',
+    'minhas-assinaturas/actions'        => 'modules/minhas_assinaturas/actions.php',
     'documentos/aprovar'             => 'modules/documentos/aprovar.php',
     'documentos/cancelar'            => 'modules/documentos/cancelar.php',
     'busca-global'              => 'ajax/busca_global.php',
@@ -158,12 +168,14 @@ $rotas = [
     'feedback/contador'         => 'modules/feedback/contador.php',
     'feedback/arquivo'          => 'modules/feedback/arquivo.php',
     'feedback/configuracoes'    => 'modules/feedback/configuracoes.php',
+    'notificacoes'              => 'modules/notificacoes/index.php',
+    'notificacoes/actions'      => 'modules/notificacoes/actions.php',
 ];
 
 // Se nao esta logado, sempre ir para login (exceto proprio login)
 if (!isset($_SESSION['usuario_logado']) && $path !== '' && $path !== 'login') {
     // Verificar se é rota pública de assinatura
-    $is_rota_publica = (strpos($path, 'assinar/') === 0 || strpos($path, 'validar/') === 0);
+    $is_rota_publica = (strpos($path, 'assinar/') === 0 || strpos($path, 'assinatura-certificado/') === 0 || strpos($path, 'validar/') === 0 || strpos($path, 'validar-assinatura/') === 0 || strpos($path, 'protocolo-aceite/') === 0);
     if ($path === 'portal' || strpos($path, 'portal/') === 0) {
         $is_rota_publica = true;
     }
@@ -179,6 +191,9 @@ if (!isset($_SESSION['usuario_logado']) && $path !== '' && $path !== 'login') {
     }
     
     if (!$is_rota_publica) {
+        if ($path === 'minhas-assinaturas') {
+            $_SESSION['login_return_to'] = 'minhas-assinaturas' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '');
+        }
         $path = '';
     }
 }
@@ -204,6 +219,8 @@ if (strpos($path, 'api/campo/v1') === 0) {
         'embarcacoes' => 'embarcacoes', 'embarcacoes/form' => 'embarcacoes', 'embarcacoes/actions' => 'embarcacoes', 'embarcacoes/foto' => 'embarcacoes',
         'vistorias' => 'vistorias', 'vistorias/nova' => 'vistorias', 'vistorias/detalhe' => 'vistorias', 'vistorias/actions' => 'vistorias', 'vistorias/relatorio' => 'vistorias', 'vistorias/relatorio_pdf' => 'vistorias', 'vistorias/relatorio_pdf.php' => 'vistorias',
         'analises-planos' => 'analise_planos', 'analises-planos/form' => 'analise_planos', 'analises-planos/actions' => 'analise_planos', 'analises-planos/arquivo' => 'analise_planos', 'analises-planos/parecer-pdf' => 'analise_planos',
+        'protocolos' => 'protocolos_documentais', 'protocolos/form' => 'protocolos_documentais', 'protocolos/actions' => 'protocolos_documentais', 'protocolos/pdf' => 'protocolos_documentais', 'protocolos/arquivo' => 'protocolos_documentais',
+        'protocolos/configuracoes' => 'protocolos_documentais',
         'financeiro' => 'financeiro', 'financeiro/form' => 'financeiro', 'financeiro/actions' => 'financeiro', 'financeiro/relatorios' => 'financeiro', 'financeiro/relatorios/exportar' => 'financeiro',
         'usuarios' => 'usuarios', 'usuarios/form' => 'usuarios', 'usuarios/actions' => 'usuarios',
         'agendamentos' => 'agendamentos', 'agendamentos/form' => 'agendamentos', 'agendamentos/actions' => 'agendamentos', 'agendamentos/os' => 'agendamentos',
@@ -224,9 +241,26 @@ if (strpos($path, 'api/campo/v1') === 0) {
         redirecionar(APP_URL . 'dashboard');
     }
     require_once __DIR__ . '/' . $rotas[$path];
+} elseif (strpos($path, 'protocolo-aceite/') === 0) {
+    $_GET['token'] = substr($path, strlen('protocolo-aceite/'));
+    require_once __DIR__ . '/modules/protocolos/aceite.php';
+    exit;
 } elseif (strpos($path, 'validar/') === 0) {
     $_GET['token'] = substr($path, 8);
     require_once __DIR__ . '/modules/documentos/validar.php';
+    exit;
+} elseif (strpos($path, 'validar-assinatura/') === 0) {
+    $_GET['token'] = substr($path, 19);
+    require_once __DIR__ . '/modules/documentos/validar_assinatura.php';
+    exit;
+} elseif (strpos($path, 'assinatura-certificado/') === 0) {
+    $partesAssinatura = explode('/', substr($path, 23));
+    $_GET['token'] = $partesAssinatura[0] ?? '';
+    $acaoAssinatura = $partesAssinatura[1] ?? '';
+    if ($acaoAssinatura === 'pdf') require_once __DIR__ . '/modules/assinaturas_publicas/preview.php';
+    elseif ($acaoAssinatura === 'confirmar') require_once __DIR__ . '/modules/assinaturas_publicas/confirmar.php';
+    elseif ($acaoAssinatura === '') require_once __DIR__ . '/modules/assinaturas_publicas/certificado.php';
+    else { http_response_code(404); echo 'Página não encontrada.'; }
     exit;
 } elseif (strpos($path, 'assinar/') === 0) {
     // Rota pública de assinatura: assinar/{token_assinatura}

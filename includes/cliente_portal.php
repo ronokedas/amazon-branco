@@ -312,6 +312,109 @@ function clientePortalDocumento(PDO $pdo, string $clienteId, string $tipo, strin
     return null;
 }
 
+/**
+ * Resolve um caminho persistido pelo sistema sem permitir que ele saia da raiz
+ * da aplicacao e valida a integridade do artefato pelo SHA-256 gravado no banco.
+ */
+function clientePortalResolverPdfPersistido(string $caminho, string $hashEsperado): string
+{
+    $caminho = trim($caminho);
+    $hashEsperado = strtolower(trim($hashEsperado));
+    if ($caminho === '' || !preg_match('/^[a-f0-9]{64}$/', $hashEsperado)) {
+        throw new RuntimeException('O artefato oficial não possui caminho ou hash válido.');
+    }
+
+    $raiz = realpath(__DIR__ . '/..');
+    if ($raiz === false || preg_match('/^(?:[A-Za-z]:[\\\\\/]|[\\\\\/]{2}|\/)/', $caminho)) {
+        throw new RuntimeException('O caminho do artefato oficial é inválido.');
+    }
+
+    $relativo = ltrim(str_replace('\\', '/', $caminho), '/');
+    if (in_array('..', explode('/', $relativo), true)) {
+        throw new RuntimeException('O caminho do artefato oficial é inválido.');
+    }
+
+    $arquivo = realpath($raiz . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativo));
+    $raizNormalizada = rtrim(str_replace('\\', '/', $raiz), '/') . '/';
+    $arquivoNormalizado = $arquivo === false ? '' : str_replace('\\', '/', $arquivo);
+    $dentroDaRaiz = DIRECTORY_SEPARATOR === '\\'
+        ? str_starts_with(strtolower($arquivoNormalizado), strtolower($raizNormalizada))
+        : str_starts_with($arquivoNormalizado, $raizNormalizada);
+
+    if ($arquivo === false || !$dentroDaRaiz || !is_file($arquivo)) {
+        throw new RuntimeException('O arquivo oficial do documento não foi encontrado.');
+    }
+
+    $hashAtual = hash_file('sha256', $arquivo);
+    if ($hashAtual === false || !hash_equals($hashEsperado, strtolower($hashAtual))) {
+        throw new RuntimeException('A integridade do arquivo oficial não pôde ser confirmada.');
+    }
+
+    return $arquivo;
+}
+
+/**
+ * Retorna o PDF oficial quando o documento do portal já foi assinado/aprovado.
+ * Retorno nulo significa que o certificado ainda está somente emitido e pode
+ * ser gerado pelo modelo atual.
+ */
+function clientePortalPdfOficial(PDO $pdo, string $tipo, string $documentoId, array $documento): ?string
+{
+    $configs = clientePortalConfigDocumentos();
+    if (isset($configs[$tipo])) {
+        if ((int)($documento['assinado'] ?? 0) !== 1 || strtolower((string)($documento['status'] ?? '')) !== 'assinado') {
+            return null;
+        }
+
+        $tabela = $configs[$tipo]['table'];
+        $stmt = $pdo->prepare("SELECT caminho_arquivo_pdf, hash_arquivo_pdf FROM {$tabela} WHERE id=:id LIMIT 1");
+        $stmt->execute([':id' => $documentoId]);
+        $artefato = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$artefato) {
+            throw new RuntimeException('O registro do documento assinado não foi encontrado.');
+        }
+
+        return clientePortalResolverPdfPersistido(
+            (string)($artefato['caminho_arquivo_pdf'] ?? ''),
+            (string)($artefato['hash_arquivo_pdf'] ?? '')
+        );
+    }
+
+    if ($tipo === 'rel_vistoria') {
+        $stmt = $pdo->prepare("SELECT caminho_pdf_final AS caminho, hash_pdf_final AS hash FROM documento_aprovacoes WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='APROVADO' ORDER BY versao DESC LIMIT 1");
+        $stmt->execute([':id' => $documentoId]);
+        $artefato = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$artefato) {
+            $stmt = $pdo->prepare("SELECT caminho_pdf_assinado AS caminho, hash_pdf_assinado AS hash FROM documento_assinaturas WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='ASSINADO' ORDER BY versao DESC LIMIT 1");
+            $stmt->execute([':id' => $documentoId]);
+            $artefato = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if (!$artefato) {
+            throw new RuntimeException('O relatório não possui um artefato oficial assinado.');
+        }
+        return clientePortalResolverPdfPersistido((string)$artefato['caminho'], (string)$artefato['hash']);
+    }
+
+    if ($tipo === 'parecer_planos') {
+        $stmt = $pdo->prepare("SELECT caminho_pdf_final AS caminho, hash_pdf_final AS hash FROM analise_planos_pareceres WHERE id=:id AND status='PUBLICADO' LIMIT 1");
+        $stmt->execute([':id' => $documentoId]);
+        $artefato = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$artefato || empty($artefato['caminho']) || empty($artefato['hash'])) {
+            $stmt = $pdo->prepare("SELECT caminho_pdf_final AS caminho, hash_pdf_final AS hash FROM documento_aprovacoes WHERE documento_tipo='PARECER_PLANOS' AND documento_id=:id AND status='APROVADO' ORDER BY versao DESC LIMIT 1");
+            $stmt->execute([':id' => $documentoId]);
+            $artefato = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+        if (!$artefato) {
+            throw new RuntimeException('O parecer não possui um artefato oficial aprovado.');
+        }
+        return clientePortalResolverPdfPersistido((string)$artefato['caminho'], (string)$artefato['hash']);
+    }
+
+    throw new RuntimeException('Tipo de documento não suportado pelo portal.');
+}
+
 function clientePortalTemplate(string $nome, array $replacements): string
 {
     $path = __DIR__ . '/../templates/email/' . $nome . '.html';

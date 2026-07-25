@@ -1,0 +1,5 @@
+<?php
+require_once __DIR__.'/../../config.php';require_once __DIR__.'/../../includes/functions.php';require_once __DIR__.'/../../includes/assinaturas_usuarios.php';
+$token=(string)($_GET['token']??'');$convite=assinaturaConvitePorToken($pdo,$token);if(!$convite||!assinaturaConviteDisponivel($convite)){http_response_code(404);exit('Prévia indisponível.');}
+$tmpDir=__DIR__.'/../../tmp/pdfs/';if(!is_dir($tmpDir)&&!mkdir($tmpDir,0750,true)&&!is_dir($tmpDir)){http_response_code(500);exit('Falha ao preparar prévia.');}$tmp=$tmpDir.'convite_'.$convite['id'].'.pdf';
+try{aprovacaoDocumentoGerarOriginal($convite['documento_tipo'],$convite['documento_id'],$tmp);if(!is_file($tmp))throw new RuntimeException('PDF não gerado.');header('Content-Type: application/pdf');header('Content-Disposition: inline; filename="'.strtolower($convite['documento_tipo']).'-previa.pdf"');header('Cache-Control: private, no-store, max-age=0');header('X-Content-Type-Options: nosniff');readfile($tmp);}catch(Throwable $e){http_response_code(500);echo 'Não foi possível gerar a prévia.';}finally{@unlink($tmp);}exit;

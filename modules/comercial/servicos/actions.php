@@ -30,6 +30,8 @@ switch ($action) {
         try {
             $nome       = sanitizar($_POST['nome'] ?? '');
             $descricao  = sanitizar($_POST['descricao'] ?? '');
+            $certificado_modelo = strtoupper(trim((string)($_POST['certificado_modelo'] ?? '')));
+            $certificado_modelo = in_array($certificado_modelo, ['CSN', 'CNBL', 'CNARQ'], true) ? $certificado_modelo : null;
             $preco_raw  = $_POST['preco_padrao'] ?? '0,00';
 
             if (empty($nome)) {
@@ -43,12 +45,13 @@ switch ($action) {
             $preco_padrao = converterMoedaDecimal($preco_raw);
 
             $stmt = $pdo->prepare("
-                INSERT INTO servicos (id, nome, descricao, preco_padrao, criado_por)
-                VALUES (UUID(), :nome, :descricao, :preco_padrao, :criado_por)
+                INSERT INTO servicos (id, nome, descricao, certificado_modelo, preco_padrao, criado_por)
+                VALUES (UUID(), :nome, :descricao, :certificado_modelo, :preco_padrao, :criado_por)
             ");
             $stmt->execute([
                 ':nome'         => $nome,
                 ':descricao'    => $descricao ?: null,
+                ':certificado_modelo' => $certificado_modelo,
                 ':preco_padrao' => $preco_padrao,
                 ':criado_por'   => $_SESSION['usuario_id'],
             ]);
@@ -69,6 +72,8 @@ switch ($action) {
             $id         = $_POST['id'] ?? '';
             $nome       = sanitizar($_POST['nome'] ?? '');
             $descricao  = sanitizar($_POST['descricao'] ?? '');
+            $certificado_modelo = strtoupper(trim((string)($_POST['certificado_modelo'] ?? '')));
+            $certificado_modelo = in_array($certificado_modelo, ['CSN', 'CNBL', 'CNARQ'], true) ? $certificado_modelo : null;
             $preco_raw  = $_POST['preco_padrao'] ?? '0,00';
             $ativo      = isset($_POST['ativo']) ? 1 : 0;
 
@@ -84,6 +89,7 @@ switch ($action) {
                 UPDATE servicos
                 SET nome = :nome,
                     descricao = :descricao,
+                    certificado_modelo = :certificado_modelo,
                     preco_padrao = :preco_padrao,
                     ativo = :ativo
                 WHERE id = :id
@@ -91,6 +97,7 @@ switch ($action) {
             $stmt->execute([
                 ':nome'         => $nome,
                 ':descricao'    => $descricao ?: null,
+                ':certificado_modelo' => $certificado_modelo,
                 ':preco_padrao' => $preco_padrao,
                 ':ativo'        => $ativo,
                 ':id'           => $id,

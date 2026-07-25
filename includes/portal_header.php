@@ -4,6 +4,7 @@ header('Content-Type: text/html; charset=UTF-8');
 $titulo_page = $titulo_page ?? 'Portal do Cliente - ' . APP_NAME;
 $portalRequestUri = $_SERVER['REQUEST_URI'] ?? '';
 $portalDocumentosAtivo = strpos($portalRequestUri, '/portal/documentos') !== false;
+$portalAnalisesAtivo = strpos($portalRequestUri, '/portal/analises-planos') !== false;
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -31,6 +32,7 @@ $portalDocumentosAtivo = strpos($portalRequestUri, '/portal/documentos') !== fal
             <nav class="portal-nav">
                 <a class="<?php echo !$portalDocumentosAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal">Portal do Cliente</a>
                 <a class="<?php echo $portalDocumentosAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/documentos">Meus documentos</a>
+                <a class="<?php echo $portalAnalisesAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/analises-planos">Enviar planos</a>
                 <a href="<?php echo APP_URL; ?>portal/documentos">Embarcações</a>
             </nav>
             <div class="portal-top-actions" aria-hidden="true">

@@ -7,6 +7,7 @@ verificar_sessao(); exigirAcesso('configuracoes');
 
 $permissoes = [
  'analise_planos'=>['Análise de planos','Análise técnica de projetos'],
+ 'protocolos_documentais'=>['Protocolos documentais','Entrada, saída, custódia e tramitação de documentos'],
  'dashboard'=>['Dashboard','Visão geral'], 'vistorias'=>['Vistorias','Execução e consulta'], 'relatorios_aprovacao'=>['Relatórios aguardando aprovação','Aba específica para análise técnica'], 'agendamentos'=>['Agendamentos','Agenda e OS'], 'certificados'=>['Certificados','Emissão e consulta'], 'embarcacoes'=>['Embarcações','Cadastro'], 'armadores'=>['Armadores','Cadastro'], 'proprietarios'=>['Proprietários','Cadastro'], 'despachantes'=>['Despachantes','Cadastro'], 'comercial'=>['Comercial','Propostas'], 'servicos'=>['Serviços','Catálogo'], 'financeiro'=>['Financeiro','Lançamentos e relatórios'], 'documentacao'=>['Documentação','Workspace de documentos'], 'relatorios'=>['Relatórios gerenciais','Consultas do sistema'], 'emails'=>['E-mails','Central de e-mails'], 'portal_clientes'=>['Portal de clientes','Gestão de acessos'], 'usuarios'=>['Usuários','Gestão'], 'configuracoes'=>['Configurações','Parâmetros'], 'responsaveis_assinatura'=>['Responsáveis por assinatura','Cadastros para emissão'],
 ];
 try {

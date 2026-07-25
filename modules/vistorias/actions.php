@@ -53,12 +53,31 @@ function blocosPermitidosRelatorioAction(string $tipoVistoria): array
 
 function bloquearMutacaoRelatorioAuditavel(PDO $pdo, string $vistoriaId, string $destino): void
 {
+    global $action;
     if ($vistoriaId === '') return;
     $stmt = $pdo->prepare("SELECT 1 FROM documento_aprovacoes WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status IN ('APROVADO','CANCELADO') LIMIT 1");
     $stmt->execute([':id'=>$vistoriaId]);
     if ($stmt->fetchColumn()) {
         setMensagem('error', 'Este relatorio possui uma aprovacao auditavel e e imutavel. Para corrigir, cancele e emita um novo documento.');
         redirecionar($destino);
+    }
+    $stmt = $pdo->prepare("SELECT status FROM vistorias WHERE id=:id LIMIT 1");
+    $stmt->execute([':id'=>$vistoriaId]);
+    $statusRelatorio = (string)$stmt->fetchColumn();
+    $reaberturaFormal = $action === 'alterar_status'
+        && in_array($statusRelatorio, ['REPROVADA','CANCELADA'], true)
+        && (string)($_POST['status'] ?? '') === 'PENDENTE';
+    if ($action !== 'aprovar_ou_reprovar' && !$reaberturaFormal && in_array($statusRelatorio, ['APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA','CANCELADA'], true)) {
+        setMensagem('error', 'Este relatorio esta finalizado e nao pode mais ser alterado. O administrador deve devolve-lo formalmente para correcao.');
+        redirecionar($destino);
+    }
+    if ($action !== 'aprovar_ou_reprovar' && !$reaberturaFormal) {
+        $stmt = $pdo->prepare("SELECT 1 FROM documento_assinaturas WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='ASSINADO' LIMIT 1");
+        $stmt->execute([':id'=>$vistoriaId]);
+        if ($stmt->fetchColumn()) {
+            setMensagem('error', 'Este relatorio ja foi assinado e esta congelado. O administrador deve devolve-lo para correcao antes de qualquer alteracao.');
+            redirecionar($destino);
+        }
     }
 }
 
@@ -85,68 +104,21 @@ switch ($action) {
             if (!$origem || !in_array($origem['status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)) {
                 throw new Exception('O relatorio de origem precisa estar aprovado.');
             }
-            $vigente = obterRelatorioVigenteAgendamento($pdo, $origem['agendamento_id']);
+            $vigente = obterRelatorioVigenteCadeia($pdo, (string)$origem['id']);
             if (!$vigente || $vigente['id'] !== $origem['id']) {
                 throw new Exception('Este relatorio ja foi substituido por um relatorio mais recente.');
             }
-            if (getCargo() !== 'ADMIN' && ($origem['vistoriador_id'] ?? '') !== ($_SESSION['usuario_id'] ?? '')) {
-                throw new Exception('Somente o vistoriador atribuido ou um administrador pode iniciar esta verificacao.');
+            if (getCargo() !== 'ADMIN') {
+                throw new Exception('Somente o administrador pode iniciar e agendar o retorno A/S.');
             }
             if (!relatorioPossuiASPendente($pdo, $origem['id'])) {
                 throw new Exception('O relatorio nao possui exigencia A/S pendente.');
             }
 
-            $stmtExistente = $pdo->prepare("SELECT id FROM vistorias
-                WHERE relatorio_anterior_id = :origem
-                  AND finalidade = 'CUMPRIMENTO_EXIGENCIAS'
-                  AND status IN ('PENDENTE','AGUARDANDO_APROVACAO')
-                ORDER BY criado_em DESC, id DESC LIMIT 1");
-            $stmtExistente->execute([':origem' => $origem['id']]);
-            $novoId = $stmtExistente->fetchColumn();
-
-            if (!$novoId) {
-                $novoId = gerarUUID();
-                $isArqueacao = stripos((string)$origem['numero'], 'REL-AP') !== false
-                    || stripos((string)$origem['tipo_vistoria'], 'arquea') !== false;
-                $numero = $isArqueacao
-                    ? gerarNumeroDocumento('REL-AP', 'AM-REL-AP')
-                    : gerarNumeroDocumento('REL-V', 'AM-REL-V');
-
-                $stmtNovo = $pdo->prepare("INSERT INTO vistorias
-                    (id, numero, embarcacao_id, pessoa_id, armador_id, operador_nome, agendamento_id,
-                     relatorio_anterior_id, finalidade, data_vistoria, prazo_exigencias_dias,
-                     observacoes_tecnicas, status, criado_por)
-                    VALUES (:id, :numero, :embarcacao, :pessoa, :armador, :operador, :agendamento,
-                            :anterior, 'CUMPRIMENTO_EXIGENCIAS', CURDATE(), :prazo,
-                            :observacoes, 'PENDENTE', :usuario)");
-                $stmtNovo->execute([
-                    ':id' => $novoId, ':numero' => $numero, ':embarcacao' => $origem['embarcacao_id'],
-                    ':pessoa' => $origem['pessoa_id'], ':armador' => $origem['armador_id'],
-                    ':operador' => $origem['operador_nome'], ':agendamento' => $origem['agendamento_id'],
-                    ':anterior' => $origem['id'], ':prazo' => $origem['prazo_exigencias_dias'],
-                    ':observacoes' => 'Verificacao de cumprimento das exigencias do relatorio ' . ($origem['numero'] ?: $origem['id']),
-                    ':usuario' => $_SESSION['usuario_id'],
-                ]);
-
-                $stmtCopiar = $pdo->prepare("INSERT INTO vistoria_exigencias
-                    (id, vistoria_id, catalogo_id, bloco_vistoria, ordem, item, descricao, conforme,
-                     observacao, item_normam, vencimento, antes_de_suspender, status_item, exigencia_origem_id)
-                    SELECT UUID(), :novo, catalogo_id, bloco_vistoria, ordem, item, descricao, 'nao',
-                           observacao, item_normam, vencimento, antes_de_suspender, 'pendente', id
-                      FROM vistoria_exigencias
-                     WHERE vistoria_id = :origem
-                       AND conforme = 'nao'
-                       AND status_item <> 'cumprida'");
-                $stmtCopiar->execute([':novo' => $novoId, ':origem' => $origem['id']]);
-                if ($stmtCopiar->rowCount() === 0) {
-                    throw new Exception('Nenhuma exigencia pendente foi encontrada para verificacao.');
-                }
-                log_atividade('relatorio_cumprimento_criado', "Relatorio {$numero} criado para substituir {$origem['numero']} ({$origem['id']}).");
-            }
-
+            criarPendenciaRetornoAS($pdo, (string)$origem['id'], (string)($_SESSION['usuario_id'] ?? ''));
             $pdo->commit();
-            setMensagem('success', 'Relatorio de verificacao de cumprimento iniciado.');
-            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($origem['agendamento_id']) . '&vistoria_id=' . urlencode($novoId));
+            setMensagem('info', 'Informe a data, o local e o vistoriador para o retorno de cumprimento A/S.');
+            redirecionar(APP_URL . 'agendamentos/form?relatorio_origem_id=' . urlencode((string)$origem['id']));
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             setMensagem('error', $e->getMessage());
@@ -390,16 +362,23 @@ switch ($action) {
         }
 
         try {
+            $pdo->beginTransaction();
             $stmt = $pdo->prepare("UPDATE vistorias SET status = :status, resultado = :resultado WHERE id = :id");
             $stmt->execute([
                 ':status'   => $novo_status,
                 ':resultado' => $resultado,
                 ':id'       => $id
             ]);
+            if ($novo_status === 'PENDENTE') {
+                $pdo->prepare("UPDATE documento_assinaturas SET status='CANCELADO',cancelado_em=NOW(),cancelado_por=:usuario,motivo_cancelamento='Relatorio devolvido formalmente para correcao.' WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='ASSINADO'")->execute([':usuario'=>$_SESSION['usuario_id'], ':id'=>$id]);
+                $pdo->prepare("UPDATE vistorias SET assinatura_status='CANCELADO',assinatura_em=NULL,responsavel_assinatura_id=NULL,aprovado_por=NULL,data_aprovacao=NULL WHERE id=:id")->execute([':id'=>$id]);
+            }
+            $pdo->commit();
 
             log_atividade('vistoria_status', "Vistoria ID: {$id} alterada para status {$novo_status}.");
             setMensagem('success', 'Status da vistoria atualizado com sucesso!');
         } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao alterar status da vistoria: ' . $e->getMessage());
             setMensagem('error', 'Erro ao alterar status da vistoria.');
         }
@@ -460,6 +439,10 @@ switch ($action) {
         }
 
         $vistoria_id          = $_POST['vistoria_id'] ?? '';
+        if (getCargo() !== 'VISTORIADOR') {
+            setMensagem('error', 'Somente o vistoriador atribuido pode alterar o conteudo e as exigencias do relatorio.');
+            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id));
+        }
         bloquearMutacaoRelatorioAuditavel($pdo, $vistoria_id, APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id));
         $armador_id           = trim($_POST['armador_id'] ?? '');
         $operador_nome        = trim($_POST['operador_nome'] ?? '');
@@ -586,6 +569,12 @@ switch ($action) {
                         ':status' => $statusCumprimentoSalvar,
                         ':id' => $vistoria_id,
                     ]);
+                    if ($statusCumprimentoSalvar === 'AGUARDANDO_APROVACAO') {
+                        $pdo->prepare("UPDATE vistoria_retornos
+                            SET status='RELATORIO_ENVIADO',relatorio_resultado_id=:relatorio
+                            WHERE agendamento_id=:agendamento")
+                            ->execute([':relatorio' => $vistoria_id, ':agendamento' => $agendamento_id]);
+                    }
                     $pdo->commit();
                     log_atividade('relatorio_cumprimento_salvo', "Relatorio {$relatorioCumprimento['numero']} salvo com status {$statusCumprimentoSalvar}. Decisoes: " . implode(', ', $decisoesLog));
                     if (!$prazoCumprimentoValido) {
@@ -620,6 +609,16 @@ switch ($action) {
 
             if (!$ag) {
                 throw new Exception('Agendamento nao encontrado.');
+            }
+
+            if (($ag['vistoriador_id'] ?? '') !== ($_SESSION['usuario_id'] ?? '')) throw new Exception('Acesso negado. Este agendamento nao esta atribuido a voce.');
+            if ($vistoria_id !== '') {
+                $stmtEdicao = $pdo->prepare('SELECT v.*, a.vistoriador_id FROM vistorias v LEFT JOIN agendamentos a ON a.id=v.agendamento_id WHERE v.id=:id FOR UPDATE');
+                $stmtEdicao->execute([':id' => $vistoria_id]);
+                $vistoriaEdicao = $stmtEdicao->fetch(PDO::FETCH_ASSOC);
+                if (!$vistoriaEdicao) throw new Exception('Relatorio nao encontrado.');
+                $regraEdicao = avaliarEdicaoRelatorio($pdo, $vistoriaEdicao, (string)$_SESSION['usuario_id'], getCargo());
+                if (!$regraEdicao['permitido']) throw new Exception($regraEdicao['mensagem']);
             }
 
             if ($prazo_exigencias_dias > 0) {
@@ -897,10 +896,8 @@ switch ($action) {
             redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
         }
 
-        if (!temPerfil('ANALISTA')) {
-            setMensagem('error', 'Apenas administradores e analistas podem adicionar exigencias na revisao.');
-            redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
-        }
+        setMensagem('error', 'Administradores e analistas podem revisar, mas somente o vistoriador atribuido pode alterar exigencias.');
+        redirecionar(APP_URL . 'documentacao/aprovacao_relatorios');
 
         $vistoria_id = trim($_POST['vistoria_id'] ?? '');
         $descricao = trim($_POST['descricao'] ?? '');
@@ -953,7 +950,6 @@ switch ($action) {
                 ':item_normam' => $item_normam ?: null,
                 ':antes_de_suspender' => $sem_prazo ? 1 : 0,
             ]);
-
             $pdo->commit();
             log_atividade('exigencia_manual_analista', "Exigencia manual adicionada na vistoria ID {$vistoria_id}.");
             setMensagem('success', 'Exigencia manual adicionada ao relatorio.');
@@ -1036,18 +1032,26 @@ switch ($action) {
             if (empty($agendamento_id)) {
                 throw new Exception('O relatorio precisa estar vinculado a um agendamento para concluir o fluxo.');
             }
-            $relatorioVigente = obterRelatorioVigenteAgendamento($pdo, (string)$agendamento_id);
+            // Retornos A/S possuem novos agendamentos; a vigência é da cadeia.
+            $relatorioVigente = obterRelatorioVigenteCadeia($pdo, (string)$id);
             if (!$relatorioVigente || $relatorioVigente['id'] !== $id) {
                 throw new Exception('Somente o relatorio vigente da cadeia pode receber uma decisao.');
             }
 
             if ($aprovando) {
+                if (($vistoria['assinatura_status'] ?? 'PENDENTE') !== 'ASSINADO') {
+                    throw new Exception('O relatorio precisa ser assinado pelo vistoriador ou por um administrador antes da aprovacao.');
+                }
                 $resumoAprovacao = aprovacaoRelatorioResumoExigencias($pdo, $id);
                 aprovacaoRelatorioValidarResultado($resumoAprovacao, $resultado_relatorio, $versao_relatorio);
                 $status_vistoria = (string)$resumoAprovacao['status_esperado'];
             }
 
             $statusFinalizaFluxo = $aprovando || $status_vistoria === 'REPROVADA';
+            if (!$aprovando && in_array($status_vistoria, ['PENDENTE','REPROVADA','CANCELADA'], true) && ($vistoria['assinatura_status'] ?? '') === 'ASSINADO') {
+                $pdo->prepare("UPDATE documento_assinaturas SET status='CANCELADO',cancelado_em=NOW(),cancelado_por=:usuario,motivo_cancelamento=:motivo WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='ASSINADO'")->execute([':usuario'=>$_SESSION['usuario_id'],':motivo'=>$observacao?:'Relatorio devolvido para correcao.',':id'=>$id]);
+                $pdo->prepare("UPDATE vistorias SET assinatura_status='CANCELADO',assinatura_em=NULL,responsavel_assinatura_id=NULL WHERE id=:id")->execute([':id'=>$id]);
+            }
             $stmt = $pdo->prepare("
                 UPDATE vistorias
                 SET status = :status,
@@ -1064,6 +1068,15 @@ switch ($action) {
                 ':finaliza_data' => $statusFinalizaFluxo ? 1 : 0,
                 ':id' => $id
             ]);
+
+            if ($aprovando) {
+                if (($vistoria['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS') {
+                    concluirRetornoDoRelatorio($pdo, $id);
+                }
+                if ((int)($resumoAprovacao['pendentes_as'] ?? 0) > 0) {
+                    criarPendenciaRetornoAS($pdo, $id, (string)($_SESSION['usuario_id'] ?? ''));
+                }
+            }
 
             if ($agendamento_id && $statusFinalizaFluxo) {
                 $pdo->prepare("UPDATE ordens_servico SET status = 'executado' WHERE agendamento_id = :agendamento_id AND status IN ('pendente', 'em_andamento')")->execute([':agendamento_id' => $agendamento_id]);
@@ -1102,6 +1115,9 @@ switch ($action) {
                 redirecionar(APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id));
             }
             setMensagem('warning', $liberacao['mensagem'] ?? 'Certificacao permanece bloqueada.');
+            if (($liberacao['possui_as'] ?? false) === true) {
+                redirecionar(APP_URL . 'agendamentos/form?relatorio_origem_id=' . urlencode($id));
+            }
         }
         redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id) . '&vistoria_id=' . urlencode($id));
         break;

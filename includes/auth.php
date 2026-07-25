@@ -44,9 +44,9 @@ function temPerfil(string $perfil, ?string $usuarioId = null): bool {
 /** Módulos iniciais recomendados para cada cargo. O administrador pode personalizar depois. */
 function permissoesPadraoCargo(string $cargo): array {
     return match ($cargo) {
-        'VENDEDOR' => ['dashboard', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'vistorias', 'agendamentos', 'comercial', 'servicos', 'emails'],
+        'VENDEDOR' => ['dashboard', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'vistorias', 'agendamentos', 'analise_planos', 'comercial', 'servicos', 'emails'],
         'VISTORIADOR' => ['dashboard', 'vistorias', 'embarcacoes', 'certificados', 'documentacao'],
-        'ANALISTA' => ['dashboard', 'vistorias', 'relatorios_aprovacao', 'analise_planos'],
+        'ANALISTA' => ['dashboard', 'vistorias', 'analise_planos'],
         default => [],
     };
 }

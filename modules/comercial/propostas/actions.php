@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../includes/functions.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../includes/financeiro_escritorios.php';
+require_once __DIR__ . '/../../../includes/analise_planos.php';
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
@@ -130,12 +131,15 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
     }
 
     $stmtEmb = $pdo->prepare("
-        SELECT pe.embarcacao_id, GROUP_CONCAT(s.nome SEPARATOR ', ') AS servicos_nomes
+        SELECT pe.embarcacao_id,
+               GROUP_CONCAT(CASE WHEN COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN s.nome END SEPARATOR ', ') AS servicos_nomes,
+               SUM(CASE WHEN COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN 1 ELSE 0 END) AS servicos_vistoria
         FROM propostas_embarcacoes pe
         LEFT JOIN propostas_servicos ps ON ps.proposta_id = pe.proposta_id AND ps.embarcacao_id = pe.embarcacao_id
         LEFT JOIN servicos s ON ps.servico_id = s.id
         WHERE pe.proposta_id = :proposta_id
         GROUP BY pe.embarcacao_id
+        HAVING servicos_vistoria > 0
     ");
     $stmtEmb->execute([':proposta_id' => $prop['id']]);
     $embarcacoes = $stmtEmb->fetchAll(PDO::FETCH_ASSOC);
@@ -179,6 +183,8 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
             ':criado_por' => $criado_por,
         ]);
     }
+
+    analisePlanosCriarDemandasProposta($pdo, $prop, $criado_por);
 }
 
 switch ($action) {

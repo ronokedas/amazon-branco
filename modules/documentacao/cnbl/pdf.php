@@ -333,7 +333,7 @@ for ($i = 1; $i < 5; $i++) {
 $pdf->SetFont('helvetica', 'B', 10);
 foreach (['A', 'B', 'C', 'D', 'E'] as $i => $letra) {
     $pdf->SetXY($tipoX + ($tipoCellW * $i), $y + 6.8);
-    $texto = ($letra === $tipo_letra ? 'X   ' : '    ') . $letra;
+    $texto = $letra . ($letra === $tipo_letra ? '   X' : '    ');
     $pdf->Cell($tipoCellW, 5, $texto, 0, 0, 'C');
 }
 
@@ -345,9 +345,9 @@ $areaW = ($w - $labelW) / 2;
 $pdf->Line($areaX + $areaW, $y + 12, $areaX + $areaW, $y + 18);
 $pdf->SetFont('helvetica', 'B', 10);
 $pdf->SetXY($areaX, $y + 12.8);
-$pdf->Cell($areaW, 5, ($area_numero === '1' ? 'X   ' : '    ') . 'Área 1', 0, 0, 'C');
+$pdf->Cell($areaW, 5, 'Área 1' . ($area_numero === '1' ? '   X' : '    '), 0, 0, 'C');
 $pdf->SetXY($areaX + $areaW, $y + 12.8);
-$pdf->Cell($areaW, 5, ($area_numero === '2' ? 'X   ' : '    ') . 'Área 2', 0, 0, 'C');
+$pdf->Cell($areaW, 5, 'Área 2' . ($area_numero === '2' ? '   X' : '    '), 0, 0, 'C');
 
 // Medições
 $pdf->SetFont('helvetica', '', 10);
@@ -458,7 +458,7 @@ $pdf->MultiCell(190, 10, 'O PRESENTE CERTIFICADO É EXPEDIDO PARA ATESTAR QUE A 
 $pdf->SetFont('helvetica', 'B', 10);
 $pdf->SetXY(10, 238);
 $pdf->Cell(190, 6, 'VÁLIDO até: ' . cnblDataExtenso($c['data_validade']), 0, 1, 'C');
-$pdf->SetXY(10, 248);
+$pdf->SetXY(10, 244);
 $pdf->Cell(190, 6, 'Expedido em ' . cnblPdfText(cnblText($c['local_emissao'] ?? '', 'Belém-PA')) . ', em ' . cnblDataExtenso($c['data_emissao']), 0, 1, 'C');
 
 // =========================
@@ -531,11 +531,16 @@ $pdf->SetXY(11, $obsY + 2);
 $pdf->Cell(188, 5, 'Observações:', 0, 1, 'L');
 $pdf->SetFont('helvetica', '', 9);
 $obs1 = '1. Este Certificado ' . $tipo_certificado . ' foi emitido com base no Relatório de Vistorias n.º ' . cnblText($c['relatorio_numero'] ?? '') . '.';
-$obs2 = '2. Vistoria Flutuando para emissão do Certificado de Segurança da Navegação realizada em ' . cnblDataBR($c['data_vistoria']) . ' em ' . cnblText($c['local_vistoria'] ?? '') . '.';
+$tipoVistoria = trim(cnblText($c['tipo_vistoria_certificado'] ?? '')) ?: 'Flutuando';
+$obs2 = '2. Vistoria ' . $tipoVistoria . ' para emissão do certificado realizada em ' . cnblDataBR($c['data_vistoria']) . ' em ' . cnblText($c['local_vistoria'] ?? '') . '.';
 $pdf->SetX(11);
 $pdf->MultiCell(188, 5, cnblPdfText($obs1), 0, 'L');
 $pdf->SetX(11);
 $pdf->MultiCell(188, 5, cnblPdfText($obs2), 0, 'L');
+if (trim((string)($c['observacoes_verso'] ?? '')) !== '') {
+    $pdf->SetX(11);
+    $pdf->MultiCell(188, 5, cnblPdfText($c['observacoes_verso']), 0, 'L');
+}
 
 // Identificação do anexo acima da faixa reservada para aprovação auditável.
 $pdf->SetFont('helvetica', 'B', 10);

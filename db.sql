@@ -30,6 +30,7 @@ SET time_zone = "+00:00";
 CREATE TABLE `agendamentos` (
   `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
   `proposta_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `relatorio_origem_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `embarcacao_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `cliente_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `armador_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
@@ -304,6 +305,8 @@ CREATE TABLE `certificados_cnarq` (
   `relatorio_numero` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `data_vistoria` date DEFAULT NULL,
   `local_vistoria` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_vistoria_certificado` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `observacoes_verso` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `data_emissao` date NOT NULL,
   `data_validade` date NOT NULL,
   `local_emissao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'BelÃ©m-PA',
@@ -358,6 +361,8 @@ CREATE TABLE `certificados_cnbl` (
   `relatorio_numero` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `data_vistoria` date DEFAULT NULL,
   `local_vistoria` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_vistoria_certificado` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `observacoes_verso` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `data_emissao` date NOT NULL,
   `data_validade` date NOT NULL,
   `local_emissao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'BelÃ©m-PA',
@@ -785,6 +790,8 @@ CREATE TABLE `documento_aprovacoes` (
   `geo_precisao_m` decimal(10,2) DEFAULT NULL,
   `ip` varchar(45) COLLATE utf8mb4_unicode_ci NOT NULL,
   `user_agent` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `autenticacao_metodo` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'SESSAO',
+  `assinatura_convite_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `hash_pdf_original` char(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `hash_pdf_final` char(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `caminho_pdf_original` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -801,6 +808,71 @@ CREATE TABLE `documento_aprovacoes` (
   `erro_processamento` varchar(1000) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+CREATE TABLE `assinatura_convites` (
+  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `documento_tipo` enum('CSN','CNBL','CNARQ') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `documento_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `responsavel_id` int NOT NULL,
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `token_hash` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email_destinatario` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('ATIVO','PROCESSANDO','UTILIZADO','CANCELADO') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ATIVO',
+  `autenticacao_metodo` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'EMAIL_MAGIC_LINK',
+  `expira_em` datetime NOT NULL,
+  `enviado_em` datetime DEFAULT NULL,
+  `utilizado_em` datetime DEFAULT NULL,
+  `cancelado_em` datetime DEFAULT NULL,
+  `cancelado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `aprovacao_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_assinatura_convite_token` (`token_hash`),
+  KEY `idx_assinatura_convite_documento` (`documento_tipo`,`documento_id`,`status`),
+  KEY `idx_assinatura_convite_expiracao` (`status`,`expira_em`),
+  KEY `idx_assinatura_convite_responsavel` (`responsavel_id`),
+  KEY `idx_assinatura_convite_usuario` (`usuario_id`),
+  CONSTRAINT `fk_assinatura_convite_responsavel` FOREIGN KEY (`responsavel_id`) REFERENCES `responsaveis_assinatura` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_assinatura_convite_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+CREATE TABLE `documento_assinaturas` (
+  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `documento_tipo` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `documento_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `versao` int UNSIGNED NOT NULL DEFAULT '1',
+  `responsavel_id` int NOT NULL,
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `assinatura_arquivo` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `assinatura_hash` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `hash_pdf_original` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `hash_pdf_assinado` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `caminho_pdf_original` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `caminho_pdf_assinado` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `token_validacao` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `latitude` decimal(10,8) NOT NULL,
+  `longitude` decimal(11,8) NOT NULL,
+  `geo_precisao_m` decimal(10,2) DEFAULT NULL,
+  `ip` varchar(45) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_agent` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` enum('ASSINADO','CANCELADO') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ASSINADO',
+  `assinado_em` datetime NOT NULL,
+  `cancelado_em` datetime DEFAULT NULL,
+  `cancelado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `motivo_cancelamento` varchar(1000) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_documento_assinatura_versao` (`documento_tipo`,`documento_id`,`versao`),
+  UNIQUE KEY `uk_documento_assinatura_token` (`token_validacao`),
+  KEY `idx_documento_assinatura_documento` (`documento_tipo`,`documento_id`,`status`),
+  KEY `idx_documento_assinatura_responsavel` (`responsavel_id`),
+  KEY `idx_documento_assinatura_usuario` (`usuario_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -1550,6 +1622,8 @@ CREATE TABLE `responsaveis_assinatura` (
   `id` int NOT NULL,
   `nome_completo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `cpf_cnpj` varchar(18) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(190) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `cargo_titulo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `registro_profissional` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `assinatura_arquivo` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -1591,6 +1665,7 @@ CREATE TABLE `servicos` (
   `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
   `nome` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
   `descricao` text COLLATE utf8mb4_general_ci,
+  `certificado_modelo` enum('CSN','CNBL','CNARQ') COLLATE utf8mb4_general_ci DEFAULT NULL,
   `preco_padrao` decimal(12,2) NOT NULL DEFAULT '0.00',
   `ativo` tinyint(1) NOT NULL DEFAULT '1',
   `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
@@ -1614,6 +1689,10 @@ INSERT INTO `servicos` (`id`, `nome`, `descricao`, `preco_padrao`, `ativo`, `cri
 ('a1d99130-6ebc-11f1-86ce-7e17ff5f90bf', 'Vistoria Anual Periódica', 'Vistoria anual periodica conforme regulamento da Capitania', 2500.00, 1, NULL, '2026-06-23 04:33:07', '2026-06-29 06:15:50'),
 ('a1d991e9-6ebc-11f1-86ce-7e17ff5f90bf', 'Vistoria Intermediária', 'Vistoria intermediaria de meio-ciclo entre renovações', 3000.00, 1, NULL, '2026-06-23 04:33:07', '2026-06-29 06:17:26'),
 ('a1d992d7-6ebc-11f1-86ce-7e17ff5f90bf', 'Licença Provisória', 'Emissão de licença provisória para navegação', 1500.00, 1, NULL, '2026-06-23 04:33:07', '2026-06-29 06:14:47');
+
+UPDATE `servicos` SET `certificado_modelo` = 'CSN' WHERE `nome` IN ('Vistoria Inicial Seco', 'Vistoria Inicial Flutuando');
+UPDATE `servicos` SET `certificado_modelo` = 'CNBL' WHERE `nome` = 'Vistoria Inicial de Borda Livre';
+UPDATE `servicos` SET `certificado_modelo` = 'CNARQ' WHERE `id` = 'a1d98ef1-6ebc-11f1-86ce-7e17ff5f90bf' OR `nome` = 'Vistoria Inicial de Arqueação';
 
 -- --------------------------------------------------------
 
@@ -1790,6 +1869,26 @@ INSERT INTO `usuario_permissoes` (`usuario_id`, `permissao`, `permitido`, `atual
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `vistoria_retornos`
+--
+
+CREATE TABLE `vistoria_retornos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `relatorio_origem_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `agendamento_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `relatorio_resultado_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('PENDENTE_AGENDAMENTO','AGENDADO','RELATORIO_ENVIADO','CONCLUIDO','CANCELADO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PENDENTE_AGENDAMENTO',
+  `motivo_cancelamento` text COLLATE utf8mb4_general_ci,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cancelado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `cancelado_em` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `vistorias`
 --
 
@@ -1811,6 +1910,8 @@ CREATE TABLE `vistorias` (
   `mobile_finalizada_em` datetime DEFAULT NULL,
   `aprovado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `responsavel_assinatura_id` int DEFAULT NULL,
+  `assinatura_status` enum('PENDENTE','ASSINADO','CANCELADO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PENDENTE',
+  `assinatura_em` datetime DEFAULT NULL,
   `data_aprovacao` datetime DEFAULT NULL,
   `observacao_admin` text COLLATE utf8mb4_general_ci,
   `observacoes` text COLLATE utf8mb4_general_ci,
@@ -1919,7 +2020,8 @@ ALTER TABLE `agendamentos`
   ADD KEY `status` (`status`),
   ADD KEY `data_vistoria` (`data_vistoria`),
   ADD KEY `criado_por` (`criado_por`),
-  ADD KEY `idx_agendamentos_armador_id` (`armador_id`);
+  ADD KEY `idx_agendamentos_armador_id` (`armador_id`),
+  ADD KEY `idx_agendamentos_relatorio_origem` (`relatorio_origem_id`);
 
 --
 -- Índices de tabela `analises_planos`
@@ -2154,7 +2256,8 @@ ALTER TABLE `documento_aprovacoes`
   ADD UNIQUE KEY `uk_documento_aprovacao_token` (`token_validacao`),
   ADD KEY `idx_documento_aprovacao_documento` (`documento_tipo`,`documento_id`,`status`),
   ADD KEY `idx_documento_aprovacao_responsavel` (`responsavel_id`),
-  ADD KEY `idx_documento_aprovacao_usuario` (`aprovador_usuario_id`);
+  ADD KEY `idx_documento_aprovacao_usuario` (`aprovador_usuario_id`),
+  ADD KEY `idx_documento_aprovacao_convite` (`assinatura_convite_id`);
 
 --
 -- Índices de tabela `documento_artefatos`
@@ -2324,7 +2427,9 @@ ALTER TABLE `propostas_servicos`
 -- Índices de tabela `responsaveis_assinatura`
 --
 ALTER TABLE `responsaveis_assinatura`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_responsavel_assinatura_usuario` (`usuario_id`),
+  ADD KEY `idx_responsavel_assinatura_email` (`email`);
 
 --
 -- Índices de tabela `sequenciais_documentos`
@@ -2337,7 +2442,8 @@ ALTER TABLE `sequenciais_documentos`
 --
 ALTER TABLE `servicos`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_servicos_ativo` (`ativo`);
+  ADD KEY `idx_servicos_ativo` (`ativo`),
+  ADD KEY `idx_servicos_certificado_modelo` (`certificado_modelo`);
 
 --
 -- Índices de tabela `tipos_embarcacao`
@@ -2373,6 +2479,18 @@ ALTER TABLE `usuario_perfis`
 --
 ALTER TABLE `usuario_permissoes`
   ADD PRIMARY KEY (`usuario_id`,`permissao`);
+
+--
+-- Índices de tabela `vistoria_retornos`
+--
+ALTER TABLE `vistoria_retornos`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_vistoria_retorno_origem` (`relatorio_origem_id`),
+  ADD UNIQUE KEY `uk_vistoria_retorno_agendamento` (`agendamento_id`),
+  ADD UNIQUE KEY `uk_vistoria_retorno_resultado` (`relatorio_resultado_id`),
+  ADD KEY `idx_vistoria_retornos_status` (`status`),
+  ADD KEY `fk_vistoria_retorno_criador` (`criado_por`),
+  ADD KEY `fk_vistoria_retorno_cancelador` (`cancelado_por`);
 
 --
 -- Índices de tabela `vistorias`
@@ -2463,11 +2581,15 @@ ALTER TABLE `responsaveis_assinatura`
 -- Restrições para tabelas despejadas
 --
 
+ALTER TABLE `documento_aprovacoes`
+  ADD CONSTRAINT `fk_documento_aprovacao_convite` FOREIGN KEY (`assinatura_convite_id`) REFERENCES `assinatura_convites` (`id`) ON DELETE SET NULL;
+
 --
 -- Restrições para tabelas `agendamentos`
 --
 ALTER TABLE `agendamentos`
   ADD CONSTRAINT `agendamentos_ibfk_1` FOREIGN KEY (`proposta_id`) REFERENCES `propostas` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_agendamento_relatorio_origem` FOREIGN KEY (`relatorio_origem_id`) REFERENCES `vistorias` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `agendamentos_ibfk_2` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE RESTRICT,
   ADD CONSTRAINT `agendamentos_ibfk_3` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE RESTRICT,
   ADD CONSTRAINT `agendamentos_ibfk_4` FOREIGN KEY (`vistoriador_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
@@ -2720,6 +2842,9 @@ ALTER TABLE `propostas_servicos`
 --
 -- Restrições para tabelas `usuarios`
 --
+ALTER TABLE `responsaveis_assinatura`
+  ADD CONSTRAINT `fk_responsavel_assinatura_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE RESTRICT;
+
 ALTER TABLE `usuarios`
   ADD CONSTRAINT `fk_usuarios_escritorio` FOREIGN KEY (`escritorio_id`) REFERENCES `escritorios` (`id`) ON DELETE SET NULL;
 
@@ -2741,6 +2866,16 @@ ALTER TABLE `usuario_perfis`
 --
 ALTER TABLE `usuario_permissoes`
   ADD CONSTRAINT `fk_usuario_permissoes_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `vistoria_retornos`
+--
+ALTER TABLE `vistoria_retornos`
+  ADD CONSTRAINT `fk_vistoria_retorno_origem` FOREIGN KEY (`relatorio_origem_id`) REFERENCES `vistorias` (`id`) ON DELETE RESTRICT,
+  ADD CONSTRAINT `fk_vistoria_retorno_agendamento` FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_vistoria_retorno_resultado` FOREIGN KEY (`relatorio_resultado_id`) REFERENCES `vistorias` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_vistoria_retorno_criador` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_vistoria_retorno_cancelador` FOREIGN KEY (`cancelado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL;
 
 --
 -- Restrições para tabelas `vistorias`

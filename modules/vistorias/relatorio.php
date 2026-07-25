@@ -64,6 +64,16 @@ try {
         redirecionar(APP_URL . 'agendamentos');
     }
 
+    // Consulta do analista é somente leitura e limitada às embarcações atribuídas a ele.
+    if ($cargo === 'ANALISTA') {
+        $stmtAnalise = $pdo->prepare('SELECT 1 FROM analises_planos WHERE embarcacao_id=:embarcacao AND analista_id=:usuario LIMIT 1');
+        $stmtAnalise->execute([':embarcacao' => $ag['embarcacao_id'], ':usuario' => $usuario_id]);
+        if (!$stmtAnalise->fetchColumn()) {
+            setMensagem('error', 'Acesso negado. O relatório não pertence a uma embarcação atribuída à sua análise.');
+            redirecionar(APP_URL . 'analises-planos');
+        }
+    }
+
     // Se estiver aprovada, vistoriador não pode mais editar
     $sqlVCheck = "SELECT status FROM vistorias WHERE agendamento_id = :id";
     $paramsVCheck = [':id' => $agendamento_id];
@@ -75,10 +85,6 @@ try {
     $stmtV_check = $pdo->prepare($sqlVCheck);
     $stmtV_check->execute($paramsVCheck);
     $vistoria_check = $stmtV_check->fetch(PDO::FETCH_ASSOC);
-    if ($cargo === 'ANALISTA' && $vistoria_solicitada_id === '' && (!$vistoria_check || $vistoria_check['status'] !== 'AGUARDANDO_APROVACAO')) {
-        setMensagem('error', 'O analista só pode acessar relatórios aguardando aprovação.');
-        redirecionar(APP_URL . 'vistorias');
-    }
 } catch (Exception $e) {
     error_log('Erro ao carregar agendamento relatorio: ' . $e->getMessage());
     setMensagem('error', 'Erro ao carregar dados do agendamento.');
@@ -152,8 +158,11 @@ try {
 
 $editando = !empty($vistoria);
 $eh_relatorio_cumprimento = (($vistoria['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS');
-$admin_review_mode = (temPerfil('ANALISTA') && $editando && $cargo !== 'VISTORIADOR')
-    || ($cargo === 'VISTORIADOR' && $editando && in_array($vistoria['status'] ?? '', ['APROVADA', 'APROVADA_COM_EXIGENCIAS', 'REPROVADA'], true));
+$regra_edicao_relatorio = $editando
+    ? avaliarEdicaoRelatorio($pdo, array_merge($vistoria, ['vistoriador_id' => $ag['vistoriador_id'] ?? null]), (string)$usuario_id, (string)$cargo)
+    : ['permitido' => $cargo === 'VISTORIADOR' && ($ag['vistoriador_id'] ?? '') === $usuario_id, 'mensagem' => ''];
+$pode_editar_relatorio = (bool)$regra_edicao_relatorio['permitido'];
+$admin_review_mode = $editando && !$pode_editar_relatorio;
 $exigencias_relatorio = [];
 $total_exigencias_relatorio = 0;
 $total_nao_conformes_relatorio = 0;
@@ -217,7 +226,17 @@ if ($vistoria && $possui_as_pendente && in_array($vistoria['status'], ['APROVADA
 }
 $liberacao_certificacao = $vistoria ? avaliarLiberacaoCertificacao($pdo, $vistoria['id']) : ['permitido' => false];
 $relatorio_substituto_aprovado = null;
+$cadeia_relatorios = [];
+$retorno_as = null;
 if ($vistoria) {
+    $cadeia_relatorios = obterCadeiaRelatorios($pdo, (string)$vistoria['id']);
+    $stmtRetornoAs = $pdo->prepare("SELECT vr.*,a.data_vistoria,a.local,u.nome vistoriador_nome
+        FROM vistoria_retornos vr
+        LEFT JOIN agendamentos a ON a.id=vr.agendamento_id
+        LEFT JOIN usuarios u ON u.id=a.vistoriador_id
+        WHERE vr.relatorio_origem_id=:id LIMIT 1");
+    $stmtRetornoAs->execute([':id' => $vistoria['id']]);
+    $retorno_as = $stmtRetornoAs->fetch(PDO::FETCH_ASSOC) ?: null;
     $stmtSubstituto = $pdo->prepare("SELECT id, numero FROM vistorias
         WHERE relatorio_anterior_id = :anterior
           AND status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')
@@ -381,9 +400,49 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 .etapa-linha.completa { background: #2ECC71 !important; }
 
 /* Checklist UI */
-.checklist-section { margin-bottom: 15px; border: 1px solid var(--cor-borda, #444); border-radius: 6px; overflow: hidden; }
-.checklist-header { background: var(--cor-sidebar, #1a1a2e); padding: 12px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
-.checklist-header:hover { background: #2a2a3e; }
+.report-inspection-card, .report-work-card, .avulsa-section, .observacoes-section { margin: 16px 20px 0; border: 1px solid var(--cor-borda, #d9e2df); border-radius: 12px; overflow: hidden; background: var(--cor-fundo-card, #fff); }
+.report-inspection-card, .report-work-card { padding: 0 !important; }
+.avulsa-section, .observacoes-section { padding: 18px !important; }
+.report-section-heading { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--cor-borda, #d9e2df); background: rgba(46,204,113,.055); }
+.report-section-heading > div { display: flex; align-items: center; gap: 12px; }
+.report-section-heading > div > i { width: 36px; height: 36px; display: grid; place-items: center; color: var(--cor-destaque, #169b67); background: rgba(46,204,113,.12); border-radius: 9px; }
+.report-section-heading span { display: flex; flex-direction: column; gap: 2px; }
+.report-section-heading strong { color: var(--cor-texto, #18332c); font-size: 1rem; }
+.report-section-heading small, .report-field-help { color: var(--cor-texto-secundario, #72827d); line-height: 1.4; }
+.report-inspection-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; padding: 18px; }
+.report-inspection-column { display: flex; flex-direction: column; gap: 16px; }
+.report-inspection-column .form-group { margin: 0; }
+.report-inspection-column .form-control { color: var(--cor-texto, #263a34); background: var(--cor-input-bg, #fff); border: 1px solid var(--cor-borda, #cfdad6); }
+.report-inspection-column #operador_nome { margin-top: 8px; }
+.report-validity-field { padding: 14px; border: 1px solid rgba(22,155,103,.22); border-radius: 9px; background: rgba(46,204,113,.045); }
+.report-validity-field select { max-width: 280px; }
+.report-field-help { display: block; margin-top: 7px; }
+.required-mark { color: #dc3545; }
+.checklist-summary { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; padding: 16px 18px 8px; }
+.checklist-summary > div { min-width: 0; display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--cor-borda, #d9e2df); border-radius: 10px; background: rgba(127,145,138,.045); }
+.checklist-summary-icon { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; border-radius: 8px; }
+.checklist-summary-icon.is-progress { color: #087a58; background: #dff5ec; }
+.checklist-summary-icon.is-pending { color: #936516; background: #fff1ce; }
+.checklist-summary-icon.is-danger { color: #b42318; background: #fee4e2; }
+.checklist-summary-icon.is-as { color: #8a1c13; background: #ffd5d2; }
+.checklist-summary small { display: block; color: var(--cor-texto-secundario, #72827d); font-size: .72rem; }
+.checklist-summary strong { display: block; color: var(--cor-texto, #18332c); font-size: 1.08rem; }
+.checklist-search { position: relative; padding: 8px 18px 16px; }
+.checklist-search > i { position: absolute; left: 34px; top: 50%; transform: translateY(-64%); color: var(--cor-texto-secundario, #72827d); pointer-events: none; }
+.checklist-search input { min-height: 46px; padding-left: 44px !important; background: var(--cor-input-bg, #fff); color: var(--cor-texto, #263a34); border: 1px solid var(--cor-borda, #cfdad6); }
+#checklist-container { padding: 0 18px 18px; }
+.checklist-section { margin-bottom: 11px; border: 1px solid var(--cor-borda, #d9e2df); border-radius: 10px; overflow: hidden; }
+.checklist-section:last-child { margin-bottom: 0; }
+.checklist-header { width: 100%; border: 0; color: var(--cor-texto, #18332c); background: var(--cor-sidebar, #f7faf9); padding: 13px 15px; cursor: pointer; display: grid; grid-template-columns: minmax(180px,1fr) auto 18px; gap: 12px; align-items: center; font: inherit; font-weight: bold; text-align: left; }
+.checklist-header:hover { background: rgba(46,204,113,.10); }
+.checklist-header:focus-visible { outline: 3px solid rgba(46,204,113,.35); outline-offset: -3px; }
+.checklist-category-metrics { display: flex; align-items: center; justify-content: flex-end; gap: 7px; flex-wrap: wrap; font-size: .72rem; font-weight: 700; }
+.checklist-category-metrics > span { padding: 4px 8px; border-radius: 999px; white-space: nowrap; }
+.category-progress { color: #276b58; background: #e5f5ef; }
+.category-issues { color: #a52b22; background: #fee9e7; }
+.category-issues.is-zero { color: #64756f; background: #edf2f0; }
+.category-as { color: #fff; background: #b42318; }
+.is-hidden { display: none !important; }
 .checklist-body { padding: 0; display: none; background: var(--cor-fundo, #121212); }
 .checklist-item { padding: 12px 15px; border-top: 1px solid var(--cor-borda, #444); }
 .checklist-item:first-child { border-top: none; }
@@ -400,6 +459,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 .item-details { margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-left: 3px solid #E74C3C; border-radius: 0 4px 4px 0; }
 .item-details label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #aaa; }
 .item-details input { width: 100%; padding: 8px 10px; margin-bottom: 10px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd); }
+.checklist-no-results { margin: 0 18px 18px; padding: 28px; display: flex; flex-direction: column; align-items: center; gap: 5px; color: var(--cor-texto-secundario, #72827d); text-align: center; border: 1px dashed var(--cor-borda, #cfdad6); border-radius: 10px; background: rgba(127,145,138,.04); }
+.checklist-no-results i { margin-bottom: 4px; color: var(--cor-destaque, #169b67); font-size: 1.3rem; }
+.checklist-no-results strong { color: var(--cor-texto, #18332c); }
+.report-pdf-after-save { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; color: var(--cor-texto-secundario, #72827d); background: rgba(127,145,138,.08); border: 1px dashed var(--cor-borda, #cfdad6); border-radius: 7px; font-size: .82rem; }
+.report-footer-pdf { font-weight: 700; }
+.report-draft-status { flex-basis: 100%; font-size: .8rem; }
 .admin-review-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr); gap: 18px; padding: 20px; }
 .admin-review-panel { border: 1px solid var(--cor-borda, rgba(255,255,255,0.08)); border-radius: 10px; background: rgba(255,255,255,0.025); overflow: hidden; }
 .admin-review-panel h4 { margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--cor-borda, rgba(255,255,255,0.08)); color: var(--cor-texto); font-size: 1rem; }
@@ -433,8 +498,21 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     .etapas-fluxo { padding: 12px 4px !important; }
     .form-container { border-radius: 14px; overflow: hidden; }
     #formRelatorio { padding: 0; }
-    .checklist-editor-section, .avulsa-section, .observacoes-section { padding: 16px !important; }
-    .checklist-header { min-height: 50px; padding: 12px; gap: 10px; line-height: 1.35; }
+    .report-inspection-card, .report-work-card, .avulsa-section, .observacoes-section { margin: 12px 12px 0; }
+    .avulsa-section, .observacoes-section { padding: 14px !important; }
+    .report-inspection-grid { grid-template-columns: 1fr; gap: 16px; padding: 15px; }
+    .report-section-heading { padding: 14px 15px; }
+    .report-section-heading small { font-size: .76rem; }
+    .report-validity-field select { max-width: none; }
+    .checklist-summary { grid-template-columns: repeat(2,minmax(0,1fr)); padding: 14px 14px 7px; gap: 8px; }
+    .checklist-summary > div { padding: 10px; }
+    .checklist-search { padding: 7px 14px 14px; }
+    .checklist-search > i { left: 29px; }
+    #checklist-container { padding: 0 14px 14px; }
+    .checklist-header { min-height: 58px; padding: 12px; gap: 8px; line-height: 1.35; grid-template-columns: 1fr 18px; }
+    .checklist-category-name { grid-column: 1; }
+    .checklist-category-metrics { grid-column: 1; justify-content: flex-start; }
+    .checklist-header .icone-toggle { grid-column: 2; grid-row: 1 / span 2; }
     .checklist-item { padding: 14px 12px; }
     .item-text { line-height: 1.48; }
     .item-actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
@@ -453,11 +531,33 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     #tabelaExigenciasAvulsas .btn { width: 44px; min-height: 42px; justify-content: center; }
     .report-actions { position: sticky; bottom: 0; z-index: 40; padding: 12px 16px !important; background: rgba(5,24,21,.97); border-top: 1px solid rgba(86,224,173,.18); backdrop-filter: blur(12px); }
     .report-actions .btn { flex: 1 1 100%; min-height: 46px; justify-content: center; margin: 0 !important; }
+    .report-pdf-after-save { width: 100%; min-height: 44px; justify-content: center; box-sizing: border-box; }
     .report-actions .text-muted { margin: 4px 0 0 !important; line-height: 1.45; }
+}
+@media (max-width: 420px) {
+    .checklist-summary { grid-template-columns: 1fr; }
 }
 </style>
 
 <!-- BOT?O ETAPA 2 (somente ADMIN, somente quando aprovado) -->
+<?php if (count($cadeia_relatorios) > 1): ?>
+    <div class="form-container" style="margin-bottom:20px">
+        <div class="form-header"><h3><i class="fas fa-timeline"></i> Linha do tempo dos relatórios A/S</h3></div>
+        <div style="display:grid;gap:10px;padding:16px">
+            <?php foreach ($cadeia_relatorios as $indiceCadeia => $itemCadeia): ?>
+                <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;padding:12px;border:1px solid #dce8e4;border-radius:9px">
+                    <span>
+                        <strong><?= h($itemCadeia['numero'] ?: $itemCadeia['id']) ?></strong>
+                        · <?= $indiceCadeia === 0 ? 'Relatório técnico original' : 'Cumprimento de A/S' ?>
+                        · <?= h($itemCadeia['status']) ?>
+                    </span>
+                    <a class="btn btn-secondary btn-sm" target="_blank" rel="noopener"
+                       href="<?= APP_URL ?>vistorias/relatorio_pdf.php?id=<?= urlencode($itemCadeia['id']) ?>">PDF</a>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+<?php endif; ?>
 <?php if ($relatorio_substituto_aprovado): ?>
     <div class="alert alert-info" style="margin-bottom:20px;">
         <strong>Relatório histórico/substituído.</strong>
@@ -471,12 +571,29 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         A embarcação não pode receber certificados até a aprovação da verificação de cumprimento.
         <?php if ($relatorio_cumprimento_aberto_id): ?>
             <a class="btn btn-warning ms-3" href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($agendamento_id) ?>&vistoria_id=<?= urlencode($relatorio_cumprimento_aberto_id) ?>">Continuar verificação de cumprimento</a>
-        <?php elseif (getCargo() === 'ADMIN' || ($ag['vistoriador_id'] ?? '') === $usuario_id): ?>
+        <?php elseif (!$retorno_as && getCargo() === 'ADMIN'): ?>
             <form method="POST" action="<?= APP_URL ?>vistorias/actions?action=iniciar_cumprimento_exigencias" style="display:inline-block;margin-left:12px;">
                 <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
                 <input type="hidden" name="vistoria_id" value="<?= h($vistoria['id']) ?>">
-                <button type="submit" class="btn btn-warning"><i class="fas fa-clipboard-check"></i> Verificar cumprimento de exigências</button>
+                <button type="submit" class="btn btn-warning"><i class="fas fa-calendar-plus"></i> Criar pendência de retorno A/S</button>
             </form>
+        <?php endif; ?>
+        <?php if ($retorno_as && $retorno_as['status'] === 'PENDENTE_AGENDAMENTO' && getCargo() === 'ADMIN'): ?>
+            <a class="btn btn-warning ms-3" href="<?= APP_URL ?>agendamentos/form?relatorio_origem_id=<?= urlencode($vistoria['id']) ?>">
+                <i class="fas fa-calendar-plus"></i> Agendar retorno A/S
+            </a>
+        <?php elseif ($retorno_as && $retorno_as['status'] === 'CANCELADO' && getCargo() === 'ADMIN'): ?>
+            <form method="POST" action="<?= APP_URL ?>vistorias/actions?action=iniciar_cumprimento_exigencias" style="display:inline-block;margin-left:12px;">
+                <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
+                <input type="hidden" name="vistoria_id" value="<?= h($vistoria['id']) ?>">
+                <button type="submit" class="btn btn-warning"><i class="fas fa-rotate-right"></i> Reabrir e agendar retorno</button>
+            </form>
+        <?php elseif ($retorno_as && in_array($retorno_as['status'], ['AGENDADO','RELATORIO_ENVIADO'], true)): ?>
+            <span style="display:inline-block;margin-left:12px">
+                Retorno: <strong><?= h($retorno_as['status']) ?></strong>
+                <?= !empty($retorno_as['data_vistoria']) ? ' em ' . h(date('d/m/Y', strtotime($retorno_as['data_vistoria']))) : '' ?>
+                <?= !empty($retorno_as['vistoriador_nome']) ? ' · ' . h($retorno_as['vistoriador_nome']) : '' ?>
+            </span>
         <?php endif; ?>
     </div>
 <?php elseif (getCargo() === 'ADMIN' && !empty($liberacao_certificacao['permitido'])): ?>
@@ -629,7 +746,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                             </label>
                                             <label style="display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid #efd39e;border-radius:9px;background:#fff9ed;<?= $resumo_aprovacao_relatorio['pendentes'] === 0 ? 'opacity:.55' : '' ?>">
                                                 <input type="radio" name="resultado_relatorio" value="APROVADA_COM_EXIGENCIAS" <?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'checked' : 'disabled' ?>>
-                                                <span><strong>Aprovada com exig&ecirc;ncias</strong><br><small>Permite apenas certificados Provis&oacute;rio e Condicional.</small></span>
+                                                <?php if ($resumo_aprovacao_relatorio['pendentes_as'] > 0): ?>
+                                                    <span><strong>Validar com A/S — certifica&ccedil;&atilde;o bloqueada</strong><br><small>Valida o documento técnico, cria o retorno obrigatório e não permite qualquer certificado.</small></span>
+                                                <?php else: ?>
+                                                    <span><strong>Aprovada com exig&ecirc;ncias</strong><br><small>Permite apenas certificados Provis&oacute;rio e Condicional.</small></span>
+                                                <?php endif; ?>
                                             </label>
                                         </div>
                                     </div>
@@ -642,11 +763,16 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         <?php endif; ?>
                                     </div>
                                     <div style="margin-bottom:16px">
-                                        <button type="submit" name="decisao" value="aprovar" class="btn btn-warning"
-                                                onclick="return confirm('<?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar este relatorio com exigencias?' : 'Aprovar este relatorio?' ?>')">
-                                            <i class="fas fa-check-circle"></i>
-                                            <?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar com exig&ecirc;ncias' : 'Aprovar relat&oacute;rio' ?>
-                                        </button>
+                                        <?php if (($vistoria['assinatura_status'] ?? '') === 'ASSINADO'): ?>
+                                            <button type="submit" name="decisao" value="aprovar" class="btn btn-warning"
+                                                    onclick="return confirm('<?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar este relatorio com exigencias?' : 'Aprovar este relatorio?' ?>')">
+                                                <i class="fas fa-check-circle"></i>
+                                                <?= $resumo_aprovacao_relatorio['pendentes_as'] > 0 ? 'Validar com A/S' : ($resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar com exig&ecirc;ncias' : 'Aprovar relat&oacute;rio') ?>
+                                            </button>
+                                        <?php else: ?>
+                                            <div class="admin-review-text" style="margin-bottom:10px">O relat&oacute;rio ainda n&atilde;o foi assinado. O administrador pode assin&aacute;-lo como substituto; a assinatura concluir&aacute; tamb&eacute;m a aprova&ccedil;&atilde;o.</div>
+                                            <a href="<?= APP_URL ?>minhas-assinaturas" class="btn btn-warning"><i class="fas fa-file-signature"></i> Assinar como substituto e aprovar</a>
+                                        <?php endif; ?>
                                     </div>
                                     <hr style="border:0;border-top:1px solid #dfe9e5;margin:16px 0">
                                     <div class="form-group mb-3">
@@ -673,8 +799,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 </form>
                             <?php elseif (($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO'): ?>
                                 <div class="admin-review-text">
-                                    A revis&atilde;o t&eacute;cnica e a inclus&atilde;o de exig&ecirc;ncias est&atilde;o dispon&iacute;veis abaixo.
-                                    A decis&atilde;o final pertence exclusivamente ao administrador.
+                                    O relat&oacute;rio est&aacute; dispon&iacute;vel para revis&atilde;o. Somente o vistoriador atribu&iacute;do pode alterar seu conte&uacute;do e suas exig&ecirc;ncias.
                                 </div>
                             <?php else: ?>
                                 <div class="admin-review-text">
@@ -692,6 +817,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </div>
                     </div>
 
+                    <?php if (false): // Inclusao em revisao desativada: somente o vistoriador altera exigencias. ?>
                     <div class="admin-review-panel">
                         <h4><i class="fas fa-plus-circle"></i> Exigencia manual do analista</h4>
                         <div class="admin-review-body">
@@ -735,6 +861,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </div>
                     </div>
 
+                    <?php endif; ?>
                     <div class="admin-review-panel">
                         <h4><i class="fas fa-list-check"></i> Exigencias registradas</h4>
                         <div class="admin-review-body">
@@ -842,21 +969,33 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
 
             <!-- ===== DATA DA VISTORIA E ARMADOR ===== -->
-            <div style="padding: 20px 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div class="form-group">
-                    <label for="data_vistoria">
-                        <i class="fas fa-calendar-check"></i> Data da Realização da Vistoria *
-                    </label>
-                    <input type="date" id="data_vistoria" name="data_vistoria" class="form-control"
-                           value="<?php echo h($vistoria['data_vistoria'] ?? $ag['data_vistoria']); ?>" required
-                           style="background: var(--cor-input-bg, #2a2a3e); color: var(--cor-texto, #ddd); border: 1px solid var(--cor-borda, #444);">
+            <section class="report-inspection-card">
+                <div class="report-section-heading">
+                    <div><i class="fas fa-calendar-check"></i><span><strong>Dados da realização</strong><small>Confirme a data, validade e o responsável presente.</small></span></div>
                 </div>
-
-                <div class="form-group">
+                <div class="report-inspection-grid">
+                    <div class="report-inspection-column">
+                        <div class="form-group">
+                            <label for="data_vistoria"><i class="fas fa-calendar-check"></i> Data da Realização da Vistoria *</label>
+                            <input type="date" id="data_vistoria" name="data_vistoria" class="form-control"
+                                   value="<?php echo h($vistoria['data_vistoria'] ?? $ag['data_vistoria']); ?>" required>
+                        </div>
+                        <div class="form-group report-validity-field">
+                            <label for="prazo_exigencias_dias">Prazo de validade do relatório <span class="required-mark">*</span></label>
+                            <select id="prazo_exigencias_dias" name="prazo_exigencias_dias" class="form-control" required>
+                                <option value="" <?= $prazo_exigencias_dias === '' ? 'selected' : '' ?> disabled>Selecione...</option>
+                                <option value="60" <?= $prazo_exigencias_dias === '60' ? 'selected' : '' ?>>60 dias</option>
+                                <option value="90" <?= $prazo_exigencias_dias === '90' ? 'selected' : '' ?>>90 dias</option>
+                            </select>
+                            <small class="report-field-help">Define o vencimento das exigências e a validade do CSN. A/S significa “Antes de suspender” e bloqueia a embarcação e todos os certificados.</small>
+                        </div>
+                    </div>
+                    <div class="report-inspection-column">
+                      <div class="form-group">
                     <label for="armador_id">
                         <i class="fas fa-user-tie"></i> Armador na data da Vistoria (Operador)
                     </label>
-                    <select id="armador_id" name="armador_id" class="form-control" style="background: var(--cor-input-bg, #2a2a3e); color: var(--cor-texto, #ddd); border: 1px solid var(--cor-borda, #444);">
+                    <select id="armador_id" name="armador_id" class="form-control">
                         <option value="" style="background: #2a2a3e; color: #ddd;">-- Nenhum Armador Específico --</option>
                         <?php
                         try {
@@ -879,45 +1018,43 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                            name="operador_nome"
                            class="form-control"
                            value="<?php echo h($vistoria['operador_nome'] ?? $ag['agendamento_operador_nome'] ?? ''); ?>"
-                           placeholder="Nome do operador/responsável presente na vistoria"
-                           style="margin-top: 8px; background: var(--cor-input-bg, #2a2a3e); color: var(--cor-texto, #ddd); border: 1px solid var(--cor-borda, #444);">
+                           placeholder="Nome do operador/responsável presente na vistoria">
+                      </div>
+                    </div>
                 </div>
-            </div>
+            </section>
 
             <!-- ===== CHECKLIST DINAMICO ===== -->
-            <div style="padding: 20px;" class="checklist-editor-section">
-                <h4 style="margin: 0 0 15px 0; font-size: 1.1rem; color: var(--cor-destaque, #2ECC71);">
-                    <i class="fas fa-clipboard-check"></i> Checklist de Vistoria
-                </h4>
-
-                <div style="margin-bottom: 20px;">
-                    <input type="text" id="buscaChecklist" class="form-control" placeholder="Buscar exigência pelo texto (filtra todas as seções)..." style="background: var(--cor-input-bg); color: var(--cor-texto); border: 1px solid var(--cor-borda); font-size: 1rem; padding: 12px;">
+            <section class="checklist-editor-section report-work-card">
+                <div class="report-section-heading">
+                    <div><i class="fas fa-clipboard-check"></i><span><strong>Checklist de Vistoria</strong><small>Classifique cada item como Conforme, Não Conforme ou N/A.</small></span></div>
                 </div>
 
-                <div style="margin-bottom: 20px; padding: 14px; border: 1px solid var(--cor-borda, #444); border-radius: 6px; background: var(--cor-sidebar, #1a1a2e);">
-                    <label for="prazo_exigencias_dias" style="display:block; margin-bottom: 6px; font-weight: 600;">
-                        Prazo de validade do relatório <span style="color:#ef4444;">*</span>
-                    </label>
-                    <select id="prazo_exigencias_dias"
-                            name="prazo_exigencias_dias"
-                            required
-                            style="max-width: 280px; padding: 8px 10px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd);">
-                        <option value="" <?= $prazo_exigencias_dias === '' ? 'selected' : '' ?> disabled>Selecione...</option>
-                        <option value="60" <?= $prazo_exigencias_dias === '60' ? 'selected' : '' ?>>60 dias</option>
-                        <option value="90" <?= $prazo_exigencias_dias === '90' ? 'selected' : '' ?>>90 dias</option>
-                    </select>
-                    <small style="display:block; margin-top: 6px; color: var(--cor-texto-secundario, #aaa);">
-                        Selecione obrigatoriamente 60 ou 90 dias. Essa escolha define o vencimento das exigências e a validade do CSN. A/S significa “Antes de suspender” e bloqueia a embarcação e todos os certificados.
-                    </small>
+                <div class="checklist-summary" aria-live="polite">
+                    <div><span class="checklist-summary-icon is-progress"><i class="fas fa-list-check"></i></span><span><small>Respondidos</small><strong id="checklistRespondidos">0</strong></span></div>
+                    <div><span class="checklist-summary-icon is-pending"><i class="fas fa-clock"></i></span><span><small>Pendentes</small><strong id="checklistPendentes">0</strong></span></div>
+                    <div><span class="checklist-summary-icon is-danger"><i class="fas fa-triangle-exclamation"></i></span><span><small>Não conformes</small><strong id="checklistNaoConformes">0</strong></span></div>
+                    <div><span class="checklist-summary-icon is-as"><i class="fas fa-ban"></i></span><span><small>Exigências A/S</small><strong id="checklistAS">0</strong></span></div>
+                </div>
+
+                <div class="checklist-search">
+                    <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                    <label class="sr-only" for="buscaChecklist">Pesquisar item do checklist</label>
+                    <input type="search" id="buscaChecklist" class="form-control" placeholder="Pesquisar exigência, descrição ou referência NORMAM...">
                 </div>
 
                 <div id="checklist-container">
                     <?php foreach ($checklist_categorias as $cat): ?>
-                    <div class="checklist-section" data-cat="<?= $cat['id'] ?>">
-                        <div class="checklist-header" onclick="toggleSection('cat_<?= $cat['id'] ?>')">
-                            <span><?= h($cat['nome']) ?> <span style="color:#aaa; font-weight:normal;">(<?= count($cat['itens']) ?> itens)</span></span>
+                    <div class="checklist-section" data-cat="<?= $cat['id'] ?>" data-total="<?= count($cat['itens']) ?>">
+                        <button type="button" class="checklist-header" aria-expanded="false" aria-controls="cat_<?= $cat['id'] ?>" onclick="toggleSection('cat_<?= $cat['id'] ?>', this)">
+                            <span class="checklist-category-name"><?= h($cat['nome']) ?></span>
+                            <span class="checklist-category-metrics">
+                                <span class="category-progress"><b data-counter="respondidos">0</b>/<?= count($cat['itens']) ?> respondidos</span>
+                                <span class="category-issues" data-badge="exigencias"><b data-counter="exigencias">0</b> exigências</span>
+                                <span class="category-as is-hidden" data-badge="as"><b data-counter="as">0</b> A/S</span>
+                            </span>
                             <i class="fas fa-chevron-down icone-toggle"></i>
-                        </div>
+                        </button>
                         <div class="checklist-body" id="cat_<?= $cat['id'] ?>">
                             <?php foreach ($cat['itens'] as $item):
                                 $resp = $checklist_respostas[$item['id']] ?? null;
@@ -963,7 +1100,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </div>
                     <?php endforeach; ?>
                 </div>
-            </div>
+                <div id="checklistSemResultados" class="checklist-no-results is-hidden"><i class="fas fa-search"></i><strong>Nenhum item encontrado</strong><span>Tente pesquisar usando outra palavra ou referência.</span></div>
+            </section>
 
             <!-- ===== EXIGÊNCIAS AVULSAS ===== -->
             <div style="padding: 20px;" class="avulsa-section">
@@ -1060,6 +1198,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
             <!-- ===== OBSERVACOES TECNICAS ===== -->
             <div style="padding: 0 20px 20px;" class="observacoes-section">
+                <h4 style="margin: 0 0 4px; font-size: 1rem; color: var(--cor-destaque, #2ECC71);"><i class="fas fa-flag-checkered"></i> Conclusão da Vistoria</h4>
+                <small class="text-muted" style="display:block; margin-bottom:15px;">Registre observações gerais e defina o encaminhamento do relatório.</small>
                 <div class="form-group">
                     <label for="observacoes_tecnicas">
                         <i class="fas fa-sticky-note"></i> Observações Técnicas
@@ -1098,13 +1238,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <i class="fas fa-save"></i>
                     <?php echo $editando ? 'Atualizar Relatorio' : 'Salvar Relatorio'; ?>
                 </button>
-                <span id="rascunhoRelatorioStatus" class="text-muted" style="font-size:.8rem;">
-                    <i class="fas fa-cloud-arrow-down"></i> Preenchimento preservado automaticamente neste navegador.
-                </span>
                 <?php if ($editando && !empty($vistoria['id'])): ?>
-                    <a href="<?php echo APP_URL; ?>vistorias/relatorio_pdf.php?id=<?php echo urlencode($vistoria['id']); ?>" target="_blank" class="btn btn-info" style="color: #fff;">
+                    <a href="<?php echo APP_URL; ?>vistorias/relatorio_pdf.php?id=<?php echo urlencode($vistoria['id']); ?>" target="_blank" class="btn btn-info report-footer-pdf" style="color: #fff;">
                         <i class="fas fa-file-pdf"></i> Visualizar Relatório
                     </a>
+                <?php else: ?>
+                    <span class="report-pdf-after-save"><i class="fas fa-file-pdf"></i> O PDF estará disponível após salvar.</span>
                 <?php endif; ?>
                 <?php if ($editando && $pode_ir_etapa2): ?>
                     <a href="<?php echo APP_URL; ?>documentacao/novo_certificado?agendamento_id=<?php echo urlencode($agendamento_id); ?>" class="btn btn-success">
@@ -1114,6 +1253,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <a href="<?php echo APP_URL; ?>agendamentos" class="btn btn-secondary">
                     <i class="fas fa-times"></i> Cancelar
                 </a>
+                <span id="rascunhoRelatorioStatus" class="text-muted report-draft-status">
+                    <i class="fas fa-cloud-arrow-down"></i> Preenchimento preservado automaticamente neste navegador.
+                </span>
                 <?php if ($editando): ?>
                     <span class="text-muted" style="margin-left: 15px; font-size: 0.8rem;">
                         <i class="fas fa-info-circle"></i>
@@ -1204,6 +1346,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 const asCheck = item.querySelector('.checklist-sem-prazo');
                 if (asOculto && asCheck) asCheck.checked = asOculto.value === '1';
             });
+            if (typeof atualizarContadoresChecklist === 'function') atualizarContadoresChecklist();
             if (status) status.innerHTML = '<i class="fas fa-rotate-left"></i> Preenchimento anterior restaurado.';
         } catch (e) {
             localStorage.removeItem(draftKey);
@@ -1229,16 +1372,46 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     form.addEventListener('submit', salvar);
 })();
 
+function atualizarContadoresChecklist() {
+    let total = 0, respondidos = 0, naoConformes = 0, totalAS = 0;
+    document.querySelectorAll('.checklist-section').forEach(function(section) {
+        let catRespondidos = 0, catExigencias = 0, catAS = 0;
+        const itens = section.querySelectorAll('.checklist-item');
+        total += itens.length;
+        itens.forEach(function(item) {
+            const status = document.getElementById('status_' + item.dataset.id)?.value || '';
+            if (status !== '') { respondidos++; catRespondidos++; }
+            if (status === 'NAO_CONFORME') {
+                naoConformes++; catExigencias++;
+                const semPrazo = document.getElementById('sem_prazo_' + item.dataset.id);
+                if (semPrazo?.value === '1') { totalAS++; catAS++; }
+            }
+        });
+        section.querySelector('[data-counter="respondidos"]').textContent = String(catRespondidos);
+        section.querySelector('[data-counter="exigencias"]').textContent = String(catExigencias);
+        section.querySelector('[data-counter="as"]').textContent = String(catAS);
+        section.querySelector('[data-badge="exigencias"]')?.classList.toggle('is-zero', catExigencias === 0);
+        section.querySelector('[data-badge="as"]')?.classList.toggle('is-hidden', catAS === 0);
+    });
+    document.getElementById('checklistRespondidos').textContent = respondidos + ' / ' + total;
+    document.getElementById('checklistPendentes').textContent = String(Math.max(0, total - respondidos));
+    document.getElementById('checklistNaoConformes').textContent = String(naoConformes);
+    document.getElementById('checklistAS').textContent = String(totalAS);
+}
+
 // Toggle Accordions
-function toggleSection(id) {
+function toggleSection(id, headerButton) {
     const body = document.getElementById(id);
-    const icon = body.previousElementSibling.querySelector('.icone-toggle');
+    const header = headerButton || body.previousElementSibling;
+    const icon = header.querySelector('.icone-toggle');
     if (body.style.display === 'block') {
         body.style.display = 'none';
+        header.setAttribute('aria-expanded', 'false');
         icon.classList.remove('fa-chevron-up');
         icon.classList.add('fa-chevron-down');
     } else {
         body.style.display = 'block';
+        header.setAttribute('aria-expanded', 'true');
         icon.classList.remove('fa-chevron-down');
         icon.classList.add('fa-chevron-up');
     }
@@ -1270,29 +1443,36 @@ function setStatus(itemId, status, btnElement) {
         const semPrazoCheck = detailsDiv.querySelector('.checklist-sem-prazo');
         if (semPrazoCheck) semPrazoCheck.checked = false;
     }
+    atualizarContadoresChecklist();
 }
 
 document.querySelectorAll('.checklist-sem-prazo').forEach(function(checkbox) {
     checkbox.addEventListener('change', function() {
         const target = document.getElementById(this.dataset.target);
         if (target) target.value = this.checked ? '1' : '0';
+        atualizarContadoresChecklist();
     });
 });
 
 // Busca / Filtro do Checklist
 document.getElementById('buscaChecklist').addEventListener('input', function() {
-    const term = this.value.toLowerCase();
+    const term = this.value.trim().toLowerCase();
     const sections = document.querySelectorAll('.checklist-section');
+    let totalVisiveis = 0;
 
     sections.forEach(section => {
         let hasVisible = false;
         const items = section.querySelectorAll('.checklist-item');
+        const body = section.querySelector('.checklist-body');
+        const header = section.querySelector('.checklist-header');
+        const icon = section.querySelector('.icone-toggle');
 
         items.forEach(item => {
             const text = item.getAttribute('data-text');
             if (term === '' || text.indexOf(term) > -1) {
                 item.style.display = 'block';
                 hasVisible = true;
+                totalVisiveis++;
             } else {
                 item.style.display = 'none';
             }
@@ -1302,17 +1482,31 @@ document.getElementById('buscaChecklist').addEventListener('input', function() {
             section.style.display = 'block';
             // Se está buscando algo, abre o accordion automaticamente
             if (term !== '') {
-                const body = section.querySelector('.checklist-body');
-                const icon = section.querySelector('.icone-toggle');
+                if (section.dataset.searchActive !== '1') {
+                    section.dataset.searchWasOpen = body.style.display === 'block' ? '1' : '0';
+                    section.dataset.searchActive = '1';
+                }
                 body.style.display = 'block';
+                header.setAttribute('aria-expanded', 'true');
                 icon.classList.remove('fa-chevron-down');
                 icon.classList.add('fa-chevron-up');
+            } else if (section.dataset.searchActive === '1') {
+                const abrir = section.dataset.searchWasOpen === '1';
+                body.style.display = abrir ? 'block' : 'none';
+                header.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+                icon.classList.toggle('fa-chevron-up', abrir);
+                icon.classList.toggle('fa-chevron-down', !abrir);
+                delete section.dataset.searchActive;
+                delete section.dataset.searchWasOpen;
             }
         } else {
             section.style.display = 'none';
         }
     });
+    document.getElementById('checklistSemResultados').classList.toggle('is-hidden', totalVisiveis !== 0);
 });
+
+atualizarContadoresChecklist();
 
 // Tabela Avulsa
 let contadorLinhasAvulsa = <?php echo count($exigencias_avulsas); ?>;

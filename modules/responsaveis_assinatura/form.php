@@ -8,6 +8,7 @@ exigirAcesso('responsaveis_assinatura');
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $responsavel = null;
+$usuariosDisponiveis = [];
 
 if ($id) {
     $stmt = $pdo->prepare("SELECT * FROM responsaveis_assinatura WHERE id = ?");
@@ -19,6 +20,16 @@ if ($id) {
         exit;
     }
 }
+
+$stmtUsuarios = $pdo->prepare("SELECT u.id,u.nome,u.email,u.cargo
+    FROM usuarios u
+    LEFT JOIN responsaveis_assinatura ra ON ra.usuario_id=u.id AND ra.id<>:responsavel
+    WHERE u.ativo=1 AND u.excluido_em IS NULL
+      AND u.cargo IN ('ADMIN','VISTORIADOR','ANALISTA')
+      AND ra.id IS NULL
+    ORDER BY u.nome");
+$stmtUsuarios->execute([':responsavel'=>$id]);
+$usuariosDisponiveis = $stmtUsuarios->fetchAll(PDO::FETCH_ASSOC);
 
 $page_title = $id ? "Editar Responsável" : "Novo Responsável";
 require_once __DIR__ . '/../../includes/header.php';
@@ -52,6 +63,27 @@ require_once __DIR__ . '/../../includes/header.php';
                         <label for="cargo_titulo" class="form-label">Cargo/Título *</label>
                         <input type="text" class="form-control" id="cargo_titulo" name="cargo_titulo" 
                                value="<?= htmlspecialchars($responsavel['cargo_titulo'] ?? '') ?>" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="usuario_id" class="form-label">Usuário vinculado *</label>
+                        <select class="form-control" id="usuario_id" name="usuario_id" required>
+                            <option value="">Selecione...</option>
+                            <?php foreach ($usuariosDisponiveis as $usuario): ?>
+                                <option value="<?= h($usuario['id']) ?>" data-email="<?= h($usuario['email']) ?>" <?= ($responsavel['usuario_id'] ?? '') === $usuario['id'] ? 'selected' : '' ?>>
+                                    <?= h($usuario['nome'].' · '.$usuario['cargo'].' · '.$usuario['email']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-muted">Este usuário será o único autorizado a usar esta assinatura.</small>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="email" class="form-label">E-mail para notificações *</label>
+                        <input type="email" class="form-control" id="email" name="email" maxlength="190"
+                               value="<?= h($responsavel['email'] ?? '') ?>" required>
                     </div>
                 </div>
 

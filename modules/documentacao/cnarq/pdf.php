@@ -361,11 +361,16 @@ $pdf->SetXY($boxX + 1, $infoY + 10.8);
 $pdf->Cell(188, 4, 'Observações:', 0, 1, 'L');
 $pdf->SetFont('helvetica', '', 8.5);
 $obs1 = '1. Este Certificado ' . ucfirst(mb_strtolower($tipo, 'UTF-8')) . ' foi emitido com base no Relatório de Vistorias n.º ' . cnarqText($c['relatorio_numero'] ?? '') . '.';
-$obs2 = '2. Vistoria Flutuando para emissão do Certificado de Segurança da Navegação realizada em ' . cnarqDataBR($c['data_vistoria']) . ' em ' . cnarqText($c['local_vistoria'] ?? '') . '.';
+$tipoVistoria = trim(cnarqText($c['tipo_vistoria_certificado'] ?? '')) ?: 'Flutuando';
+$obs2 = '2. Vistoria ' . $tipoVistoria . ' para emissão do certificado realizada em ' . cnarqDataBR($c['data_vistoria']) . ' em ' . cnarqText($c['local_vistoria'] ?? '') . '.';
 $pdf->SetX($boxX + 1);
 $pdf->MultiCell(188, 5, cnarqPdfText($obs1), 0, 'L');
 $pdf->SetX($boxX + 1);
 $pdf->MultiCell(188, 5, cnarqPdfText($obs2), 0, 'L');
+if (trim((string)($c['observacoes_verso'] ?? '')) !== '') {
+    $pdf->SetX($boxX + 1);
+    $pdf->MultiCell(188, 5, cnarqPdfText($c['observacoes_verso']), 0, 'L');
+}
 
 $pdf->SetFont('helvetica', 'B', 8);
 $pdf->Rect(10, 215, 73, 6);
