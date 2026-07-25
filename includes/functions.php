@@ -1063,10 +1063,41 @@ function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, stri
     $origemId = trim((string)($agendamento['relatorio_origem_id'] ?? ''));
     if ($origemId === '') return null;
 
-    $stmt = $pdo->prepare('SELECT id FROM vistorias WHERE agendamento_id=:agendamento LIMIT 1');
+    // Serialize creation through the auditable return row. Database unique
+    // constraints remain the final guard against concurrent requests.
+    $stmt = $pdo->prepare('SELECT * FROM vistoria_retornos WHERE relatorio_origem_id=:origem FOR UPDATE');
+    $stmt->execute([':origem' => $origemId]);
+    $retorno = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$retorno) {
+        throw new RuntimeException('A pendencia auditavel do retorno A/S nao foi encontrada.');
+    }
+    if (!empty($retorno['agendamento_id']) && $retorno['agendamento_id'] !== $agendamento['id']) {
+        throw new RuntimeException('Este retorno A/S ja pertence a outro agendamento.');
+    }
+    if (!in_array((string)$retorno['status'], ['PENDENTE_AGENDAMENTO', 'AGENDADO'], true)) {
+        throw new RuntimeException('Este retorno A/S nao esta disponivel para gerar outro relatorio.');
+    }
+
+    $stmt = $pdo->prepare('SELECT id FROM vistorias WHERE agendamento_id=:agendamento LIMIT 1 FOR UPDATE');
     $stmt->execute([':agendamento' => $agendamento['id']]);
     $existente = (string)$stmt->fetchColumn();
-    if ($existente !== '') return $existente;
+    if ($existente !== '') {
+        if (!empty($retorno['relatorio_resultado_id'])
+            && (string)$retorno['relatorio_resultado_id'] !== $existente) {
+            throw new RuntimeException('O retorno A/S aponta para outro relatorio.');
+        }
+        $pdo->prepare("UPDATE vistoria_retornos
+            SET status=IF(status='PENDENTE_AGENDAMENTO','AGENDADO',status),
+                agendamento_id=:agendamento,
+                relatorio_resultado_id=COALESCE(relatorio_resultado_id,:relatorio)
+            WHERE id=:id")
+            ->execute([
+                ':agendamento' => $agendamento['id'],
+                ':relatorio' => $existente,
+                ':id' => $retorno['id'],
+            ]);
+        return $existente;
+    }
 
     $stmt = $pdo->prepare('SELECT * FROM vistorias WHERE id=:id FOR UPDATE');
     $stmt->execute([':id' => $origemId]);
@@ -1124,10 +1155,22 @@ function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, stri
     if ($stmt->rowCount() === 0) {
         throw new RuntimeException('Nenhuma A/S pendente foi encontrada para o retorno.');
     }
-    $pdo->prepare("UPDATE vistoria_retornos
+    $stmtRetorno = $pdo->prepare("UPDATE vistoria_retornos
         SET status='AGENDADO',agendamento_id=:agendamento,relatorio_resultado_id=:relatorio
-        WHERE relatorio_origem_id=:origem")
-        ->execute([':agendamento' => $agendamento['id'], ':relatorio' => $novoId, ':origem' => $origemId]);
+        WHERE id=:id
+          AND status IN ('PENDENTE_AGENDAMENTO','AGENDADO')
+          AND (agendamento_id IS NULL OR agendamento_id=:agendamento2)
+          AND (relatorio_resultado_id IS NULL OR relatorio_resultado_id=:relatorio2)");
+    $stmtRetorno->execute([
+        ':agendamento' => $agendamento['id'],
+        ':relatorio' => $novoId,
+        ':id' => $retorno['id'],
+        ':agendamento2' => $agendamento['id'],
+        ':relatorio2' => $novoId,
+    ]);
+    if ($stmtRetorno->rowCount() !== 1) {
+        throw new RuntimeException('O retorno A/S foi alterado por outra operacao.');
+    }
     return $novoId;
 }
 

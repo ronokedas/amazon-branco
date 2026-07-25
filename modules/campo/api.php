@@ -119,12 +119,17 @@ function campoVistoriaPorAgendamento(PDO $pdo, string $agendamentoId, bool $bloq
 
 function campoCriarVistoria(PDO $pdo, array $ag, string $usuarioId): array {
     $id = gerarUUID();
-    $numero = gerarNumeroDocumento('REL-V', 'AM-REL-V');
+    $origemId = trim((string)($ag['relatorio_origem_id'] ?? '')) ?: null;
+    $isArqueacao = stripos((string)($ag['tipo_vistoria'] ?? ''), 'arquea') !== false;
+    $numero = $isArqueacao
+        ? gerarNumeroDocumento('REL-AP', 'AM-REL-AP')
+        : gerarNumeroDocumento('REL-V', 'AM-REL-V');
     $stmt = $pdo->prepare("INSERT INTO vistorias
         (id, numero, embarcacao_id, pessoa_id, armador_id, operador_nome, agendamento_id,
-         data_vistoria, status, criado_por, mobile_versao)
+         relatorio_anterior_id, finalidade, data_vistoria, status, criado_por, mobile_versao)
         VALUES (:id, :numero, :embarcacao_id, :pessoa_id, :armador_id, :operador_nome,
-                :agendamento_id, :data_vistoria, 'PENDENTE', :criado_por, 0)");
+                :agendamento_id, :relatorio_anterior_id, :finalidade,
+                :data_vistoria, 'PENDENTE', :criado_por, 0)");
     $stmt->execute([
         ':id' => $id,
         ':numero' => $numero,
@@ -133,6 +138,8 @@ function campoCriarVistoria(PDO $pdo, array $ag, string $usuarioId): array {
         ':armador_id' => $ag['armador_id'] ?: null,
         ':operador_nome' => $ag['operador_nome'] ?: null,
         ':agendamento_id' => $ag['id'],
+        ':relatorio_anterior_id' => $origemId,
+        ':finalidade' => $origemId ? 'CUMPRIMENTO_EXIGENCIAS' : 'VISTORIA',
         ':data_vistoria' => $ag['data_vistoria'] ?: date('Y-m-d'),
         ':criado_por' => $usuarioId,
     ]);

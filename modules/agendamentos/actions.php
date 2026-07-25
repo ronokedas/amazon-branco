@@ -264,6 +264,18 @@ switch ($action) {
             }
 
             $pdo->beginTransaction();
+            if ($relatorio_origem_id !== '') {
+                $stmtRetornoLock = $pdo->prepare("SELECT id,status,agendamento_id
+                    FROM vistoria_retornos
+                    WHERE relatorio_origem_id=:origem
+                    FOR UPDATE");
+                $stmtRetornoLock->execute([':origem' => $relatorio_origem_id]);
+                $retornoLock = $stmtRetornoLock->fetch(PDO::FETCH_ASSOC);
+                if (!$retornoLock || $retornoLock['status'] !== 'PENDENTE_AGENDAMENTO'
+                    || !empty($retornoLock['agendamento_id'])) {
+                    throw new RuntimeException('Este retorno A/S ja possui agendamento ou foi concluido.');
+                }
+            }
             $novoAgendamentoId = gerarUUID();
             $stmt = $pdo->prepare("
                 INSERT INTO agendamentos (
@@ -296,10 +308,18 @@ switch ($action) {
                 ':criado_por'      => $_SESSION['usuario_id'],
             ]);
             if ($relatorio_origem_id !== '') {
-                $pdo->prepare("UPDATE vistoria_retornos
+                $stmtVincularRetorno = $pdo->prepare("UPDATE vistoria_retornos
                     SET status='AGENDADO',agendamento_id=:agendamento
-                    WHERE relatorio_origem_id=:origem AND status='PENDENTE_AGENDAMENTO'")
-                    ->execute([':agendamento' => $novoAgendamentoId, ':origem' => $relatorio_origem_id]);
+                    WHERE relatorio_origem_id=:origem
+                      AND status='PENDENTE_AGENDAMENTO'
+                      AND agendamento_id IS NULL");
+                $stmtVincularRetorno->execute([
+                    ':agendamento' => $novoAgendamentoId,
+                    ':origem' => $relatorio_origem_id,
+                ]);
+                if ($stmtVincularRetorno->rowCount() !== 1) {
+                    throw new RuntimeException('O retorno A/S foi agendado por outra operacao.');
+                }
             }
             $pdo->commit();
 

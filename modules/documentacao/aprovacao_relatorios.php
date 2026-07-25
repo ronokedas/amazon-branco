@@ -9,7 +9,7 @@ exigirAcesso('relatorios_aprovacao');
 
 global $pdo;
 
-$stmt = $pdo->prepare("SELECT v.id, v.numero, v.status, v.data_vistoria, v.atualizado_em as data_envio, v.agendamento_id, e.nome as embarcacao, e.registro, COALESCE(u.nome,'Sem vistoriador vinculado') as vistoriador, COUNT(ve.id) as total_itens, SUM(CASE WHEN ve.conforme = 'nao' THEN 1 ELSE 0 END) as itens_nao_conformes, (SELECT COUNT(*) FROM vistoria_anexos va WHERE va.vistoria_id = v.id) AS total_fotos FROM vistorias v JOIN embarcacoes e ON v.embarcacao_id = e.id LEFT JOIN agendamentos a ON v.agendamento_id = a.id LEFT JOIN usuarios u ON a.vistoriador_id = u.id LEFT JOIN vistoria_exigencias ve ON v.id = ve.vistoria_id WHERE v.status = 'AGUARDANDO_APROVACAO' GROUP BY v.id ORDER BY v.atualizado_em ASC");
+$stmt = $pdo->prepare("SELECT v.id, v.numero, v.status, v.data_vistoria, v.atualizado_em as data_envio, v.agendamento_id, e.nome as embarcacao, e.registro, COALESCE(u.nome,'Sem vistoriador vinculado') as vistoriador, COUNT(ve.id) as total_itens, SUM(CASE WHEN ve.conforme = 'nao' THEN 1 ELSE 0 END) as itens_nao_conformes, (SELECT COUNT(*) FROM vistoria_anexos va WHERE va.vistoria_id = v.id) AS total_fotos FROM vistorias v JOIN embarcacoes e ON v.embarcacao_id = e.id LEFT JOIN agendamentos a ON v.agendamento_id = a.id LEFT JOIN usuarios u ON a.vistoriador_id = u.id LEFT JOIN vistoria_exigencias ve ON v.id = ve.vistoria_id WHERE v.status = 'AGUARDANDO_APROVACAO' AND NOT EXISTS (SELECT 1 FROM vistorias vf WHERE vf.relatorio_anterior_id=v.id AND vf.status<>'CANCELADA') GROUP BY v.id ORDER BY v.atualizado_em ASC");
 $stmt->execute();
 $pendentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

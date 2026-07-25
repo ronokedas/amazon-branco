@@ -226,10 +226,15 @@ if ($vistoria && $possui_as_pendente && in_array($vistoria['status'], ['APROVADA
 }
 $liberacao_certificacao = $vistoria ? avaliarLiberacaoCertificacao($pdo, $vistoria['id']) : ['permitido' => false];
 $relatorio_substituto_aprovado = null;
+$relatorio_vigente_cadeia = null;
+$eh_relatorio_vigente = true;
 $cadeia_relatorios = [];
 $retorno_as = null;
 if ($vistoria) {
     $cadeia_relatorios = obterCadeiaRelatorios($pdo, (string)$vistoria['id']);
+    $relatorio_vigente_cadeia = obterRelatorioVigenteCadeia($pdo, (string)$vistoria['id']);
+    $eh_relatorio_vigente = !empty($relatorio_vigente_cadeia)
+        && (string)$relatorio_vigente_cadeia['id'] === (string)$vistoria['id'];
     $stmtRetornoAs = $pdo->prepare("SELECT vr.*,a.data_vistoria,a.local,u.nome vistoriador_nome
         FROM vistoria_retornos vr
         LEFT JOIN agendamentos a ON a.id=vr.agendamento_id
@@ -237,12 +242,9 @@ if ($vistoria) {
         WHERE vr.relatorio_origem_id=:id LIMIT 1");
     $stmtRetornoAs->execute([':id' => $vistoria['id']]);
     $retorno_as = $stmtRetornoAs->fetch(PDO::FETCH_ASSOC) ?: null;
-    $stmtSubstituto = $pdo->prepare("SELECT id, numero FROM vistorias
-        WHERE relatorio_anterior_id = :anterior
-          AND status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')
-        ORDER BY criado_em DESC, id DESC LIMIT 1");
-    $stmtSubstituto->execute([':anterior' => $vistoria['id']]);
-    $relatorio_substituto_aprovado = $stmtSubstituto->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$eh_relatorio_vigente) {
+        $relatorio_substituto_aprovado = $relatorio_vigente_cadeia;
+    }
 }
 
 // ============================================
@@ -560,9 +562,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 <?php endif; ?>
 <?php if ($relatorio_substituto_aprovado): ?>
     <div class="alert alert-info" style="margin-bottom:20px;">
-        <strong>Relatório histórico/substituído.</strong>
-        Para decisões atuais e certificação, use
-        <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($agendamento_id) ?>&vistoria_id=<?= urlencode($relatorio_substituto_aprovado['id']) ?>"><?= h($relatorio_substituto_aprovado['numero']) ?></a>.
+        <strong>Relatório histórico/substituído — somente leitura.</strong>
+        Nenhuma decisão pode ser registrada nesta versão. Use o relatório vigente
+        <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode((string)$relatorio_substituto_aprovado['agendamento_id']) ?>&vistoria_id=<?= urlencode((string)$relatorio_substituto_aprovado['id']) ?>"><?= h($relatorio_substituto_aprovado['numero']) ?></a>.
     </div>
 <?php endif; ?>
 <?php if ($vistoria && $possui_as_pendente && in_array($vistoria['status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)): ?>
@@ -732,7 +734,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <div class="admin-review-panel admin-decision-card">
                         <h4><i class="fas fa-gavel"></i> Resultado final da vistoria</h4>
                         <div class="admin-review-body">
-                            <?php if (($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO' && $cargo === 'ADMIN'): ?>
+                            <?php if (($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO' && $cargo === 'ADMIN' && $eh_relatorio_vigente): ?>
                                 <form method="POST" action="<?= APP_URL ?>vistorias/actions?action=aprovar_ou_reprovar" id="formDecisaoAdmin">
                                     <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()); ?>">
                                     <input type="hidden" name="id" value="<?= h($vistoria['id']); ?>">
@@ -797,6 +799,15 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         </a>
                                     </div>
                                 </form>
+                            <?php elseif (($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO' && !$eh_relatorio_vigente): ?>
+                                <div class="admin-review-text">
+                                    Este relatório foi substituído e permanece disponível somente para consulta.
+                                    <?php if ($relatorio_vigente_cadeia): ?>
+                                        <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode((string)$relatorio_vigente_cadeia['agendamento_id']) ?>&vistoria_id=<?= urlencode((string)$relatorio_vigente_cadeia['id']) ?>">
+                                            Abrir <?= h($relatorio_vigente_cadeia['numero'] ?: $relatorio_vigente_cadeia['id']) ?>
+                                        </a>.
+                                    <?php endif; ?>
+                                </div>
                             <?php elseif (($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO'): ?>
                                 <div class="admin-review-text">
                                     O relat&oacute;rio est&aacute; dispon&iacute;vel para revis&atilde;o. Somente o vistoriador atribu&iacute;do pode alterar seu conte&uacute;do e suas exig&ecirc;ncias.

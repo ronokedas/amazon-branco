@@ -1,6 +1,30 @@
-# Intencionalmente vazio.
-#
-# Este projeto publica todos os arquivos no GitHub, inclusive .env,
-# dependencias, uploads, documentos, backups, logs e arquivos de runtime.
-# Use `git add --all` ou `scripts/publicar_tudo_github.ps1` para que nenhum
-# arquivo novo seja omitido.
+# Segredos e configuracoes locais
+.env
+.env.*
+!.env.example
+
+# Dependencias
+/vendor/
+**/node_modules/
+
+# Dados e arquivos gerados em runtime
+/logs/
+/minio-data/
+/storage/sessions/
+/storage/documentos_assinados/
+/uploads/
+/tmp/
+/temp_pdf/
+/test-results/
+**/test-results/
+
+# Artefatos temporarios
+*.log
+*.tmp
+*.bak
+
+# Arquivos do sistema/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

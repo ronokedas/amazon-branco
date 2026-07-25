@@ -638,10 +638,12 @@ switch ($action) {
 
             $blocos_permitidos_relatorio = blocosPermitidosRelatorioAction((string)($ag['tipo_vistoria'] ?? ''));
 
-            // Relatorio anterior (se existir) do form (mas não enviamos, vamos buscar novamente ou atualizar)
-            $stmtAnt = $pdo->prepare("SELECT id FROM vistorias WHERE embarcacao_id = :emb_id AND status IN ('APROVADA', 'APROVADA_COM_EXIGENCIAS') ORDER BY data_vistoria DESC, id DESC LIMIT 1");
-            $stmtAnt->execute([':emb_id' => $ag['embarcacao_id']]);
-            $relatorio_anterior_id = $stmtAnt->fetchColumn() ?: null;
+            // Somente um agendamento formal de retorno A/S cria continuidade.
+            // Vistorias comuns são raízes independentes, mesmo para a mesma embarcação.
+            $relatorio_anterior_id = trim((string)($ag['relatorio_origem_id'] ?? '')) ?: null;
+            $finalidade_relatorio = $relatorio_anterior_id !== null
+                ? 'CUMPRIMENTO_EXIGENCIAS'
+                : 'VISTORIA';
 
             // Gerar texto automático
             $txt_gerado = "";
@@ -675,8 +677,8 @@ switch ($action) {
                 // Criar nova vistoria com numero
                 $vistoria_id = gerarUUID();
                 $stmtV = $pdo->prepare("
-                    INSERT INTO vistorias (id, numero, embarcacao_id, pessoa_id, armador_id, operador_nome, agendamento_id, data_vistoria, prazo_exigencias_dias, observacoes_tecnicas, status, criado_por, relatorio_anterior_id, texto_observacoes_geradas)
-                    VALUES (:id, :numero, :embarcacao_id, :pessoa_id, :armador_id, :operador_nome, :agendamento_id, :data_vistoria, :prazo_exigencias_dias, :obs_tecnicas, :status, :criado_por, :rel_ant, :txt_gerado)
+                    INSERT INTO vistorias (id, numero, embarcacao_id, pessoa_id, armador_id, operador_nome, agendamento_id, data_vistoria, prazo_exigencias_dias, observacoes_tecnicas, status, criado_por, relatorio_anterior_id, finalidade, texto_observacoes_geradas)
+                    VALUES (:id, :numero, :embarcacao_id, :pessoa_id, :armador_id, :operador_nome, :agendamento_id, :data_vistoria, :prazo_exigencias_dias, :obs_tecnicas, :status, :criado_por, :rel_ant, :finalidade, :txt_gerado)
                 ");
                 $stmtV->execute([
                     ':id'             => $vistoria_id,
@@ -692,6 +694,7 @@ switch ($action) {
                     ':status'         => $status_vistoria,
                     ':criado_por'     => $_SESSION['usuario_id'],
                     ':rel_ant'        => $relatorio_anterior_id,
+                    ':finalidade'     => $finalidade_relatorio,
                     ':txt_gerado'     => $txt_gerado ?: null,
                 ]);
             } else {
@@ -710,8 +713,7 @@ switch ($action) {
                         observacoes_tecnicas = :obs_tecnicas, status = :status,
                         aprovado_por = IF(:status_check IN ('APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA'), :aprovador, aprovado_por),
                         data_aprovacao = IF(:status2 IN ('APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA'), NOW(), data_aprovacao),
-                        texto_observacoes_geradas = :txt_gerado,
-                        relatorio_anterior_id = :rel_ant
+                        texto_observacoes_geradas = :txt_gerado
                     WHERE id = :id
                 ");
                 $stmtV->execute([
@@ -725,7 +727,6 @@ switch ($action) {
                     ':aprovador'    => $_SESSION['usuario_id'],
                     ':status2'      => $status_vistoria,
                     ':txt_gerado'   => $txt_gerado ?: null,
-                    ':rel_ant'      => $relatorio_anterior_id,
                     ':id'           => $vistoria_id,
                 ]);
 
@@ -1035,7 +1036,12 @@ switch ($action) {
             // Retornos A/S possuem novos agendamentos; a vigência é da cadeia.
             $relatorioVigente = obterRelatorioVigenteCadeia($pdo, (string)$id);
             if (!$relatorioVigente || $relatorioVigente['id'] !== $id) {
-                throw new Exception('Somente o relatorio vigente da cadeia pode receber uma decisao.');
+                $numeroVigente = trim((string)($relatorioVigente['numero'] ?? ''));
+                throw new Exception(
+                    'Este relatorio foi substituido. Abra o relatorio vigente'
+                    . ($numeroVigente !== '' ? ' ' . $numeroVigente : '')
+                    . ' para registrar a decisao.'
+                );
             }
 
             if ($aprovando) {
@@ -1047,7 +1053,7 @@ switch ($action) {
                 $status_vistoria = (string)$resumoAprovacao['status_esperado'];
             }
 
-            $statusFinalizaFluxo = $aprovando || $status_vistoria === 'REPROVADA';
+            $statusFinalizaFluxo = $aprovando || in_array($status_vistoria, ['REPROVADA','CANCELADA'], true);
             if (!$aprovando && in_array($status_vistoria, ['PENDENTE','REPROVADA','CANCELADA'], true) && ($vistoria['assinatura_status'] ?? '') === 'ASSINADO') {
                 $pdo->prepare("UPDATE documento_assinaturas SET status='CANCELADO',cancelado_em=NOW(),cancelado_por=:usuario,motivo_cancelamento=:motivo WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='ASSINADO'")->execute([':usuario'=>$_SESSION['usuario_id'],':motivo'=>$observacao?:'Relatorio devolvido para correcao.',':id'=>$id]);
                 $pdo->prepare("UPDATE vistorias SET assinatura_status='CANCELADO',assinatura_em=NULL,responsavel_assinatura_id=NULL WHERE id=:id")->execute([':id'=>$id]);
@@ -1068,6 +1074,32 @@ switch ($action) {
                 ':finaliza_data' => $statusFinalizaFluxo ? 1 : 0,
                 ':id' => $id
             ]);
+
+            if ($status_vistoria === 'CANCELADA') {
+                if (($vistoria['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS') {
+                    $pdo->prepare("UPDATE vistoria_retornos
+                        SET status='CANCELADO',
+                            motivo_cancelamento=:motivo,
+                            cancelado_por=:usuario,
+                            cancelado_em=NOW()
+                        WHERE relatorio_resultado_id=:relatorio
+                           OR agendamento_id=:agendamento")
+                        ->execute([
+                            ':motivo' => $observacao ?: 'Relatorio de cumprimento cancelado pelo administrador.',
+                            ':usuario' => $_SESSION['usuario_id'],
+                            ':relatorio' => $id,
+                            ':agendamento' => $agendamento_id,
+                        ]);
+                }
+                $pdo->prepare("UPDATE ordens_servico
+                    SET status='cancelado'
+                    WHERE agendamento_id=:agendamento AND status<>'cancelado'")
+                    ->execute([':agendamento' => $agendamento_id]);
+                $pdo->prepare("UPDATE agendamentos
+                    SET status='cancelado'
+                    WHERE id=:agendamento AND status<>'cancelado'")
+                    ->execute([':agendamento' => $agendamento_id]);
+            }
 
             if ($aprovando) {
                 if (($vistoria['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS') {
@@ -1105,7 +1137,17 @@ switch ($action) {
                 'Somente relatorios aguardando aprovacao podem receber esta decisao.',
                 'Somente o relatorio vigente da cadeia pode receber uma decisao.',
             ];
-            setMensagem('error', in_array($e->getMessage(), $mensagensRevisao, true) ? $e->getMessage() : 'Erro ao processar decisao do relatorio. Tente novamente.');
+            $mensagemErro = $e->getMessage();
+            $mensagemPublica = in_array($mensagemErro, $mensagensRevisao, true)
+                || str_starts_with($mensagemErro, 'Este relatorio foi substituido.')
+                ? $mensagemErro
+                : 'Erro ao processar decisao do relatorio. Tente novamente.';
+            setMensagem('error', $mensagemPublica);
+            if (isset($relatorioVigente) && !empty($relatorioVigente['id']) && $relatorioVigente['id'] !== $id) {
+                redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id='
+                    . urlencode((string)$relatorioVigente['agendamento_id'])
+                    . '&vistoria_id=' . urlencode((string)$relatorioVigente['id']));
+            }
             redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode((string)$agendamento_id) . '&vistoria_id=' . urlencode($id));
         }
 

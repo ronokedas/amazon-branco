@@ -16,6 +16,7 @@ if (!$base) {
 
 $raizId = gerarUUID();
 $filhoId = gerarUUID();
+$agendamentoRaizId = gerarUUID();
 $agendamentoFilhoId = gerarUUID();
 $asRaizId = gerarUUID();
 $comumRaizId = gerarUUID();
@@ -28,11 +29,22 @@ try {
         (id,proposta_id,relatorio_origem_id,embarcacao_id,cliente_id,armador_id,operador_nome,
          vistoriador_id,vendedor_id,tipo_vistoria,data_vistoria,hora_vistoria,local,
          contato_nome,contato_telefone,status,observacoes,criado_por)
-        SELECT :id,proposta_id,NULL,embarcacao_id,cliente_id,armador_id,operador_nome,
-               vistoriador_id,vendedor_id,'Cumprimento de A/S',CURDATE(),hora_vistoria,local,
+        SELECT :id,proposta_id,:origem,embarcacao_id,cliente_id,armador_id,operador_nome,
+               vistoriador_id,vendedor_id,:tipo,CURDATE(),hora_vistoria,local,
                contato_nome,contato_telefone,'confirmado','Teste transacional A/S',criado_por
         FROM agendamentos WHERE id=:base");
-    $stmt->execute([':id'=>$agendamentoFilhoId, ':base'=>$base['id']]);
+    $stmt->execute([
+        ':id'=>$agendamentoRaizId,
+        ':origem'=>null,
+        ':tipo'=>'Vistoria de teste',
+        ':base'=>$base['id'],
+    ]);
+    $stmt->execute([
+        ':id'=>$agendamentoFilhoId,
+        ':origem'=>null,
+        ':tipo'=>'Cumprimento de A/S',
+        ':base'=>$base['id'],
+    ]);
 
     $stmt = $pdo->prepare("INSERT INTO vistorias
         (id,numero,embarcacao_id,pessoa_id,agendamento_id,finalidade,data_vistoria,status)
@@ -41,7 +53,7 @@ try {
     $stmt->execute([
         ':id'=>$raizId, ':numero'=>"TEST-AS-{$sufixo}-0",
         ':embarcacao'=>$base['embarcacao_id'], ':pessoa'=>$base['cliente_id'],
-        ':agendamento'=>$base['id'],
+        ':agendamento'=>$agendamentoRaizId,
     ]);
     $pdo->prepare('UPDATE agendamentos SET relatorio_origem_id=:origem WHERE id=:id')
         ->execute([':origem'=>$raizId, ':id'=>$agendamentoFilhoId]);
