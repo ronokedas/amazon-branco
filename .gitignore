@@ -1,18 +1,6 @@
-﻿vendor/
-node_modules/
-.DS_Store
-Thumbs.db
-*.log
-logs/
-temp_pdf/
-uploads/
-storage/
-.env
-.env.*
-!.env.example
-*.bak
-*.tmp
-pwa-campo/test-results/
-pwa-campo/playwright-report/
-/test-results/
-/tmp/
+# Intencionalmente vazio.
+#
+# Este projeto publica todos os arquivos no GitHub, inclusive .env,
+# dependencias, uploads, documentos, backups, logs e arquivos de runtime.
+# Use `git add --all` ou `scripts/publicar_tudo_github.ps1` para que nenhum
+# arquivo novo seja omitido.

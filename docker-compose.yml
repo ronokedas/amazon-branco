@@ -102,9 +102,8 @@ services:
       - MYSQL_PASSWORD=${DB_PASS:-erp_pass_2026}
     volumes:
       - db_data:/var/lib/mysql
-      - ./docker/init-custom.sql:/docker-entrypoint-initdb.d/01-init-custom.sql
-      - ./docker/02-erp_sistema_mysql.sql:/docker-entrypoint-initdb.d/02-erp_sistema.sql
-      - ./docker/03-add_minio_columns.sql:/docker-entrypoint-initdb.d/03-add_minio_columns.sql
+      # Em uma instalacao nova, o MySQL carrega exclusivamente o dump completo.
+      - ./db.sql:/docker-entrypoint-initdb.d/01-db.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -150,7 +149,8 @@ services:
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-erp_minio_pass_2026}
     command: server /data --console-address ":9001"
     volumes:
-      - minio_data:/data
+      # Bind mount versionado: os objetos do MinIO acompanham o GitHub/VPS.
+      - ./minio-data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -165,7 +165,6 @@ services:
 
 volumes:
   db_data:
-  minio_data:
 
 networks:
   erp_network:

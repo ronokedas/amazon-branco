@@ -1,48 +1,51 @@
-# Deploy do Sistema Amazon no Ubuntu 24.04 com Docker
+# Deploy completo do Sistema Amazon no Ubuntu 24.04 com Docker
 
-Este manual instala o sistema em um VPS Linux Ubuntu 24.04 usando Docker Compose.
+Este manual considera o repositório GitHub como a cópia completa e oficial do
+sistema. O repositório inclui código, `.env`, dependências, banco de dados,
+uploads, PDFs, assinaturas, backups, logs e demais arquivos de runtime.
+Os objetos do MinIO ficam em `minio-data/` e também fazem parte do repositório.
 
-## 1. Atualizar o servidor
+O banco inicial de uma VPS nova é carregado exclusivamente de `db.sql`.
+
+## 1. Preparar o Ubuntu
 
 ```bash
 sudo apt update
 sudo apt upgrade -y
 sudo apt install -y ca-certificates curl gnupg git unzip nano ufw
-sudo reboot
 ```
 
-Depois do reboot, conecte novamente no servidor.
-
-## 2. Instalar Docker e Docker Compose
+Instale o Docker:
 
 ```bash
 sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg |
+  sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" |
+  sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
 
 sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo usermod -aG docker $USER
+sudo usermod -aG docker "$USER"
 ```
 
-Saia do SSH e entre novamente para o grupo `docker` valer.
-
-Teste:
+Saia do SSH e conecte novamente. Confirme:
 
 ```bash
 docker --version
 docker compose version
 ```
 
-## 3. Liberar portas no firewall
+## 2. Configurar o firewall
 
 ```bash
 sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
 sudo ufw allow 8082/tcp
 sudo ufw allow 8083/tcp
 sudo ufw allow 9002/tcp
@@ -51,35 +54,71 @@ sudo ufw enable
 sudo ufw status
 ```
 
-Portas:
+Portas padrão:
 
-- `8082`: sistema ERP
-- `8083`: phpMyAdmin
-- `9002`: MinIO API
-- `9003`: MinIO Console
+- `8082`: ERP, salvo se `APP_PORT` definir outra porta;
+- `8083`: phpMyAdmin;
+- `9002`: API do MinIO;
+- `9003`: console do MinIO.
 
-## 4. Baixar o sistema do GitHub
+## 3. Publicar absolutamente tudo do computador local
+
+No PowerShell do Windows:
+
+```powershell
+cd C:\sistema
+powershell -ExecutionPolicy Bypass -File .\scripts\publicar_tudo_github.ps1 `
+  -Mensagem "Atualiza sistema, banco e arquivos completos"
+```
+
+O script executa cinco ações:
+
+1. exporta o MySQL local completo e substitui `db.sql`;
+2. sincroniza os objetos do MinIO para `minio-data/`;
+3. pausa os containers para congelar os arquivos de runtime;
+4. executa `git add --all`;
+5. cria o commit e envia para `origin/main`;
+6. religa os containers locais, inclusive quando ocorrer uma falha.
+
+Se o Docker local estiver parado e o `db.sql` já estiver atualizado:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\publicar_tudo_github.ps1 `
+  -SemExportarBanco `
+  -Mensagem "Publica todos os arquivos"
+```
+
+Verifique o resultado:
+
+```powershell
+git status
+git log -1 --oneline
+```
+
+O resultado esperado de `git status` é `working tree clean`.
+
+## 4. Instalação em uma VPS nova
+
+Baixe o repositório completo:
 
 ```bash
 cd /opt
-sudo git clone https://github.com/ronokedas/neto-amazon.git sistema-amazon
-sudo chown -R $USER:$USER /opt/sistema-amazon
+sudo git clone https://github.com/ronokedas/amazon-branco.git sistema-amazon
+sudo chown -R "$USER":"$USER" /opt/sistema-amazon
 cd /opt/sistema-amazon
 ```
 
-Como o repositório está público, o clone deve baixar sem pedir login.
-
-## 5. Configurar variáveis de ambiente
+Como o `.env` é versionado por decisão deste projeto, não é necessário
+copiá-lo de `.env.example`. Confira apenas os valores:
 
 ```bash
-cp .env.example .env
 nano .env
 ```
 
-Para testar no VPS igual ao ambiente local, mantenha as credenciais abaixo. Ajuste apenas `APP_URL` para o IP ou domínio do VPS:
+Confirme principalmente:
 
 ```env
-APP_URL=http://SEU_IP_OU_DOMINIO:8082/
+APP_URL=https://sistema.amazonnaval.com.br/
 DB_NAME=erp_sistema
 DB_USER=erp_user
 DB_PASS=erp_pass_2026
@@ -88,367 +127,219 @@ MINIO_ROOT_USER=erp_minio_admin
 MINIO_ROOT_PASSWORD=erp_minio_pass_2026
 ```
 
-Essas são as mesmas credenciais usadas no ambiente Docker local. Para produção aberta ao público, o ideal é trocar depois, mas para teste/homologação no VPS pode manter assim para facilitar.
+### Importante: banco novo
 
-Se futuramente usar domínio com HTTPS, altere:
-
-```env
-APP_URL=https://seudominio.com/
-```
-
-## 6. Subir os containers
-
-```bash
-
-
-cd /opt/sistema-amazon
-docker compose up -d --build
-```
-
-Verifique:
-
-```bash
-docker compose ps
-docker compose logs -f app
-```
-
-Acesse:
-
-- Sistema: `http://SEU_IP:8082`
-- phpMyAdmin: `http://SEU_IP:8083`
-- MinIO Console: `http://SEU_IP:9003`
-
-## 7. Banco de dados inicial
-
-Na primeira subida, o MySQL executa automaticamente estes arquivos:
-
-- `docker/init-custom.sql`
-- `docker/02-erp_sistema_mysql.sql`
-- `docker/03-add_minio_columns.sql`
-
-### Forma preferida: exportar pelo phpMyAdmin local e importar pelo phpMyAdmin do VPS
-
-Este e o fluxo recomendado para manter o VPS igual ao sistema local.
-
-No computador local:
-
-1. Acesse o phpMyAdmin local: `http://localhost:8083`
-2. Selecione o banco `erp_sistema`
-3. Clique em **Exportar**
-4. Use a opcao **Personalizado**
-5. Formato: **SQL**
-6. Exporte **estrutura e dados**
-7. Se aparecer a opcao, marque para incluir:
-   - `DROP TABLE / VIEW / PROCEDURE / FUNCTION / EVENT / TRIGGER`
-   - `CREATE TABLE`
-   - `IF NOT EXISTS`
-8. Baixe o arquivo `.sql`
-
-No VPS:
-
-1. Acesse o phpMyAdmin do VPS: `http://SEU_IP:8083`
-2. Entre usando:
-   - usuario: `root`
-   - senha: `root_pass_2026`
-3. Selecione o banco `erp_sistema`
-4. Limpe o banco antes de importar o novo arquivo
-5. Va em **Importar**
-6. Selecione o arquivo `.sql` exportado do phpMyAdmin local
-7. Execute a importacao
-
-Se o arquivo for maior que o limite do phpMyAdmin, aumente temporariamente o `UPLOAD_LIMIT` no `docker-compose.yml` ou use a importacao pelo terminal abaixo.
-
-### Alternativa pelo terminal
-
-Se quiser importar um dump completo pelo terminal, coloque o arquivo no servidor e rode:
-
-```bash
-docker compose exec -T db mysql -u root -p erp_sistema < arquivo-db.sql
-```
-
-O terminal vai pedir a senha definida em `MYSQL_ROOT_PASSWORD`.
-
-
-## 8. Permissões das pastas de runtime
-
-Normalmente o Dockerfile já prepara as permissões. Se precisar corrigir:
-
-```bash
-docker compose exec app mkdir -p uploads logs storage/backups temp_pdf
-docker compose exec app chown -R www-data:www-data uploads logs storage temp_pdf
-docker compose exec app chmod -R 775 uploads logs storage temp_pdf
-```
-
-## 9. Criar bucket no MinIO
-
-Acesse `http://SEU_IP:9003` com:
-
-- usuário: `erp_minio_admin`
-- senha: `erp_minio_pass_2026`
-
-Crie o bucket:
+O serviço `db` monta apenas este arquivo:
 
 ```text
-erp-storage
+db.sql -> /docker-entrypoint-initdb.d/01-db.sql
 ```
 
-Ou use o nome configurado em `MINIO_BUCKET`.
+O MySQL executa `db.sql` automaticamente somente quando o volume `db_data`
+está vazio. Nenhuma migration e nenhum outro arquivo SQL são executados
+automaticamente.
 
-### Criar/configurar o bucket sem entrar no MinIO Console
+Confirme que o dump existe antes de subir:
 
-Credenciais padrao do MinIO Console:
+```bash
+test -s db.sql && echo "db.sql encontrado"
+```
 
-- usuario: `erp_minio_admin`
-- senha: `erp_minio_pass_2026`
+Suba o sistema:
 
-Se preferir fazer tudo pelo terminal do VPS, rode este comando dentro da pasta do sistema:
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+Acompanhe a primeira importação:
+
+```bash
+docker compose logs -f db
+```
+
+Quando o banco estiver saudável, verifique a aplicação:
+
+```bash
+docker compose logs --tail=100 app
+```
+
+## 5. Recriar uma instalação usando novamente o `db.sql`
+
+Esta operação exclui o banco existente na VPS e o recria com o conteúdo
+versionado em `db.sql`. Use somente quando a intenção for substituir todo o
+estado da VPS pelo estado publicado no GitHub.
 
 ```bash
 cd /opt/sistema-amazon
-docker run --rm --network container:erp_minio --entrypoint sh minio/mc -c "mc alias set local http://127.0.0.1:9000 erp_minio_admin erp_minio_pass_2026 && mc mb -p local/erp-storage || true && mc anonymous set download local/erp-storage"
+docker compose down
+docker volume ls | grep sistema
+docker compose down -v
+docker compose up -d --build
+docker compose logs -f db
 ```
 
-Esse comando conecta no MinIO, cria o bucket `erp-storage` se ele ainda nao existir e libera leitura dos arquivos salvos pelo sistema.
+O nome real do volume depende do nome da pasta/projeto do Compose. O comando
+`docker compose down -v` remove apenas os volumes declarados por esse projeto.
 
-## 10. Comandos úteis
+## 6. Arquivos persistentes e documentos do portal
 
-Status:
+Os PDFs oficiais não ficam dentro do MySQL. O banco armazena apenas caminho e
+hash. Os arquivos físicos ficam principalmente em:
+
+```text
+storage/certificados/
+storage/documentos_aprovados/
+storage/documentos_assinados/
+storage/documentos_gerados/
+storage/private/
+storage/protocolos/
+uploads/
+```
+
+Essas pastas são versionadas. Portanto, um clone completo contém os documentos
+necessários para o portal do cliente. Depois do clone ou atualização, corrija
+as permissões:
+
+```bash
+cd /opt/sistema-amazon
+sudo chown -R www-data:www-data storage uploads logs temp_pdf tmp
+sudo chmod -R u+rwX,g+rwX storage uploads logs temp_pdf tmp
+sudo chown -R root:root minio-data
+```
+
+Se alguma pasta ainda não existir:
+
+```bash
+mkdir -p storage uploads logs temp_pdf tmp
+sudo chown -R www-data:www-data storage uploads logs temp_pdf tmp
+sudo chmod -R u+rwX,g+rwX storage uploads logs temp_pdf tmp
+sudo chown -R root:root minio-data
+```
+
+## 7. Atualizar uma VPS existente como espelho exato do GitHub
+
+Como arquivos de runtime também são versionados, os containers podem deixar o
+repositório da VPS modificado. Pare-os antes de atualizar:
+
+```bash
+cd /opt/sistema-amazon
+docker compose down
+git fetch origin main
+git reset --hard origin/main
+git clean -fd
+sudo chown -R www-data:www-data storage uploads logs temp_pdf tmp
+sudo chmod -R u+rwX,g+rwX storage uploads logs temp_pdf tmp
+sudo chown -R root:root minio-data
+docker compose up -d --build
+docker compose ps
+```
+
+`git reset --hard` e `git clean -fd` descartam alterações existentes somente
+na VPS. Esse fluxo é apropriado quando o computador local/GitHub é a fonte
+oficial de todo o conteúdo.
+
+Uma atualização comum não recria o banco, pois o volume `db_data` já existe.
+Para substituir também o banco pelo `db.sql`, siga a seção 5.
+
+## 8. Verificações depois da instalação
+
+Containers:
 
 ```bash
 docker compose ps
+```
+
+Banco:
+
+```bash
+docker compose exec db mysql \
+  -u root -p"$MYSQL_ROOT_PASSWORD" \
+  -e "USE erp_sistema; SHOW TABLES;"
+```
+
+Existência dos PDFs:
+
+```bash
+find storage/documentos_aprovados -type f | head
+find storage/documentos_assinados -type f | head
+```
+
+Permissões:
+
+```bash
+docker compose exec app sh -c \
+  'test -w /var/www/html/storage && test -w /var/www/html/uploads && echo OK'
 ```
 
 Logs:
 
 ```bash
-docker compose logs -f
-docker compose logs -f app
-docker compose logs -f db
+docker compose logs --tail=200 app
+docker compose logs --tail=200 db
+docker compose logs --tail=200 worker
 ```
 
-Reiniciar:
+## 9. MinIO
 
-```bash
-docker compose restart
-```
-
-Parar:
-
-```bash
-docker compose down
-```
-
-Subir:
-
-```bash
-docker compose up -d
-```
-
-Rebuild:
-
-```bash
-docker compose up -d --build
-```
-
-## 11. Enviar alteracoes locais para o GitHub
-
-Use estes comandos no computador local, dentro da pasta do sistema:
-
-```powershell
-cd C:\sistema
-git status
-git add .
-git commit -m "botoes"
-git push
-```
-
-
-
-======
-
-depois no vps:
-
-
-cd /opt/sistema-amazon
-git pull origin main
-
-
-
-cd /opt/sistema-amazon
-git pull --ff-only origin main && sudo docker compose up -d --build && sudo docker compose ps
-
-ou sem db
-docker compose up -d --force-recreate app
-
-
-manunteção: 
-
-git gc
-git prune
-
-
-========
-34.132.186.4:8083
-
-   - usuario: `root`
-   - senha: `root_pass_2026`
-
-
-
-nano .env
-
-
-
-
-fluxo 
-
-01
-Proposta
-02
-Agendamento
-03
-Vistoria
-04
-Aprovação
-05
-Certificados
-
-
-
-
-Servidor SMTP	smtp-relay.brevo.com
-Porta	587
-Fazer login	b157d8001@smtp-brevo.com
-Senha	6zPdnrCTtUQGZ2cM
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Exemplo:
-
-```powershell
-git commit -m "Ajusta dashboard e manual de instalacao"
-```
-
-Se quiser enviar somente alguns arquivos, use:
-
-```powershell
-git add modules/dashboard/index.php docs/DEPLOY_UBUNTU_24_DOCKER.md
-git commit -m "Atualiza dashboard e manual"
-git push
-```
-
-## 12. Atualizar o sistema no VPS a partir do GitHub
+Acesse o console na porta configurada por `MINIO_CONSOLE_PORT`. Para criar os
+buckets usados pelo sistema:
 
 ```bash
 cd /opt/sistema-amazon
-git pull
-docker compose up -d --build
+docker run --rm --network container:erp_minio --entrypoint sh minio/mc -c \
+  "mc alias set local http://127.0.0.1:9000 erp_minio_admin erp_minio_pass_2026 &&
+   mc mb -p local/erp-storage || true &&
+   mc mb -p local/erp-campo-private || true"
 ```
 
-Depois confira se os containers estao rodando:
+O Compose monta `./minio-data:/data`. Assim, os objetos e metadados do MinIO
+baixados do GitHub são carregados automaticamente em uma VPS nova. O script
+local de publicação copia o estado atual do container para essa pasta antes de
+executar o commit.
+
+## 10. Comandos úteis
 
 ```bash
 docker compose ps
-```
-
-Se quiser acompanhar os logs:
-
-```bash
 docker compose logs -f app
-```
-
-Se aparecer erro de PDF dizendo `Autoloader do Composer nao encontrado`, rode:
-
-```bash
-docker compose exec app composer install --no-interaction --prefer-dist --no-dev
-docker compose restart app
-```
-
-Esse comando instala as bibliotecas usadas para gerar PDFs, enviar e-mails e usar o MinIO. O `docker-compose.yml` atual ja faz isso automaticamente quando o container sobe, mas este comando resolve manualmente se o VPS estiver com uma versao antiga.
-
-Se houver nova migration SQL manual, aplique uma por vez:
-
-```bash
-docker compose exec -T db mysql -u root -p erp_sistema < migrations/048_pre_agendamentos_sem_data.sql
-```
-
-Quando existir uma migration nova, troque o nome do arquivo no comando. Exemplo:
-
-```bash
-docker compose exec -T db mysql -u root -p erp_sistema < migrations/049_checklist_respostas_unicas.sql
-```
-
-O terminal vai pedir a senha do MySQL root:
-
-```text
-root_pass_2026
-```
-
-## 13. Backup do banco
-
-Criar backup:
-
-```bash
-mkdir -p ~/backups-amazon
-docker compose exec -T db mysqldump -u root -p erp_sistema > ~/backups-amazon/erp_sistema_$(date +%F_%H-%M).sql
-```
-
-Restaurar backup:
-
-```bash
-docker compose exec -T db mysql -u root -p erp_sistema < ~/backups-amazon/arquivo.sql
-```
-
-## 14. Atualizar Ubuntu e imagens Docker
-
-```bash
-sudo apt update
-sudo apt upgrade -y
-cd /opt/sistema-amazon
-docker compose pull
+docker compose restart
+docker compose down
+docker compose up -d
 docker compose up -d --build
 ```
 
-## 15. Segurança recomendada
+## 11. Diagnóstico do portal de documentos
 
-- Troque todas as senhas do `.env`.
-- Não envie `.env` para o GitHub.
-- Evite deixar phpMyAdmin aberto publicamente em produção.
-- Use HTTPS com Nginx Proxy Manager, Caddy ou Nginx quando apontar domínio.
-- Faça backup antes de atualizar.
-- Guarde os backups fora do VPS também.
+Se o portal mostrar:
+
+```text
+Não foi possível disponibilizar o documento oficial.
+```
+
+confira o log:
+
+```bash
+docker compose logs --tail=200 app | grep "Erro PDF portal"
+```
+
+Depois confira se o caminho registrado no banco existe fisicamente no clone.
+Exemplo:
+
+```bash
+test -f storage/documentos_aprovados/2026/csn/ARQUIVO.pdf
+sha256sum storage/documentos_aprovados/2026/csn/ARQUIVO.pdf
+```
+
+O hash precisa ser igual ao campo `hash_arquivo_pdf` do documento.
+
+## 12. Observações sobre a publicação integral
+
+- O projeto foi configurado deliberadamente para não ignorar nenhum arquivo.
+- Credenciais do `.env` são publicadas conforme a política deste projeto.
+- Dependências de `vendor/` e `node_modules/` também são versionadas.
+- Objetos e metadados do MinIO são versionados em `minio-data/`.
+- Logs, sessões e backups podem aumentar rapidamente o tamanho do repositório.
+- O GitHub rejeita arquivos individuais maiores que 100 MB.
+- Antes de cada publicação, revise `git status` e a lista de arquivos grandes.
+- `db.sql` é a única fonte automática do banco em instalações novas.

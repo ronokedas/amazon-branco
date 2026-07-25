@@ -1,0 +1,3184 @@
+/*M!999999\- enable the sandbox mode */ 
+-- MariaDB dump 10.19-11.8.6-MariaDB, for debian-linux-gnu (x86_64)
+--
+-- Host: db    Database: erp_sistema
+-- ------------------------------------------------------
+-- Server version	8.0.46
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*M!100616 SET @OLD_NOTE_VERBOSITY=@@NOTE_VERBOSITY, NOTE_VERBOSITY=0 */;
+
+--
+-- Table structure for table `agendamentos`
+--
+
+DROP TABLE IF EXISTS `agendamentos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `agendamentos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `proposta_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `armador_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `operador_nome` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vistoriador_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vendedor_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_vistoria` text COLLATE utf8mb4_general_ci NOT NULL,
+  `data_vistoria` date DEFAULT NULL,
+  `hora_vistoria` time DEFAULT NULL,
+  `local` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `contato_nome` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `contato_telefone` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('pendente','confirmado','em_andamento','concluido','cancelado') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pendente',
+  `observacoes` text COLLATE utf8mb4_general_ci,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `proposta_id` (`proposta_id`),
+  KEY `embarcacao_id` (`embarcacao_id`),
+  KEY `cliente_id` (`cliente_id`),
+  KEY `vistoriador_id` (`vistoriador_id`),
+  KEY `status` (`status`),
+  KEY `data_vistoria` (`data_vistoria`),
+  KEY `criado_por` (`criado_por`),
+  KEY `idx_agendamentos_armador_id` (`armador_id`),
+  CONSTRAINT `agendamentos_ibfk_1` FOREIGN KEY (`proposta_id`) REFERENCES `propostas` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `agendamentos_ibfk_2` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `agendamentos_ibfk_3` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `agendamentos_ibfk_4` FOREIGN KEY (`vistoriador_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `agendamentos_ibfk_5` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_agendamentos_armador` FOREIGN KEY (`armador_id`) REFERENCES `clientes` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `agendamentos`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `agendamentos` WRITE;
+/*!40000 ALTER TABLE `agendamentos` DISABLE KEYS */;
+INSERT INTO `agendamentos` VALUES
+('05ef6ca5-3621-446f-bb71-bd42b79d0678','d23048fa-7a47-11f1-8c34-8a26e9191f69','620a9dfa-7628-11f1-85ad-621c498e207c','64e60ad7-3a78-4db0-9e03-cc529d935325','60977320-a7d1-49a7-8471-4909c5530d79',NULL,'d2a16613-dfa4-4948-8de4-8c802abdf394','95eb5557-65e8-11f1-85ef-047c16b568a3','Vistoria Inicial de Borda Livre, Vistoria Inicial Flutuando, Vistoria Inicial Seco','2026-07-17','09:30:00','belem',NULL,NULL,'pendente','Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data e vistoriador.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-07 21:08:15','2026-07-16 16:37:16'),
+('3a45f350-7b29-11f1-a8a1-56798194b3af','2bd3ad77-7b29-11f1-a8a1-56798194b3af','620a9dfa-7628-11f1-85ad-621c498e207c','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,'Savio','d2a16613-dfa4-4948-8de4-8c802abdf394','95eb5557-65e8-11f1-85ef-047c16b568a3','Vistoria Inicial de Arqueação, Vistoria Inicial de Borda Livre, Vistoria Inicial Flutuando, Vistoria Inicial Seco, Vistoria Intermediária','2026-07-10','06:00:00','belem',NULL,NULL,'concluido','Agendamento gerado automaticamente a partir da aprovação interna da proposta. Favor definir data e vistoriador.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:00:42','2026-07-09 00:06:04'),
+('4b624c2f-7830-11f1-88ab-1acc827a0ea9','41d931c6-7830-11f1-88ab-1acc827a0ea9','05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'11111111-1111-1111-1111-111111111111','95eb5557-65e8-11f1-85ef-047c16b568a3','Licença Provisória, Vistoria Anual','2026-07-08','18:00:00','belem','Toane Silva de Araujo','91989340275','pendente','Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:13:44','2026-07-07 12:12:54'),
+('517d7186-7894-11f1-bea6-861d3ff9e143','07c2f09e-782d-11f1-88ab-1acc827a0ea9','05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'3774d80c-2574-470e-88a9-9781936c6de3',NULL,'Vistoria Inicial Seco, Vistoria Inicial Flutuando','2026-07-07','14:10:00','belem','Pedro Almeida','91989340275','pendente',NULL,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-05 17:09:44',NULL),
+('5fc644bc-782f-11f1-88ab-1acc827a0ea9','5b167c30-782f-11f1-88ab-1acc827a0ea9','05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'3774d80c-2574-470e-88a9-9781936c6de3',NULL,'Vistoria Inicial Seco, Vistoria Inicial Flutuando','2026-07-05','03:37:00','belem',NULL,NULL,'pendente','Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:07:09','2026-07-05 06:37:57'),
+('6206e36e-7628-11f1-85ad-621c498e207c',NULL,'6205b1f7-7628-11f1-85ad-621c498e207c','620624f7-7628-11f1-85ad-621c498e207c',NULL,NULL,'11111111-1111-1111-1111-111111111111',NULL,'Vistoria Inicial - Seco e Flutuando','2026-07-10','08:00:00','Estaleiro Rio Maguari - BelÃ©m-PA','JoÃ£o Silva','(91) 98765-4321','concluido',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-02 15:12:04'),
+('620bf6aa-7628-11f1-85ad-621c498e207c',NULL,'620a9dfa-7628-11f1-85ad-621c498e207c','620b1381-7628-11f1-85ad-621c498e207c',NULL,NULL,'22222222-2222-2222-2222-222222222222',NULL,'Vistoria Inicial - ArqueaÃ§Ã£o e Borda Livre','2026-07-15','09:00:00','Porto de SantarÃ©m - PA','Maria Oliveira','(93) 98888-1111','concluido',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-02 15:12:04'),
+('620f7603-7628-11f1-85ad-621c498e207c',NULL,'620e4464-7628-11f1-85ad-621c498e207c','620ebfc8-7628-11f1-85ad-621c498e207c',NULL,NULL,'33333333-3333-3333-3333-333333333333',NULL,'Vistoria Inicial - Completa','2026-07-20','07:30:00','Porto de BelÃ©m - Terminal de Carga','Pedro Almeida','(91) 97777-2222','concluido',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-02 15:12:04'),
+('70000000-0000-4000-8000-000000000003',NULL,'70000000-0000-4000-8000-000000000002','70000000-0000-4000-8000-000000000001',NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3',NULL,'DEMONSTRACAO CAMPO','2026-07-14','09:30:00','Ponta Negra - Manaus/AM',NULL,NULL,'pendente','Registro fictício para demonstração da PWA.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-14 22:06:04','2026-07-14 22:16:02'),
+('70000000-0000-4000-8000-000000000005',NULL,'70000000-0000-4000-8000-000000000004','70000000-0000-4000-8000-000000000001',NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3',NULL,'DEMONSTRACAO CAMPO','2026-07-14','14:00:00','Porto de Manaus - AM',NULL,NULL,'pendente','Registro fictício para demonstração da PWA.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-14 22:06:04','2026-07-14 22:16:02'),
+('83ad9b48-7666-11f1-9eb5-0a1b2af87b16','733dc145-7657-11f1-9eb5-0a1b2af87b16','05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'e5c68a85-c920-4b11-bc93-9343d9d94f14',NULL,'Vistoria Inicial Seco','2026-07-03','19:36:00','belem','Rosano Souza','91989340275','concluido',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 22:36:49','2026-07-02 23:30:55'),
+('8b96f7e3-85fd-4908-bff2-cfe16b9cd6c3','87daba67-7974-11f1-8c34-8a26e9191f69','05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'22222222-2222-2222-2222-222222222222',NULL,'Vistoria Inicial Flutuando, Vistoria Inicial Flutuando, Vistoria Inicial Seco, Vistoria Inicial Seco','2026-07-07','09:30:00','belem','Pedro Almeida','91989340275','pendente','Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data e vistoriador.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-06 19:55:36','2026-07-07 12:20:17'),
+('9c4e5534-76e1-11f1-9eb5-0a1b2af87b16','733dc145-7657-11f1-9eb5-0a1b2af87b16','05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'3774d80c-2574-470e-88a9-9781936c6de3',NULL,'Vistoria Inicial Seco','2026-07-06','15:39:00','belem','Rosano Souza','91989340275','concluido',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-03 13:17:58','2026-07-04 04:59:52'),
+('a4ce16b6-c087-426b-874d-0f6f441fc809','75eae56f-79c6-11f1-8c34-8a26e9191f69','620a9dfa-7628-11f1-85ad-621c498e207c','64e60ad7-3a78-4db0-9e03-cc529d935325','60977320-a7d1-49a7-8471-4909c5530d79',NULL,'3774d80c-2574-470e-88a9-9781936c6de3','95eb5557-65e8-11f1-85ef-047c16b568a3','Vistoria Inicial de Arqueação, Vistoria Inicial de Borda Livre, Vistoria Inicial Flutuando, Vistoria Inicial Seco','2026-07-08','22:00:00','belem','Pedro Almeida','91989340275','concluido','Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data e vistoriador.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-07 05:42:19','2026-07-07 22:12:58'),
+('aa9c6b58-cc84-4150-8755-8ee1d04e1d26',NULL,'05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'3774d80c-2574-470e-88a9-9781936c6de3',NULL,'Vistoria Avulsa','2026-07-06',NULL,NULL,NULL,NULL,'concluido',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:43:18','2026-07-06 20:34:08'),
+('b7ca73e7-782f-11f1-88ab-1acc827a0ea9','6aa00f1a-782f-11f1-88ab-1acc827a0ea9','05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'3774d80c-2574-470e-88a9-9781936c6de3','95eb5557-65e8-11f1-85ef-047c16b568a3','Vistoria Inicial Flutuando, Vistoria Inicial Seco','2026-07-10','02:30:00',NULL,NULL,NULL,'pendente','Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:09:36','2026-07-07 19:43:55'),
+('e2015b8b-92ba-40ee-848b-3f934605769f','b7196667-8132-11f1-a1f7-9ed3395acbbb','620a9dfa-7628-11f1-85ad-621c498e207c','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,'Saviobb','d2a16613-dfa4-4948-8de4-8c802abdf394','95eb5557-65e8-11f1-85ef-047c16b568a3','Vistoria Inicial de Borda Livre, Vistoria Inicial Flutuando, Vistoria Inicial Seco','2026-07-16','03:30:00','belem','Pedro Almeida','91989340275','pendente','Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data e vistoriador.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-16 16:25:27','2026-07-16 16:36:44'),
+('faf4be42-523f-48db-9776-1d08bce6d3e1','87daba67-7974-11f1-8c34-8a26e9191f69','620a9dfa-7628-11f1-85ad-621c498e207c','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'3774d80c-2574-470e-88a9-9781936c6de3','95eb5557-65e8-11f1-85ef-047c16b568a3','Vistoria Inicial Flutuando, Vistoria Inicial Flutuando, Vistoria Inicial Seco, Vistoria Inicial Seco','2026-08-07','21:00:00','belem','Pedro Almeida','91989340275','pendente','Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data e vistoriador.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-06 19:55:36','2026-07-07 11:44:34');
+/*!40000 ALTER TABLE `agendamentos` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `cert_convalidacoes`
+--
+
+DROP TABLE IF EXISTS `cert_convalidacoes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cert_convalidacoes` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `tipo_certificado` enum('CNBL','CNARQ') COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Tipo de certificado ao qual a convalidaÃ§Ã£o pertence',
+  `certificado_id` char(36) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'ID do certificado (certificados_cnbl ou certificados_cnarq)',
+  `numero_vistoria` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Ex: 1Âª VIST. ANUAL, 2Âª VIST. ANUAL, etc',
+  `data_inicio` date DEFAULT NULL,
+  `data_fim` date DEFAULT NULL,
+  `local_data` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vistoriador` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_cert_convalidacoes_tipo` (`tipo_certificado`),
+  KEY `idx_cert_convalidacoes_certificado` (`certificado_id`,`tipo_certificado`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cert_convalidacoes`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `cert_convalidacoes` WRITE;
+/*!40000 ALTER TABLE `cert_convalidacoes` DISABLE KEYS */;
+INSERT INTO `cert_convalidacoes` VALUES
+('25ea43fc-e479-4ac4-9a91-0c7281a394f7','CNBL','670f4d07-b570-46b9-ad0a-cb9cb1c43a09','2ª VIST. ANUAL','2028-04-17','2028-10-17','',''),
+('782e693f-b15e-433a-a5f5-54d30d1ce1a5','CNBL','6ab45886-6dcb-4bcb-bf82-d626e1ccb22a','4ª VIST. ANUAL','2030-04-17','2030-10-17','',''),
+('a1696fae-341a-41ce-9d6e-42cc5714b93f','CNBL','6ab45886-6dcb-4bcb-bf82-d626e1ccb22a','2ª VIST. ANUAL','2028-04-17','2028-10-17','',''),
+('b0540385-c66f-41bc-bc97-4a72e997df8a','CNBL','6ab45886-6dcb-4bcb-bf82-d626e1ccb22a','1ª VIST. ANUAL','2027-04-17','2027-10-17','',''),
+('c55f780e-aa3c-45c6-a73f-00ce05506034','CNBL','6ab45886-6dcb-4bcb-bf82-d626e1ccb22a','3ª VIST. ANUAL','2029-04-17','2029-10-17','',''),
+('d2666b0a-8234-4adb-9070-f4369d6f79a5','CNBL','670f4d07-b570-46b9-ad0a-cb9cb1c43a09','3ª VIST. ANUAL','2029-04-17','2029-10-17','',''),
+('d615d10f-78a2-11f1-bea6-861d3ff9e143','CNBL','42636b04-fb47-4ef2-8f5c-07e947ae4f04','1? VIST. ANUAL','2027-04-17','2027-10-17','',''),
+('d615d80a-78a2-11f1-bea6-861d3ff9e143','CNBL','42636b04-fb47-4ef2-8f5c-07e947ae4f04','2? VIST. ANUAL','2028-04-17','2028-10-17','',''),
+('d615e0ea-78a2-11f1-bea6-861d3ff9e143','CNBL','42636b04-fb47-4ef2-8f5c-07e947ae4f04','3? VIST. ANUAL','2029-04-17','2029-10-17','',''),
+('d615e80a-78a2-11f1-bea6-861d3ff9e143','CNBL','42636b04-fb47-4ef2-8f5c-07e947ae4f04','4? VIST. ANUAL','2030-04-17','2030-10-17','',''),
+('e26e20df-0e12-4b0e-b651-34bb16fb2c07','CNBL','670f4d07-b570-46b9-ad0a-cb9cb1c43a09','4ª VIST. ANUAL','2030-04-17','2030-10-17','',''),
+('efe1e101-3fad-46e4-90b4-85099456f16e','CNBL','670f4d07-b570-46b9-ad0a-cb9cb1c43a09','1ª VIST. ANUAL','2027-04-17','2027-10-17','','');
+/*!40000 ALTER TABLE `cert_convalidacoes` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `certificados_cht`
+--
+
+DROP TABLE IF EXISTS `certificados_cht`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `certificados_cht` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero_certificado` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_relatorio_ht` varchar(30) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'N??mero do relat??rio (AM-REL-HT:{n}/{ano})',
+  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `profissional_empresa` varchar(200) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Nome do profissional ou empresa homologada',
+  `cpf_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `email_destinatario` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `atividade_homologada` text COLLATE utf8mb4_general_ci COMMENT 'Atividade t??cnica homologada',
+  `relatorio_homologacao_numero` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `observacoes` text COLLATE utf8mb4_general_ci,
+  `data_emissao` date NOT NULL,
+  `data_validade` date DEFAULT NULL,
+  `local_emissao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'Bel??m-PA',
+  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_em` datetime DEFAULT NULL,
+  `assinado` tinyint(1) DEFAULT '0',
+  `dados_json` longtext COLLATE utf8mb4_general_ci,
+  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `despachante_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_certificados_cht_numero` (`numero_certificado`),
+  KEY `idx_certificados_cht_numero` (`numero_relatorio_ht`),
+  KEY `idx_certificados_cht_status` (`status`),
+  KEY `idx_certificados_cht_ativo` (`ativo`),
+  KEY `idx_certificados_ht_profissional` (`profissional_empresa`),
+  KEY `fk_cht_vistoria` (`vistoria_id`),
+  CONSTRAINT `fk_cht_vistoria` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `certificados_cht_chk_1` CHECK (json_valid(`dados_json`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `certificados_cht`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `certificados_cht` WRITE;
+/*!40000 ALTER TABLE `certificados_cht` DISABLE KEYS */;
+/*!40000 ALTER TABLE `certificados_cht` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `certificados_cnarq`
+--
+
+DROP TABLE IF EXISTS `certificados_cnarq`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `certificados_cnarq` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo` varchar(30) COLLATE utf8mb4_general_ci DEFAULT 'Condicional',
+  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `nome_embarcacao` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
+  `numero_inscricao` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `indicativo_chamada` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_embarcacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ano_construcao` varchar(10) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `porto_inscricao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_construcao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_quilha` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `comprimento_total` decimal(8,2) DEFAULT NULL,
+  `comprimento_casco` decimal(8,2) DEFAULT NULL,
+  `comprimento_lpp` decimal(8,2) DEFAULT NULL COMMENT 'Comprimento entre perpendiculares',
+  `boca_moldada` decimal(8,2) DEFAULT NULL,
+  `boca_maxima` decimal(8,2) DEFAULT NULL,
+  `pontal_moldado` decimal(8,2) DEFAULT NULL,
+  `arqueacao_bruta` decimal(10,2) DEFAULT NULL COMMENT 'ArqueaÃ§Ã£o bruta (AB)',
+  `arqueacao_liquida` decimal(10,2) DEFAULT NULL COMMENT 'ArqueaÃ§Ã£o lÃ­quida (AL)',
+  `metodo_arqueacao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'MÃ©todo utilizado (NORMAM, ConvenÃ§Ã£o, etc)',
+  `calado_moldado_m` decimal(8,3) DEFAULT NULL,
+  `passageiros_camarotes` int DEFAULT '0',
+  `passageiros_outros` int DEFAULT '0',
+  `espacos_incluidos_ab` text COLLATE utf8mb4_general_ci,
+  `espacos_incluidos_al` text COLLATE utf8mb4_general_ci,
+  `espacos_excluidos_m3` decimal(10,2) DEFAULT '0.00',
+  `data_local_arqueacao_original` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_local_ultima_rearqueacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `relatorio_numero` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_vistoria` date DEFAULT NULL,
+  `local_vistoria` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_emissao` date NOT NULL,
+  `data_validade` date NOT NULL,
+  `local_emissao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'BelÃ©m-PA',
+  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_em` datetime DEFAULT NULL,
+  `assinado` tinyint(1) DEFAULT '0',
+  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `despachante_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_certificados_cnarq_numero` (`numero`),
+  KEY `idx_certificados_cnarq_status` (`status`),
+  KEY `idx_certificados_cnarq_ativo` (`ativo`),
+  KEY `fk_cnarq_vistoria` (`vistoria_id`),
+  CONSTRAINT `fk_cnarq_vistoria` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `certificados_cnarq`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `certificados_cnarq` WRITE;
+/*!40000 ALTER TABLE `certificados_cnarq` DISABLE KEYS */;
+INSERT INTO `certificados_cnarq` VALUES
+('0ec31290-80c0-4a72-87c3-1933008cc230','AM-CNARQ-1/26','Condicional','9fe21f3426924bb0922599cec7efb36cbcfa7706e2863d8a981a4d0e29b8b4e9','Barco kds','BAL-00632-PA','PW3463','Balsa','2023','Aço','Santarém - PA','Estaleiro Belem','2023',30.00,29.00,26.50,9.00,9.50,2.80,120.00,85.00,'Regra II',1.800,33,11,'','',0.00,'','','AM-REL-V-5/26','2026-07-17','belem','2026-07-06','2026-10-04','Manaus-AM','João Responsável','Engenheiro Naval','123456',NULL,NULL,NULL,0,NULL,NULL,'emitido',1,NULL,'2026-07-06 14:56:12','2026-07-06 14:56:12','8f85d9b9-4606-49ac-8a9e-ce3943829467',NULL),
+('e62fc8b3-2c5d-4333-9117-a0720f11900d','AM-CNARQ-2/26','Definitivo','5fdb842a114aad05330b74183dffa95c5edddab2bf5a6b473c5c4bf933611622','Barco kds','BAL-00632-PA','PW3463','Balsa','2023','Aço','Santarém - PA','Estaleiro Belem','2023',30.00,29.00,26.50,9.00,9.50,2.80,120.00,85.00,'Regra II',1.800,33,11,'','',0.00,'','','AM-REL-V-5/26','2026-07-17','belem','2026-07-06','2026-07-08','Belém-PA','João Responsável','Engenheiro Naval','123456','data:image/png;base64,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','172.23.0.1','2026-07-06 12:06:25',1,'storage/certificados/2026/cnarq/CNARQ_AM-CNARQ-2-26.pdf','36423bc12aca0abf38f26b1d92ca964506c7e8480706b939e41d56270cdbeffb','assinado',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-06 15:05:46','2026-07-06 15:06:25','8f85d9b9-4606-49ac-8a9e-ce3943829467',NULL);
+/*!40000 ALTER TABLE `certificados_cnarq` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `certificados_cnbl`
+--
+
+DROP TABLE IF EXISTS `certificados_cnbl`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `certificados_cnbl` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo` varchar(30) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Condicional',
+  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `nome_embarcacao` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
+  `numero_inscricao` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `porto_inscricao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `indicativo_chamada` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `atividades_servicos` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_embarcacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ano_construcao` varchar(10) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `comprimento_total` decimal(8,2) DEFAULT NULL,
+  `comprimento_casco` decimal(8,2) DEFAULT NULL,
+  `boca_moldada` decimal(8,2) DEFAULT NULL,
+  `pontal_moldado` decimal(8,2) DEFAULT NULL,
+  `arqueacao_bruta` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `area_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `borda_livre_mm` int DEFAULT NULL,
+  `borda_livre_tipo` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Tipo de borda livre (verÃ£o, tropical, etc)',
+  `calado_maximo_m` decimal(8,2) DEFAULT NULL,
+  `relatorio_numero` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_vistoria` date DEFAULT NULL,
+  `local_vistoria` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_emissao` date NOT NULL,
+  `data_validade` date NOT NULL,
+  `local_emissao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'BelÃ©m-PA',
+  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_em` datetime DEFAULT NULL,
+  `assinado` tinyint(1) DEFAULT '0',
+  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `aresta_superior_linha_conves` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '0 mm',
+  `centro_disco_situado` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '0 mm',
+  `dist_linha_conves_bico_proa` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '',
+  `dist_linha_conves_abaixo_disco` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '',
+  `marca_linha_carga_area1` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '0 mm',
+  `marca_linha_carga_area2` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '0 mm',
+  `acrescimo_agua_salgada` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '0 mm',
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `despachante_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_certificados_cnbl_numero` (`numero`),
+  KEY `idx_certificados_cnbl_status` (`status`),
+  KEY `idx_certificados_cnbl_ativo` (`ativo`),
+  KEY `fk_cnbl_vistoria` (`vistoria_id`),
+  CONSTRAINT `fk_cnbl_vistoria` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `certificados_cnbl`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `certificados_cnbl` WRITE;
+/*!40000 ALTER TABLE `certificados_cnbl` DISABLE KEYS */;
+INSERT INTO `certificados_cnbl` VALUES
+('42636b04-fb47-4ef2-8f5c-07e947ae4f04','AM-CNBL-1/26','Definitivo','a672d25b17fce2667356f8635c6fccb2aac1240036d2dd5c0deb228b4944fba4','Barco kds','BAL-00632-PA','Santarém - PA','PW3463','Transporte de Passageiros','Balsa','2023',30.00,29.00,9.00,2.80,'120','Interior','Cabotagem','Aço',280,'Tipo B',1.80,'AM-REL-V-5/26','2026-07-17','belem','2026-07-05','2026-08-06','Belém-PA','João Responsável','Engenheiro Naval','123456','data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAACWCAYAAADwkd5lAAAQAElEQVR4AeydCfR1XznHL6GMZUjGzONfqT8RoZASMiTzkAahJISElaG1FBaLJGUeWqZKtCpTkmlRtDK0ksXfPERImcf6fm73edd+73t/vzudc89wP+/az9377HPOHj7n9+7n7P3svc+rL/wnAQlIQAISOICACuQAaN4iAQlIQAKLhQrEvwIJDEXAfCUwcQIqkIk/QIsvAQlIYCgCKpChyJuvBCQggYkTmLACmTh5iy8BCUhg4gRUIBN/gBZfAhKQwFAEVCBDkTdfCUyYgEWXAARUIFBQJCABCUhgbwIqkL2ReYMEJCABCUBABQKFU4v5SUACEpgBARXIDB6iVZCABCQwBAEVyBDUzVMCEhiKgPl2SEAF0iFMk5KABCRwTgRUIOf0tK2rBCQggQ4JqEA6hHkOSVlHCUhAAkVABVIk9CUgAQlIYC8CKpC9cHmxBCQggaEIjC9fFcj4noklkoAEJDAJAiqQSTwmCykBCUhgfARUION7JpaoHwKmKgEJdExABdIxUJOTgAQkcC4EVCDn8qStpwQkIIGOCeysQDrO1+QkIAEJSGDiBFQgE3+AFl8CEpDAUARUIEORN18J7EzACyUwTgIqkHE+F0slAQlIYPQEVCCjf0QWUAISkMA4CZyDAhkneUslAQlIYOIEVCATf4AWXwISkMBQBFQgQ5E3XwmcAwHrOGsCKpBZP14rJwEJSKA/AiqQ/tiasgQkIIFZE1CBjPrxWjgJSEAC4yWgAhnvs7FkEpCABEZNQAUy6sdj4SQggaEImO92AiqQ7Yy8QgISkIAENhBQgWyAYpQEJCABCWwnoALZzsgrDiHgPRKQwOwJqEBm/4itoAQkIIF+CKhA+uFqqhKQgASGInCyfFUgJ0NtRhKQgATmRUAFMq/naW0kIAEJnIyACuRkqM1oKgQspwQksBsBFchunLxKAhKQgATWCKhA1oB4KAEJSEACuxHoXoHslq9XSUACEpDAxAmoQCb+AC2+BCQggaEIqECGIm++EuiegClK4KQEVCAnxW1mEpCABOZDQAUyn2dpTSQgAQmclIAKpMFtUAISkIAEdiegAtmdlVdKQAISkEBDQAXSwDAoAQkMRcB8p0hABTLFp2aZJSABCYyAgApkBA/BIkhAAhKYIgEVyBSf2rVlNkYCEpDAyQmoQE6O3AwlIAEJzIOACmQez9FaSEACQxE443xVIGf88K26BCQggWMIqECOoee9EpCABM6YgArkjB/+OKpuKSQggakSUIFM9clZbglIQAIDE1CBDPwAzF4CEpDAUASOzVcFcixB75eABCRwpgRUIGf64K22BCQggWMJqECOJej950vAmkvgzAmoQM78D8DqS0ACEjiUgArkUHLTue89UtQHRF4Y+c/IDZG/j/x75I8ivxup45cmTPwj4uskIAEJXEpgQAVyabk8eRyBt83tz438V+T3I98RebfIjSNvH7l55LUj7xi5daSOb5Yw8V8V/xWRH43oJCABCWwkoALZiGWSkSiNr0nJ/3Qlt4v/WpFyL0vgryK/FKHXQfjnEv7JSB3/QcL0QOIt3ccsf/2RgAQksIGACmQDlIlFoTh+KmVGcXx1fI7jLR1DUw9M6FYRehdvHf9DIreJEP7w+B8fqeN3T/h1I+W4v8L6MyJgVSTQBQEVSBcUh0kDRVE9jran8GcpztdGXi1yi8hjIy+I7OpIt65FKVVYXwISkMBVBFQgV+GYxAENfCkOehxV6BcncO/I20U4H+8g97Tmroc3YYMSkIAEriKgArkKx44Hw132jGRNr6BVHM9OHErjzeP/QOQYd/fcfF0E96L8/GpEJwEJSGAjARXIRiyji7xzSoSh+27xy5Xi+OBEMGwV7yjHDK1vWaXwf/E/OqKTgAQkcCEBFciFaEZzgmm4v5DSMN023oIeyF0T6EpxJKml+838Mq033uLB+WGNSDydBEZFwMKMiIAKZEQPY60o359j1mKwEDDBpXtoflnH8fPxu3T3TWLMxIq3+PP8sG4knk4CEpDAxQRUIBezGerM05MxiuOz4pf7ywRo4L8xfteOqbvfvkr0f+PfP6KTgAQksJWACmQropNe8A3J7SMi5TCKM1R1y0RgA4l3nNtw9+MTx+rzeItPy0/XvZskqZOABOZIQAUynqeK8viyVXFYNX6vhJmWi7E8wV4cdo8PWKVM7+YnVuFjvd9IAhji6Ukh9GzYh+ufEs9K900+1/9/ztPbYgHjpuv+OeeJd6+ugNBJYGgCKpChn8Cr8n9OvFIebCdyfY5/KNKnwxD/vqsM2GgR+8rq8GDvUbnz3yK3j7R/WzfKMbO83jA+vZ1NPtez+PGtck3tzbV+3U1zjvvZq4t9vr4oxzoJTITA/IrJf9r51Wo6NWJ6LrOs3mdVZN6wPyrhP4n06e6UxH82gvuP/HxBpAv3oCTyOpFy1fv410Sw0BHlyB5c6z5lyCVL9y/5Zbhu03WsTaEHkksW7PPFtGN6LV9PhCIBCZyWgArktLzb3Bg+YnpuzbJiWOdTckHfyoOV7GyomKyWDpvLLy5Dx//Qi/nrJPPfkb+LoKheM/7rR1joiMGePbhan94PvYpcsuC+eyTAhIH16zhmR2H26npKrilHr+Wz60BfAhI4HQEVyOlYtzl9cw5q+CjBBQ3vGydQvYIEe3NMD67EMdB3aWN5TBJmCIrhqjdL+FcilzkUwl1WFzAkRe/rmavjda89Rsk8v4l4k4TPpRfCCwCKmVl6bFmDMPWaXh49O3pvSNmRWM9Tx/8TTvTYEGxuOdRJ4HACKpDD2R16Jz2PL17dzH/6j0sYA3a83h09DxofMmLDxS6VB2nuK9/V3IAioUfWRF0axE7UXnCf9mDi4VISKAcExcAwH0OCLCTlOfIiwJY2CLP06Jm9a+rNglOk7EgsDq3j18h5emwICiiHOgkcTkAFcji7Q+5kzL56Htg73jOJsBV7vN4dyqKUB2Eapt4zvSQDGsmaAfZruW5bbyWXXOOe2MTwxt0cTiYIB54FfwfrSgLlgKAYbnJBjdjGhuFPlAzfdimh14Edqb758vLmfmbFPaQ5NiiBywlccFYFcgGYHqIZMqhZQ8xU+sTk0be9I1ksHYrjjsvQYoEhmqGr1eFg3lObnD+jCe8TZHPJuv6RFZiAX0qDngQ9CpQEW/JvUhIoCCYg/E7qRa8R4fmxgSY9CXyGP7Er8W2XkrIj8c0XZq29Qe7H/U1+3iXyhIhOAkcRUIEchW/nm1Ee7TRdhhT2Ga7ZOaMNF6I8aKg4Ra+n3ZCRuKGkJg8wC41Gct9yvE1uaNeDDP35XZQCPSmGJekN0ANYl79ImWsYCqXBs0nU0rVKgvU/KIlSEExAuG2uoqeC0IPch1k7VHiKiRopqu4cCKhA+n/K2Dxa5YGh+FQ9Dxq1Uh7UFHvLPg0P9/QlLBwk7V/nZ0/5rVxPPTDYJ7jsVeGfWuBLg04vArlDCrBui7j1YrHghQFhJlkuueKoQ/UoWiXBDgQoiSsXHhGgjDVUSC/mkKHCI7L31jkTUIH0+3Rp6FqbxymVBzXD0IqP8EbbVaNEescKBl3SuBU/ewgbP753c/0fJvxJkT4da1PoOZQwiwm7A0qDngSNdOX/kgTKDrHu830V7vm2XFO9CxRQn8+l/RvgBSJZ6yTQDQEVSDccN6WCwbwaOoyWp7R5UB56HjVEwltun40U+e0j7QygfXb+ZZy/Nn5kSuqnJlMMzL8Xv0/3emuJ0/izSr6iqydB/JsmsuwQ6/4H5Ry7KX9h/FM4lFP7N0A5T5GveZwJgSkokCk+CoatWoM5i/VOZfOAF8qiGg7CNCTEj0VQaFWWfWwX7caPn54E9rk3lx/smM1E74MEauiNMMLsKQzZY2NMr4jeEWVEcYytfJRLmTgBFUj3D5CeRztsxdj3KZUHPY+xzbhap1y2AAzo6+cuOmY4sMbyWTfT1caPF+XXxlNe/q/Qw2DorWxaXMPsqTEuYvwRCrcSjPKroJ4EuiPAf4ruUjOl9Z7HKYeteONEeVTPgxlXrPQe41PBhkC5MOriXyYM+TwrF9RwINNQWbmfqKtc2SlY0X6/q850f/BNSfKnIziUysMSIN/qdeZwUMe06PdblQBe9EJXh3t6Xi6BSwioQC6Bs+MpdqDl7ZjhlKF6HigNjLP4FJsGox2jJ25Mwu68lOed+blEPiHnfjvCBIB4C5Ti5yyu/ff+iSo7BZssYmhPVK/uY5P6kyNsUx9vublj2zMhbgjBTsRQH3mztxh2F8KKBDonoAI5Hikrenk7/uRVUkMsEqTnscp+gX2hGtyKG5tfdoQbLikYayoYpipFyMwlwux7hdG81luwO+/6VOBNPZRLsjr41D1zJxtBsto7wQX7fw1ta0B5UCbKQ0/kMsZco0jgYAIqkIPRXbmRMfE6YLigsXlUdG8+BtxWeaA4hm7AtlWWobbqgdxsw8X0on458aypiLdgttUPJsCQDIZspqUy9bfWW1RjmUsWnP/WBE691oHV3nxEK1kvMFx/LoEBhK9JDmUnGqC6Zjk0ARVIt0/glKt8URwYcKnBP+QH5cHQVYKjdu0WJgz/tYV9eg6oVzvswnbwfJ2xvpmSS5aOHWhZZ8G28ewh9XWJ5e95KDvEVyb/cvSWqiGvuL59PhD2YatM2CL/VL2wVZZ650iA/3DnWO+u6swWJZUWaz1O9eZLI8ubOnkzlHO7BKagPFLMRbuFCQvriENgyXRnwpsE+wd2HoboMFzTk2GdBcNGfMSKN/9N950qjmdShnXsME9LxqdUIl+e/Mp19YGwSm+SvoXun4AK5HDGvC23RlOGsh5weHI73UmjSUNVygOlwceamOe/UwIjuKidgUV9qAv2jpZlFZOPUzFFliEr7B/MyBrzEB2G9VokeNNUgmfFTLwEe3UwgSOZoGC7+kAY6SkSuJCACuRCNJeeYHpsvS2324izMvrSG484SQPBGzg+yaA8GLYiPAUpZVH2Dwy81IdGtuwdVQ+Guagne10xNPSCOjEBn+GrUiK8VGCT6bPYcK3eF38TKJM+8zNtCVwhoAK5gmKvwI83VzPVtGYV9dUToDGloa1secvsV3lUTvv7TKfFXsF2JSz4Y60Hxu1SFhelCMM/zknqim0HQ3oOJ+lQIs9ZlZxNEvvsmTKpYJXVcgZehfUl0DsBFchhiNtxfNaA1Ft1H406DXGrPFhVPKa3TFjQQPLpVNYdsKCPxpOG7UuDl49mxbvGoTAqktlrrAl5p0RMWXGk+FdcTesmoq+eKX8bKFzy6HIHX9JTJLCVgApkK6KNF9Q4PltxMAPoZ1ZXvUX8Lht3bAM0xEl26VBQNBTLg4F+SmH8WPKn4YcBGyLy6VRmTCX6imNiAVvX0/v47sRS/mJXSpddbT8w57gu3mwcvVFWp1MhniN+19L+bfBi0XX6pjcMgcnkqgLZ/1GxXUk1ftetbsce0q4D2LRaenXpzh6zkso2wFs9jS9jK9Q0EwAACk1JREFU3DsnsMeFjKPzJovyQ5giy+yu9sNITBWmh1EKgy3UGZ6pbCgjH0x6XCIY1oMNCuUdcozx+/7xmTHV/s1RH76mNzflkaouXf2d8GKxjOjwp7UL8bfRYdImJYHdCLT/mXe747yvem6qX9uV0Jh+SY7LYeyt8KMTOGYKJ8qjZiW9LGnxHQca2wSvcTT+NPq85a43+vVFPAz9rNhmmKniaOzZhqO1T2CMRW6ZXGqhHgsjERp6FEJOLd3f5hdb0APjM0uKT6bylcDPy/GTIqxFiLd0lJFFj2z3sozID2/Pc2/4MKKnqguG5vC7EmZ2oaBJj17gRX8bnFck0BsBFcjuaFlrwHoL7mBoho9DPZODlWCnaNcBMJZP47o6vbPXKg96ANfnzvVpmTTIKA3yZHiIRp/eynqjT8OP3DxpsGKbYSaOEXaYvXHi1x1DLwwrkTcL9Uo4Ruk8PDegMHirZpz/sTlu34ZzeJVjnJ4yYhivE/Q47lMHXfsjSq+G61C2XRXrLZPQYyI4XmJq52WOFQmclIAKZHfcvMHX1TSYm7ZoZx1A9Rxgy9bul/VEUAQIjSwKgd5G3c/4OQvmnpJM215D9RhQGgw75fTSbWr0q/Hnfr5pwZ5NFcciPhp2Zgwxfk5vgPz4tgW9DTblY6FeCcf0MB6R3Kh/vEsd9ULB0dNYv/CJ6xEzPeZvgKq1Q30cHyMoD14ISINhQWauEVYkcHIC9Qd+8ownmiGNN0V/OT8XCFt900hzmhXJNKLfx8FKaFgZziEtGnCERhaFwDDQ6rIFvQO+tkdvoYReQ53Hp7dQU3o3NfrV+N8mF3MvezZVHNuFYJtgzQKG+a6GQVCGpZxKwVU5eWNOURYsssOfu3TdA2HIlJcUuH1PftgjLJ5OAsMQuFaBDFOOqeTKGzplZZ0D/kVCI03DzHnGwXnDZ1NAehgojHY4h2taYXpr21NAGZVUw0yvgbLQW6Dn0lXj35Zj3zAr81GKKMO214WCq3KiUEmXITD8uUv9/2KK8rF1vX0S4OUk3oLhxEOGR7lXkUBnBOoPvLMEzyShm6SeDDHxH3ndQF3Hn59r2L+JRjXBBYqk7WG8OJE0rs+IX46t4O+Wg7angDIqaXsNuWwUjl4Mw3nMRGsLxALCUhzE0zPBR8pWRPgcpHpex9SVoau6n7+tLtKs9PQlcBABFch+2JjeWgqBt2mGmBiPbg3U7THbldNT2JTLGyXyQZFqeFFGDFXRGCd6Eo7punzw6c6r0rIzLrPRqPNtE8fQVbyla42952IDqSGslsMSxgU/F0WzTft7rU4yieFZq7CeBAYloALZDz/2C964n5DbaPAZWlo3UK8fPy/XMmz1yPjfG6FXEm/5BTuUCOF/zA+zupidlODoHb0JPuq0/sEn1nmw+eGmClA/4llHc2yDSjpTkPr/dcwQFvuu1TbtfByKSQxTqLtlPAMC9Qd+BlXtrIo0fmwEyKwkhpbWDdTrx3ytEKXzFSnB/SK8mZcCQtkwlHWPxI9ZebBIEhsOwyb0wLBzlB2DKc2fmfKXzSfBjY4vCXKC4T/8cxJ6q4fWl2nSde9QH6qq/PUlcBWBWSmQq2o23oNWAaFsmOJ5qu+IHEoFAy42nHYhIWkxNZi9rn6Yg0uEHkudHuqDT5X/qXx6WpUXSrbC+/jMYkO4B3tZu+6IOEUCgxJQgQyKf9KZs4qdXgkzwFgjwyp3FhoyxZmPKaE02savKsv1FZ6rz6LT2rEARod+4ImeHox46WC2HWFFAqMhoAIZzaMYdUEwemO7QTmweSSFZSiKWVbtpAHWmvCBq4/MBTR+rIHhPrZGSdTy++akwRoG7EnEzVHanQNo/A/pOaAwitEE1nvM8TFap20EVCDbCHkeAuy9xBcBWQDI2/WTE8l0ZRpG7DgMZbF2hXUqxOf0Fcc9dcAQGArmvolgYsFL4/PBpWooczgLx5BfVYT9ySq8qw8PFpZyPQoIZUJYkcCoCKhARvU4JlOYe6akt4gwOwg7Dj0P1q6wToV4pvHSO2EBJd8GwfCeyxcvyQ9rXeItHdOcH5wQyqR6Jqy0rtlpOTVJx2QDCk6dtk0u4Lp1QalWHAwrrC+BURFQgYzjccyxFLw5s0UKGy6iUKgjH9/ii4Xsu8ViwvbtvHom7P3FtGZsLHyQivumJg9JgdmpGOW67wQJ7Ea1U8GLks452IxSTd0UCahApvjUplXmpzbFfdQqTKNITwOlgTJh8SSLEFenlx57gbEz8UXrSpYXjfSHVeMoTnpW+xYR21Hdw64EFdaXwOgIqEBG90hmV6BaL8IiOGwk6xVEmdwlkSxCxL5y14RrpTU9l4flGMM9thWGhPg2SqJm6VAe2D+oHENX9OIIK30SMO2DCahADkbnjXsSwP6x7RYUBdt2fGguxFDPMFaCC2Z8MduLHktrH+DcXIShK6Y+Ux+UKsN/hBUJjJaACmS0j2Y2BWMKMOtDHrpnjTDUs8cYioTeB1/eIwmmBLMwj80su/h0MGmOQeh9VDnofVRYXwKjJaACGe2jmUrBtpaTKcB8iGpfY3IljCJhZtcdKiL+jSJsD/K4+CzUm7oiYWjPoas8TN20CKhApvW8zrm02AMeHQDsHcbixASXji1WvjMh1pSgTOidMPTFFxrppTBtmIWLuWSUDsVR30+hjg5djfIxWahNBFQgm6gYN1YCrBlh7zAWNT4/hURhxFtgbGdNCcqE3gkzuLiGXgqGeRYuoliwsbwwN7QL/XI4qCu7B4VgRhq+IoGdCAx9kQpk6Cdg/ocSuD43oiCeFJ8pwKyZoGfCTC16KWy3T6+EfbpyyQLFgjGe7dGZQkzcGKRdcU4PZAxlsgwS2ImACmQnTF40YgJ81IopwCgGeh1snUIvhe32WdF+XcrO9vkoFbZcYaPHxyduDK7dooTddsdQJssggZ0JqEB2RuWFEyXAWz3fb0GpsOXK3VOPVy3wS2Bgd69V/pRR28cKht50CKhApvOsLOm8CGA8R6iVu+1CQZkcARXI5B6ZBZ4JgfYjXO1Q1kyqZzXOgcARCuQc8FhHCfRCgJ5HTd1lU8leMjFRCfRNQAXSN2HTl8C1BNqpu4ds935tisZIYAACKpABoJvl2RM4euru2RMUwCgIqEBG8RgsxBkRYPiqqqvxvEjoT5KACmSSj81CT5hAGc9Zk6LxfMIP0qIvFuepQHzyEhiGAL2PMp4/b5gimKsEuiOgAumOpSlJYBsBjefbCHl+UgRUIJN6XBZ24gQ0ni8WE3+EFr8loAJpaRiWQH8EGL6q1DWeFwn9SRNQgUz68Vn4CRHQeD6hh2VRdyOgAtmN02iusiCTJVDG8xsmWwMLLoE1AiqQNSAeSqAHAq3x3F13ewBsksMQUIEMw91cz4vAHZvqPrsJG5wUAQu7TkAFsk7EYwl0T+BOqyRRHnz7Y3WoJ4FpE1CBTPv5WfppEVB5TOt5WdotBFQgWwB5ujMC55zQvVN5PlmLn6BOAvMgoAKZx3O0FuMmwNCV+16N+xlZugMIvBIAAP//ObOn7gAAAAZJREFUAwCj2adaARxB/gAAAABJRU5ErkJggg==','172.23.0.1','2026-07-05 15:39:53',1,'storage/certificados/2026/cnbl/CNBL_AM-CNBL-1-26.pdf','682a44bdf87a09b1471170c6dd3d343d58777817b60bfe4225cb4a117ab62cc5','assinado',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 18:39:07','2026-07-05 19:07:55','0','476','25440','','0','476','0','8f85d9b9-4606-49ac-8a9e-ce3943829467',NULL),
+('670f4d07-b570-46b9-ad0a-cb9cb1c43a09','AM-CNBL-3/26','Definitivo','d4d6cc19aa7e209fea6d482a3024a7d392fca333090d192038e51faf672e4c66','Barco kds','BAL-00632-PA','Santarém - PA','PW3463','Transporte de Passageiros','B','2023',30.00,29.00,9.00,2.80,'120','Interior','Área 1','Aço',280,'Tipo B',1.80,'AM-REL-V-5/26','2026-07-17','belem','2026-07-06','2026-07-22','Manaus-AM','João Responsável','Engenheiro Naval','123456',NULL,NULL,NULL,0,NULL,NULL,'emitido',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-06 12:58:31','2026-07-06 12:58:31','222','44','86','','2266','655','333','8f85d9b9-4606-49ac-8a9e-ce3943829467',NULL),
+('6ab45886-6dcb-4bcb-bf82-d626e1ccb22a','AM-CNBL-2/26','Definitivo','7bcb57079f4260d0b99fb5090036df015ba3ffd511a0c20c4fa75bae0e27c701','Barco kds','BAL-00632-PA','Santarém - PA','PW3463','Transporte de Passageiros','Balsa','2023',30.00,29.00,9.00,2.80,'120','Interior','Cabotagem','Aço',280,'Tipo B',1.80,'AM-REL-V-5/26','2026-07-17','belem','2026-07-05','2026-07-15','Santarém-PA','João Responsável','Engenheiro Naval','123456',NULL,NULL,NULL,0,NULL,NULL,'emitido',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 19:25:17','2026-07-05 19:25:17','','A meia nau','','','IAN','V','','8f85d9b9-4606-49ac-8a9e-ce3943829467',NULL);
+/*!40000 ALTER TABLE `certificados_cnbl` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `certificados_csn`
+--
+
+DROP TABLE IF EXISTS `certificados_csn`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `certificados_csn` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Definitivo',
+  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `emitente` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `nome_embarcacao` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
+  `numero_inscricao` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `indicativo_chamada` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `atividades_servicos` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_embarcacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ano_construcao` varchar(10) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `comprimento_m` decimal(8,2) DEFAULT NULL,
+  `arqueacao_bruta` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `area_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `fabricante_motor` varchar(300) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `potencia_kw` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `autorizado_carga` tinyint(1) DEFAULT '0',
+  `qtd_passageiros` int DEFAULT '0',
+  `obs_passageiros` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `observacoes_verso` text COLLATE utf8mb4_general_ci,
+  `relatorio_numero` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_vistoria_seco` date DEFAULT NULL,
+  `data_vistoria_flutuando` date DEFAULT NULL,
+  `local_vistoria` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `normam_aplicavel` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_vistoria_certificado` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `acessibilidade_sim` tinyint(1) DEFAULT '0',
+  `acessibilidade_nao` tinyint(1) DEFAULT '1',
+  `data_emissao` date NOT NULL,
+  `data_validade` date NOT NULL,
+  `local_emissao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'BelÃ©m-PA',
+  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_em` datetime DEFAULT NULL,
+  `assinado` tinyint(1) DEFAULT '0',
+  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `numero` (`numero`),
+  UNIQUE KEY `token_assinatura` (`token_assinatura`),
+  KEY `criado_por` (`criado_por`),
+  KEY `fk_csn_vistoria` (`vistoria_id`),
+  CONSTRAINT `certificados_csn_ibfk_1` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_csn_vistoria` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `certificados_csn`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `certificados_csn` WRITE;
+/*!40000 ALTER TABLE `certificados_csn` DISABLE KEYS */;
+INSERT INTO `certificados_csn` VALUES
+('01087135-1331-464f-a498-b1e9ee998faa','AM-CSN-10/26','Definitivo','76dfae41b50fb368844271fd47696ffe9d3d9b1d3ac710fee555262458c92dac',NULL,'Barco kds','BAL-00632-PA','PW3463','','Balsa','2023',30.00,'120','Interior','Cabotagem','','','Aço',1,44,'veiculo leva passageiros',NULL,'AM-REL-V-5/26','2026-07-06','2026-07-06','belem',NULL,NULL,0,1,'2026-07-04','2026-08-04','Santarém-PA','João Responsável','Engenheiro Naval','123456','data:image/png;base64,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','172.23.0.1','2026-07-05 01:48:20',1,'storage/certificados/2026/csn/CSN_AM-CSN-10-26.pdf','2c21d33321f7658c55e162ca841f059d3dea336aec4de0125b39d86f4f1f646d','assinado',0,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-04 05:02:50','2026-07-07 22:56:23','8f85d9b9-4606-49ac-8a9e-ce3943829467'),
+('19fc6e8b-2e56-4953-9594-7ba7c8e5ae1f','AM-CSN-8/26','Provisório','139477b7049b491084b8acd556b4d135c2941536a2c47a626ab450df3a9a602e',NULL,'Barco kds','BAL-00632-PA','PW3463','','Balsa','2023',30.00,'120','Interior','Cabotagem','','','Aço',1,44,'veiculo leva passageiros',NULL,'AM-REL-V-4/26','2026-07-03','2026-07-03','belem',NULL,NULL,0,1,'2026-07-03','2026-08-10','Manaus-AM','João Responsável','Engenheiro Naval','123456',NULL,NULL,NULL,0,NULL,NULL,'emitido',0,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-03 03:38:07','2026-07-07 22:56:19','3b14c7df-5078-470a-afd1-41da3958260a'),
+('20b9c99e-3121-4790-bcaf-9c22151be3bd','AM-CSN-4/26','Definitivo','2a2f384c2780228d7706693ba244adc85b82bd5f225454db296631a01bf5fffc',NULL,'Barco kds','BAL-00632-PA','PW3463','','Balsa','2023',30.00,'120','Interior','Cabotagem','','','Aço',1,44,'veiculo leva passageiros',NULL,'AM-REL-V-4/26','2026-07-03','2026-07-03','belem',NULL,NULL,0,1,'2026-07-02','2026-08-02','Belém-PA','João Responsável','Engenheiro Naval','123456',NULL,NULL,NULL,0,NULL,NULL,'emitido',0,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-03 02:15:58','2026-07-06 20:36:01','3b14c7df-5078-470a-afd1-41da3958260a'),
+('2bb22ff4-c6ef-4666-9d11-7949c600cda8','AM-CSN-14/26','Definitivo','5b161c6d28e62157da3dddddca17516bc7550830de467d24566990b6ced42ede','Capitania','Barco kds','BAL-00632-PA','PW3463','','Balsa','2023',30.00,'120','Interior','Cabotagem','','','Aço',1,44,'veiculo leva passageiros','ok observações aqui','AM-REL-V-5/26','2026-07-17','2026-07-17','belem','NORMAM-02','Inicial',0,1,'2026-07-07','2026-08-07','Belém-PA','Victal Donanzan','Engenheiro Naval','CREA: 22.537',NULL,NULL,NULL,0,NULL,NULL,'emitido',1,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-08 01:20:34','2026-07-08 01:20:34','8f85d9b9-4606-49ac-8a9e-ce3943829467'),
+('3f694510-d109-409a-8e17-d53b9dd29d85','AM-CSN-11/26','Definitivo','c4d60eb52f3654b21ba61bb04cffeda271b22e5d819efaf3ad8a5f41066910ae',NULL,'Barco kds','BAL-00632-PA','PW3463','','Balsa','2023',30.00,'120','Interior','Cabotagem','','','Aço',1,44,'veiculo leva passageiros',NULL,'AM-REL-V-5/26','2026-07-17','2026-07-17','belem',NULL,NULL,0,1,'2026-07-06','2026-07-08','Manaus-AM','João Responsável','Engenheiro Naval','123456',NULL,NULL,NULL,0,NULL,NULL,'emitido',0,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-06 19:28:42','2026-07-07 22:56:24','8f85d9b9-4606-49ac-8a9e-ce3943829467'),
+('47458a16-6603-44e4-a407-6fb11cdbbc4d','AM-CSN-13/26','Condicional','3e33d8ff71eda0e97a3fccd938a270b4ac6ab57309266bbdb7b6ff750b79c48e',NULL,'BALSA RIO MAR','BAL-002-PA','PW5678','','Empurrador','2020',30.00,'120','Interior','Rio Amazonas e afluentes','','','Alumínio',1,60,'VeÃ­culos e passageiros',NULL,'AM-REL-AP-1/26','2026-07-08','2026-07-08','belem',NULL,NULL,0,1,'2026-07-07','2026-07-07','Manaus-AM','Victal Donanzan','Engenheiro Naval','CREA: 22.537',NULL,NULL,NULL,0,NULL,NULL,'emitido',1,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-07 22:56:12','2026-07-07 22:56:12','96ad88be-ee14-405f-8ea1-f525afae4bd8'),
+('6209a5ce-7628-11f1-85ad-621c498e207c','CSN-2026-001','Definitivo','d0c5970cfbf0c3b7e23f0cebb80614dc',NULL,'EMPURADOR VALENTE','EMP-001-PA','PW1234','Rebocagem/Empurra','Empurrador','2018',18.50,'45','Interior','Bacia AmazÃ´nica','MWM 6.12TCA','300','AÃ§o Naval',0,0,NULL,NULL,'VST-2026-001','2026-07-10','2026-07-10','Estaleiro Rio Maguari - BelÃ©m-PA',NULL,NULL,0,1,'2026-07-10','2027-07-10','BelÃ©m-PA','Rosano Silva De Souza','Programador','383034','data:image/png;base64,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','172.23.0.1','2026-07-02 16:25:10',1,'storage/certificados/2026/csn/CSN_CSN-2026-001.pdf','07553bb010286ddcf9ba7c382dc80b608d8479bf022524b4adbee224cab5499d','assinado',0,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-06 20:35:59','620765e4-7628-11f1-85ad-621c498e207c'),
+('620d8e83-7628-11f1-85ad-621c498e207c','CSN-2026-002','Definitivo','e5ec81e1e1cbef4525a9082b6bc167f3',NULL,'BALSA RIO MAR','BAL-002-PA','PW5678','Transporte de Carga','Balsa','2020',30.00,'120','Interior','Rio Amazonas e afluentes',NULL,NULL,'AÃ§o Carbono',1,60,NULL,NULL,'VST-2026-002',NULL,'2026-07-15','Porto de SantarÃ©m - PA',NULL,NULL,1,0,'2026-07-15','2027-07-15','BelÃ©m-PA','Rosano Silva De Souza','Programador','383034',NULL,NULL,NULL,0,NULL,NULL,'emitido',0,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-06 20:35:57','620c6b1a-7628-11f1-85ad-621c498e207c'),
+('62120e49-7628-11f1-85ad-621c498e207c','CSN-2026-003','Definitivo','013532d2c80badd4757030623f222e3b',NULL,'REBOCADOR FORÃ‡A NAVAL','REB-003-PA','PW9012','Rebocagem portuÃ¡ria e oceÃ¢nica','Rebocador','2022',22.00,'85','Costeiro','Costa Norte do Brasil','Cummins QSK19','600','AÃ§o Naval',0,0,NULL,NULL,'VST-2026-003','2026-07-20','2026-07-20','Porto de BelÃ©m - Terminal de Carga',NULL,NULL,0,1,'2026-07-20','2027-07-20','BelÃ©m-PA','Rosano Silva De Souza','Programador','383034',NULL,NULL,NULL,0,NULL,NULL,'emitido',0,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-06 20:35:54','620fefdc-7628-11f1-85ad-621c498e207c'),
+('73bd5dea-d344-4852-83af-a7bb8f1ef629','AM-CSN-7/26','Definitivo','f5e659c7445785c56cdfba3dacc5ce80ad78e3b4aaa34434d08f5e9f4e388787',NULL,'Barco kds','BAL-00632-PA','PW3463','','Balsa','2023',30.00,'120','Interior','Cabotagem','','','Aço',1,44,'veiculo leva passageiros',NULL,'AM-REL-V-4/26','2026-07-03','2026-07-03','belem',NULL,NULL,0,1,'2026-07-03','2026-08-03','Manaus-AM','João Responsável','Engenheiro Naval','123456',NULL,NULL,NULL,0,NULL,NULL,'emitido',0,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-03 03:08:27','2026-07-06 20:36:09','3b14c7df-5078-470a-afd1-41da3958260a'),
+('8b6582c8-f102-4aa2-bc2d-76d78a258361','AM-CSN-9/26','Provisório','7e54b7a137e70ccd18f189b7499c784d6fdcdf6ddecab9f8f67219f6ace437c1',NULL,'Barco kds','BAL-00632-PA','PW3463','','Balsa','2023',30.00,'120','Interior','Cabotagem','','','Aço',1,44,'veiculo leva passageiros',NULL,'AM-REL-V-4/26','2026-07-03','2026-07-03','belem',NULL,NULL,0,1,'2026-07-03','2026-08-04','Santarém-PA','João Responsável','Engenheiro Naval','123456',NULL,NULL,NULL,0,NULL,NULL,'emitido',0,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-03 03:40:10','2026-07-07 22:56:21','3b14c7df-5078-470a-afd1-41da3958260a'),
+('b0a5b2ea-d243-4dac-99f8-6affd62e46e7','AM-CSN-15/26','Definitivo','4036a18293848cdee71b63aaa7d70cd55b6125a133acefce29da374ec80d58cc','Capitania','Barco kds','BAL-00632-PA','PW3463','','Balsa','2023',30.00,'120','Interior','Cabotagem','','','Aço',1,44,'veiculo leva passageiros','obbobobobobob','AM-REL-V-5/26','2026-07-17','2026-07-17','belem','NORMAM-02','Inicial',0,1,'2026-07-07','2026-08-07','Santarém-PA','Victal Donanzan','Engenheiro Naval','CREA: 22.537',NULL,NULL,NULL,0,NULL,NULL,'emitido',1,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-08 01:23:38','2026-07-08 01:23:38','8f85d9b9-4606-49ac-8a9e-ce3943829467'),
+('b6f85830-c806-4e85-913a-e5502c189f73','AM-CSN-6/26','Definitivo','2020657c8d7b79011771f6b7329da798ff0ed1dd7ce64e9caf35e69919748c20',NULL,'Barco kds','BAL-00632-PA','PW3463','','Balsa','2023',30.00,'120','Interior','Cabotagem','','','Aço',1,44,'veiculo leva passageiros',NULL,'AM-REL-V-4/26','2026-07-03','2026-07-03','belem',NULL,NULL,0,1,'2026-07-02','2026-08-02','Belém-PA','João Responsável','Engenheiro Naval','123456','data:image/png;base64,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','172.23.0.1','2026-07-03 00:00:16',1,'storage/certificados/2026/csn/CSN_AM-CSN-6-26.pdf','725c4624408298fe63c026b59322987f27bca0a063105c9d76fccba6a5d27ab2','assinado',0,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-03 02:17:09','2026-07-06 20:36:07','3b14c7df-5078-470a-afd1-41da3958260a'),
+('c0250674-b85e-4c99-8576-8d78f3d2349b','AM-CSN-12/26','Definitivo','307b4a15b194c27c0b52a0f04bf19df1c97880ef0365f2fb0908b0995129b064',NULL,'Barco kds','BAL-00632-PA','PW3463','','Balsa','2023',30.00,'120','Interior','Cabotagem','','','Aço',1,44,'veiculo leva passageiros',NULL,'','2026-07-08','2026-07-08','',NULL,NULL,0,1,'2026-07-06','2026-07-07','Manaus-AM','João Responsável','Engenheiro Naval','123456',NULL,NULL,NULL,0,NULL,NULL,'emitido',0,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-06 20:35:01','2026-07-07 22:56:31','c274f2cf-9445-423e-8e5e-f91b21d4a0bc'),
+('ccf89c69-9632-438d-a343-731ebbeb6874','AM-CSN-16/26','Condicional','6c417108c0030fa5f804008680750fcd2710296be98263339ff012d3f6206b6f','Capitania','BALSA RIO MAR','BAL-002-PA','PW5678','Transporte de Carga','Empurrador','2020',30.00,'120','Interior','Área 1','','','Alumínio',1,60,'VeÃ­culos e passageiros','','AM-REL-AP-2/26','2026-07-10','2026-07-10','belem','NORMAM-02','Inicial',0,1,'2026-07-08','2026-08-21','Belém-PA','Victal Donanzan','Engenheiro Naval','CREA: 22.537','data:image/png;base64,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','172.23.0.1','2026-07-08 21:07:40',1,'storage/certificados/2026/csn/CSN_AM-CSN-16-26.pdf','ea221af6e7804a918054d456826a804c4700cf54129102835a9b0c331a874529','assinado',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:06:57','2026-07-09 00:07:40','90b14fb6-f742-448f-8708-d3bafeef8681'),
+('d701806a-b045-4d7e-aab6-ad29ef5b7157','AM-CSN-5/26','Definitivo','85981cc959f02f6d61d4f4ae6effcbf2406e41127650d2179c40358365e29a59',NULL,'Barco kds','BAL-00632-PA','PW3463','','Balsa','2023',30.00,'120','Interior','Cabotagem','','','Aço',1,44,'veiculo leva passageiros',NULL,'AM-REL-V-4/26','2026-07-03','2026-07-03','belem',NULL,NULL,0,1,'2026-07-02','2026-08-02','Belém-PA','João Responsável','Engenheiro Naval','123456',NULL,NULL,NULL,0,NULL,NULL,'emitido',0,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-03 02:16:37','2026-07-06 20:36:04','3b14c7df-5078-470a-afd1-41da3958260a'),
+('f4b37d80-fe2d-438d-b581-9e5b072885a1','AM-CSN-17/26','Condicional','7092fcac0192f2eaafd7281a75041eda31cffcf32ea53a97153a66515505df79','Capitania','BALSA RIO MAR','BAL-002-PA','PW5678','Transporte de Carga','Empurrador','2020',30.00,'120','Interior','Área 1','','','Alumínio',1,60,'VeÃ­culos e passageiros','','AM-REL-AP-2/26','2026-07-10','2026-07-10','belem','NORMAM-02','Inicial',0,1,'2026-07-08','2026-08-21','Belém-PA','Victal Donanzan','Engenheiro Naval','CREA: 22.537',NULL,NULL,NULL,0,NULL,NULL,'emitido',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:06:58','2026-07-09 00:06:58','90b14fb6-f742-448f-8708-d3bafeef8681');
+/*!40000 ALTER TABLE `certificados_csn` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `certificados_lc`
+--
+
+DROP TABLE IF EXISTS `certificados_lc`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `certificados_lc` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero_lc` varchar(30) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'N??mero da licen??a (AM-LC:{n}/{ano} ou AM-EC:{n}/{ano})',
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'ID da embarca????o no cadastro',
+  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_licenca` enum('LC','LA','LR','LCEC') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'LC',
+  `data_termino_construcao` date DEFAULT NULL,
+  `nome_embarcacao` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_embarcacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `sociedade_classificadora` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `comprimento_total` decimal(8,2) DEFAULT NULL,
+  `comprimento_pp` decimal(8,2) DEFAULT NULL COMMENT 'Comprimento entre perpendiculares',
+  `boca_moldada` decimal(8,2) DEFAULT NULL,
+  `pontal_moldado` decimal(8,2) DEFAULT NULL,
+  `calado_maximo` decimal(8,2) DEFAULT NULL,
+  `porte_bruto` decimal(10,2) DEFAULT NULL,
+  `numero_tripulantes` int DEFAULT NULL,
+  `numero_passageiros` int DEFAULT NULL,
+  `tipo_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `area_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `atividade_servico` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `propulsao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario_cpf_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario_endereco` text COLLATE utf8mb4_general_ci,
+  `estaleiro_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_cpf_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_endereco` text COLLATE utf8mb4_general_ci,
+  `data_emissao` date NOT NULL,
+  `data_validade` date DEFAULT NULL,
+  `local_emissao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'Bel??m-PA',
+  `relatorio_numero` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_em` datetime DEFAULT NULL,
+  `assinado` tinyint(1) DEFAULT '0',
+  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `dados_json` longtext COLLATE utf8mb4_general_ci,
+  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `despachante_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_certificados_lc_numero` (`numero_lc`),
+  KEY `idx_certificados_lc_status` (`status`),
+  KEY `idx_certificados_lc_ativo` (`ativo`),
+  KEY `idx_certificados_lc_embarcacao` (`embarcacao_id`),
+  KEY `idx_certificados_lc_tipo` (`tipo_licenca`),
+  KEY `fk_lc_vistoria` (`vistoria_id`),
+  CONSTRAINT `fk_lc_vistoria` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `certificados_lc_chk_1` CHECK (json_valid(`dados_json`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `certificados_lc`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `certificados_lc` WRITE;
+/*!40000 ALTER TABLE `certificados_lc` DISABLE KEYS */;
+/*!40000 ALTER TABLE `certificados_lc` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `certificados_lp`
+--
+
+DROP TABLE IF EXISTS `certificados_lp`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `certificados_lp` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero_lp` varchar(30) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'N??mero da licen??a (AM-LP:{n}/{ano})',
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'ID da embarca????o no cadastro',
+  `token_assinatura` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_licenca` enum('construcao','alteracao','reclassificacao','lcec') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'construcao',
+  `nome_embarcacao` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_embarcacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `comprimento_total` decimal(8,2) DEFAULT NULL,
+  `boca_moldada` decimal(8,2) DEFAULT NULL,
+  `pontal_moldado` decimal(8,2) DEFAULT NULL,
+  `proprietario_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario_cpf_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario_endereco` text COLLATE utf8mb4_general_ci,
+  `estaleiro_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_cpf_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_endereco` text COLLATE utf8mb4_general_ci,
+  `observacoes_exigencias` text COLLATE utf8mb4_general_ci,
+  `data_emissao` date NOT NULL,
+  `validade_dias` int DEFAULT NULL COMMENT 'Validade em dias',
+  `validade_data` date DEFAULT NULL COMMENT 'Data de validade calculada',
+  `data_requerimento` date DEFAULT NULL,
+  `assinante_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_titulo` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_registro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
+  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_em` datetime DEFAULT NULL,
+  `assinado` tinyint(1) DEFAULT '0',
+  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `dados_json` longtext COLLATE utf8mb4_general_ci,
+  `status` enum('rascunho','emitido','assinado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'rascunho',
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `despachante_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_certificados_lp_numero` (`numero_lp`),
+  KEY `idx_certificados_lp_status` (`status`),
+  KEY `idx_certificados_lp_ativo` (`ativo`),
+  KEY `idx_certificados_lp_embarcacao` (`embarcacao_id`),
+  KEY `idx_certificados_lp_tipo` (`tipo_licenca`),
+  KEY `fk_lp_vistoria` (`vistoria_id`),
+  CONSTRAINT `fk_lp_vistoria` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `certificados_lp_chk_1` CHECK (json_valid(`dados_json`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `certificados_lp`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `certificados_lp` WRITE;
+/*!40000 ALTER TABLE `certificados_lp` DISABLE KEYS */;
+INSERT INTO `certificados_lp` VALUES
+('6de88a7c-ea79-482e-891c-ae36da1abad5','AM-LP-2/26','05a94606-59fe-4371-afbc-b7b094df2676','2aee72c50788a6eeac0403ed62d598de08653ffb266336315ca87cdc8eef22e9','construcao','Barco kds','Balsa','x-x-x','Aço',30.00,9.00,2.80,'Rosano Silva de Souza','','','Rosano Silva de Souza','','Estaleiro Belem','1. A emissão da licença provisória não exime o interessado da obtenção da licença de construção definitiva, prevista na NORMAM aplicável.\n\n2. Licença Provisória para Iniciar Construção emitida com base no relatório de vistoria n.º AM-REL-V-5/26.','2026-07-06',31,'2026-08-06','2026-07-17','João Responsável','Engenheiro Naval','123456',NULL,NULL,NULL,0,NULL,NULL,NULL,'emitido',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-06 16:55:14','2026-07-06 16:55:14','8f85d9b9-4606-49ac-8a9e-ce3943829467',NULL),
+('eec69bd5-228f-47e6-bc04-d9a959bef902','AM-LP-TESTE/26',NULL,'12ce97a6340d8b5f','construcao','BARCO KDS','BALSA','X-01','AÃ‡O NAVAL',18.56,3.90,1.80,'Rosano Silva de Souza',NULL,NULL,'KLEDSON LUIS DOS SANTOS PEREIRA',NULL,'Av Teste 02, BelÃ©m-PA','1. A emissÃ£o da licenÃ§a provisÃ³ria nÃ£o exime o interessado da obtenÃ§Ã£o da licenÃ§a de construÃ§Ã£o definitiva, prevista no item 3.7.1. d), da NORMAM 202/DPC.\n\n2. LicenÃ§a ProvisÃ³ria para Iniciar ConstruÃ§Ã£o emitida com base no requerimento apresentado por teste, datado em 10/06/2026.','2026-07-06',90,'2026-10-04','2026-07-06','Aracelli Suzane Andrade Ferreira','Engenheira Naval','CREA: 22.482',NULL,NULL,NULL,0,NULL,NULL,NULL,'emitido',0,NULL,'2026-07-06 16:50:02','2026-07-06 16:50:03',NULL,NULL);
+/*!40000 ALTER TABLE `certificados_lp` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `cliente_password_resets`
+--
+
+DROP TABLE IF EXISTS `cliente_password_resets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cliente_password_resets` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `token_hash` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `expira_em` datetime NOT NULL,
+  `usado_em` datetime DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_cliente_reset_token` (`token_hash`),
+  KEY `idx_cliente_reset_cliente` (`cliente_id`),
+  KEY `idx_cliente_reset_expira` (`expira_em`),
+  CONSTRAINT `fk_cliente_reset_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cliente_password_resets`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `cliente_password_resets` WRITE;
+/*!40000 ALTER TABLE `cliente_password_resets` DISABLE KEYS */;
+/*!40000 ALTER TABLE `cliente_password_resets` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `cliente_portal_acessos`
+--
+
+DROP TABLE IF EXISTS `cliente_portal_acessos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cliente_portal_acessos` (
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `senha_hash` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `forcar_troca_senha` tinyint(1) NOT NULL DEFAULT '1',
+  `ultimo_login_em` datetime DEFAULT NULL,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`cliente_id`),
+  KEY `idx_cliente_portal_ativo` (`ativo`),
+  CONSTRAINT `fk_cliente_portal_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cliente_portal_acessos`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `cliente_portal_acessos` WRITE;
+/*!40000 ALTER TABLE `cliente_portal_acessos` DISABLE KEYS */;
+INSERT INTO `cliente_portal_acessos` VALUES
+('64e60ad7-3a78-4db0-9e03-cc529d935325','$2y$10$6kTbnZ7J63KOwfTUrn2mieYze6CfaGY8dJckS0w0aeZJt/Qy4zp62',1,0,'2026-07-16 17:46:31','dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-08 12:01:05','2026-07-16 17:46:31');
+/*!40000 ALTER TABLE `cliente_portal_acessos` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `clientes`
+--
+
+DROP TABLE IF EXISTS `clientes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `clientes` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `nome` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_pessoa` enum('PF','PJ') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PF',
+  `cpf_cnpj` varchar(18) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `perfil` enum('armador','proprietario','despachante') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'proprietario',
+  `telefone` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `email` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `endereco` text COLLATE utf8mb4_general_ci,
+  `status` enum('ATIVO','INATIVO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ATIVO',
+  `tipo_recebimento` enum('pix','cc') COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `chave_pix` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `banco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `agencia` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `conta` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `cpf_cnpj` (`cpf_cnpj`),
+  KEY `criado_por` (`criado_por`),
+  CONSTRAINT `clientes_ibfk_1` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `clientes`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `clientes` WRITE;
+/*!40000 ALTER TABLE `clientes` DISABLE KEYS */;
+INSERT INTO `clientes` VALUES
+('18aa7dc6-9623-4bdf-8bb9-e73b9d449100','Marcelo Augusto Pereira','PF','18219822821','despachante','(91) 98934-0244',NULL,'Passagem Monte Crist\r\nCasa 44','ATIVO','pix','9193982348',NULL,NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 22:17:48','2026-07-02 22:17:48'),
+('60977320-a7d1-49a7-8471-4909c5530d79','Armador Souza','PF','12345678900','armador',NULL,'ronoktert020@gmail.com',NULL,'ATIVO',NULL,NULL,NULL,NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 22:14:12','2026-07-02 22:35:25'),
+('620624f7-7628-11f1-85ad-621c498e207c','Transportes Amaz?nia Ltda','PJ','12.345.678/0001-90','armador','(91) 3222-1000','contato@transportesamazonia.com.br','Av. Presidente Vargas, 500 - Belém-PA','INATIVO','pix','12.345.678/0001-90',NULL,NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-04 04:56:27'),
+('62062969-7628-11f1-85ad-621c498e207c','Jo?o Batista da Silva','PF','123.456.789-00','proprietario','(91) 98765-4321','joao.silva@email.com','Rua dos navegantes, 150 - Belém-PA','INATIVO','cc',NULL,'Banco do Brasil','1234-5','67890-1','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-04 04:56:48'),
+('62062e07-7628-11f1-85ad-621c498e207c','Despachos Ribeiro Ltda','PJ','98.765.432/0001-10','despachante','(91) 3223-2000','despachos@ribeiro.com.br','Travessa 14 de Março, 200 - Belém-PA','ATIVO','pix','despachos@ribeiro.com.br',NULL,NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-02 18:19:05'),
+('620b1381-7628-11f1-85ad-621c498e207c','Navega??o Rio Mar S/A','PJ','23.456.789/0001-01','armador','(93) 3522-3000','contato@riomar.com.br','Rua do Comércio, 100 - Santarém-PA','INATIVO','pix','23.456.789/0001-01',NULL,NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-04 04:56:32'),
+('620b1780-7628-11f1-85ad-621c498e207c','Maria dos Santos Oliveira','PF','234.567.890-00','proprietario','(93) 98888-1111','maria.oliveira@email.com','Av. Tapajós, 500 - Santarém-PA','ATIVO','cc',NULL,'Caixa EconÃ´mica','0123-4','54321-0','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-02 18:19:05'),
+('620b1c1e-7628-11f1-85ad-621c498e207c','Santos Despachos Mar?timos','PJ','87.654.321/0001-00','despachante','(93) 3522-4000','despachos@santosmar.com.br','Travessa do Porto, 50 - Santarém-PA','ATIVO','cc',NULL,'Bradesco','7890-1','12345-6','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-02 18:19:50'),
+('620ebfc8-7628-11f1-85ad-621c498e207c','Marinha Mercante do Par? Ltda','PJ','34.567.890/0001-02','armador','(91) 3244-5000','contato@marinhamercantepa.com.br','Av. Almirante Barroso, 800 - Belém-PA','INATIVO','pix','34.567.890/0001-02',NULL,NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-04 04:56:34'),
+('620ec3a6-7628-11f1-85ad-621c498e207c','Pedro Henrique Almeida','PF','345.678.901-00','proprietario','(91) 97777-2222','pedro.almeida@email.com','Rua dos Caripunas, 300 - Belém-PA','ATIVO','pix','pedro.almeida@email.com',NULL,NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-02 18:19:05'),
+('620ec773-7628-11f1-85ad-621c498e207c','Bel?m Despachos Navais','PJ','76.543.210/0001-99','despachante','(91) 3244-6000','contato@belemdespachos.com.br','Travessa Padre Eutíquio, 180 - Belém-PA','ATIVO','cc',NULL,'ItaÃº','5678-9','98765-4','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-02 18:19:50'),
+('64e60ad7-3a78-4db0-9e03-cc529d935325','Rosano Silva de Souza','PF','38303451863','proprietario','(91) 98934-0275','ronokedas2020@gmail.com','Rua presidente costa e silva','ATIVO',NULL,NULL,NULL,NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 19:37:22','2026-07-08 14:42:14'),
+('70000000-0000-4000-8000-000000000001','Navegação Modelo Amazônia Ltda.','PJ',NULL,'proprietario','(92) 99999-0000','demo@example.test',NULL,'ATIVO',NULL,NULL,NULL,NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-14 22:06:04','2026-07-14 22:06:04'),
+('97e777dd-763d-11f1-85ad-621c498e207c','Propriet?rio Teste','PF','11111111111','proprietario',NULL,'prop@teste.com',NULL,'INATIVO',NULL,NULL,NULL,NULL,NULL,NULL,'2026-07-02 17:43:53','2026-07-04 04:56:53'),
+('97e7d8c6-763d-11f1-85ad-621c498e207c','Armador Teste','PF','22222222222','armador',NULL,'arm@teste.com',NULL,'ATIVO',NULL,NULL,NULL,NULL,NULL,NULL,'2026-07-02 17:43:53','2026-07-02 17:43:53'),
+('97e84847-763d-11f1-85ad-621c498e207c','Despachante Teste','PF','33333333333','despachante',NULL,'desp@teste.com',NULL,'ATIVO',NULL,NULL,NULL,NULL,NULL,NULL,'2026-07-02 17:43:53','2026-07-02 17:43:53');
+/*!40000 ALTER TABLE `clientes` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `clientes_embarcacoes`
+--
+
+DROP TABLE IF EXISTS `clientes_embarcacoes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `clientes_embarcacoes` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `cliente_embarcacao` (`cliente_id`,`embarcacao_id`),
+  KEY `embarcacao_id` (`embarcacao_id`),
+  CONSTRAINT `clientes_embarcacoes_ibfk_1` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `clientes_embarcacoes_ibfk_2` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `clientes_embarcacoes`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `clientes_embarcacoes` WRITE;
+/*!40000 ALTER TABLE `clientes_embarcacoes` DISABLE KEYS */;
+INSERT INTO `clientes_embarcacoes` VALUES
+('35e1041e-7adb-11f1-b408-1a04821156f9','64e60ad7-3a78-4db0-9e03-cc529d935325','05a94606-59fe-4371-afbc-b7b094df2676','2026-07-08 14:42:14'),
+('35e12566-7adb-11f1-b408-1a04821156f9','64e60ad7-3a78-4db0-9e03-cc529d935325','620a9dfa-7628-11f1-85ad-621c498e207c','2026-07-08 14:42:14'),
+('5dd6b338-7666-11f1-9eb5-0a1b2af87b16','60977320-a7d1-49a7-8471-4909c5530d79','05a94606-59fe-4371-afbc-b7b094df2676','2026-07-02 22:35:45'),
+('620693c4-7628-11f1-85ad-621c498e207c','62062969-7628-11f1-85ad-621c498e207c','6205b1f7-7628-11f1-85ad-621c498e207c','2026-07-02 15:12:04'),
+('620b8d58-7628-11f1-85ad-621c498e207c','620b1780-7628-11f1-85ad-621c498e207c','620a9dfa-7628-11f1-85ad-621c498e207c','2026-07-02 15:12:04'),
+('620f2d75-7628-11f1-85ad-621c498e207c','620ec3a6-7628-11f1-85ad-621c498e207c','620e4464-7628-11f1-85ad-621c498e207c','2026-07-02 15:12:04');
+/*!40000 ALTER TABLE `clientes_embarcacoes` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `clientes_tipos_embarcacao`
+--
+
+DROP TABLE IF EXISTS `clientes_tipos_embarcacao`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `clientes_tipos_embarcacao` (
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`cliente_id`,`tipo_embarcacao_id`),
+  KEY `idx_cte_tipo_embarcacao` (`tipo_embarcacao_id`),
+  CONSTRAINT `fk_cte_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_cte_tipo_embarcacao` FOREIGN KEY (`tipo_embarcacao_id`) REFERENCES `tipos_embarcacao` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `clientes_tipos_embarcacao`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `clientes_tipos_embarcacao` WRITE;
+/*!40000 ALTER TABLE `clientes_tipos_embarcacao` DISABLE KEYS */;
+INSERT INTO `clientes_tipos_embarcacao` VALUES
+('18aa7dc6-9623-4bdf-8bb9-e73b9d449100','06a95b60-75d0-11f1-98f0-5ed0db5eacb7','2026-07-07 05:15:16'),
+('18aa7dc6-9623-4bdf-8bb9-e73b9d449100','06a95ffa-75d0-11f1-98f0-5ed0db5eacb7','2026-07-07 05:15:16'),
+('18aa7dc6-9623-4bdf-8bb9-e73b9d449100','06a96100-75d0-11f1-98f0-5ed0db5eacb7','2026-07-07 05:15:16'),
+('18aa7dc6-9623-4bdf-8bb9-e73b9d449100','06a96123-75d0-11f1-98f0-5ed0db5eacb7','2026-07-07 05:15:16');
+/*!40000 ALTER TABLE `clientes_tipos_embarcacao` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `configuracoes`
+--
+
+DROP TABLE IF EXISTS `configuracoes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `configuracoes` (
+  `chave` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `valor` text COLLATE utf8mb4_general_ci NOT NULL,
+  `descricao` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`chave`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `configuracoes`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `configuracoes` WRITE;
+/*!40000 ALTER TABLE `configuracoes` DISABLE KEYS */;
+INSERT INTO `configuracoes` VALUES
+('acesso_documentacao_usuarios','[3774]','IDs dos usuários com acesso à documentação','2026-06-29 06:38:14'),
+('backup_email','ronokedas2020@gmail.com','E-mail para receber backups do banco de dados','2026-06-29 05:22:15'),
+('meta_mensagem','Ao bater a meta, teremos um dia especial com toda a equipe.','Mensagem da meta mensal exibida para a equipe','2026-07-16 17:48:32'),
+('meta_mensal','180000.00','Meta mensal de faturamento comercial em R$','2026-07-06 22:49:46'),
+('responsavel_assinatura_cargo','Engenheiro Naval',NULL,'2026-07-02 17:34:06'),
+('responsavel_assinatura_nome','João Responsável',NULL,'2026-07-02 17:34:06'),
+('responsavel_assinatura_registro','CREA 123456',NULL,'2026-07-02 17:34:06');
+/*!40000 ALTER TABLE `configuracoes` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `contratos`
+--
+
+DROP TABLE IF EXISTS `contratos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `contratos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `proposta_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `numero` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('MINUTA','AGUARDANDO_ASSINATURA','ASSINADO','CANCELADO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'MINUTA',
+  `frequencia` enum('ÃšNICA','MENSAL','TRIMESTRAL','SEMESTRAL','ANUAL') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ÃšNICA',
+  `dia_vencimento` tinyint DEFAULT NULL,
+  `proximo_faturamento` date DEFAULT NULL,
+  `renovacao_automatica` tinyint(1) NOT NULL DEFAULT '1',
+  `data_emissao` date DEFAULT NULL,
+  `data_vencimento` date DEFAULT NULL,
+  `valor_total` decimal(10,2) DEFAULT NULL,
+  `conteudo` longtext COLLATE utf8mb4_general_ci,
+  `assinado_por` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinado_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinado_em` datetime DEFAULT NULL,
+  `caminho_arquivo_pdf` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_arquivo_pdf` char(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `proposta_id` (`proposta_id`),
+  KEY `criado_por` (`criado_por`),
+  KEY `contratos_cliente_fk` (`cliente_id`),
+  CONSTRAINT `contratos_cliente_fk` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `contratos_ibfk_2` FOREIGN KEY (`proposta_id`) REFERENCES `propostas` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `contratos_ibfk_3` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `contratos`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `contratos` WRITE;
+/*!40000 ALTER TABLE `contratos` DISABLE KEYS */;
+/*!40000 ALTER TABLE `contratos` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `csn_convalidacoes`
+--
+
+DROP TABLE IF EXISTS `csn_convalidacoes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `csn_convalidacoes` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `certificado_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `numero_vistoria` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_inicio` date DEFAULT NULL,
+  `data_fim` date DEFAULT NULL,
+  `local_data` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vistoriador` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `certificado_id` (`certificado_id`),
+  CONSTRAINT `csn_convalidacoes_ibfk_1` FOREIGN KEY (`certificado_id`) REFERENCES `certificados_csn` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `csn_convalidacoes`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `csn_convalidacoes` WRITE;
+/*!40000 ALTER TABLE `csn_convalidacoes` DISABLE KEYS */;
+INSERT INTO `csn_convalidacoes` VALUES
+('019112dd-ad23-4764-b6ab-de7f6e7aeaf2','d701806a-b045-4d7e-aab6-ad29ef5b7157','8ª VIST. ANUAL','2034-04-03','2034-10-03','',''),
+('032ca9d9-eaf1-4c46-a93c-fe15ef2384cc','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','7ª VIST. ANUAL','2033-04-17','2033-10-17','',''),
+('04671f13-58dd-4569-94e6-cb4fbf5ff4be','3f694510-d109-409a-8e17-d53b9dd29d85','5ª VIST. ANUAL','2031-04-17','2031-10-17','',''),
+('04dae7d3-5065-4ef8-bd68-9f8659b747a0','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','4ª VIST. ANUAL','2030-04-17','2030-10-17','',''),
+('09853871-8d06-4d63-a1a5-bfa20a86d704','d701806a-b045-4d7e-aab6-ad29ef5b7157','2ª VIST. ANUAL','2028-04-03','2028-10-03','',''),
+('0a8b8b61-cb8f-4910-ab76-d8f14dac4680','b6f85830-c806-4e85-913a-e5502c189f73','6ª VIST. ANUAL','2032-04-03','2032-10-03','',''),
+('14a85109-4438-4978-8929-518c5c15837e','3f694510-d109-409a-8e17-d53b9dd29d85','4ª VIST. ANUAL','2030-04-17','2030-10-17','',''),
+('1836da60-89df-4dba-a9c0-f42f6e739912','c0250674-b85e-4c99-8576-8d78f3d2349b','3ª VIST. ANUAL','2029-04-08','2029-10-08','',''),
+('18621452-b089-45b0-adff-ed78d495e69d','01087135-1331-464f-a498-b1e9ee998faa','1ª VIST. ANUAL','2027-04-06','2027-10-06','',''),
+('1a1ad8b2-4396-4f95-b1fc-d0adf75d8fac','20b9c99e-3121-4790-bcaf-9c22151be3bd','6ª VIST. ANUAL','2032-04-03','2032-10-03','',''),
+('1b876786-56f9-4ec1-b323-1d00a44e30d4','d701806a-b045-4d7e-aab6-ad29ef5b7157','9ª VIST. ANUAL','2035-04-03','2035-10-03','',''),
+('210ede39-c0b9-4175-8e8a-975e3e4adaf9','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','6ª VIST. ANUAL','2032-04-17','2032-10-17','',''),
+('224b9782-a12b-4e4c-99a4-48386102270c','c0250674-b85e-4c99-8576-8d78f3d2349b','6ª VIST. ANUAL','2032-04-08','2032-10-08','',''),
+('234d1c72-9b15-45b7-b1d1-ba804d06de76','01087135-1331-464f-a498-b1e9ee998faa','4ª VIST. ANUAL','2030-04-06','2030-10-06','',''),
+('276d0c9a-ef33-4b87-a38c-c56d0516b13c','2bb22ff4-c6ef-4666-9d11-7949c600cda8','5ª VIST. ANUAL','2031-04-17','2031-10-17','',''),
+('2f169c9f-4206-4720-8523-f4926c31b470','b6f85830-c806-4e85-913a-e5502c189f73','4ª VIST. ANUAL','2030-04-03','2030-10-03','',''),
+('32b9a01d-f8c9-4067-b8c6-f26a3977feeb','c0250674-b85e-4c99-8576-8d78f3d2349b','8ª VIST. ANUAL','2034-04-08','2034-10-08','',''),
+('33cd7223-897f-42d3-8400-a8f5c651535c','2bb22ff4-c6ef-4666-9d11-7949c600cda8','8ª VIST. ANUAL','2034-04-17','2034-10-17','',''),
+('3aff2e02-8f29-4331-9bf2-012cf4a0490f','b6f85830-c806-4e85-913a-e5502c189f73','1ª VIST. ANUAL','2027-04-03','2027-10-03','',''),
+('3e25cf6c-4125-493b-b5c4-c0cdd44d8cdc','2bb22ff4-c6ef-4666-9d11-7949c600cda8','7ª VIST. ANUAL','2033-04-17','2033-10-17','',''),
+('3fcc295f-2818-477c-82e0-ec07b7a64ca0','01087135-1331-464f-a498-b1e9ee998faa','6ª VIST. ANUAL','2032-04-06','2032-10-06','',''),
+('40485c78-a8b6-465e-b561-455049deb177','2bb22ff4-c6ef-4666-9d11-7949c600cda8','1ª VIST. ANUAL','2027-04-17','2027-10-17','',''),
+('435fe326-a233-4bf5-bd8e-8296cf4007a2','c0250674-b85e-4c99-8576-8d78f3d2349b','5ª VIST. ANUAL','2031-04-08','2031-10-08','',''),
+('450598ab-88f8-490a-bb2c-c260de52adee','3f694510-d109-409a-8e17-d53b9dd29d85','1ª VIST. ANUAL','2027-04-17','2027-10-17','',''),
+('4742173a-7317-44d1-a594-0d684448ebca','20b9c99e-3121-4790-bcaf-9c22151be3bd','7ª VIST. ANUAL','2033-04-03','2033-10-03','',''),
+('47f90ce3-15f5-4f83-8153-da0df08455fa','c0250674-b85e-4c99-8576-8d78f3d2349b','2ª VIST. ANUAL','2028-04-08','2028-10-08','',''),
+('4fb0582a-9d12-4db3-a95e-b8d20a9b0706','c0250674-b85e-4c99-8576-8d78f3d2349b','4ª VIST. ANUAL','2030-04-08','2030-10-08','',''),
+('4fbb923b-d90e-499b-9d3c-6819728a84b3','3f694510-d109-409a-8e17-d53b9dd29d85','2ª VIST. ANUAL','2028-04-17','2028-10-17','',''),
+('517302dc-8496-41e9-9b57-d6c1780d18b3','3f694510-d109-409a-8e17-d53b9dd29d85','3ª VIST. ANUAL','2029-04-17','2029-10-17','',''),
+('6040d47c-ba94-4584-a31e-964a3a5d9f4d','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','8ª VIST. ANUAL','2034-04-17','2034-10-17','',''),
+('6193ff45-b783-4b40-b3e4-efdbb7e67016','2bb22ff4-c6ef-4666-9d11-7949c600cda8','9ª VIST. ANUAL','2035-04-17','2035-10-17','',''),
+('620a1fa6-7628-11f1-85ad-621c498e207c','6209a5ce-7628-11f1-85ad-621c498e207c','VST-2026-001','2026-07-10','2026-07-10','BelÃ©m-PA','Carlos Mendes'),
+('620a2125-7628-11f1-85ad-621c498e207c','6209a5ce-7628-11f1-85ad-621c498e207c','VST-2026-001','2026-07-10','2027-01-10','BelÃ©m-PA','Carlos Mendes'),
+('620e0215-7628-11f1-85ad-621c498e207c','620d8e83-7628-11f1-85ad-621c498e207c','VST-2026-002','2026-07-15','2026-07-15','SantarÃ©m-PA','Ana Paula Silva'),
+('62127a80-7628-11f1-85ad-621c498e207c','62120e49-7628-11f1-85ad-621c498e207c','VST-2026-003','2026-07-20','2026-07-20','BelÃ©m-PA','Roberto Lima'),
+('62127c95-7628-11f1-85ad-621c498e207c','62120e49-7628-11f1-85ad-621c498e207c','VST-2026-003','2026-07-20','2027-01-20','BelÃ©m-PA','Roberto Lima'),
+('6502c6c6-4f1f-4c3e-8c45-dc57ed985bcd','20b9c99e-3121-4790-bcaf-9c22151be3bd','2ª VIST. ANUAL','2028-04-03','2028-10-03','',''),
+('67996c41-76ca-4335-a454-0cdf9f3b9216','d701806a-b045-4d7e-aab6-ad29ef5b7157','4ª VIST. ANUAL','2030-04-03','2030-10-03','',''),
+('69611336-d208-46d7-a382-f00b0d2905d2','b6f85830-c806-4e85-913a-e5502c189f73','3ª VIST. ANUAL','2029-04-03','2029-10-03','',''),
+('6c377849-d3eb-4085-917f-cbdf66378cef','b6f85830-c806-4e85-913a-e5502c189f73','7ª VIST. ANUAL','2033-04-03','2033-10-03','',''),
+('6ea1dc03-d4d9-4e96-8ad7-bc707a6fcc03','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','5ª VIST. ANUAL','2031-04-17','2031-10-17','',''),
+('7928d4c9-e883-4e34-96ca-7d15b6558130','c0250674-b85e-4c99-8576-8d78f3d2349b','9ª VIST. ANUAL','2035-04-08','2035-10-08','',''),
+('79f6b83b-3784-4429-a0a6-3b6d126fbafb','01087135-1331-464f-a498-b1e9ee998faa','2ª VIST. ANUAL','2028-04-06','2028-10-06','',''),
+('7aa6be26-92df-4f23-b90c-0ffd50dd4c5e','b6f85830-c806-4e85-913a-e5502c189f73','5ª VIST. ANUAL','2031-04-03','2031-10-03','',''),
+('7af2dbe9-277b-435f-8e91-4ada35ea4aae','2bb22ff4-c6ef-4666-9d11-7949c600cda8','3ª VIST. ANUAL','2029-04-17','2029-10-17','',''),
+('7b6ece00-b960-4d49-b6d1-8c56d08c6733','01087135-1331-464f-a498-b1e9ee998faa','7ª VIST. ANUAL','2033-04-06','2033-10-06','',''),
+('7d646703-b353-4438-9433-68c75cf44f7c','20b9c99e-3121-4790-bcaf-9c22151be3bd','5ª VIST. ANUAL','2031-04-03','2031-10-03','',''),
+('7f3e4871-8a7f-450b-b74b-aa6dc28aa198','20b9c99e-3121-4790-bcaf-9c22151be3bd','9ª VIST. ANUAL','2035-04-03','2035-10-03','',''),
+('868d537c-bafb-421f-bdca-1fa62e9f394a','01087135-1331-464f-a498-b1e9ee998faa','8ª VIST. ANUAL','2034-04-06','2034-10-06','',''),
+('8a9cd998-f160-4a56-bd39-bb3bd18b928e','3f694510-d109-409a-8e17-d53b9dd29d85','8ª VIST. ANUAL','2034-04-17','2034-10-17','',''),
+('8ffaf9b3-d64f-415b-b56b-bae0b62eedd4','d701806a-b045-4d7e-aab6-ad29ef5b7157','7ª VIST. ANUAL','2033-04-03','2033-10-03','',''),
+('9118b43b-8b15-419f-b8f8-f9064c9c701a','c0250674-b85e-4c99-8576-8d78f3d2349b','1ª VIST. ANUAL','2027-04-08','2027-10-08','',''),
+('990b99ba-3edc-4f5b-a97b-eb4e153fb089','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','9ª VIST. ANUAL','2035-04-17','2035-10-17','',''),
+('a1cb7d39-e20f-4694-9175-a56b1f015179','c0250674-b85e-4c99-8576-8d78f3d2349b','7ª VIST. ANUAL','2033-04-08','2033-10-08','',''),
+('a1cc970d-e214-4d8a-a6fd-1dc0230fefbf','3f694510-d109-409a-8e17-d53b9dd29d85','7ª VIST. ANUAL','2033-04-17','2033-10-17','',''),
+('a9c9aef0-6001-41a9-ad26-27ad9faa611b','2bb22ff4-c6ef-4666-9d11-7949c600cda8','2ª VIST. ANUAL','2028-04-17','2028-10-17','',''),
+('b3ced32b-9399-4ab2-91b9-0f299652f62c','01087135-1331-464f-a498-b1e9ee998faa','3ª VIST. ANUAL','2029-04-06','2029-10-06','',''),
+('ba47fd12-ef9c-42e3-a887-957c551bfb37','20b9c99e-3121-4790-bcaf-9c22151be3bd','4ª VIST. ANUAL','2030-04-03','2030-10-03','',''),
+('bd30f6af-936f-43ba-a4df-38387b0f15bd','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','2ª VIST. ANUAL','2028-04-17','2028-10-17','',''),
+('bdb0ad75-3f7a-44f6-84b6-4db465f4c5e7','b6f85830-c806-4e85-913a-e5502c189f73','2ª VIST. ANUAL','2028-04-03','2028-10-03','',''),
+('be5e6d23-9932-4807-b50b-4d4456c77328','2bb22ff4-c6ef-4666-9d11-7949c600cda8','6ª VIST. ANUAL','2032-04-17','2032-10-17','',''),
+('c074507c-d0ab-4f48-9693-aaea7355e1e5','d701806a-b045-4d7e-aab6-ad29ef5b7157','1ª VIST. ANUAL','2027-04-03','2027-10-03','',''),
+('c254d277-d036-483c-9db7-f5d84e00d867','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','1ª VIST. ANUAL','2027-04-17','2027-10-17','',''),
+('c5048591-4e88-45c8-a8be-261453f31a91','3f694510-d109-409a-8e17-d53b9dd29d85','6ª VIST. ANUAL','2032-04-17','2032-10-17','',''),
+('c58878f7-391c-4269-abd8-9a6e24ed7bf5','2bb22ff4-c6ef-4666-9d11-7949c600cda8','4ª VIST. ANUAL','2030-04-17','2030-10-17','',''),
+('c91283f3-a839-4378-b6b5-0cf84cc61b2e','20b9c99e-3121-4790-bcaf-9c22151be3bd','3ª VIST. ANUAL','2029-04-03','2029-10-03','',''),
+('d2b0a36b-ca65-4ca5-a914-867a9f10e353','d701806a-b045-4d7e-aab6-ad29ef5b7157','6ª VIST. ANUAL','2032-04-03','2032-10-03','',''),
+('d3f97d93-acce-4af7-8308-66ea9722e59f','3f694510-d109-409a-8e17-d53b9dd29d85','9ª VIST. ANUAL','2035-04-17','2035-10-17','',''),
+('d44d6e38-e699-4fec-92b1-bb2099e745f5','b6f85830-c806-4e85-913a-e5502c189f73','9ª VIST. ANUAL','2035-04-03','2035-10-03','',''),
+('dc40df84-769d-4f51-bce3-a08d79ecb456','d701806a-b045-4d7e-aab6-ad29ef5b7157','5ª VIST. ANUAL','2031-04-03','2031-10-03','',''),
+('dc4854e3-e684-41ea-8fd1-9107e8a90458','01087135-1331-464f-a498-b1e9ee998faa','9ª VIST. ANUAL','2035-04-06','2035-10-06','',''),
+('dd9e9f5a-54ec-4b15-9b74-6738f58f83a5','d701806a-b045-4d7e-aab6-ad29ef5b7157','3ª VIST. ANUAL','2029-04-03','2029-10-03','',''),
+('e2c33fd6-5408-4f5f-bbae-8c089f303e5a','20b9c99e-3121-4790-bcaf-9c22151be3bd','1ª VIST. ANUAL','2027-04-03','2027-10-03','',''),
+('e30f012d-1734-42b3-bacf-67408d904ce8','b6f85830-c806-4e85-913a-e5502c189f73','8ª VIST. ANUAL','2034-04-03','2034-10-03','',''),
+('e4998384-a822-4b04-af64-f6a2ced0591d','01087135-1331-464f-a498-b1e9ee998faa','5ª VIST. ANUAL','2031-04-06','2031-10-06','',''),
+('e7f66af8-a8f2-4ea1-b514-6bc7290a001b','20b9c99e-3121-4790-bcaf-9c22151be3bd','8ª VIST. ANUAL','2034-04-03','2034-10-03','',''),
+('fdc5c79a-1fa3-4a94-b5c7-819ff3f7a1e2','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','3ª VIST. ANUAL','2029-04-17','2029-10-17','','');
+/*!40000 ALTER TABLE `csn_convalidacoes` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `csn_distribuicao_passageiros`
+--
+
+DROP TABLE IF EXISTS `csn_distribuicao_passageiros`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `csn_distribuicao_passageiros` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `certificado_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `item_codigo` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `local_nome` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `quantidade` int DEFAULT '0',
+  `conves_principal` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `conves_superior` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `area_lazer` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `unidade` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `certificado_id` (`certificado_id`),
+  CONSTRAINT `csn_distribuicao_passageiros_ibfk_1` FOREIGN KEY (`certificado_id`) REFERENCES `certificados_csn` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `csn_distribuicao_passageiros`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `csn_distribuicao_passageiros` WRITE;
+/*!40000 ALTER TABLE `csn_distribuicao_passageiros` DISABLE KEYS */;
+INSERT INTO `csn_distribuicao_passageiros` VALUES
+('0b2991de-214d-43fc-bdcf-331856d9ef78','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','deposito_conves_principal','Depósito no convés principal',NULL,'','','','t'),
+('0cd0a2d0-c475-44f5-a314-5d5f5efb309c','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','porao_carga_01','Porão de carga 01 (carga geral)',NULL,'','','','t'),
+('132cd64d-45d2-4cd3-9feb-cd043a935fd1','ccf89c69-9632-438d-a343-731ebbeb6874','passageiros_camarote','Passageiros em camarote',NULL,'','','','passageiros'),
+('13d3ab8f-13e2-4e9d-b763-f21182005102','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','deposito_conves_superior','Depósito no convés superior',NULL,'','','','t'),
+('17455192-ac01-4da4-86eb-7a5acff056fc','ccf89c69-9632-438d-a343-731ebbeb6874','deposito_conves_superior','Depósito no convés superior',NULL,'','','','t'),
+('1aad15cd-402c-4769-b134-2c2823830891','f4b37d80-fe2d-438d-b581-9e5b072885a1','paiol_casco','Paiol no casco (mantimentos e materiais diversos)',NULL,'','','','t'),
+('2853013a-f811-4a1e-a965-2972fb4ccdfc','ccf89c69-9632-438d-a343-731ebbeb6874','porao_carga_01','Porão de carga 01 (carga geral)',NULL,'','','','t'),
+('2e7b117a-d69d-41ea-8356-29b3e6b6b798','2bb22ff4-c6ef-4666-9d11-7949c600cda8','passageiros_redes','Passageiros em redes',NULL,'','','','passageiros'),
+('2f2f31d6-8486-465a-83d0-9ae9cb3e170d','ccf89c69-9632-438d-a343-731ebbeb6874','paiol_casco','Paiol no casco (mantimentos e materiais diversos)',NULL,'','','','t'),
+('36b7a688-b7e0-4963-a452-fbe7e1ba19dd','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','almoxarifado_conves_principal','Almoxarifado no convés principal',NULL,'','','','t'),
+('3b311e8d-b384-43b2-9049-b9fbaecae9d0','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','passageiros_em_pe','Passageiros em pé',NULL,'11','','','passageiros'),
+('3bdf643d-3a55-4e89-b44a-18293b640919','2bb22ff4-c6ef-4666-9d11-7949c600cda8','porao_carga_01','Porão de carga 01 (carga geral)',NULL,'','','','t'),
+('3edde21c-764b-42d8-8d85-8be13f65ce2e','2bb22ff4-c6ef-4666-9d11-7949c600cda8','paiol_casco','Paiol no casco (mantimentos e materiais diversos)',NULL,'','','','t'),
+('433f1cc9-ca57-4df6-8012-b102a0e23554','f4b37d80-fe2d-438d-b581-9e5b072885a1','deposito_conves_principal','Depósito no convés principal',NULL,'','','','t'),
+('49058a6e-ab12-4741-a022-d810a10b82d7','2bb22ff4-c6ef-4666-9d11-7949c600cda8','almoxarifado_conves_principal','Almoxarifado no convés principal',NULL,'','','','t'),
+('4dfc0c8b-bb9d-4faa-846e-f73e98f931b4','ccf89c69-9632-438d-a343-731ebbeb6874','passageiros_sentados','Passageiros sentados',NULL,'40','','','passageiros'),
+('504447ae-af0b-42be-ba06-1d4c734f96dd','2bb22ff4-c6ef-4666-9d11-7949c600cda8','passageiros_em_pe','Passageiros em pé',NULL,'11','','','passageiros'),
+('57c8d07e-ea2d-4312-b369-e82232342fa5','f4b37d80-fe2d-438d-b581-9e5b072885a1','passageiros_em_pe','Passageiros em pé',NULL,'20','','','passageiros'),
+('5ce4103e-9636-4113-9d23-78f6575f9f64','2bb22ff4-c6ef-4666-9d11-7949c600cda8','passageiros_sentados','Passageiros sentados',NULL,'33','','','passageiros'),
+('5e3d1513-f315-4a08-aa28-f5e8ed560c3d','ccf89c69-9632-438d-a343-731ebbeb6874','passageiros_em_pe','Passageiros em pé',NULL,'20','','','passageiros'),
+('612f7635-1ea1-4be0-ba31-0e2453df2762','f4b37d80-fe2d-438d-b581-9e5b072885a1','passageiros_sentados','Passageiros sentados',NULL,'40','','','passageiros'),
+('68b9a8b9-514d-486d-9c57-c5119812be1c','2bb22ff4-c6ef-4666-9d11-7949c600cda8','passageiros_camarote','Passageiros em camarote',NULL,'','','','passageiros'),
+('79578abd-e316-49ab-a91b-ad12f10dbceb','f4b37d80-fe2d-438d-b581-9e5b072885a1','passageiros_redes','Passageiros em redes',NULL,'','','','passageiros'),
+('7aa1e331-13da-4772-b626-744249a9ad0a','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','passageiros_sentados','Passageiros sentados',NULL,'33','','','passageiros'),
+('7c00d9a3-54c2-414a-9c04-607416f38918','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','passageiros_redes','Passageiros em redes',NULL,'','','','passageiros'),
+('942b8f43-2edb-48c7-a89a-45954974342e','ccf89c69-9632-438d-a343-731ebbeb6874','passageiros_redes','Passageiros em redes',NULL,'','','','passageiros'),
+('98b9bb9a-953e-4af3-860a-8ea14c45a6ac','f4b37d80-fe2d-438d-b581-9e5b072885a1','passageiros_camarote','Passageiros em camarote',NULL,'','','','passageiros'),
+('b4b02c31-f6e0-4e6b-9a75-83e47082204d','f4b37d80-fe2d-438d-b581-9e5b072885a1','deposito_conves_superior','Depósito no convés superior',NULL,'','','','t'),
+('bc4694e4-6785-496f-a092-773cd8e7d91f','2bb22ff4-c6ef-4666-9d11-7949c600cda8','deposito_conves_superior','Depósito no convés superior',NULL,'','','','t'),
+('c8867db2-24b6-4977-a8af-11f40722b092','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','paiol_casco','Paiol no casco (mantimentos e materiais diversos)',NULL,'','','','t'),
+('dd24d120-4397-400c-9b9e-0ee92dfde39f','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','passageiros_camarote','Passageiros em camarote',NULL,'','','','passageiros'),
+('e39ef386-f351-4b4a-b418-c96879b64835','2bb22ff4-c6ef-4666-9d11-7949c600cda8','deposito_conves_principal','Depósito no convés principal',NULL,'','','','t'),
+('e4965ae0-117e-4fe2-b7b1-f7bb2e8ad552','f4b37d80-fe2d-438d-b581-9e5b072885a1','porao_carga_01','Porão de carga 01 (carga geral)',NULL,'','','','t'),
+('f5032518-3071-4bc7-b22d-7aecad4528a9','f4b37d80-fe2d-438d-b581-9e5b072885a1','almoxarifado_conves_principal','Almoxarifado no convés principal',NULL,'','','','t'),
+('f7255717-6cee-4960-882e-ce95fd36ca79','ccf89c69-9632-438d-a343-731ebbeb6874','almoxarifado_conves_principal','Almoxarifado no convés principal',NULL,'','','','t'),
+('f85c605a-314f-4671-9c93-58030b65d1c3','ccf89c69-9632-438d-a343-731ebbeb6874','deposito_conves_principal','Depósito no convés principal',NULL,'','','','t');
+/*!40000 ALTER TABLE `csn_distribuicao_passageiros` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `email_logs`
+--
+
+DROP TABLE IF EXISTS `email_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `email_logs` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `destinatario` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'E-mail do destinat??rio',
+  `assunto` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Assunto do e-mail enviado',
+  `tipo` enum('proposta','agendamento','certificado','assinatura','alerta_vencimento','portal_acesso','portal_recuperacao_senha') COLLATE utf8mb4_general_ci NOT NULL,
+  `referencia_tipo` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Tipo da entidade referenciada (ex: propostas, certificados_cnbl)',
+  `referencia_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'ID da entidade referenciada',
+  `status` enum('enviado','erro') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'enviado' COMMENT 'Status do envio',
+  `mensagem_erro` text COLLATE utf8mb4_general_ci COMMENT 'Mensagem de erro se o envio falhou',
+  `enviado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'ID do usu??rio que enviou',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT 'Data/hora do envio',
+  PRIMARY KEY (`id`),
+  KEY `idx_email_logs_tipo` (`tipo`),
+  KEY `idx_email_logs_status` (`status`),
+  KEY `idx_email_logs_referencia` (`referencia_tipo`,`referencia_id`),
+  KEY `idx_email_logs_enviado_por` (`enviado_por`),
+  KEY `idx_email_logs_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `email_logs`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `email_logs` WRITE;
+/*!40000 ALTER TABLE `email_logs` DISABLE KEYS */;
+INSERT INTO `email_logs` VALUES
+('0121e876-7b0b-11f1-a8a1-56798194b3af','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-17/26','proposta','propostas','d23048fa-7a47-11f1-8c34-8a26e9191f69','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 20:24:21'),
+('033aa6d0-7a8b-11f1-b408-1a04821156f9','ronokedas@gmail.com','CSN - AM-CSN-15/26','certificado','certificados_csn','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 05:08:09'),
+('2375e611-7aca-11f1-b408-1a04821156f9','test-67bbhflnz@srv1.mail-tester.com','CNBL - AM-CNBL-3/26','certificado','certificados_cnbl','670f4d07-b570-46b9-ad0a-cb9cb1c43a09','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 12:40:02'),
+('29672d06-7b2f-11f1-a8a1-56798194b3af','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-16/26','proposta','propostas','75eae56f-79c6-11f1-8c34-8a26e9191f69','erro',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:43:11'),
+('2f5338e0-7a82-11f1-827f-56be5bd6a641','test-ntw03kdte@srv1.mail-tester.com','CNARQ - AM-CNARQ-2/26','certificado','certificados_cnarq','e62fc8b3-2c5d-4333-9117-a0720f11900d','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 04:04:58'),
+('31325a4e-7b30-11f1-a29e-725f8dd87a8b','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-16/26','proposta','propostas','75eae56f-79c6-11f1-8c34-8a26e9191f69','erro',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:50:33'),
+('37e96e64-7adb-11f1-b408-1a04821156f9','ronokedas2020@gmail.com','Acesso ao Portal do Cliente','portal_acesso','clientes','64e60ad7-3a78-4db0-9e03-cc529d935325','enviado',NULL,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-08 14:42:17'),
+('3ce6edfa-7b2f-11f1-a8a1-56798194b3af','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-18/26','proposta','propostas','2bd3ad77-7b29-11f1-a8a1-56798194b3af','erro','Erro ao enviar e-mail: SMTP Error: Could not connect to SMTP host. Connection failed. stream_socket_enable_crypto(): Peer certificate CN=`smtp-relay-offshore-southamerica-east-v2.sendinblue.com\' did not match expected CN=`smtp-relay.brevo.com\' SMTP server error: QUIT command failed Detail: ,N \'awv8~ hy P)wɇM # . [W 0St n )P`!ݬ̴;0S+ DE)b K CYM:鄁s}5ݿ c*','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:43:44'),
+('3f18c31f-7b0c-11f1-a8a1-56798194b3af','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-17/26','proposta','propostas','d23048fa-7a47-11f1-8c34-8a26e9191f69','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 20:33:15'),
+('40636fe8-7aca-11f1-b408-1a04821156f9','test-67bbhflnz@srv1.mail-tester.com','CSN - AM-CSN-15/26','certificado','certificados_csn','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 12:40:50'),
+('444f3b66-7b2e-11f1-a8a1-56798194b3af','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-18/26','proposta','propostas','2bd3ad77-7b29-11f1-a8a1-56798194b3af','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:36:46'),
+('47cd520e-7adb-11f1-b408-1a04821156f9','ronokedas2020@gmail.com','Acesso ao Portal do Cliente','portal_acesso','clientes','64e60ad7-3a78-4db0-9e03-cc529d935325','enviado',NULL,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-08 14:42:44'),
+('5133da1b-7b34-11f1-a29e-725f8dd87a8b','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-15/26','proposta','propostas','87daba67-7974-11f1-8c34-8a26e9191f69','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 01:20:05'),
+('5360238b-7a7f-11f1-827f-56be5bd6a641','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-14/26','proposta','propostas','4b5d9f51-7974-11f1-8c34-8a26e9191f69','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 03:44:30'),
+('55b0b0bc-7b0b-11f1-a8a1-56798194b3af','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-17/26','proposta','propostas','d23048fa-7a47-11f1-8c34-8a26e9191f69','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 20:26:43'),
+('68e95c78-7b35-11f1-a29e-725f8dd87a8b','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-15/26','proposta','propostas','87daba67-7974-11f1-8c34-8a26e9191f69','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 01:27:54'),
+('7b514c54-7a82-11f1-827f-56be5bd6a641','test-ntw03kdte@srv1.mail-tester.com','Assinatura Digital - CNARQ AM-CNARQ-2/26','assinatura','certificados_cnarq','e62fc8b3-2c5d-4333-9117-a0720f11900d','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 04:07:05'),
+('7e2ccb81-7a81-11f1-827f-56be5bd6a641','ronoktert020@gmail.com','CSN - AM-CSN-15/26','certificado','certificados_csn','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','enviado',NULL,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-08 04:00:01'),
+('8f4000b6-7a8a-11f1-827f-56be5bd6a641','ronokedas@gmail.com','Proposta Comercial - AM-ORC-17/26','proposta','propostas','d23048fa-7a47-11f1-8c34-8a26e9191f69','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 05:04:55'),
+('a60be53e-7a81-11f1-827f-56be5bd6a641','ronoktert020@gmail.com','CNBL - AM-CNBL-3/26','certificado','certificados_cnbl','670f4d07-b570-46b9-ad0a-cb9cb1c43a09','enviado',NULL,'d2a16613-dfa4-4948-8de4-8c802abdf394','2026-07-08 04:01:08'),
+('b4518ddf-7ac4-11f1-b408-1a04821156f9','ronokedas@gmail.com','Acesso ao Portal do Cliente','portal_acesso','clientes','64e60ad7-3a78-4db0-9e03-cc529d935325','erro','Erro ao enviar e-mail: SMTP Error: Could not authenticate.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 12:01:08'),
+('c9571b56-7b2f-11f1-a8a1-56798194b3af','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-16/26','proposta','propostas','75eae56f-79c6-11f1-8c34-8a26e9191f69','erro','Erro ao enviar e-mail: SMTP Error: Could not connect to SMTP host. Connection failed. stream_socket_enable_crypto(): Peer certificate CN=`smtp-relay-offshore-southamerica-east-v2.sendinblue.com\' did not match expected CN=`smtp-relay.brevo.com\' SMTP server error: QUIT command failed Detail: 5[3σ%f^CfgHi _ 䍄Cq [c#ͳO$(y]{9 ߀ l g lg,a- 蹈 % ƴ־Ny=M⍇ߩ)E? Z Q^ + R c} KuNԌQ','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:47:39'),
+('cb169ac7-7b34-11f1-a29e-725f8dd87a8b','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-16/26','proposta','propostas','75eae56f-79c6-11f1-8c34-8a26e9191f69','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 01:23:30'),
+('d0e5b158-8132-11f1-a1f7-9ed3395acbbb','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-19/26','proposta','propostas','b7196667-8132-11f1-a1f7-9ed3395acbbb','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-16 16:24:27'),
+('d382b24c-7a8b-11f1-b408-1a04821156f9','ronokedas@gmail.com','CNARQ - AM-CNARQ-2/26','certificado','certificados_cnarq','e62fc8b3-2c5d-4333-9117-a0720f11900d','erro','Erro ao enviar e-mail: SMTP Error: Could not authenticate.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 05:13:59'),
+('dcc74ded-7adb-11f1-b408-1a04821156f9','ronokedas2020@gmail.com','Acesso ao Portal do Cliente','portal_acesso','clientes','64e60ad7-3a78-4db0-9e03-cc529d935325','enviado',NULL,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-08 14:46:54'),
+('e0534bf3-7a7f-11f1-827f-56be5bd6a641','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-17/26','proposta','propostas','d23048fa-7a47-11f1-8c34-8a26e9191f69','enviado',NULL,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-08 03:48:26'),
+('e5992376-7ac9-11f1-b408-1a04821156f9','ronokedas@gmail.com','CSN - AM-CSN-15/26','certificado','certificados_csn','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 12:38:18'),
+('eb688b6e-7b30-11f1-a29e-725f8dd87a8b','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-16/26','proposta','propostas','75eae56f-79c6-11f1-8c34-8a26e9191f69','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:55:46'),
+('ee8ec430-7ac6-11f1-b408-1a04821156f9','ronokedas@gmail.com','Acesso ao Portal do Cliente','portal_acesso','clientes','64e60ad7-3a78-4db0-9e03-cc529d935325','erro','Erro ao enviar e-mail: SMTP Error: Could not authenticate.','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-08 12:17:04'),
+('f3d23858-7b32-11f1-a29e-725f8dd87a8b','ronokedas2020@gmail.com','Proposta Comercial - AM-ORC-15/26','proposta','propostas','87daba67-7974-11f1-8c34-8a26e9191f69','enviado',NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 01:10:19'),
+('f8c73cd1-7adf-11f1-ae84-1eb632e13718','ronokedas2020@gmail.com','CSN - AM-CSN-15/26','certificado','certificados_csn','b0a5b2ea-d243-4dac-99f8-6affd62e46e7','enviado',NULL,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-08 15:16:19');
+/*!40000 ALTER TABLE `email_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `embarcacoes`
+--
+
+DROP TABLE IF EXISTS `embarcacoes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `embarcacoes` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `proprietario_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `nome` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_embarcacao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_embarcacao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cnbl_tipo_embarcacao` varchar(1) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `possui_propulsao` tinyint(1) DEFAULT NULL,
+  `fabricante_motor` varchar(300) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `potencia_kw` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `registro` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `proprietario` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ano` int DEFAULT NULL,
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `comprimento_total` decimal(8,2) DEFAULT NULL,
+  `comprimento_casco` decimal(8,2) DEFAULT NULL,
+  `comprimento_lpp` decimal(8,2) DEFAULT NULL,
+  `pontal_moldado` decimal(8,2) DEFAULT NULL,
+  `boca_moldada` decimal(8,2) DEFAULT NULL,
+  `boca_maxima` decimal(8,2) DEFAULT NULL,
+  `material_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_servico` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `area_navegacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cnbl_area_navegacao` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `arqueacao_bruta` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_inscricao` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `porto_inscricao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `indicativo_chamada` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_tripulantes` int DEFAULT '0',
+  `numero_passageiros_n1` int DEFAULT '0',
+  `numero_passageiros_n2` int DEFAULT '0',
+  `observacoes` text COLLATE utf8mb4_general_ci,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `autorizado_carga` tinyint(1) DEFAULT NULL,
+  `obs_passageiros` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `acessibilidade` tinyint(1) DEFAULT NULL,
+  `local_construcao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `numero_casco` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `porte_bruto` decimal(10,2) DEFAULT NULL,
+  `estaleiro_nome` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_cpf_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `estaleiro_endereco` text COLLATE utf8mb4_general_ci,
+  `arqueacao_liquida` decimal(10,2) DEFAULT NULL,
+  `metodo_arqueacao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cnarq_data_quilha` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cnarq_calado_moldado_m` decimal(8,3) DEFAULT NULL,
+  `cnarq_espacos_incluidos_ab` text COLLATE utf8mb4_general_ci,
+  `cnarq_espacos_incluidos_al` text COLLATE utf8mb4_general_ci,
+  `cnarq_espacos_excluidos_m3` decimal(10,2) DEFAULT NULL,
+  `cnarq_data_local_arqueacao_original` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cnarq_data_local_ultima_rearqueacao` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `borda_livre_mm` int DEFAULT NULL,
+  `borda_livre_tipo` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `calado_maximo_m` decimal(8,2) DEFAULT NULL,
+  `aresta_superior_linha_conves` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `centro_disco_situado` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `dist_linha_conves_bico_proa` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `dist_linha_conves_abaixo_disco` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `marca_linha_carga_area1` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `marca_linha_carga_area2` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `acrescimo_agua_salgada` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `registro` (`registro`),
+  KEY `criado_por` (`criado_por`),
+  KEY `idx_cliente_id` (`cliente_id`),
+  KEY `fk_embarcacoes_tipo` (`tipo_embarcacao_id`),
+  KEY `fk_embarcacoes_proprietario` (`proprietario_id`),
+  CONSTRAINT `embarcacoes_ibfk_1` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_embarcacoes_proprietario` FOREIGN KEY (`proprietario_id`) REFERENCES `clientes` (`id`),
+  CONSTRAINT `fk_embarcacoes_tipo` FOREIGN KEY (`tipo_embarcacao_id`) REFERENCES `tipos_embarcacao` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `embarcacoes`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `embarcacoes` WRITE;
+/*!40000 ALTER TABLE `embarcacoes` DISABLE KEYS */;
+INSERT INTO `embarcacoes` VALUES
+('05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325','Barco kds',NULL,'06a95b60-75d0-11f1-98f0-5ed0db5eacb7','Balsa','B',0,NULL,NULL,'BAL-00632','Rosano Silva de Souza',2023,NULL,30.00,29.00,26.50,2.80,9.00,9.50,'Aço','Transporte de Passageiros','Interior','Cabotagem','Área 1','120','BAL-00632-PA','Santarém - PA','PW3463',44,33,11,NULL,1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 20:05:12','2026-07-08 01:40:07',1,'veiculo leva passageiros',1,'Estaleiro Belem',NULL,NULL,NULL,NULL,NULL,85.00,'Regra II',NULL,NULL,NULL,NULL,NULL,NULL,NULL,280,'Tipo B',1.80,'222','44','86','6','2266','655','333'),
+('6205b1f7-7628-11f1-85ad-621c498e207c',NULL,'EMPURADOR VALENTE','Empurrador','06a95eb2-75d0-11f1-98f0-5ed0db5eacb7',NULL,NULL,1,'MWM 6.12TCA','300','EMP-001','João da Silva',2018,NULL,18.50,16.80,15.20,3.20,6.50,7.00,'AÃ§o Naval','Rebocagem/Empurra','Interior','Bacia AmazÃ´nica',NULL,'45','EMP-001-PA','Belém-PA','PW1234',6,0,0,'Embarcação para serviço de empurra no Rio Amazonas.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-02 18:19:05',0,NULL,0,'Estaleiro Rio Maguari',NULL,NULL,NULL,NULL,NULL,22.50,'MÃ©todo de Ulysses',NULL,NULL,NULL,NULL,NULL,NULL,NULL,350,'Tipo A',2.50,'Linha d\'Ã¡gua','Centro','2.0m','1.5m','Plimsoll A1','Plimsoll A2','25mm'),
+('620a9dfa-7628-11f1-85ad-621c498e207c','64e60ad7-3a78-4db0-9e03-cc529d935325','BALSA RIO MAR','Balsa','06a95eb2-75d0-11f1-98f0-5ed0db5eacb7','Empurrador','A',0,NULL,NULL,'BAL-002','Rosano Silva de Souza',2020,NULL,30.00,28.00,26.50,2.80,9.00,9.50,'Alumínio','Transporte de Carga','Interior','Rio Amazonas e afluentes','Área 1','120','BAL-002-PA','Santarém-PA','PW5678',4,40,20,'Balsa para transporte de veículos e passageiros na região de Santarém.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-06 19:33:29',1,'VeÃ­culos e passageiros',1,'Estaleiro SantarÃ©m',NULL,NULL,NULL,NULL,NULL,85.00,'Isento',NULL,NULL,NULL,NULL,NULL,NULL,NULL,280,'Tipo B',1.80,'88','44','55','66','6','5','77'),
+('620e4464-7628-11f1-85ad-621c498e207c',NULL,'REBOCADOR FORÇA NAVAL','Rebocador','06a96069-75d0-11f1-98f0-5ed0db5eacb7',NULL,NULL,1,'Cummins QSK19','600','REB-003','Pedro Almeida',2022,NULL,22.00,20.00,18.50,4.00,7.50,8.00,'AÃ§o Naval','Rebocagem portuÃ¡ria e oceÃ¢nica','Costeiro','Costa Norte do Brasil',NULL,'85','REB-003-PA','Belém-PA','PW9012',8,0,0,'Rebocador para manobras portuárias no Porto de Belém.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04','2026-07-02 18:19:05',0,NULL,0,'Estaleiro EISA',NULL,NULL,NULL,NULL,NULL,50.00,'MÃ©todo de Ulysses',NULL,NULL,NULL,NULL,NULL,NULL,NULL,420,'Tipo A',3.20,'Linha d\'Ã¡gua','Centro','2.5m','1.8m','Plimsoll C1','Plimsoll C2','30mm'),
+('70000000-0000-4000-8000-000000000002','70000000-0000-4000-8000-000000000001','BALSA RIO MAR','Balsa',NULL,'Balsa',NULL,NULL,NULL,NULL,'DEMO-BAL-17/26','Navegação Modelo Amazônia Ltda.',NULL,'70000000-0000-4000-8000-000000000001',NULL,NULL,NULL,NULL,NULL,NULL,'Aço',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,NULL,1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-14 22:06:04','2026-07-14 22:06:04',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+('70000000-0000-4000-8000-000000000004','70000000-0000-4000-8000-000000000001','N/M SOLIMÕES','Balsa',NULL,'Balsa',NULL,NULL,NULL,NULL,'DEMO-NMS-08/26','Navegação Modelo Amazônia Ltda.',NULL,'70000000-0000-4000-8000-000000000001',NULL,NULL,NULL,NULL,NULL,NULL,'Aço',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,NULL,1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-14 22:06:04','2026-07-14 22:06:04',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+/*!40000 ALTER TABLE `embarcacoes` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `exigencias_catalogo`
+--
+
+DROP TABLE IF EXISTS `exigencias_catalogo`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `exigencias_catalogo` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `codigo_interno` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `categoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `descricao` text COLLATE utf8mb4_general_ci NOT NULL,
+  `item_normam` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `bloco_vistoria` enum('seco','flutuando','borda_livre','arqueacao') COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo_vistoria` enum('seco','flutuando','borda_livre','arqueacao') COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `prazo_padrao_dias` int DEFAULT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `aplicabilidade_a` tinyint(1) NOT NULL DEFAULT '1',
+  `aplicabilidade_b` tinyint(1) NOT NULL DEFAULT '1',
+  `aplicabilidade_c` tinyint(1) NOT NULL DEFAULT '1',
+  `aplicabilidade_d` tinyint(1) NOT NULL DEFAULT '1',
+  `aplicabilidade_e` tinyint(1) NOT NULL DEFAULT '1',
+  `aplicabilidade_f` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `fk_catalogo_categoria` (`categoria_id`),
+  CONSTRAINT `fk_catalogo_categoria` FOREIGN KEY (`categoria_id`) REFERENCES `exigencias_categorias` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `exigencias_catalogo`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `exigencias_catalogo` WRITE;
+/*!40000 ALTER TABLE `exigencias_catalogo` DISABLE KEYS */;
+INSERT INTO `exigencias_catalogo` VALUES
+('001794c9-7765-48f2-aa3e-13b4ff29aba8','EX-344','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','A dotação de coletes salva vidas atende a totalidade de pessoas a serem transportadas, inclusive crianças (10% para elas)','NORMAM-202/DPC, Cap. 04, Item 4.13.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('005da3a8-7a7b-4fab-b855-6dbbf28f8fa8','EX-373','a5f25230-91c9-4e14-aa33-e83524d5d943','As embarcações com AB maior que 500 deverão ter, pelo menos, duas bombas de incêndio de acionamento não manual, sendo que uma bomba deverá possuir força motriz distinta da outra e independente do motor principal.','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('012e8fb1-9d0f-4d3c-94a4-8bb0ee588991','EX-329','e70f7906-4e9d-4367-b10a-2ad2a007817a','Indicador de rotação do(s) MCP(s) no passadiço ou comando','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('025542ea-e255-4ace-9dbd-b02ef35feabd','EX-358','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Data de fabricação (Embarcações de Sobrevivência/Boias)','NORMAM-202/DPC, Cap. 04, Item 4.12.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('0382e720-a8ce-42ef-8146-d19431108b5a','EX-438','b8ed9a31-9fa3-492f-904e-b8158a06d0da','a) os fios são protegidos por meio de eletrodutos rígidos ou flexíveis','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('03d79106-5ac2-42a2-ba86-af98a21c6022','EX-382','a5f25230-91c9-4e14-aa33-e83524d5d943','O número de seções de mangueira, incluindo uniões e esguichos, é de uma para cada 30 m de comprimento da embarcação e há outra sobressalente (sendo que, em nenhum caso, este número poderá ser inferior a três).','NORMAM-202/DPC, Cap. 04, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('0470cbba-bc5c-4e90-841d-6de840326f65','EX-339','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Classe (Coletes salva-vidas)','NORMAM-202/DPC, Cap. 04, Item 4.13.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('0496349c-9dd7-4bf1-b628-d6a87e9744ab','EX-463','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Existe a bordo um compartimento, com dimensões apropriadas e com possibilidade de trancamento, para a guarda de bagagens e volumes de passageiros, conforme indicado no projeto','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('066394ff-2a85-4b3b-8338-e04f6948b915','EX-371','a5f25230-91c9-4e14-aa33-e83524d5d943','A embarcação é dotada de, pelo menos, uma bomba de incêndio fixa não manual, com vazão maior ou igual a 15 m³/h (tal bomba poderá ser acionada pelo motor principal)','NORMAM-202/DPC, Cap. 04, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('06a2613d-ad79-437a-b3b8-190ae85212da','EX-537','71c05e83-0d67-4137-b2b7-478c4241a057','Escala de calado está escrita a boreste e a bombordo, a vante e a ré e a meia nau, em medidas métricas','NORMAM-202/DPC, Cap. 02, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('076e253a-6e6a-4a81-9877-640da3ad73e1','EX-405','65bf89f0-f44d-4746-89f7-f530c9aa990d','As bombas utilizadas para transferência de óleo para consumo da embarcação deverão ser instaladas sobre bandejas coletoras, que possibilitem, em caso de vazamentos, a coleta do óleo derramado','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('07a3393b-429c-447d-bfd0-353a6683bd1b','EX-387','a5f25230-91c9-4e14-aa33-e83524d5d943','A identificação por cores das tubulações em todas as embarcações deverá ser efetuada em conformidade com o disposto na norma ISO 14726:2008.','NORMAM-202/DPC, Cap. 09, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('07f7f40b-5d11-4d8b-b409-54d6f2d9ec76','EX-407','65bf89f0-f44d-4746-89f7-f530c9aa990d','Verificar as proteções térmicas e acústicas do(s) motor(es) de embarcações de transporte de passageiros','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('0812830b-ec4d-4746-bb3b-d6cf8a6eb74a','EX-428','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Quanto aos quadros elétricos: b) o de emergência está próximo à fonte de energia elétrica de emergência','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('08457e8a-69b4-4157-b040-15d526d41a67','EX-335','e70f7906-4e9d-4367-b10a-2ad2a007817a','Verificar a presença de relógio de parede ou de painel no comando, devidamente sincronizado e operacional.','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('0a144b76-52d6-4e7d-a1c2-8154c5ccf4fb','EX-520','71c05e83-0d67-4137-b2b7-478c4241a057','Abaixo do convés aberto mais baixo, a via de escape principal é uma escada e a via secundária consiste num conduto ou numa escada','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,0,1,1,0,0),
+('0a212a39-3f21-4932-ab3b-7d5bd4e8721f','EX-368','a5f25230-91c9-4e14-aa33-e83524d5d943','Os botijões de gás estão posicionados em áreas externas, em local seguro e arejado, protegidos do sol e afastados de fontes que possam causar ignição.','NORMAM-202/DPC, Cap. 04, Item 4.29.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('0bb736ea-8f70-4b80-9ac4-c441139fbe3c','EX-374','a5f25230-91c9-4e14-aa33-e83524d5d943','Em EMPURRADORES e REBOCADORES a(s) bomba(s), as duas tomadas e as duas estações de incêndio completas deverão estar posicionadas nas proximidades da proa da embarcação','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('0c21a30d-7637-49bd-94b9-eaa39968b2bc','EX-508','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A unidade de chuveiro apresenta soleira com uma altura mínima de 100 mm acima do convés e é impermeabilizadas até esse nível','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('0d11a58c-88e9-40df-b7c1-28e0eb4e62b0','EX-325','e70f7906-4e9d-4367-b10a-2ad2a007817a','Ecobatímetro','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('0dc6cd05-01d7-4035-b683-fb1c6251f2d8','EX-350','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','A dotação das embarcações de sobrevivência está de acordo com o quadro da NORMAM e estão em boas condições (inclusive suas alças, se aparelho rígido)','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('0ddc6914-749b-40e7-8799-15c272201ebf','EX-338','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Modelo (Coletes salva-vidas)','NORMAM-202/DPC, Cap. 04, Item 4.13.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('0e8c9c8f-adb8-444a-985e-dc2cebd737b4','EX-502','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','As distâncias mínimas que deverão ser observadas entre as unidades do sanitário coletivo são as seguintes (Unidade em frente a unidade, lavatório, antepara, etc.)','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('0ed1e638-2afc-4cdf-ad7a-3d1e9b3fb6c4','EX-475','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','As cadeiras deverão atender às seguintes dimensões: c) profundidade mínima de 0,40 m','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('0fcd87ed-ac18-4025-a692-d79d5ba5599b','EX-443','b8ed9a31-9fa3-492f-904e-b8158a06d0da','f) os cabos e fiação utilizados nos circuitos elétricos de fornecimento essencial ou de emergência de força, iluminação, comunicações interiores ou sinalização não passam por áreas em que haja risco de incêndio','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('0fdc1e57-8063-4666-ab7d-cee70fff1cf4','EX-367','a5f25230-91c9-4e14-aa33-e83524d5d943','Todos os extintores portáteis possuem o selo do INMETRO e estão dentro do prazo de validade, com as manutenções periódicas realizadas','NORMAM-202/DPC, Cap. 04, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('144a054a-435d-4c39-8a2a-c0ad22d4f20e','EX-500','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Cada módulo do lavatório coletivo possui sua torneira própria, e há um dreno servindo a, no máximo, 5 módulos','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('15d35d22-8df1-4051-ae12-4f75812736d9','EX-359','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Nome da embarcação (Embarcações de Sobrevivência/Boias)','NORMAM-202/DPC, Cap. 04, Item 4.12.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('16dbdb50-0884-4e9f-8ee9-0b202a65fc04','EX-314','aa4a7f0d-004d-4a60-924e-693335fdd69b','Tabelas ou quadros em outros locais de fácil visualização: - tabelas ou quadros de primeiros socorros','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('191031d1-a918-4879-9118-a6bce6f4b56b','EX-362','a5f25230-91c9-4e14-aa33-e83524d5d943','Não são utilizados combustíveis com ponto de fulgor inferior a 60 °C (como álcool ou gasolina)','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('19b9e02f-e153-46af-90a9-deb6b1511808','EX-484','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','As têm, no mínimo, 1,9 m de comprimento e 0,68 m de largura','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('1b8b2e7c-37f2-41d2-90e5-27d936a704da','EX-429','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Quanto aos quadros elétricos: c) os lados, a parte de trás e da frente dos quadros elétricos estão devidamente protegidos, tapetes ou estrados não condutores estão no piso na frente e atrás dos referidos quadros.','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('1bb30d90-ee8e-4efe-946d-d3ee1385eb36','EX-398','65bf89f0-f44d-4746-89f7-f530c9aa990d','Verificar a presença de objetos não necessários ao funcionamento dos equipamentos, estivados de forma irregular sobre ou próximo aos equipamentos','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('1c389c2a-ae2a-479b-9303-05f79a2846f8','EX-381','a5f25230-91c9-4e14-aa33-e83524d5d943','A rede e as tomadas de incêndio são pintadas de vermelho','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('1d3e7e6f-55fe-4e02-aa7b-b4e06329ec90','EX-376','a5f25230-91c9-4e14-aa33-e83524d5d943','Nas DEMAIS embarcações, deverá haver uma estação de incêndio no visual de uma pessoa que esteja junto a uma tomada de incêndio.','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('1de8358a-fa6e-4cef-876d-6784f605e96d','EX-334','e70f7906-4e9d-4367-b10a-2ad2a007817a','Verificar a presença e o pleno funcionamento do sistema regulamentar \'Sistran\' no comando da embarcação.','NORMAM-202/DPC, Cap. 04, Item 4.2','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 02:36:44',1,1,1,1,1,1),
+('1f83e2dd-32fd-4f92-84c3-524af3ceb621','EX-544','71c05e83-0d67-4137-b2b7-478c4241a057','Entrar no porão com o plano de perfil estrutural e confrontar os espaçamentos das cavernas/estruturas em loco (ex: 35 ou 50 cm), inspecionando furos, descontinuidades e corrosão.','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('20ceea81-c249-4b94-9448-af7887e79124','EX-467','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os espaços para redes apresentam ventilação natural permanente para o exterior da embarcação, tendo como meio de fechamento sanefas ou janelas móveis. No caso de janela móvel, a área mínima de ventilação é de 40% do vão da abertura','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('20d82a21-815c-4aa1-bdf5-282950555392','EX-541','71c05e83-0d67-4137-b2b7-478c4241a057','Verificar se os acessos aos locais abaixo relacionados estão livres: Embornais, saídas d\'água das tomadas de incêndio, tubos de sondagem, suspiros e bocas de ventiladores','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('2127c977-6a9f-4e11-9787-3aa2b600b21a','EX-501','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Em frente a cada lavatório existe um espaço livre igual ou superior a 0,5 x 0,6 m','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('22a1886c-48c1-4323-8cce-d1a9f509b800','EX-459','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Existe separação física que permita isolar carga e passageiros','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('22f45a4b-749e-4340-93bb-4c18b3a8273b','EX-316','aa4a7f0d-004d-4a60-924e-693335fdd69b','Relatório de medição de espessura (cinco pontos por chapa), assinado por profissional qualificado e certificado, com reconhecimento no Sistema Nacional de Qualificação e Certificação de Pessoal em Ensaios Não Destrutivos (SNQC/END), acompanhado de documento que comprove a validade da citada habilitação na data de execução do serviço','NORMAM-202/DPC, Cap. 08, Item 8.5','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 02:36:44',1,1,1,1,1,1),
+('23a80531-b5d7-4dec-bfc3-a56db5c37e23','EX-542','71c05e83-0d67-4137-b2b7-478c4241a057','Verificar se os acessos aos locais abaixo relacionados estão livres: Elementos de amarração e fundeio e o acesso às máquinas','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('2704ff5c-b1e3-4799-8637-fdedf7f3114b','EX-393','65bf89f0-f44d-4746-89f7-f530c9aa990d','Correias, ferramentas e sobressalentes deverão ser acondicionados em local apropriado (como cabides e armários), que evite seu deslocamento','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('27e53b15-99f1-4cd2-a400-ab471fb91c23','EX-486','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A distância mínima entre o topo de um colchão e a parte inferior do estrado da cama imediatamente superior ou a parte inferior dos reforços do convés superior (teto do camarote) é de 0,6 m','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('2a3a0379-b1ba-40fe-b676-809f122084a1','EX-413','65bf89f0-f44d-4746-89f7-f530c9aa990d','Verificar o indicador do sentido de impulsão do(s) propulsor(es) lateral(ais) no passadiço','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('2b8953dd-9bc1-45c6-92a3-ace223c00b5b','EX-446','b8ed9a31-9fa3-492f-904e-b8158a06d0da','i) as partes condutoras de tomadas e plugs estão protegidas de modo a impedir de serem tocadas, mesmo durante ligamento e desligamento','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('2bd5be9b-36f4-40bf-81ad-20cb8ca52aee','EX-527','71c05e83-0d67-4137-b2b7-478c4241a057','As cores das luzes de navegação estão de acordo com as normas específicas sobre o assunto','RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('2c585b69-496a-420b-8fa7-14e372dda5dc','EX-492','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','As portas de acesso de banheiros não abrem diretamente para cozinhas ou refeitórios','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('31bb4064-def1-4e32-8ef7-e207f15562dd','EX-384','a5f25230-91c9-4e14-aa33-e83524d5d943','Há completa permutabilidade entre as uniões, mangueiras e esguichos','NORMAM-202/DPC, Cap. 04, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('320476cf-8452-4bbc-908d-9f363b3b2eac','EX-401','65bf89f0-f44d-4746-89f7-f530c9aa990d','Redes de descarga devem ser flangeadas onde ultrapassem anteparas e ou costado (de modo que garanta a estanqueidade)','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('33356298-d44a-451e-b38c-e360b2a5bed5','EX-437','b8ed9a31-9fa3-492f-904e-b8158a06d0da','O quadro das luzes de navegação é alimentado por uma linha independente derivada do quadro principal e de emergência','RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('33e7f3eb-6d6d-4bdf-8bdb-80a063c683ce','EX-452','b8ed9a31-9fa3-492f-904e-b8158a06d0da','o) nos circuitos polifásicos, se a seção dos condutores fase for igual ou inferior a 16 mm² e nos circuitos monofásicos, seja qual for a seção do condutor fase, o condutor neutro tem a mesma seção que os condutores fase','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('33fbb2e3-ae28-4932-820c-40e2f45974e5','EX-529','71c05e83-0d67-4137-b2b7-478c4241a057','As luzes de navegação são homologadas pela Marinha','RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('342986f3-dbc0-4f3e-aedc-cb8f14f10d8a','EX-431','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Quanto aos quadros elétricos: e) os quadros elétricos são bem fixados em locais abrigados que não contêm materiais inflamáveis','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('3443b027-7b7e-4275-bdf3-a916184578f9','EX-515','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Verificar a conformidade e a data de validade de cerca de 5 anos da mangueira de gás regulamentada pela ABNT e da válvula reguladora de pressão na cozinha.','NORMAM-202/DPC, Cap. 04, Item 4.29','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 02:36:44',1,1,1,1,1,1),
+('36b4174a-fda8-4a30-bb87-7917235aaf0f','EX-494','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os acessórios são de material resistente, não apresentam pontas ou arestas cortantes e estão instalados de modo a não interferir no uso do sanitário','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('37f1473c-43ee-4e4a-88fe-8848ddfc933e','EX-534','71c05e83-0d67-4137-b2b7-478c4241a057','Não há espaço abaixo do convés com comprimento superior a 40% do Lregra, medido a partir da parte superior do espelho ou da roda de proa, somente embarcações de passageiros e de madeira','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,0,1,1,0,0),
+('39789262-7c98-42cc-98d1-708f7cb4a09e','EX-355','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Modelo (Embarcações de Sobrevivência/Boias)','NORMAM-202/DPC, Cap. 04, Item 4.12.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('3a263732-7431-4277-812b-8204b15e1f5d','EX-550','71c05e83-0d67-4137-b2b7-478c4241a057','Visualmente, externa e internamente, o estado das descargas, caixas de mar e toda e qualquer abertura no casco da embarcação abaixo de seu convés principal','NORMAM-202/DPC','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('3e2d7077-e88b-4268-8d2f-9844471927c0','EX-332','e70f7906-4e9d-4367-b10a-2ad2a007817a','Radar','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('3f973cac-9537-4264-97a5-829b557d3fe1','EX-496','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A unidade é dotada de sistema de escoamento de água tanto no boxe do chuveiro quanto no restante da área e a água do chuveiro não transborda para a parte externa do boxe','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('3fe4aeef-98fe-4a5c-9544-b36d9cd831b6','EX-504','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Nos sanitários coletivos as unidades sanitárias estão localizadas em compartimentos separados entre si por divisórias fixas com altura mínima de 1,8 m a partir do piso acabado, providos de portas de acesso','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('3feea2e8-f5d7-4bad-88af-bdb77f4659e7','EX-444','b8ed9a31-9fa3-492f-904e-b8158a06d0da','g) os cabos que conectam as bombas de incêndio ao quadro elétrico de emergência são do tipo resistente ao fogo, quando passam próximos de áreas em que haja elevado risco de incêndio','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('40284473-c2f6-481c-8a50-8c4d3c5c8a5f','EX-539','71c05e83-0d67-4137-b2b7-478c4241a057','Verificar se os acessos aos locais abaixo relacionados estão livres: Portas de acesso para tripulação e passageiros','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('415b0057-acb3-4884-a57f-e8c3473b0e6f','EX-372','a5f25230-91c9-4e14-aa33-e83524d5d943','O sistema de bomba(s) consegue manter, pelo menos, duas tomadas de incêndio distintas com jatos d\'água nunca inferior a 15 m de alcance','NORMAM-202/DPC, Cap. 04, Item 4.14','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 02:36:44',1,1,1,1,1,1),
+('4174697f-5b23-4140-ac3e-c24ac861b016','EX-414','65bf89f0-f44d-4746-89f7-f530c9aa990d','Verificar a indicação de funcionamento da máquina motriz do(s) “thruster(s)” no passadiço','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('43a7583f-f880-4cf1-bb2c-1f9df67a29d5','EX-479','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os camarotes para 2 passageiros ou tripulantes possuem dimensões mínimas de 1,9 m x 1,5 m, contendo um beliche duplo','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('446e0844-e616-4c5e-a073-480d64f291d7','EX-389','65bf89f0-f44d-4746-89f7-f530c9aa990d','O arranjo físico da embarcação está de acordo com o Arranjo Geral.','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('450fd87a-eb93-4031-a7a1-237cbfd57c63','EX-483','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Ocorre o transporte de no máximo 4 passageiros ou 9 tripulantes por camarote','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('45180ac3-9c57-4200-a523-3cc0867b3a6b','EX-356','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Classe (Embarcações de Sobrevivência/Boias)','NORMAM-202/DPC, Cap. 04, Item 4.12.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('45e58c28-008c-4b2f-85a0-e3c26155d21a','EX-449','b8ed9a31-9fa3-492f-904e-b8158a06d0da','l) todos os circuitos de luz e força, terminando num espaço que contenha tanques de combustível, ou material inflamável, são dotados de chave colocada por fora do referido espaço, para desconectar tais circuitos','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('45f242ee-96c4-4558-8a4f-86bdac810e1a','EX-419','b8ed9a31-9fa3-492f-904e-b8158a06d0da','A fonte de energia elétrica principal foi dimensionada de forma que a potência aparente fornecida ao sistema seja suficiente para evitar quedas de tensões que resultem em desligamento ou oscilação de consumidores em operação devido a partida de motores elétricos de alta corrente','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('47b78ace-bd63-451e-ae51-001de365baaf','EX-333','e70f7906-4e9d-4367-b10a-2ad2a007817a','Verificar se há compasso, régua paralela, borracha, apontador e lápis disponíveis junto das cartas náuticas para uso operacional no traçado de rotas.','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('48501aad-989d-46d0-b36b-56274659a1de','EX-498','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','O lavatório é equipado com torneira de água corrente e dreno','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('4a802f33-84d3-4b5f-b4a5-f8b3accb328b','EX-510','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A rampa apresenta largura mínima de 0,5 m e contém balaustrada em pelo menos um dos lados com altura de 1 m ou mais','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,0,0,0),
+('4add624f-894e-442c-bc48-1bf430208d14','EX-423','b8ed9a31-9fa3-492f-904e-b8158a06d0da','A fonte de energia de emergência está localizada, se possível, acima do convés contínuo superior e é de pronto acesso partindo-se do convés aberto.','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('4bb658ec-309f-4338-b4e6-3a965db20dc7','EX-511','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A rampa tem resistência suficiente para possibilitar a passagem das pessoas sem apresentar uma flexão significativa','NORMAM-202/DPC, Cap. 03, Seção V.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,0,1,0,0,0),
+('4c8e77b2-3baa-4674-94e8-8d1fc6708eb1','EX-347','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','A dotação de boias salva vidas está de acordo com o quadro da NORMAM e estão em boas condições (inclusive as retinidas)','NORMAM-202/DPC, Cap. 04, Item 4.12.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('4dce80a9-ccad-4b7e-b61c-644a54d2978a','EX-552','71c05e83-0d67-4137-b2b7-478c4241a057','Para as embarcações de casco de madeira, a partir da primeira vistoria, verificar o calafeto','NORMAM-202/DPC','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('4e94ab4a-31be-4329-b6d5-bf08463c68c0','EX-337','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Fabricante (Coletes salva-vidas)','NORMAM-202/DPC, Cap. 04, Item 4.13.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('4f0cca2c-efa9-40d3-a863-0488fea72d05','EX-514','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Verificar se as tomadas elétricas instaladas nos camarotes estão em perfeito estado físico, com espelhos protetores e energizadas corretamente.','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('51377ad9-666c-49d1-80f0-6e43cd20c12a','EX-357','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Número de série (se tiver) (Embarcações de Sobrevivência/Boias)','NORMAM-202/DPC, Cap. 04, Item 4.12.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('525223b6-395d-45f9-ae14-7a1c528215f6','EX-301','aa4a7f0d-004d-4a60-924e-693335fdd69b','Certificado de Segurança de Navegação','NORMAM-202/DPC, Cap. 08, Item 8.2.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('532445e2-6334-4633-ad34-ccc907b62a47','EX-380','a5f25230-91c9-4e14-aa33-e83524d5d943','Há instalada uma válvula ou dispositivo similar em cada tomada de incêndio, em posições tais que permitem o fechamento das tomadas com as bombas de incêndio em funcionamento','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('53fd2924-3c59-434e-9b5c-3ffe3c4c1a7b','EX-451','b8ed9a31-9fa3-492f-904e-b8158a06d0da','n) os fios e cabos elétricos são especificados levando em consideração a capacidade de condução de corrente estabelecida pelo fabricante e a queda de tensão admissível','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('544e46ae-c5da-46c2-837e-3c112db98f3e','EX-343','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Nome da embarcação (Coletes salva-vidas)','NORMAM-202/DPC, Cap. 04, Item 4.13.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('548d1060-cb9d-4fac-b389-8c03c0ccea29','EX-322','e70f7906-4e9d-4367-b10a-2ad2a007817a','Alarme visual e sonoro de baixa pressão do óleo lubrificante do MCP e MCA com potência igual ou superior a 800 HP (597 kW)','NORMAM-202/DPC, Cap. 09, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('54daf75f-7dd4-4064-84b1-dcc73e0dc352','EX-507','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A unidade de chuveiro não está instalada em um sanitário coletivo, mas possui área destinada à troca de roupa','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('55d90c7d-3aba-4255-970f-43ce4bcfdaff','EX-349','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','As retinidas das boias salva vidas possuem 20 m de comprimento e são feitas de material sintético e capazes de flutuar.','NORMAM-202/DPC, Cap. 04, Item 4.12.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('58133b9a-53e9-454e-bdb7-e5e2b7a1d90c','EX-365','a5f25230-91c9-4e14-aa33-e83524d5d943','A quantidade, capacidade, localização e tipo dos extintores de incêndio estão de acordo com a tabela da NORMAM. Quanto à localização deles, seguem o determinado no Plano de Segurança (se existente)','NORMAM-202/DPC, Cap. 04, Item 4.2), 4.2.1, m, I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 02:36:44',1,1,1,1,1,1),
+('585d1cfe-309c-40aa-be0e-4804eda5310a','EX-473','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','As cadeiras deverão atender às seguintes dimensões: a) largura mínima de 0,45 m de para os bancos simples','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('58e5b2aa-0482-4c9b-82a3-01c000cb1bb5','EX-489','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A área mínima requerida para o transporte turísticos sem pernoite a bordo, considera a concentração de 1,5 passageiros/m². No cálculo dessas áreas estão computadas as áreas de estivagem de bagagens ou transporte de carga, nem as escadas','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('5a63ec6b-964c-4a41-a1d7-53fa6980ba2e','EX-545','71c05e83-0d67-4137-b2b7-478c4241a057','O comprimento total, boca moldada e pontal moldado do casco da embarcação estão de acordo com aqueles anotados no Memorial Descritivo','NORMAM-202/DPC','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('5b125c67-ea0c-45a2-905e-437027445eb7','EX-439','b8ed9a31-9fa3-492f-904e-b8158a06d0da','b) os cabos são individualmente fixados a leitos ou suportes','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('5b502640-d457-410d-9580-8ed3d5e95d81','EX-454','f299c8c7-4402-4efa-89c6-d5add1fa60d5','Toda embarcação que seja dotada de um equipamento fixo de radiocomunicação, deverá possuir a licença rádio, emitida pela Agência Nacional de Telecomunicações (ANATEL).','NORMAM-202/DPC, Cap. 04, Item 4.8), 4.8.1.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:04:13',1,0,0,1,0,0),
+('5d288f7e-25e6-4e36-b8aa-093601403d54','EX-390','65bf89f0-f44d-4746-89f7-f530c9aa990d','Verificar a limpeza dos espaços de máquinas e equipamentos. Os espaços e equipamentos de máquinas deverão ser mantidos limpos e sem vazamentos de óleos e com os estrados em bom estado de conservação','NORMAM-202/DPC, Cap. 09, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('5df039e6-b400-4fd0-abd2-83959587485a','EX-395','65bf89f0-f44d-4746-89f7-f530c9aa990d','A iluminação deverá possibilitar que nenhuma área superior a 1 m² fique sem iluminação','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('5f8a7cb6-2019-4100-a02f-96c076e65b5d','EX-366','a5f25230-91c9-4e14-aa33-e83524d5d943','Os extintores com peso bruto superior a 25 kg (quando carregados) possuem mangueiras ou esguichos adequados ou outros meios praticáveis para que atendam o espaço a que se destinam.','NORMAM-202/DPC, Cap. 04, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('60f87d12-e57b-4063-ad67-b625f26f3093','EX-361','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Dotação de artefatos pirotécnicos conforme NORMAM e catálogo de material homologado da DPC','NORMAM-202/DPC, Cap. 04, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('616c56c7-ec03-4fc1-8fe8-c5a5c9321130','EX-369','a5f25230-91c9-4e14-aa33-e83524d5d943','As canalizações utilizadas para a distribuição de gás estão em boas condições e têm proteção adequada contra o calor e, se flexíveis, atendem às normas da Associação Brasileira de Normas Técnicas (ABNT)','NORMAM-202/DPC, Cap. 04, Item 4.29.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('61e1dc4b-494e-46d8-b8eb-f0f2f6f8b8b6','EX-488','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Área mínima requerida em travessia com até 1 hora de duração considera a concentração de 4 passageiros por m²','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('62c73930-c97e-40c7-8241-0ca46b7ce652','EX-551','71c05e83-0d67-4137-b2b7-478c4241a057','Os perfis (transversais, longitudinais e “diagonais”) e anteparas estão devidamente soldados nos respectivos locais onde devem ser ligados','NORMAM-202/DPC, Cap. 04, Seção I.','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('62ed00d9-c647-40fc-82dc-cdd0feb36475','EX-352','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','As embarcações de sobrevivência infláveis possuem o certificado de revisão dentro do prazo de validade e foram revisadas em estação de manutenção autorizada pela DPC','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('63ec6d70-d445-4051-9851-f414c26fb7b7','EX-525','71c05e83-0d67-4137-b2b7-478c4241a057','A dotação das luzes atende as regras sobre o assunto para este tipo de embarcação','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('64264fe0-373e-4c75-82be-3665162220eb','EX-317','e70f7906-4e9d-4367-b10a-2ad2a007817a','Lanterna portátil com bateria recarregável ou pilhas sobressalentes','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('6a368da8-410c-42df-bbc2-f58bfdb9806b','EX-499','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','O lavatório do tipo coletivo considera 0,6 m por pessoa','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('6d6d6309-d8f2-4d2a-86a2-01e902c50df9','EX-400','65bf89f0-f44d-4746-89f7-f530c9aa990d','Redes de descarga e aspiração da praça de máquinas conectadas ao fundo ou ao costado deverão ser metálicas','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('6e55abe3-ccfb-41d0-8365-c6c5f838e658','EX-540','71c05e83-0d67-4137-b2b7-478c4241a057','Verificar se os acessos aos locais abaixo relacionados estão livres: Equipamentos de salvatagem e combate a incêndio','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('6f4dc9b2-6ff0-4ca5-9b9f-649913e95d75','EX-547','71c05e83-0d67-4137-b2b7-478c4241a057','Os posicionamentos dos tanques de consumíveis estão de acordo com aqueles anotados no Plano de Capacidades. Caso seja necessário, deverá ser requerida a abertura do fundo duplo','NORMAM-202/DPC','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('7208560e-f098-4ed4-a6db-04e305b59b2b','EX-436','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Os circuitos das luzes de navegação são individualmente protegidos por fusíveis ou disjuntores instalados no painel de controle ou quadro de luzes de navegação','RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('73540b8b-e8bd-4d3e-b08d-77ed59461bce','EX-503','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A unidade sanitária é composta de um vaso sanitário de louça vitrificada, dotado de fluxo de água (descarga) para sua limpeza e acessórios','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('73f848be-eb6b-4e0a-b0b1-67a6ee583f3f','EX-348','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','As boias salva vidas e sua retinida não estão presas ou amarradas à embarcação, estando apenas apoiadas em seus suportes, prontas para serem lançadas','NORMAM-202/DPC, Cap. 04, Item 4.12.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('76456380-e872-472e-80de-465dc9969111','EX-312','aa4a7f0d-004d-4a60-924e-693335fdd69b','Tabelas ou quadros no comando: - balizamento','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('7661f5f9-cff5-4173-9b00-6e4337d2e45f','EX-330','e70f7906-4e9d-4367-b10a-2ad2a007817a','Quadro elétrico de luzes/sistemas de comunicação','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('76ed1958-0074-4027-be8a-45a0f35ebaa8','EX-518','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','O arranjo físico da embarcação está de acordo com o Arranjo Geral. Devem ser verificados os compartimentos em relação ao seu posicionamento e destinação','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('7a31837c-64ee-47e2-9f6b-d4b5cd5108b1','EX-403','65bf89f0-f44d-4746-89f7-f530c9aa990d','Os indicadores de níveis dos tanques de óleo deverão ser dotados de válvulas (preferencialmente do tipo esfera), que deverão ser instaladas na parte inferior do respectivo indicador','NORMAM-202/DPC, Cap. 09, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('7a9f7a2a-d2df-43ae-bb1b-14c77c92ad36','EX-519','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Todos os níveis de acomodações, de compartimentos de serviço ou da praça de máquinas possui, pelo menos, duas vias de escape amplamente separadas, provenientes de cada compartimento restrito ou grupos de compartimentos','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,0,1,1,0,0),
+('7c148a99-d39d-4dce-9428-a65d8c9e9a39','EX-474','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','As cadeiras deverão atender às seguintes dimensões: b) largura mínima de 0,86 m de para os bancos duplos ou combinações desses','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('7dca1f10-d3ca-4efb-aaad-05c38b4e02de','EX-548','71c05e83-0d67-4137-b2b7-478c4241a057','Os equipamentos de carga, propulsão, energia e governo da embarcação estão de acordo com o Memorial Descritivo.','NORMAM-202/DPC, Cap. 03, Seção IV.','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('7fe5827d-bbc9-4041-b881-c55b5edc1563','EX-394','65bf89f0-f44d-4746-89f7-f530c9aa990d','As superfícies quentes deverão ser providas de proteções térmicas, a fim de minimizar o risco de queimaduras nos tripulantes','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('7fed81ee-7071-42cc-8f8b-eb18d5346505','EX-512','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A rampa é dotada de dispositivo antiderrapante no piso (o qual poderá consistir de travessões instalados no sentido transversal com espaçamento não superior a 0,50 m)','NORMAM-202/DPC, Cap. 03, Seção V.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,0,1,0,0,0),
+('805c0314-b1b1-4061-8c40-d25398d2e53f','EX-472','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','O espaço de cadeiras possui pelo menos 2 portas de acesso opostas','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('83c0e7f6-6a1a-4383-ba22-9544c2018930','EX-555','9e81f468-422b-40e4-8bf8-40b60a027a36','Estão em bom estado o(s) leme(s) e o(s) hélice(s)','NORMAM-202/DPC, Cap. 03, Seção III.','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('8640b086-97b1-4cf5-b853-86b0b9504e30','EX-490','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Número mínimo de aparelhos sanitários conforme tabelas regulamentares','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('86ccce9f-605d-4896-871b-d7775e23014f','EX-491','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Todos os banheiros são dotados de ventilação natural, através de janela ou cachimbo, ou ventilação forçada','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('88af8f67-9df3-429a-8d9d-bb04d74345ec','EX-538','71c05e83-0d67-4137-b2b7-478c4241a057','As embarcações de propriedade de órgãos públicos serão caracterizadas por meio de letras e distintivos adotados por seus respectivos órgãos.','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('8b5b4c03-0824-4f51-ab4b-2b1c27640900','EX-303','aa4a7f0d-004d-4a60-924e-693335fdd69b','O armador deverá apresentar a Provisão de Registro da Propriedade Marítima (PRPM) ou caso a embarcação não possua apresentar Documento Provisório de Propriedade (DPP).','NORMAM-202/DPC, Cap. 02, Item 2.1.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:04:13',1,1,1,1,1,1),
+('8d78d063-e888-4a5b-994b-5c61e704fc44','EX-364','a5f25230-91c9-4e14-aa33-e83524d5d943','Na saída de cada tanque de combustível há uma válvula de fechamento capaz de interromper o fluxo da rede','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('8ed00d22-c8ee-40f5-be7c-64f9e9acc83d','EX-456','f299c8c7-4402-4efa-89c6-d5add1fa60d5','A embarcação possui a licença de estação do navio em vigor, emitida pela ANATEL','ANATEL / NORMAM','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-03 05:41:41',1,0,0,1,0,0),
+('902653ef-7f5d-497e-a1f4-d78f31212d7c','EX-441','b8ed9a31-9fa3-492f-904e-b8158a06d0da','d) os cabos e fiação estão instalados e fixados de modo a evitar desgastes por atrito ou outra avaria','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('9339e3f3-a72d-48ab-8f33-eb449e5f7395','EX-385','a5f25230-91c9-4e14-aa33-e83524d5d943','Todos os esguichos das mangueiras que servem às tomadas localizadas no compartimento de máquinas ou localizadas junto a tanques de carga de líquidos inflamáveis são de duplo emprego, isto é, borrifo e jato sólido, incluindo um dispositivo de fechamento','NORMAM-202/DPC, Cap. 04, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('934b7190-7444-4f16-96bd-a367c6953b9c','EX-321','e70f7906-4e9d-4367-b10a-2ad2a007817a','Limpador de para-brisa ou vigia rotativa','NORMAM-202/DPC, Cap. 03, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('94a99554-75f0-4da2-9e4f-f2c089ee8141','EX-327','e70f7906-4e9d-4367-b10a-2ad2a007817a','Transceptor para o Sistema de Identificação Automática homologado pela ANATEL (Automatic Identification System - AIS)','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('9537c200-5b45-4d8b-b670-505c5c936f79','EX-427','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Quanto aos quadros elétricos: a) todos eles são dispostos de maneira que ofereçam fácil acesso durante a operação e ou manutenção dos equipamentos','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('95822d65-14fa-4d61-a80c-93b779751ed4','EX-528','71c05e83-0d67-4137-b2b7-478c4241a057','As luzes atendem aos setores (ângulos) corretos','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('95f9e766-875a-48f0-93bb-149d9e29f784','EX-460','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Todos os espaços destinados ao transporte e ou permanência de passageiros apresentam pés-direitos (vão entre o piso e o teto) de no mínimo 1,90 m','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('990defff-5140-4561-b20a-e9a67b74e9a0','EX-506','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A unidade de chuveiro é composta por um chuveiro com jato d ́água com altura de queda mínima de 1,9 m e seus acessórios, localizada em compartimento separado das demais áreas por um meio que evite respingos (box)','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('991a0bbc-deb5-4b81-8305-c4d102e95e50','EX-410','65bf89f0-f44d-4746-89f7-f530c9aa990d','Motores com potência igual ou superior a 800 HP deverão ser dotados de um painel local ou remoto, com as seguintes indicações: RPM, temperatura da água de arrefecimento, pressão e temperatura do óleo lubrificante','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('9979e589-44dd-4790-9574-4adb561aaf7d','EX-461','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A circulação nas áreas de embarque e desembarque, nos corredores e escadas é livre e independente das demais áreas da embarcação. Nas embarcações com AB maior que 50, os corredores maiores que 7 m, possui, pelo menos, 2 vias de acesso/escape','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('99be0275-f74e-49e6-aac2-fce3b372fecf','EX-517','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Verificar a existência físico-documental e o correto preenchimento do livro de registro de lixo a bordo.','NORMAM-202/DPC, Cap. 09, Item 9.2','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 02:36:44',1,1,1,1,1,1),
+('9ac15939-64b7-4878-8b0e-76c61bf1b55e','EX-553','71c05e83-0d67-4137-b2b7-478c4241a057','Verificar a marcação física da régua de calado com algarismos soldados em relevo na quilha de 20 em 20 cm, pintados com cor de destaque.','NORMAM-202/DPC, Cap. 03, Seção I.','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('9be9b57c-5702-4e46-9703-4414b0c8ce56','EX-319','e70f7906-4e9d-4367-b10a-2ad2a007817a','Binóculo 7x50','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('9c039242-cd6f-4dae-b2ea-628efe60d3cd','EX-485','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','O topo do colchão inferior está a pelo menos 0,3 m do convés (piso do camarote)','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('9d9028b2-a785-4a1a-bf9a-db04ae0e3e95','EX-331','e70f7906-4e9d-4367-b10a-2ad2a007817a','Sistema de comunicação interna, interligando, pelo menos, passadiço, praça de máquinas e compartimento da máquina do leme, propiciando troca de informações nos dois sentidos','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('9dc4b5a1-2d0e-4821-8be6-c4fe3a8e8ee0','EX-470','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A largura mínima do vão de acesso ao compartimento é maior ou igual à largura do corredor de acesso à abertura','NORMAM-202/DPC, Cap. 03, Seção V.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('9e411c90-8ac2-4499-8ca7-2bcda5d07503','EX-420','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Para embarcações com AB maior ou igual a 300 a fonte de emergência de energia elétrica é um gerador acionado por um motor com suprimento independente de combustível','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('9e7cda40-92d3-4ba1-b90d-bca3d3071994','EX-328','e70f7906-4e9d-4367-b10a-2ad2a007817a','Indicador do ângulo do leme no passadiço ou comando','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('a0662bd3-30ea-4206-82e2-51b4a8fa3f8a','EX-535','71c05e83-0d67-4137-b2b7-478c4241a057','A estrutura (flutuante fixa) está sinalizada por uma luz fixa amarela, com alcance mínimo de duas milhas náuticas, estabelecida no seu tope ou em local de melhor visibilidade para o navegante.','NORMAM-202/DPC, Cap. 03, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',0,0,1,0,0,0),
+('a0acbebe-660c-4f48-9da8-64bd45b91455','EX-345','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Os coletes salva vidas estão em bom estado de conservação e com apito','RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a0e3d499-45d6-4908-bed1-c1da5138641f','EX-416','65bf89f0-f44d-4746-89f7-f530c9aa990d','Verificar se as luminárias na praça de máquinas possuem proteção antichoque física em invólucros do tipo \'tartaruga\' e se acendem normalmente.','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a194202b-f4c6-4cbe-bf63-a5216292653b','EX-450','b8ed9a31-9fa3-492f-904e-b8158a06d0da','m) os circuitos polifásicos são distribuídos de modo a assegurar o melhor equilíbrio de cargas entre fases','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a19d11c1-6666-4459-80ae-5e82c990f243','EX-318','e70f7906-4e9d-4367-b10a-2ad2a007817a','Apito','RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a1d44288-9e8d-4cc9-abef-7bf1f296e426','EX-422','b8ed9a31-9fa3-492f-904e-b8158a06d0da','O grupo gerador de emergência ou a bateria de emergência foi instalado, preferencialmente, fora do compartimento das máquinas e dos geradores principais. A antepara de separação entre os compartimentos é, preferencialmente, estanque e resistente ao fogo','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a1f22623-e022-464e-bd02-d1e056aab5db','EX-482','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os camarotes com camas simples possuem área mínima de 2,6 m² por pessoa','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('a371bf33-76aa-11f1-9eb5-0a1b2af87b16','CBL-001','71c05e83-0d67-4137-b2b7-478c4241a057','Há passagem permanentemente desobstruída de proa à popa, que não é efetivada por cima de tampas de escotilhas. Tal passagem possui largura mínima em conformidade com o estabelecido no Anexo 3-M','NORMAM-202/DPC, Cap. 03, Seção I.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a371da38-76aa-11f1-9eb5-0a1b2af87b16','CBL-002','71c05e83-0d67-4137-b2b7-478c4241a057','Em todas as partes expostas dos conveses principais e de superestruturas há eficientes balaustradas ou bordas falsas (que poderão ser removíveis), com altura não inferior a 1 metro (para embarcações com AB maior que 20)','NORMAM-202/DPC, Cap. 04, Seção I.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a371f205-76aa-11f1-9eb5-0a1b2af87b16','CBL-003','71c05e83-0d67-4137-b2b7-478c4241a057','A abertura inferior da balaustrada apresenta altura menor ou igual a 230 mm e os demais vãos não poderão apresentar espaçamento superior a 380 mm. No caso de embarcações com bordas arredondadas, os suportes das balaustradas deverão ser colocados na parte plana do convés','NORMAM-202/DPC, Cap. 04, Seção I.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a3721459-76aa-11f1-9eb5-0a1b2af87b16','CBL-004','71c05e83-0d67-4137-b2b7-478c4241a057','Para embarcações que possuam borda falsa, estas deverão possuir saídas d’água respeitando o determinado no item 0609','NORMAM-202/DPC','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a3722d96-76aa-11f1-9eb5-0a1b2af87b16','CBL-005','71c05e83-0d67-4137-b2b7-478c4241a057','Nas embarcações dos tipos A, B ou D, as vigias e olhos de boi, se existentes nos costados abaixo do convés de borda livre, deverão apresentar as seguintes características: a) ser estanque à água (ou apresentar meios que possibilitem o seu fechamento estanque à água) b) ser de construção sólida c) ser provida de vidros temperados de espessura compatível com seu diâmetro d) não podem ser do tipo “removível” e) caso rebatíveis, deverão permanecer fechadas quando em viagem, devendo haver uma placa, permanentemente fixada junto à vigia, alertando que a mesma deverá permanecer fechada quando em viagem','NORMAM-202/DPC, Cap. 05, Item 5.1.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,0,1,0,0),
+('a37244fe-76aa-11f1-9eb5-0a1b2af87b16','CBL-006','71c05e83-0d67-4137-b2b7-478c4241a057','As aberturas no costado de embarcações dos tipos A, B ou D deverão possuir tampas estanques à água ou vigias e olhos de boi e deverão estar posicionadas de forma que sua aresta inferior esteja a, pelo menos, 300 mm acima da linha d’água carregada, em qualquer condição esperada de trim. Para as embarcações dos tipos C ou E essa distância não deverá ser inferior a 500 mm','NORMAM-202/DPC, Cap. 03, Seção I.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a3725c4c-76aa-11f1-9eb5-0a1b2af87b16','CBL-007','71c05e83-0d67-4137-b2b7-478c4241a057','As portas externas que possibilitem, direta ou indiretamente, o acesso ao interior de qualquer compartimento localizado abaixo do convés de borda livre ou ao interior de uma superestrutura fechada, deverão ter uma soleira mínima de 150 mm (260 mm para embarcações que operam em área 2)','NORMAM-202/DPC, Cap. 05, Item 5.1.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a37275b5-76aa-11f1-9eb5-0a1b2af87b16','CBL-008','71c05e83-0d67-4137-b2b7-478c4241a057','Os escotilhões e as aberturas de escotilha possuem braçola de pelo menos 150 mm de altura (260 mm para embarcações que operam em área 2) e são dotados de tampas que possam ser fixadas às braçolas. As embarcações dos tipos “C” e “E” estão dispensadas da obrigatoriedade de possuírem tampas de escotilha ou dos escotilhões','NORMAM-202/DPC, Cap. 03, Seção I.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,0,1,0,1),
+('a3728c4f-76aa-11f1-9eb5-0a1b2af87b16','CBL-009','71c05e83-0d67-4137-b2b7-478c4241a057','As tampas das aberturas de escotilha, dos escotilhões e seus respectivos dispositivos de fechamento têm resistência suficiente que permite satisfazer as condições de estanqueidade previstas para o tipo de embarcação considerada e apresenta todos os elementos necessários que asseguram a estanqueidade','NORMAM-202/DPC, Cap. 03, Seção III.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a372a38d-76aa-11f1-9eb5-0a1b2af87b16','CBL-010','71c05e83-0d67-4137-b2b7-478c4241a057','Os suspiros externos, situados acima do convés de borda livre, deverão apresentar as seguintes caraterísticas: a) extremidade superior do suspiro em forma de “U” invertido ou com arranjo que proteja a sua abertura da entrada de água proveniente das intempéries; b) distância vertical entre o ponto a partir da qual a água efetivamente tem acesso ao tanque ou compartimento abaixo e o convés onde o suspiro se encontra instalado maior ou igual a 450 mm (760 mm nos conveses de borda livre e 450 mm nos demais conveses para embarcações que operam em área 2)','NORMAM-202/DPC, Cap. 05, Item 5.1.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a372bc98-76aa-11f1-9eb5-0a1b2af87b16','CBL-011','71c05e83-0d67-4137-b2b7-478c4241a057','Dispositivos de iluminação e ou ventilação natural (alboios) de compartimentos situados abaixo do convés de borda livre, que estão situados imediatamente acima do referido convés, deverão: a) ser estanque ao tempo (ou dispor de meios que possibilitem o seu fechamento estanque ao tempo) b) ser dotado de vidros com espessura compatível com sua área e máxima dimensão linear c) apresentar braçolas com, pelo menos, 150 mm de altura (260 mm para embarcações que operam em área 2)','NORMAM-202/DPC, Cap. 05, Item 5.1.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a372d307-76aa-11f1-9eb5-0a1b2af87b16','CBL-012','71c05e83-0d67-4137-b2b7-478c4241a057','Os dutos de ventilação ou exaustão destinados aos espaços situados abaixo do convés de borda livre deverão apresentar a borda inferior de sua extremidade externa com pelo menos 450 mm de altura acima do referido convés (760 mm para embarcações que operam em área 2)','NORMAM-202/DPC, Cap. 05, Item 5.1.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,0,1,0,1),
+('a372e880-76aa-11f1-9eb5-0a1b2af87b16','CBL-013','71c05e83-0d67-4137-b2b7-478c4241a057','Para embarcações que operam em área 2, as venezianas instaladas em anteparas ou portas externas, destinadas à ventilação de compartimentos situados sob o convés de borda livre ou superestruturas fechadas, e que não possuam meios efetivos de fechamento que as tornem estanques ao tempo, deverão possuir altura mínima de 760 mm','NORMAM-202/DPC, Cap. 05, Item 5.1.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a373033e-76aa-11f1-9eb5-0a1b2af87b16','CBL-014','71c05e83-0d67-4137-b2b7-478c4241a057','A extremidade junto ao costado dos tubos de descarga, provenientes de espaços situados abaixo do convés de borda livre ou de superestruturas fechadas, deverá ser dotada de válvulas de retenção e fechamento (combinadas ou não). Os meios disponíveis para operação de válvula de fechamento deverão ser facilmente acessíveis e estar sempre disponíveis (ver exigência abaixo)','NORMAM-202/DPC, Cap. 05, Item 5.1.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a3731baa-76aa-11f1-9eb5-0a1b2af87b16','CBL-015','71c05e83-0d67-4137-b2b7-478c4241a057','Quando a descarga se dá por gravidade e a distância vertical entre o ponto de descarga no costado e a extremidade superior do tubo for maior ou igual a 1,20 m (2,0 m para embarcações que operam em área 2) as válvulas poderão ser de fechamento sem retenção (ver exigência acima)','NORMAM-202/DPC','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a3733364-76aa-11f1-9eb5-0a1b2af87b16','CBL-016','71c05e83-0d67-4137-b2b7-478c4241a057','As descargas de gases provenientes de motores de combustão interna que sejam posicionadas na popa ou nos costados, mesmo quando associadas à descarga de água de refrigeração dos motores (“descarga molhada”), estão dispensadas da obrigatoriedade da instalação de válvulas de retenção ou fechamento, mas deverão atender aos seguintes requisitos: a) deverão ser flangeadas no casco b) beverão ser de aço ou material equivalente nas proximidades do casco','NORMAM-202/DPC, Cap. 03, Seção III.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a373534c-76aa-11f1-9eb5-0a1b2af87b16','CBL-017','71c05e83-0d67-4137-b2b7-478c4241a057','Embarcações dos tipos D e E que operem em área 2 deverão possuir altura mínima de proa de acordo com o item 0619','NORMAM-202/DPC','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',0,0,0,1,1,0),
+('a373c1f4-76aa-11f1-9eb5-0a1b2af87b16','CBL-018','71c05e83-0d67-4137-b2b7-478c4241a057','O Disco de Plimsoll está posicionado conforme Notas para a Marcação da Borda Livre.','NORMAM-202/DPC, Cap. 05, Item 5.1.','borda_livre',NULL,30,1,'2026-07-03 06:44:28','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a3a06b64-50be-420a-9892-2c189dcbe724','EX-426','b8ed9a31-9fa3-492f-904e-b8158a06d0da','As baterias deverão: c) atender a uma altura mínima de 40 cm do piso, quando fixadas em conveses situados abaixo do convés principal','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a431a945-f958-40bc-9491-058a3d643c98','EX-464','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Há espaço livre para circulação nos bordos da embarcação, ao longo de todos os espaços para redes. Essa circulação deverá apresenta largura mínima de 800 mm por bordo','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('a4f04bb2-0533-498c-970e-73a3c5de19e2','EX-412','65bf89f0-f44d-4746-89f7-f530c9aa990d','Verificar o funcionamento do alarme de nível alto de esgoto (visual e ou sonoro), emitido na praça de máquinas e no comando – para embarcações com AB maior que 20','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('a73b0ca4-6bbb-41d6-ac23-410beabbe8b9','EX-309','aa4a7f0d-004d-4a60-924e-693335fdd69b','Certificado de conformidade para transporte de produtos químicos perigosos a granel (se aplicável)','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('a9916551-a7e8-49b4-aa43-ee43ed71e60f','EX-466','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','A área mínima requerida para o transporte de passageiros em redes considera a concentração de 1 passageiro por m², sem rede em cima de rede. No cálculo dessa área não estão computadas as áreas de circulação, de embarque e desembarque, de estivagem de bagagens ou transporte de carga, nem corredores ou escadas','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('ac2e0924-d475-4f40-8429-553d94cbd7c1','EX-445','b8ed9a31-9fa3-492f-904e-b8158a06d0da','h) nos compartimentos e locais onde existe depósito de materiais inflamáveis, os interruptores, tomadas de correntes, luminárias e demais equipamentos elétricos são à prova de explosão','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('ad528287-01ba-4c8f-ac0a-0203113ba8c6','EX-465','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Ocorre o transporte simultâneo de passageiros em redes e em bancos laterais, junto aos bordos, e o limite de espaço para redes se iniciar a não menos de 1,70m da face interna da balaustrada do convés considerado','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('ad8b2645-95b8-4f61-a654-5610123e893e','EX-404','65bf89f0-f44d-4746-89f7-f530c9aa990d','As tubulações advindas dos tanques de óleo, por intermédio da qual o óleo é conduzido às máquinas principais ou auxiliares, deverão ser de material metálico ou material resistente ao fogo e possuir válvula de fechamento rápido, o qual deverá ser testado','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('ae76d3fb-35cf-4108-81f2-4d0e8a579cab','EX-418','b8ed9a31-9fa3-492f-904e-b8158a06d0da','A fonte de energia elétrica principal consegue manter em funcionamento todos os serviços essenciais independentemente do sentido e da velocidade de rotação das máquinas principais e do eixo propulsor','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('af6b1cb2-e94a-452c-a083-9b7e2f41ff69','EX-392','65bf89f0-f44d-4746-89f7-f530c9aa990d','Motores cujo sistema de arrefecimento seja constituído por ventiladores deverão ter os mesmos providos de proteção','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('b16a6bde-ff11-49be-aa7e-ad733190b39c','EX-360','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Porto de inscrição (Embarcações de Sobrevivência/Boias)','NORMAM-202/DPC, Cap. 04, Item 4.12.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('b2594475-d99b-47e9-b28f-ef970b9ef621','EX-554','71c05e83-0d67-4137-b2b7-478c4241a057','Acompanhar fisicamente a medição por ultrassom feita por engenheiro qualificado contratado, incluindo o lixamento de um ponto redondo de ~5 cm de diâmetro nas chapas.','NORMAM-202/DPC, Cap. 03, Seção I.','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('b27da535-c866-4c52-9a83-b3e5b10072e0','EX-320','e70f7906-4e9d-4367-b10a-2ad2a007817a','Prumo de mão','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('b3e0478a-37ea-4ecf-a8f7-d81e816f1a25','EX-408','65bf89f0-f44d-4746-89f7-f530c9aa990d','Toda tubulação de gás (não de cozinha), combustível, óleo lubrificante, substancias inflamáveis em geral e fiações não poderá distar menos que 200 mm das tubulações de descarga ou de quaisquer superfícies em alta temperatura','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('b3f0b053-6c41-42f4-adb3-a3f0d76c9e05','EX-531','71c05e83-0d67-4137-b2b7-478c4241a057','A antepara de colisão de vante está posicionada entre 5 e 8% do Lregra, a partir da parte superior do espelho ou da roda de proa','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,0,1,1,0,0),
+('b56def21-6b53-42cc-a16b-35f5a0a63c59','EX-476','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','As cadeiras deverão atender às seguintes dimensões: d) distância mínima de 0,90 m entre os encostos dos assentos montados frente a frente, ou entre o encosto e uma antepara, ou outra divisão que por ventura exista à frente do assento','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('b5ce3089-e78e-4390-99bb-e8855acd1ffd','EX-397','65bf89f0-f44d-4746-89f7-f530c9aa990d','Todo espaço de máquinas deverá ter ventilação (forçada ou natural) apropriada ao funcionamento dos equipamentos','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('b5f8b4f6-cb8d-432f-b7cd-52bdb1121ae8','EX-478','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os corredores de circulação e ou acesso aos camarotes apresentam largura mínima de 0,8 m para um comprimento máximo de 10 m. Quando o comprimento dos corredores internos excede a 10 m, a largura mínima é acrescida de 0,05 m para cada 2 m ou fração a mais no comprimento, até o máximo de 1 m','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('b6db0410-2703-4196-993a-ed9f04038200','EX-533','71c05e83-0d67-4137-b2b7-478c4241a057','Há antepara a vante da praça de máquinas, somente embarcações de passageiros','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,0,1,1,0,0),
+('b7545aa5-51fe-44d7-9513-fd491720ace9','EX-302','aa4a7f0d-004d-4a60-924e-693335fdd69b','Cartão de Tripulação de Segurança','NORMAM-202/DPC, Cap. 04, Item 4.2), 4.2.1, m, III','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 02:36:44',1,1,1,1,1,1),
+('b8b68324-6f6c-48d4-af7f-84d98d71eca7','EX-516','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Verificar a afixação de placa educativa em local visível no convés com os dizeres: \'Não jogue lixo no rio, deposite seu lixo aqui\'.','NORMAM-202/DPC, Cap. 09, Item 9.2','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 02:36:44',1,1,1,1,1,1),
+('bac0b5fb-e1ef-4ce4-b171-36716b176f2e','EX-424','b8ed9a31-9fa3-492f-904e-b8158a06d0da','As baterias deverão: a) ser instaladas em locais não habitados, arejados e abrigados','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('bac38230-26ef-427d-b223-0d1b0bc96b03','EX-487','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Nos camarotes há ventilação natural por janela ou alboio, dando para o exterior da embarcação, com uma abertura mínima de 0,1 m² por janela ou alboio. A ventilação natural pode ser substituída por ventilação forçada através de ventilador e ou ar condicionado','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('bb1b61cc-c7fb-4a39-a7b2-749267af3ac9','EX-447','b8ed9a31-9fa3-492f-904e-b8158a06d0da','j) não são utilizadas extensões elétricas (caso usadas numa necessidade eventual, verificar a capacidade de corrente e, dependendo da distância, a queda de tensão)','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('bc4bc5e4-a100-4aa5-a3f0-6f0d7405fb64','EX-386','a5f25230-91c9-4e14-aa33-e83524d5d943','Os esguichos não têm menos de 12 mm de diâmetro','NORMAM-202/DPC, Cap. 04, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,0,1,0,0),
+('bd328ebf-7ae2-4e72-8d75-c1519b935d1b','EX-536','71c05e83-0d67-4137-b2b7-478c4241a057','A embarcação deverá ser marcada de modo visível e durável, com letras e algarismos de tamanho apropriado às dimensões da embarcação, com letras de, no mínimo, 10 cm, na popa, o nome da embarcação juntamente com o porto de inscrição e, na proa, o nome da embarcação nos dois bordos','NORMAM-202/DPC, Cap. 02, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('bd5d3265-5bb4-4d45-a4a3-592dbaeafc7b','EX-351','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Os aparelhos flutuantes estão estivados de modo a flutuarem livremente em caso de naufrágio','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('be414d13-fba6-478b-b244-8cae54e7532e','EX-513','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Verificar o estado físico de conservação, higiene e limpeza dos colchões fornecidos nos camarotes.','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('bed32fa9-00cb-4821-a92a-f9d913ef261e','EX-425','b8ed9a31-9fa3-492f-904e-b8158a06d0da','As baterias deverão: b) ser mantidas devidamente fixadas e com seus bornes de ligação sem azinhavre e protegidos por material isolante','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('c01f90ce-7dc7-494d-ac0d-631ac1833ac4','EX-391','65bf89f0-f44d-4746-89f7-f530c9aa990d','Quaisquer polias, correias e demais partes móveis utilizadas para acionamento de máquinas e ou mecanismos deverão ser dotadas de dispositivos adequados de proteção para as pessoas','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,1,1,1,1,1),
+('c0b150ff-dbbe-4b9e-9228-6e66a738b87b','EX-481','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os camarotes destinados a mais de 4 pessoas em beliches possuem área mínima de 1,5 m² por pessoa','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:38',1,0,1,1,0,0),
+('c1d3a7cb-333e-4e09-96ef-098c409c7c6e','EX-546','71c05e83-0d67-4137-b2b7-478c4241a057','O material empregado na construção da embarcação está de acordo com aquele mencionado no Memorial Descritivo','NORMAM-202/DPC','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:38',1,1,1,1,1,1),
+('c1e33d68-30aa-4c63-8059-7c6f66ce4dad','EX-497','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','O sanitário coletivo mínimo é formado por uma unidade sanitária e lavatório, tendo área mínima de 1,26 m² e pode ser usado simultaneamente por mais de uma pessoa','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,1,1,0,0),
+('c231dec1-4488-4a8c-a9bc-3633e4f940c3','EX-523','71c05e83-0d67-4137-b2b7-478c4241a057','As janelas ou escotilhas, indicadas no Plano de Segurança como via de escape, possuem um vão livre mínimo não inferior a 600 x 600 mm, se instaladas em conveses e 600 x 800 mm, se instaladas em anteparas','NORMAM-202/DPC, Cap. 04, Item 4.2), 4.2.1, m, I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 02:36:44',1,0,1,1,0,0),
+('c33725e8-227b-4dd2-9f32-e9e083b8d97c','EX-462','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os corredores ou passarelas externas de circulação e acesso com até 10 m de comprimento apresentam largura mínima de 650 mm. Como o comprimento excede a 10 m, a largura mínima é acrescida de 50 mm para cada 2 m ou fração de comprimento, até no máximo de 800 mm','NORMAM-202/DPC, Cap. 03, Seção V.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,1,1,0,0),
+('c3c80149-529a-42c6-8a26-36c464054bca','EX-396','65bf89f0-f44d-4746-89f7-f530c9aa990d','Toda lâmpada deverá ser protegida contra choques, eficazmente, por luminárias','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('c85334c5-8f56-4ee3-be27-b6783951d5c3','EX-480','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os camarotes para 3 ou 4 passageiros ou tripulantes possuem dimensões mínimas de 1,9 m x 3,0 m, contendo uma cama e um beliche duplo ou dois beliches duplos','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,1,1,0,0),
+('c8d265a4-62cc-4153-b226-337375cd363d','EX-526','71c05e83-0d67-4137-b2b7-478c4241a057','As alturas das luzes de navegação estão de acordo com as normas específicas sobre o assunto','RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:39',1,1,1,1,1,1),
+('ca1c1aed-7e2a-4d54-92cd-7567486150c7','EX-375','a5f25230-91c9-4e14-aa33-e83524d5d943','Nas DEMAIS embarcações, as tomadas (hidrantes) deverão estar posicionadas de modo a propiciar, pelo menos, dois jatos d\'água não provenientes da mesma tomada de incêndio','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('cad656d0-6125-4f9c-be76-9d9ce5e03c99','EX-556','9e81f468-422b-40e4-8bf8-40b60a027a36','Realizar verificação física detalhada de todo o hélice, leme, bucha e eixo propulsor da embarcação em seco, buscando desgastes, trincas ou folgas anômalas.','NORMAM-202/DPC, Cap. 03, Seção III.','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:39',1,1,1,1,1,1),
+('ccaeea91-05ea-4864-a770-5c9b98ae8f48','EX-342','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Tamanho (apenas para os coletes salva vidas)','NORMAM-202/DPC, Cap. 04, Item 4.13.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2','EX-409','65bf89f0-f44d-4746-89f7-f530c9aa990d','Motores providos de sistema de abertura das válvulas de admissão e descarga, por intermédio de balancins, deverão ter seus tuchos de acionamento protegidos','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('ce1ba98a-6d1a-4140-a789-ca3efa885333','EX-402','65bf89f0-f44d-4746-89f7-f530c9aa990d','Os tanques de óleo situados no interior da Praça de Maquinas deverão ser dotados de suspiros independentes e cuja saída deverá estar localizada em área externa','NORMAM-202/DPC, Cap. 09, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('ce50512f-13f2-4b0e-a2f7-bc1ae1e5bffd','EX-340','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Número de série (se tiver) (Coletes salva-vidas)','NORMAM-202/DPC, Cap. 04, Item 4.13.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('cf097e63-f9a6-4408-ae6e-766baddc6322','EX-477','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os espaços de cadeiras apresentam ventilação natural permanente para o exterior da embarcação, tendo como meio de fechamento sanefas ou janelas móveis. No caso de janela móvel, a área mínima de ventilação é de 40% do vão da abertura','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,1,1,0,0),
+('cf34c2da-207c-4d4c-a185-8c19374aaedf','EX-323','e70f7906-4e9d-4367-b10a-2ad2a007817a','Alarme visual e sonoro de alta temperatura da água de resfriamento do MCP e MCA com potência igual ou superior a 800 HP (597 kW)','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,0,1,0,0),
+('d11e0a27-5ba2-4d6f-9d9d-1415a92db143','EX-353','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Número do certificado de homologação pela DPC (Embarcações de Sobrevivência/Boias)','NORMAM-202/DPC, Cap. 04, Item 4.12.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('d171a5f8-0d0a-4279-9688-68856ea403e3','EX-505','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os acessos às unidades sanitárias são efetuados através de vão mínimo de 1,8 x 0,55 m, dotados de portas com dispositivo de travamento interno e apresenta uma altura livre de, no máximo 0,3 m e, no mínimo 0,1 m, entre a porta e o piso','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,1,1,0,0),
+('d35a46ed-2908-4475-897d-fe955538be34','EX-453','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Na instalação elétrica não existe fios soltos, desencapados ou qualquer outra condição que possa vir a provocar um curto-circuito','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('d3653240-9326-4f99-a41f-fccfd35e75b2','EX-341','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Data de fabricação (Coletes salva-vidas)','NORMAM-202/DPC, Cap. 04, Item 4.13.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('d6c54388-c992-4021-8a62-0a5400976539','EX-509','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Há pelo menos uma rampa, adequada às características da embarcação e ao local onde se efetua o embarque/desembarque de passageiros, para facilitar a entrada e saída dos passageiros','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,1,0,0,0),
+('d7a3466c-1c51-4001-a537-7f02912156a8','EX-406','65bf89f0-f44d-4746-89f7-f530c9aa990d','Toda fiação elétrica dos motores principais, auxiliares e equipamentos acessórios deverá ser protegida por eletrodutos ou acondicionada em “chicotes” apropriados','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('d970e4db-5964-4eaa-add3-dee2763eab6e','EX-313','aa4a7f0d-004d-4a60-924e-693335fdd69b','Tabelas ou quadros no comando: - sinais sonoros e luminosos','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,0,1,0,0),
+('da44538d-807e-40ef-9c99-0bb3c1f0c7a7','EX-532','71c05e83-0d67-4137-b2b7-478c4241a057','A antepara de colisão de ré está colocada de forma que limita o tubo telescópico em um espaço estanque à água de volume moderado','NORMAM-202/DPC, Cap. 03, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:39',1,0,1,1,0,0),
+('da807bea-cb86-4be2-8655-97320c8fd059','EX-379','a5f25230-91c9-4e14-aa33-e83524d5d943','Não são usados para as redes de incêndio e para as tomadas de incêndio, materiais cujas características são prejudicadas pelo calor (como plásticos e PVC).','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('dab5c2ba-432e-47f3-a6ab-0a0e67b420a5','EX-315','aa4a7f0d-004d-4a60-924e-693335fdd69b','As embarcações que transportem passageiros deverão ter afixadas, em local visível aos passageiros, uma placa contendo o número de inscrição da embarcação, peso máximo de carga, número máximo de passageiros por convés que a embarcação está autorizada a transportar e número do telefone da OM em cuja jurisdição a embarcação estiver operando','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,0,1,0,0),
+('dbc42c9d-c0f2-44bc-ad57-b78a7b4e0ab3','EX-377','a5f25230-91c9-4e14-aa33-e83524d5d943','Nas DEMAIS embarcações, próximas à entrada da praça de máquinas (lado externo), deverão ser previstas uma tomada de incêndio e uma estação de incêndio com uma ou mais seções de mangueira e um aplicador de neblina','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('dbe76a3f-4454-4836-a600-1c3c99c06475','EX-458','f299c8c7-4402-4efa-89c6-d5add1fa60d5','A embarcação, que navega sob jurisdição da Capitania dos Portos de Barra Bonita, possui o equipamento AIS em pleno funcionamento','ANATEL / NORMAM','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-03 05:41:41',1,0,0,1,0,0),
+('e125df21-a446-4bef-9486-35a165b9220b','EX-326','e70f7906-4e9d-4367-b10a-2ad2a007817a','Agulha giroscópica ou magnética','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,0,1,0,0),
+('e1a77c79-63a6-4d5e-8906-64f06dee4a9a','EX-432','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Quanto aos quadros elétricos: f) os quadros elétricos não estão localizados a vante da antepara de colisão','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e204d705-f37b-46c6-88b6-5d46f506064b','EX-543','71c05e83-0d67-4137-b2b7-478c4241a057','Verificar se os acessos aos locais abaixo relacionados estão livres: Porões de carga','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e26e80f5-8422-4fb7-8199-6669ac222815','EX-308','aa4a7f0d-004d-4a60-924e-693335fdd69b','Certificado de conformidade para transporte de gases liquefeitos a granel (se aplicável)','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e27dc4c7-dd3b-4269-bc57-601cbb159450','EX-354','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Fabricante (Embarcações de Sobrevivência/Boias)','NORMAM-202/DPC, Cap. 04, Item 4.12.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e2dc9cdc-437a-4c3a-8710-ce6bb9d4c3f6','EX-411','65bf89f0-f44d-4746-89f7-f530c9aa990d','Qualquer sistema de monitoramento e ou controle de equipamentos instalado no passadiço deverá ser dotado de placas identificadoras, assim como provido de uma iluminação apropriada','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e402c282-bbf7-4213-b997-761e8e06227a','EX-311','aa4a7f0d-004d-4a60-924e-693335fdd69b','Tabelas ou quadros no comando: - sinais de salvamento','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,0,1,0,0),
+('e4382149-9351-4ffe-8e6c-004723fdb8a0','EX-448','b8ed9a31-9fa3-492f-904e-b8158a06d0da','k) os acessórios de iluminação são instalados de maneira tal que evitam aumentos de temperatura que possam danificar cabos e fiação e impeçam que o material situado nos arredores se torne excessivamente quente','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e4c70296-da8c-4f2d-a1e5-a20287dddb1c','EX-433','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Quanto aos quadros elétricos: g) estão limpos e mantidos','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e4db742c-931a-43ef-bff3-287ef5d42c1f','EX-521','71c05e83-0d67-4137-b2b7-478c4241a057','Acima do convés aberto mais baixo, as vias de escape são escadas, portas ou janelas ou uma combinação delas, dando para um convés aberto','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:39',1,0,1,1,0,0),
+('e556f7ad-a680-44ce-861d-f051aac27a86','EX-417','b8ed9a31-9fa3-492f-904e-b8158a06d0da','A fonte de energia principal tem capacidade suficiente para suprir a carga necessária para manter a embarcação em plenas condições de operação e habitabilidade, levando-se em consideração os fatores de potência, de demanda e a simultaneidade das cargas','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e55e3316-1841-41f7-8eca-de405ef9e180','EX-388','a5f25230-91c9-4e14-aa33-e83524d5d943','Somente deverão ser utilizadas redes de aço e acessórios de materiais resistentes ao fogo junto ao casco, nos embornais, nas descargas sanitárias e em outras descargas situadas abaixo do convés estanque.','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e64d7ec0-fccc-4d7b-91f0-043098347422','EX-307','aa4a7f0d-004d-4a60-924e-693335fdd69b','Certificado de Borda Livre, quando aplicável','NORMAM-202/DPC, Cap. 05, Item 5.1.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e70fad1d-6ee7-4ceb-9c23-d101f192e2a3','EX-363','a5f25230-91c9-4e14-aa33-e83524d5d943','Nenhum tanque ou rede de combustível está posicionado em local onde qualquer derramamento ou vazamento dele proveniente, venha constituir risco de incêndio pelo contato com superfícies aquecidas ou equipamentos elétricos','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e8afc2e7-7783-4ea7-9e95-fccf3e8499dd','EX-415','65bf89f0-f44d-4746-89f7-f530c9aa990d','Verificar se os empurradores possuem placa física identificadora com o número do motor ou, se inexistente, exigir Nota Fiscal ou Recibo de Compra e Venda.','NORMAM-202/DPC, Cap. 03, Seção III.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('e9226bc3-3b12-417e-946f-18c0176792e0','EX-324','e70f7906-4e9d-4367-b10a-2ad2a007817a','Sistema de comunicação que possibilita ao comando divulgar informações gerais por intermédio de alto-falantes nos locais destinados aos passageiros (para embarcações com mais de 100 passageiros)','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,0,1,0,0),
+('eae082a5-c90e-4a46-8922-aadbe8cdeea0','EX-471','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','As portas de acesso estão posicionadas de forma que uma pessoa não necessita se deslocar mais de 13 m em linha reta, a partir de qualquer posição do espaço de cadeiras, para alcançar uma das portas','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,1,1,0,0),
+('eb283686-11d5-4d21-aa6a-46fa76015422','EX-469','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Todos os corredores têm livre acesso às saídas do compartimento','NORMAM-202/DPC, Cap. 03, Seção V.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,1,1,0,0),
+('eba785cf-5373-49b1-9f45-74624533cd4e','EX-495','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','As unidades de banheiro têm área maior ou igual a 1,3 m², sendo que as medidas do boxe são de 0,7 x 0,7 m ou maiores. A largura da unidade de banheiro é maior ou igual a 0,8 m','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,1,1,0,0),
+('ec47b315-cde2-4d25-955b-8ef469a3db99','EX-457','f299c8c7-4402-4efa-89c6-d5add1fa60d5','A licença-rádio deverá ser mantida a bordo da embarcação.','ANATEL / NORMAM','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-03 05:41:41',1,0,0,1,0,0),
+('ec652099-4966-4fea-94f7-0c41adde6ccb','EX-306','aa4a7f0d-004d-4a60-924e-693335fdd69b','Certificado ou notas de arqueação','NORMAM-202/DPC, Cap. 06, Item 6.1.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('ecf0c6d1-02a0-479f-9b92-982e68083700','EX-430','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Quanto aos quadros elétricos: d) se a fonte de emergência de energia for constituída por bateria de acumuladores, ela não está instalada no mesmo compartimento do quadro elétrico de emergência','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('ecf9e38b-e522-425b-9daa-e0323352bab8','EX-522','71c05e83-0d67-4137-b2b7-478c4241a057','Não há corredores sem saída com mais de 7 m de comprimento (um corredor sem saída é um corredor ou parte de um corredor a partir do qual só há uma via de escape)','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:39',1,0,1,1,0,0),
+('ee4ccc12-4cbd-45d3-a239-fd8d70eb6e7b','EX-310','aa4a7f0d-004d-4a60-924e-693335fdd69b','Tabelas ou quadros no comando: - regras de governo e navegação','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,0,1,0,0),
+('eed4571e-88f9-4f4a-833b-bc4cfbb5dc2a','EX-304','aa4a7f0d-004d-4a60-924e-693335fdd69b','Caderneta de Inscrição e Registro de cada tripulante (CIR)','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('ef865d12-3b6a-4d96-b9e0-a32b12b89725','EX-455','f299c8c7-4402-4efa-89c6-d5add1fa60d5','Os equipamentos de radiocomunicação funcionam e podem operar na freqüência de 156,8 Mhz (canal 16)','NORMAM-202/DPC, Cap. 04, Item 4.8), 4.8.1.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 02:36:44',1,0,0,1,0,0),
+('efb0d9fe-b5be-4c6d-817d-edd230a5c0a9','EX-336','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Número do certificado de homologação pela DPC (Coletes salva-vidas)','NORMAM-202/DPC, Cap. 04, Item 4.13.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('f10786b6-5cfd-4656-8789-db333c13166f','EX-346','b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Os coletes salva vidas estão estivados de maneira a serem prontamente utilizados, em local visível, bem sinalizado e de fácil acesso','NORMAM-202/DPC, Cap. 04, Item 4.13.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('f1305470-ca00-414f-9f1b-8082fc6cb2a6','EX-493','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os compartimentos sanitários são dotados de meios de drenagem no ponto mais baixo do piso. As unidades de chuveiro possuem dreno específico','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,1,1,0,0),
+('f199c93c-ce4a-424f-8ea6-da60372de2e4','EX-524','71c05e83-0d67-4137-b2b7-478c4241a057','As rotas de escape estão marcadas por setas indicadoras, pintadas em cor contrastante, indicando \'Saída de Emergência\'. A marcação permite, aos passageiros e tripulantes, a identificação de todas as rotas de evacuação e a rápida identificação das saídas','NORMAM-202/DPC, Cap. 03, Seção II.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:39',1,0,1,1,0,0),
+('f1abbac0-6684-47e0-b67e-0c850ad377ae','EX-549','71c05e83-0d67-4137-b2b7-478c4241a057','O casco e os conveses estão em condições satisfatórias, sem deterioração acentuada, não apresentando mossas, trincas ou furos por corrosão','NORMAM-202/DPC','seco',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:39',1,1,1,1,1,1),
+('f3fa1e72-5aa5-46d3-bde1-caa01704b771','EX-440','b8ed9a31-9fa3-492f-904e-b8158a06d0da','c) os eletrodutos estão instalados com suficiente caimento e furos para dar drenagem e evitar o acúmulo d’água','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('f42be128-51c4-4240-bd88-d0031f30b2e3','EX-468','9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Os corredores internos dos salões de cadeiras têm largura mínima de 800mm para um comprimento máximo equivalente a 20 filas de cadeiras consecutivas. Para um comprimento superior, a largura mínima é acrescida de 100 mm para cada 10 filas ou fração de cadeiras a mais','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,1,1,0,0),
+('f5a3cf01-94bc-4944-a3c1-4db1811db59b','EX-399','65bf89f0-f44d-4746-89f7-f530c9aa990d','Não deverá haver vazamentos ou descargas de gases provenientes da queima de combustão no interior dos espaços de máquinas ou outros compartimentos quaisquer.','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('f6b03730-2355-4d50-82d9-573150d8ec4f','EX-442','b8ed9a31-9fa3-492f-904e-b8158a06d0da','e) as extremidades e junções de todos os condutores são feitas de modo a serem conservadas as propriedades originais elétricas e mecânicas','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('f6b5c4dc-45a7-4eb8-b2f0-92e2f01171a2','EX-530','71c05e83-0d67-4137-b2b7-478c4241a057','O ponto de alagamento progressivo (qualquer acesso ao casco não estanque ao tempo) está localizado exatamente no local informado no projeto – geralmente no Estudo de Estabilidade ou nas Curvas','NORMAM-202/DPC, Cap. 03, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:14','2026-07-04 04:12:39',1,1,1,1,1,1),
+('f91ac072-d60c-4502-8590-472181dc8a53','EX-378','a5f25230-91c9-4e14-aa33-e83524d5d943','As mangueiras e seus acessórios ficam acondicionados em cabides ou estações de incêndio (armário pintado de vermelho, dotado em sua antepara frontal de uma porta)','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('f95612f7-d307-4cdf-8a02-41124b7bf5e2','EX-305','aa4a7f0d-004d-4a60-924e-693335fdd69b','Regras para evitar abalroamento – RIPEAM (exceto para embarcações sem propulsão quando rebocadas/empurradas)','RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,0,1,0,1),
+('fa01a553-9f0b-4eb4-a2fa-fe53004c7e78','EX-434','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Os circuitos de distribuição, geradores e alimentadores são individualmente protegidos por disjuntores ou fusíveis contra sobrecarga e curto-circuito','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('fa3a530e-d204-4571-b0ef-3902a2ff8f50','EX-383','a5f25230-91c9-4e14-aa33-e83524d5d943','O diâmetro das mangueiras de incêndio não é inferior a 38 mm (1,5\'\')','NORMAM-202/DPC','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,0,1,0,0),
+('fd836b06-765d-4b56-a022-699234aab52b','EX-435','b8ed9a31-9fa3-492f-904e-b8158a06d0da','Os transformadores são protegidos com disjuntores no primário','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('fd9cb55e-6e74-4f21-b89a-3c77685d0862','EX-370','a5f25230-91c9-4e14-aa33-e83524d5d943','As embarcações propulsadas empregadas no transporte de passageiros com AB maior que 10 e as demais embarcações propulsadas com AB maior que 20 deverão ser dotadas de pelo menos uma bomba de esgoto com vazão total maior ou igual a 15 m³/h','NORMAM-202/DPC, Cap. 04, Seção I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,0,0,1,0,1),
+('fee925e7-19cc-4f27-839e-d320076cd13f','EX-421','b8ed9a31-9fa3-492f-904e-b8158a06d0da','A fonte de energia elétrica de emergência é independente da fonte principal e com capacidade de alimentar por uma hora todos os sistemas elétricos e consumidores necessários à segurança de passageiros e tripulação','NORMAM-202/DPC, Cap. 03, Seção IV.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 04:12:39',1,1,1,1,1,1),
+('ff928f0e-e467-4d37-b188-fe991b28568e','EX-300','aa4a7f0d-004d-4a60-924e-693335fdd69b','Plano de Segurança','NORMAM-202/DPC, Cap. 04, Item 4.2), 4.2.1, m, I.','flutuando',NULL,30,1,'2026-07-03 05:38:13','2026-07-04 02:36:44',1,0,0,1,0,0);
+/*!40000 ALTER TABLE `exigencias_catalogo` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `exigencias_categorias`
+--
+
+DROP TABLE IF EXISTS `exigencias_categorias`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `exigencias_categorias` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `nome` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_categoria_nome` (`nome`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `exigencias_categorias`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `exigencias_categorias` WRITE;
+/*!40000 ALTER TABLE `exigencias_categorias` DISABLE KEYS */;
+INSERT INTO `exigencias_categorias` VALUES
+('65bf89f0-f44d-4746-89f7-f530c9aa990d','Praça de Máquinas','2026-07-03 05:36:20','2026-07-03 05:36:20'),
+('71c05e83-0d67-4137-b2b7-478c4241a057','Casco, Estrutura e Porão','2026-07-03 05:36:20','2026-07-03 05:36:20'),
+('9755fe45-1e6f-4fa7-b589-942d8a6f07d2','Habitabilidade e Cozinha','2026-07-03 05:36:20','2026-07-03 05:36:20'),
+('9e81f468-422b-40e4-8bf8-40b60a027a36','Sistemas de Propulsão e Governo','2026-07-03 05:36:20','2026-07-03 05:36:20'),
+('a5f25230-91c9-4e14-aa33-e83524d5d943','Combate a Incêndio','2026-07-03 05:36:20','2026-07-03 05:36:20'),
+('aa4a7f0d-004d-4a60-924e-693335fdd69b','Documentação e Certificados','2026-07-03 05:36:20','2026-07-03 05:36:20'),
+('b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d','Salvatagem e Segurança','2026-07-03 05:36:20','2026-07-03 05:36:20'),
+('b8ed9a31-9fa3-492f-904e-b8158a06d0da','Setor Elétrico','2026-07-03 05:36:20','2026-07-03 05:36:20'),
+('e70f7906-4e9d-4367-b10a-2ad2a007817a','Sistemas de Navegação e Comando','2026-07-03 05:36:20','2026-07-03 05:36:20'),
+('f299c8c7-4402-4efa-89c6-d5add1fa60d5','Rádio e Comunicações','2026-07-03 05:36:20','2026-07-03 05:36:20');
+/*!40000 ALTER TABLE `exigencias_categorias` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `financeiro_comprovantes`
+--
+
+DROP TABLE IF EXISTS `financeiro_comprovantes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `financeiro_comprovantes` (
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `lancamento_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `nome_original` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `nome_arquivo` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `caminho` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `mime_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `tamanho` int unsigned NOT NULL DEFAULT '0',
+  `criado_por` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_financeiro_comprovantes_lancamento` (`lancamento_id`),
+  CONSTRAINT `fk_financeiro_comprovantes_lancamento` FOREIGN KEY (`lancamento_id`) REFERENCES `financeiro_lancamentos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `financeiro_comprovantes`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `financeiro_comprovantes` WRITE;
+/*!40000 ALTER TABLE `financeiro_comprovantes` DISABLE KEYS */;
+INSERT INTO `financeiro_comprovantes` VALUES
+('46a67ad9-5a22-4894-b143-92173f02d8d8','f8988ad1-7a47-11f1-8c34-8a26e9191f69','img_231.jpg','f8988ad1-7a47-11f1-8c34-8a26e9191f69_46a67ad9-5a22-4894-b143-92173f02d8d8.jpg','uploads/financeiro/comprovantes/f8988ad1-7a47-11f1-8c34-8a26e9191f69_46a67ad9-5a22-4894-b143-92173f02d8d8.jpg','image/jpeg',61140,'dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-07 23:36:28'),
+('ba3e277f-6997-403e-af93-9bb6e9ddd4ac','f4a30d3d-8132-11f1-a1f7-9ed3395acbbb','imagempdfs3-sem-fundo.png','f4a30d3d-8132-11f1-a1f7-9ed3395acbbb_ba3e277f-6997-403e-af93-9bb6e9ddd4ac.png','uploads/financeiro/comprovantes/f4a30d3d-8132-11f1-a1f7-9ed3395acbbb_ba3e277f-6997-403e-af93-9bb6e9ddd4ac.png','image/png',112102,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-16 17:44:58');
+/*!40000 ALTER TABLE `financeiro_comprovantes` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `financeiro_lancamentos`
+--
+
+DROP TABLE IF EXISTS `financeiro_lancamentos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `financeiro_lancamentos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo` enum('RECEITA','DESPESA') COLLATE utf8mb4_general_ci NOT NULL,
+  `descricao` varchar(300) COLLATE utf8mb4_general_ci NOT NULL,
+  `valor` decimal(10,2) NOT NULL,
+  `status` enum('PENDENTE','PAGO','CANCELADO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PAGO',
+  `frequencia` enum('unica','mensal','trimestral','anual') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'unica',
+  `data_vencimento` date DEFAULT NULL,
+  `data` date DEFAULT NULL,
+  `categoria` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `observacoes` text COLLATE utf8mb4_general_ci,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `criado_por` (`criado_por`),
+  KEY `fk_financeiro_cliente` (`cliente_id`),
+  CONSTRAINT `financeiro_lancamentos_ibfk_1` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_financeiro_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `financeiro_lancamentos`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `financeiro_lancamentos` WRITE;
+/*!40000 ALTER TABLE `financeiro_lancamentos` DISABLE KEYS */;
+INSERT INTO `financeiro_lancamentos` VALUES
+('1f80cfdf-2531-4617-969b-a4fcfe88bdec','18aa7dc6-9623-4bdf-8bb9-e73b9d449100','RECEITA','aluguel casa arquimedes ataides',550.00,'PENDENTE','mensal','2026-08-04','2026-07-06','Operacional','',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-04 05:17:11','2026-07-04 05:17:11'),
+('3a45a230-7b29-11f1-a8a1-56798194b3af','64e60ad7-3a78-4db0-9e03-cc529d935325','RECEITA','Referente à Proposta Comercial nº AM-ORC-18/26',15000.00,'PENDENTE','unica','2026-07-24','2026-07-09','SERVIÇOS','Lançamento gerado automaticamente após aprovação interna da proposta.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:00:42','2026-07-09 00:00:42'),
+('4b61b114-7830-11f1-88ab-1acc827a0ea9','64e60ad7-3a78-4db0-9e03-cc529d935325','RECEITA','Referente à Proposta Comercial nº AM-ORC-13/26',3700.00,'PAGO','unica','2026-07-20','2026-07-05','SERVIÇOS','Lançamento gerado automaticamente após assinatura da proposta.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:13:44','2026-07-07 23:22:30'),
+('5fc5a95a-782f-11f1-88ab-1acc827a0ea9','64e60ad7-3a78-4db0-9e03-cc529d935325','RECEITA','Referente à Proposta Comercial nº AM-ORC-11/26',7000.00,'PAGO','unica','2026-07-20','2026-07-05','SERVIÇOS','Lançamento gerado automaticamente após assinatura da proposta.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:07:09','2026-07-05 06:20:59'),
+('9ebe8683-79c6-11f1-8c34-8a26e9191f69','64e60ad7-3a78-4db0-9e03-cc529d935325','RECEITA','Referente à Proposta Comercial nº AM-ORC-16/26',12000.00,'PAGO','unica','2026-07-22','2026-07-07','SERVIÇOS','Lançamento gerado automaticamente após assinatura da proposta.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-07 05:42:19','2026-07-07 23:57:54'),
+('a7b506f4-7974-11f1-8c34-8a26e9191f69','64e60ad7-3a78-4db0-9e03-cc529d935325','RECEITA','Referente à Proposta Comercial nº AM-ORC-15/26',11889.00,'PAGO','unica','2026-07-21','2026-07-06','SERVIÇOS','Lançamento gerado automaticamente após assinatura da proposta.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-06 19:55:36','2026-07-06 20:24:28'),
+('b7c9e181-782f-11f1-88ab-1acc827a0ea9','64e60ad7-3a78-4db0-9e03-cc529d935325','RECEITA','Referente à Proposta Comercial nº AM-ORC-12/26',7000.00,'PENDENTE','unica','2026-07-20','2026-07-05','SERVIÇOS','Lançamento gerado automaticamente após assinatura da proposta.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:09:36','2026-07-05 05:09:36'),
+('b89d1420-7a1b-4153-bd76-d80637263dff',NULL,'DESPESA','energia',200.00,'PENDENTE','mensal','2026-07-04','2026-07-06','Administrativo','pago quando vencer',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-04 05:22:00','2026-07-04 05:22:00'),
+('e0e54890-782e-11f1-88ab-1acc827a0ea9','64e60ad7-3a78-4db0-9e03-cc529d935325','RECEITA','Referente à Proposta Comercial nº AM-ORC-10/26',6667.00,'PENDENTE','unica','2026-07-20','2026-07-05','SERVIÇOS','Lançamento gerado automaticamente após assinatura da proposta.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:03:36','2026-07-05 05:03:36'),
+('f4a30d3d-8132-11f1-a1f7-9ed3395acbbb','64e60ad7-3a78-4db0-9e03-cc529d935325','RECEITA','Referente à Proposta Comercial nº AM-ORC-19/26',9200.00,'PENDENTE','unica','2026-07-31','2026-07-16','SERVIÇOS','Lançamento gerado automaticamente após assinatura da proposta.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-16 16:25:27','2026-07-16 16:25:27'),
+('f8988ad1-7a47-11f1-8c34-8a26e9191f69','64e60ad7-3a78-4db0-9e03-cc529d935325','RECEITA','Referente à Proposta Comercial nº AM-ORC-17/26',9800.00,'PAGO','unica','2026-07-22','2026-07-07','SERVIÇOS','Lançamento gerado automaticamente após assinatura da proposta.',1,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-07 21:08:15','2026-07-07 23:22:01');
+/*!40000 ALTER TABLE `financeiro_lancamentos` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `logs_atividade`
+--
+
+DROP TABLE IF EXISTS `logs_atividade`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `logs_atividade` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `usuario_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `acao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `descricao` text COLLATE utf8mb4_general_ci,
+  `ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=269 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `logs_atividade`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `logs_atividade` WRITE;
+/*!40000 ALTER TABLE `logs_atividade` DISABLE KEYS */;
+INSERT INTO `logs_atividade` VALUES
+(1,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_criado','Certificado 4ª VIST. ANUAL - navio do guama','172.23.0.1','2026-06-23 12:42:32'),
+(2,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_assinado','Certificado AM-CNBL-1/26 assinado por Rosano Souza Capitao OK via link público','172.23.0.1','2026-06-23 12:43:13'),
+(3,'95eb5557-65e8-11f1-85ef-047c16b568a3','erro_sequencial','Erro ao gerar número documento: There is already an active transaction','172.23.0.1','2026-06-24 12:46:57'),
+(4,'95eb5557-65e8-11f1-85ef-047c16b568a3','erro_sequencial','Erro ao gerar número documento: There is already an active transaction','172.23.0.1','2026-06-24 12:49:40'),
+(5,'95eb5557-65e8-11f1-85ef-047c16b568a3','erro_sequencial','Erro ao gerar número documento: There is already an active transaction','172.23.0.1','2026-06-24 12:51:13'),
+(6,'95eb5557-65e8-11f1-85ef-047c16b568a3','erro_sequencial','Erro ao gerar número documento: There is already an active transaction','172.23.0.1','2026-06-24 12:53:39'),
+(7,'95eb5557-65e8-11f1-85ef-047c16b568a3','erro_sequencial','Erro ao gerar número documento: There is already an active transaction','172.23.0.1','2026-06-24 12:55:49'),
+(8,'95eb5557-65e8-11f1-85ef-047c16b568a3','erro_sequencial','Erro ao gerar número documento: There is already an active transaction','172.23.0.1','2026-06-24 13:04:08'),
+(9,'95eb5557-65e8-11f1-85ef-047c16b568a3','erro_sequencial','Erro ao gerar número documento: There is already an active transaction','172.23.0.1','2026-06-24 13:06:34'),
+(10,'95eb5557-65e8-11f1-85ef-047c16b568a3','erro_sequencial','Erro ao gerar número documento: There is already an active transaction','172.23.0.1','2026-06-24 13:13:27'),
+(11,'95eb5557-65e8-11f1-85ef-047c16b568a3','erro_sequencial','Erro ao gerar número documento: There is already an active transaction','172.23.0.1','2026-06-24 13:36:25'),
+(12,'95eb5557-65e8-11f1-85ef-047c16b568a3','licenca_lp_excluida','Licença LP ID: c0da9f43-20c5-4703-a8a4-833894cfc594','172.23.0.1','2026-06-24 13:44:28'),
+(13,'95eb5557-65e8-11f1-85ef-047c16b568a3','embarcacao_criada','Embarcação criada: Rio Amazonas','::1','2026-06-24 17:33:03'),
+(14,'95eb5557-65e8-11f1-85ef-047c16b568a3','embarcacao_criada','Embarcação criada: Boa Esperança','::1','2026-06-24 17:33:03'),
+(15,'95eb5557-65e8-11f1-85ef-047c16b568a3','vistoria_criada','Vistoria criada: VIST-2026-001','::1','2026-06-24 17:33:03'),
+(16,'95eb5557-65e8-11f1-85ef-047c16b568a3','vistoria_criada','Vistoria criada: VIST-2026-002','::1','2026-06-24 17:33:03'),
+(17,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_criado','Agendamento criado: OS-2026-001','::1','2026-06-24 17:33:03'),
+(18,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_criado','Agendamento criado: OS-2026-002','::1','2026-06-24 17:33:03'),
+(19,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-7/26 criado','::1','2026-06-24 17:33:03'),
+(20,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-8/26 criado','::1','2026-06-24 17:33:03'),
+(21,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_criado','Certificado AM-CNBL-1/26 criado','::1','2026-06-24 17:33:03'),
+(22,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnarq_criado','Certificado AM-CNARQ-1/26 criado','::1','2026-06-24 17:33:03'),
+(23,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_lp_criado','Certificado AM-LP-1/26 criado','::1','2026-06-24 17:33:03'),
+(24,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_lc_criado','Certificado AM-LC-1/26 criado','::1','2026-06-24 17:33:03'),
+(25,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cht_criado','Certificado AM-REL-HT-1/26 criado','::1','2026-06-24 17:33:03'),
+(26,'95eb5557-65e8-11f1-85ef-047c16b568a3','financeiro_lancamento','Lançamento financeiro: Taxa de vistoria','::1','2026-06-24 17:33:03'),
+(27,'95eb5557-65e8-11f1-85ef-047c16b568a3','financeiro_lancamento','Lançamento financeiro: Taxa de certificação','::1','2026-06-24 17:33:03'),
+(28,'95eb5557-65e8-11f1-85ef-047c16b568a3','cliente_editado','Cliente \'João Pedro Almeida\' editado.','172.23.0.1','2026-06-24 16:22:29'),
+(29,'95eb5557-65e8-11f1-85ef-047c16b568a3','licenca_lp_excluida','Licença LP ID: c10309f1-6ff2-11f1-b0cf-b2d3c685df9e','172.23.0.1','2026-06-24 16:25:43'),
+(30,'95eb5557-65e8-11f1-85ef-047c16b568a3','licenca_lp_assinada','Licença LP AM-LP-1/26 assinada por Rosano','172.23.0.1','2026-06-24 16:26:40'),
+(31,'95eb5557-65e8-11f1-85ef-047c16b568a3','cliente_editado','Cliente \'José Maria Oliveira\' editado.','172.23.0.1','2026-06-24 16:30:48'),
+(32,'95eb5557-65e8-11f1-85ef-047c16b568a3','cliente_editado','Cliente \'João Pedro Almeida\' editado.','172.23.0.1','2026-06-24 16:31:18'),
+(33,'95eb5557-65e8-11f1-85ef-047c16b568a3','cliente_editado','Cliente \'Navegação Amazônica S/A\' editado.','172.23.0.1','2026-06-24 16:31:59'),
+(34,'95eb5557-65e8-11f1-85ef-047c16b568a3','cliente_editado','Cliente \'Navegação Amazônica S/A\' editado.','172.23.0.1','2026-06-24 16:32:04'),
+(35,'95eb5557-65e8-11f1-85ef-047c16b568a3','cliente_editado','Cliente \'Transportes Marí­timos Ltda\' editado.','172.23.0.1','2026-06-24 16:32:42'),
+(36,'95eb5557-65e8-11f1-85ef-047c16b568a3','vistoria_criada','Vistoria criada para embarcacao ID: 44444444-4444-4444-4444-444444444444.','172.23.0.1','2026-06-24 16:43:11'),
+(37,'95eb5557-65e8-11f1-85ef-047c16b568a3','erro_sequencial','Erro ao gerar número documento: There is already an active transaction','172.23.0.1','2026-06-24 16:43:58'),
+(38,'95eb5557-65e8-11f1-85ef-047c16b568a3','cliente_editado','Cliente \'Maria Fernanda Costa\' editado.','172.23.0.1','2026-06-24 16:58:34'),
+(39,'95eb5557-65e8-11f1-85ef-047c16b568a3','erro_sequencial','Erro ao gerar número documento: There is already an active transaction','172.23.0.1','2026-06-24 17:00:33'),
+(40,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-1/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 6.300,00 | Desconto: 5% | Total: R$ 5.985,00','172.23.0.1','2026-06-24 17:24:03'),
+(41,'95eb5557-65e8-11f1-85ef-047c16b568a3','licenca_lp_excluida','Licença LP ID: c103039e-6ff2-11f1-b0cf-b2d3c685df9e','172.23.0.1','2026-06-27 12:48:24'),
+(42,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-2/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 2.500,00 | Desconto: 5% | Total: R$ 2.375,00','172.23.0.1','2026-06-27 12:50:37'),
+(43,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-3/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 3.700,00 | Desconto: 0% | Total: R$ 3.700,00','172.23.0.1','2026-06-27 13:41:11'),
+(44,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_aprovada','Proposta ID: 0138dd8c-7247-11f1-b965-76474b9feea2 marcada como aprovada.','172.23.0.1','2026-06-27 13:41:19'),
+(45,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_criado','Agendamento de Licença Provisória criado para data 2026-12-12.','172.23.0.1','2026-06-27 13:42:47'),
+(46,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-V-1/26 salvo para agendamento ID: 3a7ded21-7247-11f1-b965-76474b9feea2. Status: APROVADA_COM_EXIGENCIAS.','172.23.0.1','2026-06-27 16:30:07'),
+(47,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico  salvo para agendamento ID: 3a7ded21-7247-11f1-b965-76474b9feea2. Status: APROVADA_COM_EXIGENCIAS.','172.23.0.1','2026-06-27 20:20:58'),
+(48,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico  salvo para agendamento ID: 3a7ded21-7247-11f1-b965-76474b9feea2. Status: APROVADA.','172.23.0.1','2026-06-27 22:09:34'),
+(49,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-1/26 salvo para agendamento ID: 3a7ded21-7247-11f1-b965-76474b9feea2. Status: APROVADA.','172.23.0.1','2026-06-27 22:18:49'),
+(50,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-1/26 salvo para agendamento ID: 3a7ded21-7247-11f1-b965-76474b9feea2. Status: APROVADA.','172.23.0.1','2026-06-27 22:19:12'),
+(51,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado 4ª VIST. ANUAL - Estrela do Mar','172.23.0.1','2026-06-28 01:44:27'),
+(52,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_assinado','Certificado AM-CSN-5/26 assinado por  via link público','172.23.0.1','2026-06-28 01:45:43'),
+(53,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_criado','Certificado 4ª VIST. ANUAL - Estrela do Mar','172.23.0.1','2026-06-28 14:40:40'),
+(54,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_criado','Agendamento de Vistoria Anual criado para data 2026-06-30.','172.23.0.1','2026-06-28 14:59:06'),
+(55,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-V-2/26 salvo para agendamento ID: 0df1021b-731b-11f1-a2a5-5a560304b7f4. Status: AGUARDANDO_APROVACAO.','172.23.0.1','2026-06-28 15:00:52'),
+(56,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_aprovado','Relatorio ID 7299419c-c9a7-408a-aba2-a4a6fe4b0b51 aprovado. Status: APROVADA_COM_EXIGENCIAS.','172.23.0.1','2026-06-28 15:07:03'),
+(57,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-2/26 salvo para agendamento ID: 0df1021b-731b-11f1-a2a5-5a560304b7f4. Status: APROVADA.','172.23.0.1','2026-06-28 15:16:12'),
+(58,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_criado','Certificado 4ª VIST. ANUAL - Estrela do Mar','172.23.0.1','2026-06-28 15:52:41'),
+(59,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_editado','Certificado 1ª VIST. ANUAL - Estrela do Mar','172.23.0.1','2026-06-28 16:45:42'),
+(60,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_editado','Certificado 3ª VIST. ANUAL - Estrela do Mar','172.23.0.1','2026-06-28 17:45:27'),
+(61,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_criado','Certificado 4ª VIST. ANUAL - Estrela do Mar','172.23.0.1','2026-06-28 18:29:56'),
+(62,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_assinado','Certificado AM-CNBL-6/26 assinado por Neto via link público','172.23.0.1','2026-06-28 18:33:36'),
+(63,'sistema','pdf_backfill','Gerado PDF retroativo (snapshot) para certificados_csn (AM-CSN-5/26)','0.0.0.0','2026-06-29 01:51:51'),
+(64,'sistema','pdf_backfill','Gerado PDF retroativo (snapshot) para certificados_cnbl (AM-CNBL-5/26)','0.0.0.0','2026-06-29 01:54:56'),
+(65,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_editado','Certificado 4ª VIST. ANUAL - Estrela do Mar','172.23.0.1','2026-06-29 01:55:24'),
+(66,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_editado','Certificado 2ª VIST. ANUAL - Estrela do Mar','172.23.0.1','2026-06-29 01:55:43'),
+(67,'sistema','pdf_backfill','Gerado PDF retroativo (snapshot) para certificados_csn (AM-CSN-7/26)','0.0.0.0','2026-06-29 01:56:23'),
+(68,'sistema','pdf_backfill','Gerado PDF retroativo (snapshot) para certificados_csn (AM-CSN-1/26)','0.0.0.0','2026-06-29 01:56:23'),
+(69,'sistema','pdf_backfill','Gerado PDF retroativo (snapshot) para certificados_cnbl (AM-CNBL-6/26)','0.0.0.0','2026-06-29 01:56:24'),
+(70,'sistema','pdf_backfill','Gerado PDF retroativo (snapshot) para certificados_cnbl (AM-CNBL-1/26)','0.0.0.0','2026-06-29 01:56:24'),
+(71,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_criado','Certificado 4ª VIST. ANUAL - Estrela do Mar','172.23.0.1','2026-06-29 02:36:35'),
+(72,'sistema','certificado_cnbl_assinado','Certificado AM-CNBL-7/26 assinado por Neto via link público','172.23.0.1','2026-06-29 02:48:43'),
+(73,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-4/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 1.500,00 | Desconto: 0% | Total: R$ 1.500,00','172.23.0.1','2026-06-29 03:07:53'),
+(74,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_assinada','Proposta AM-ORC-4/26 assinada por Maria Fernanda Costa via link público','172.23.0.1','2026-06-29 03:10:06'),
+(75,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Acompanhamento de Ultrassom\' editado.','172.23.0.1','2026-06-29 03:13:07'),
+(76,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Análise de Planos Ec1\' editado.','172.23.0.1','2026-06-29 03:13:39'),
+(77,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Análise de Planos Ec2\' editado.','172.23.0.1','2026-06-29 03:14:16'),
+(78,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Análise de Planos Ec2\' editado.','172.23.0.1','2026-06-29 03:14:18'),
+(79,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Licença Provisória\' editado.','172.23.0.1','2026-06-29 03:14:47'),
+(80,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Licença Provisória\' editado.','172.23.0.1','2026-06-29 03:14:48'),
+(81,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Vistoria Anual\' editado.','172.23.0.1','2026-06-29 03:15:13'),
+(82,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Vistoria Anual\' editado.','172.23.0.1','2026-06-29 03:15:23'),
+(83,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Vistoria Anual Periódica\' editado.','172.23.0.1','2026-06-29 03:15:41'),
+(84,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Vistoria Anual Periódica\' editado.','172.23.0.1','2026-06-29 03:15:50'),
+(85,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Vistoria Inicial de Arqueação\' editado.','172.23.0.1','2026-06-29 03:16:14'),
+(86,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Vistoria Inicial de Borda Livre\' editado.','172.23.0.1','2026-06-29 03:16:31'),
+(87,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Vistoria Inicial Flutuando\' editado.','172.23.0.1','2026-06-29 03:16:44'),
+(88,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Vistoria Inicial Seco\' editado.','172.23.0.1','2026-06-29 03:16:55'),
+(89,'95eb5557-65e8-11f1-85ef-047c16b568a3','servico_editado','Serviço \'Vistoria Intermediária\' editado.','172.23.0.1','2026-06-29 03:17:26'),
+(90,'95eb5557-65e8-11f1-85ef-047c16b568a3','vistoria_status','Vistoria ID: 33333333-3333-3333-3333-333333333333 alterada para status CANCELADA.','172.23.0.1','2026-06-29 03:54:10'),
+(91,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-5/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 1.500,00 | Desconto: 0% | Total: R$ 1.500,00','172.23.0.1','2026-06-29 04:13:22'),
+(92,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-6/26 criada para cliente \'Maria Fernanda Costa\'. Subtotal: R$ 5.300,00 | Desconto: 10% | Total: R$ 4.770,00','172.23.0.1','2026-06-29 11:30:05'),
+(93,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_criado','Agendamento de Licença Provisória criado para data 2026-07-16.','172.23.0.1','2026-06-29 11:37:04'),
+(94,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-V-3/26 salvo para agendamento ID: ffa49acf-73c7-11f1-b509-2675ac0d9653. Status: AGUARDANDO_APROVACAO.','172.23.0.1','2026-06-29 11:38:32'),
+(95,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_criado','Agendamento de Vistoria Inicial Seco criado para data 2026-08-01.','172.23.0.1','2026-07-01 20:29:27'),
+(96,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_assinado','Certificado CSN-2026-001 assinado por Rosano Silva De Souza via link público','172.23.0.1','2026-07-02 16:25:10'),
+(97,'95eb5557-65e8-11f1-85ef-047c16b568a3','proprietario_criado','Proprietário \'Rosano Silva de Souza\' criado.','172.23.0.1','2026-07-02 16:37:22'),
+(98,'95eb5557-65e8-11f1-85ef-047c16b568a3','proprietario_editado','Proprietário \'Rosano Silva de Souza\' editado.','172.23.0.1','2026-07-02 17:24:42'),
+(99,'95eb5557-65e8-11f1-85ef-047c16b568a3','proprietario_editado','Proprietário \'Rosano Silva de Souza\' editado.','172.23.0.1','2026-07-02 17:25:13'),
+(100,'95eb5557-65e8-11f1-85ef-047c16b568a3','proprietario_editado','Proprietário \'Rosano Silva de Souza\' editado.','172.23.0.1','2026-07-02 17:25:40'),
+(101,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-7/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 3.500,00 | Desconto: 10% | Total: R$ 3.150,00','172.23.0.1','2026-07-02 17:48:59'),
+(102,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_assinada','Proposta AM-ORC-7/26 assinada por Rosano Silva de Souza via link público','172.23.0.1','2026-07-02 17:53:26'),
+(103,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico VST-2026-001 salvo para agendamento ID: 6206e36e-7628-11f1-85ad-621c498e207c. Status: CANCELADA.','172.23.0.1','2026-07-02 19:04:41'),
+(104,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico VST-2026-002 salvo para agendamento ID: 620bf6aa-7628-11f1-85ad-621c498e207c. Status: REPROVADA.','172.23.0.1','2026-07-02 19:05:18'),
+(105,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico VST-2026-002 salvo para agendamento ID: 620bf6aa-7628-11f1-85ad-621c498e207c. Status: CANCELADA.','172.23.0.1','2026-07-02 19:05:40'),
+(106,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico VST-2026-003 salvo para agendamento ID: 620f7603-7628-11f1-85ad-621c498e207c. Status: CANCELADA.','172.23.0.1','2026-07-02 19:05:54'),
+(107,'95eb5557-65e8-11f1-85ef-047c16b568a3','armadore_criado','Armadore \'Rosano Souza\' criado.','172.23.0.1','2026-07-02 19:14:12'),
+(108,'95eb5557-65e8-11f1-85ef-047c16b568a3','despachante_criado','Despachante \'Marcelo Augusto Pereira\' criado.','172.23.0.1','2026-07-02 19:17:48'),
+(109,'95eb5557-65e8-11f1-85ef-047c16b568a3','armadore_editado','Armadore \'Rosano Souza\' editado.','172.23.0.1','2026-07-02 19:34:43'),
+(110,'95eb5557-65e8-11f1-85ef-047c16b568a3','armadore_editado','Armadore \'Armador Souza\' editado.','172.23.0.1','2026-07-02 19:35:25'),
+(111,'95eb5557-65e8-11f1-85ef-047c16b568a3','armadore_editado','Armadore \'Armador Souza\' editado.','172.23.0.1','2026-07-02 19:35:45'),
+(112,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_criado','Agendamento de Vistoria Inicial Seco criado para data 2026-07-03.','172.23.0.1','2026-07-02 19:36:49'),
+(113,'e5c68a85-c920-4b11-bc93-9343d9d94f14','relatorio_salvo','Relatorio tecnico AM-REL-V-4/26 salvo para agendamento ID: 83ad9b48-7666-11f1-9eb5-0a1b2af87b16. Status: AGUARDANDO_APROVACAO.','172.23.0.1','2026-07-02 20:03:15'),
+(114,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_aprovado','Relatorio ID 3b14c7df-5078-470a-afd1-41da3958260a aprovado. Status: APROVADA_COM_EXIGENCIAS.','172.23.0.1','2026-07-02 20:30:55'),
+(115,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-4/26 - ','172.23.0.1','2026-07-02 23:15:58'),
+(116,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-5/26 - Barco kds','172.23.0.1','2026-07-02 23:16:37'),
+(117,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-6/26 - Barco kds','172.23.0.1','2026-07-02 23:17:09'),
+(118,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_assinado','Certificado AM-CSN-6/26 assinado por João Responsável via link público','172.23.0.1','2026-07-03 00:00:16'),
+(119,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-7/26 - Barco kds','172.23.0.1','2026-07-03 00:08:27'),
+(120,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-8/26 (Provisório) - Barco kds','172.23.0.1','2026-07-03 00:38:07'),
+(121,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-9/26 (Provisório) - Barco kds','172.23.0.1','2026-07-03 00:40:10'),
+(122,'95eb5557-65e8-11f1-85ef-047c16b568a3','proprietario_editado','Proprietário \'Rosano Silva de Souza\' editado.','172.23.0.1','2026-07-03 10:16:09'),
+(123,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_criado','Agendamento de Vistoria Inicial Seco criado para data 2026-07-06.','172.23.0.1','2026-07-03 10:17:58'),
+(124,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: PENDENTE.','172.23.0.1','2026-07-03 10:30:32'),
+(125,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: PENDENTE.','172.23.0.1','2026-07-03 10:56:26'),
+(126,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: PENDENTE.','172.23.0.1','2026-07-03 11:01:28'),
+(127,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: PENDENTE.','172.23.0.1','2026-07-03 11:02:05'),
+(128,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: AGUARDANDO_APROVACAO.','172.23.0.1','2026-07-04 01:55:12'),
+(129,'3774d80c-2574-470e-88a9-9781936c6de3','armadore_desativado','Armadore ID: 620624f7-7628-11f1-85ad-621c498e207c desativado.','172.23.0.1','2026-07-04 01:56:27'),
+(130,'3774d80c-2574-470e-88a9-9781936c6de3','armadore_desativado','Armadore ID: 620b1381-7628-11f1-85ad-621c498e207c desativado.','172.23.0.1','2026-07-04 01:56:32'),
+(131,'3774d80c-2574-470e-88a9-9781936c6de3','armadore_desativado','Armadore ID: 620ebfc8-7628-11f1-85ad-621c498e207c desativado.','172.23.0.1','2026-07-04 01:56:34'),
+(132,'3774d80c-2574-470e-88a9-9781936c6de3','proprietario_desativado','Proprietário ID: 62062969-7628-11f1-85ad-621c498e207c desativado.','172.23.0.1','2026-07-04 01:56:48'),
+(133,'3774d80c-2574-470e-88a9-9781936c6de3','proprietario_desativado','Proprietário ID: 97e777dd-763d-11f1-85ad-621c498e207c desativado.','172.23.0.1','2026-07-04 01:56:53'),
+(134,'3774d80c-2574-470e-88a9-9781936c6de3','proprietario_desativado','Proprietário ID: 62062969-7628-11f1-85ad-621c498e207c desativado.','172.23.0.1','2026-07-04 01:57:11'),
+(135,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_aprovado','Relatorio ID 8f85d9b9-4606-49ac-8a9e-ce3943829467 aprovado. Status: APROVADA_COM_EXIGENCIAS.','172.23.0.1','2026-07-04 01:59:52'),
+(136,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: APROVADA.','172.23.0.1','2026-07-04 02:00:22'),
+(137,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-10/26 (Definitivo) - Barco kds','172.23.0.1','2026-07-04 02:02:50'),
+(138,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-5/26 salvo para agendamento ID: 9c4e5534-76e1-11f1-9eb5-0a1b2af87b16. Status: APROVADA.','172.23.0.1','2026-07-04 02:07:01'),
+(139,'95eb5557-65e8-11f1-85ef-047c16b568a3','vistoria_criada','Vistoria criada para embarcacao ID: 05a94606-59fe-4371-afbc-b7b094df2676.','172.23.0.1','2026-07-04 02:53:04'),
+(140,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_assinado','Certificado AM-CSN-10/26 assinado por João Responsável via link público','172.23.0.1','2026-07-05 01:48:20'),
+(141,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-8/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 7.000,00 | Desconto: 28.57% | Total: R$ 5.000,00','172.23.0.1','2026-07-05 01:50:22'),
+(142,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-9/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 7.000,00 | Desconto: 0% | Total: R$ 7.000,00','172.23.0.1','2026-07-05 01:58:29'),
+(143,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-10/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 7.000,00 | Desconto: 4.76% | Total: R$ 6.667,00','172.23.0.1','2026-07-05 02:02:28'),
+(144,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-11/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 7.000,00 | Desconto: 0% | Total: R$ 7.000,00','172.23.0.1','2026-07-05 02:07:01'),
+(145,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_assinada','Proposta AM-ORC-11/26 assinada por Rosano Silva de Souza via link público','172.23.0.1','2026-07-05 02:07:09'),
+(146,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-12/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 7.000,00 | Desconto: 0% | Total: R$ 7.000,00','172.23.0.1','2026-07-05 02:07:27'),
+(147,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_assinada','Proposta AM-ORC-12/26 assinada por Rosano Silva de Souza via link público','172.23.0.1','2026-07-05 02:09:36'),
+(148,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-13/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 3.700,00 | Desconto: 0% | Total: R$ 3.700,00','172.23.0.1','2026-07-05 02:13:28'),
+(149,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_assinada','Proposta AM-ORC-13/26 assinada por Rosano Silva de Souza via link público','172.23.0.1','2026-07-05 02:13:44'),
+(150,'95eb5557-65e8-11f1-85ef-047c16b568a3','vistoria_agendada','Vistoria ID: c274f2cf-9445-423e-8e5e-f91b21d4a0bc agendada para 2026-07-05 com vistoriador 3774d80c-2574-470e-88a9-9781936c6de3.','172.23.0.1','2026-07-05 02:36:44'),
+(151,'95eb5557-65e8-11f1-85ef-047c16b568a3','vistoria_agendada','Vistoria ID: c274f2cf-9445-423e-8e5e-f91b21d4a0bc agendada para 2026-07-06 com vistoriador 3774d80c-2574-470e-88a9-9781936c6de3.','172.23.0.1','2026-07-05 02:37:32'),
+(152,'95eb5557-65e8-11f1-85ef-047c16b568a3','vistoria_agendada','Vistoria ID: c274f2cf-9445-423e-8e5e-f91b21d4a0bc agendada para 2026-07-06 com vistoriador 3774d80c-2574-470e-88a9-9781936c6de3.','172.23.0.1','2026-07-05 02:43:18'),
+(153,'95eb5557-65e8-11f1-85ef-047c16b568a3','vistoria_status','Vistoria ID: c274f2cf-9445-423e-8e5e-f91b21d4a0bc alterada para status PENDENTE.','172.23.0.1','2026-07-05 02:43:55'),
+(154,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: 5fc644bc-782f-11f1-88ab-1acc827a0ea9 atualizado.','172.23.0.1','2026-07-05 03:37:57'),
+(155,'dd121661-feb4-42f6-895a-68eb0608d1e4','agendamento_criado','Agendamento de Vistoria Inicial Seco, Vistoria Inicial Flutuando criado para data 2026-07-07.','172.23.0.1','2026-07-05 14:09:44'),
+(156,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico  salvo para agendamento ID: aa9c6b58-cc84-4150-8755-8ee1d04e1d26. Status: PENDENTE.','172.23.0.1','2026-07-05 14:11:44'),
+(157,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_criado','Certificado AM-CNBL-1/26 (Definitivo) - Barco kds','172.23.0.1','2026-07-05 15:39:07'),
+(158,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_assinado','Certificado AM-CNBL-1/26 assinado por João Responsável via link público','172.23.0.1','2026-07-05 15:39:54'),
+(159,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_criado','Certificado AM-CNBL-2/26 (Definitivo) - Barco kds','172.23.0.1','2026-07-05 16:25:17'),
+(160,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_criado','Certificado AM-CNBL-3/26 (Definitivo) - Barco kds','172.23.0.1','2026-07-06 09:58:31'),
+(161,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnarq_criado','Certificado AM-CNARQ-2/26 (Definitivo) - Barco kds','172.23.0.1','2026-07-06 12:05:46'),
+(162,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnarq_assinado','Certificado AM-CNARQ-2/26 assinado por João Responsável via link público','172.23.0.1','2026-07-06 12:06:25'),
+(163,'95eb5557-65e8-11f1-85ef-047c16b568a3','licenca_lp_criada','Licença AM-LP-2/26 - Barco kds','172.23.0.1','2026-07-06 13:55:14'),
+(164,'dd121661-feb4-42f6-895a-68eb0608d1e4','licenca_lc_criada','AM-LC-3/26 (LC) - Barco kds','172.23.0.1','2026-07-06 14:27:51'),
+(165,'95eb5557-65e8-11f1-85ef-047c16b568a3','proprietario_editado','Proprietário \'Rosano Silva de Souza\' editado.','172.23.0.1','2026-07-06 15:07:52'),
+(166,'dd121661-feb4-42f6-895a-68eb0608d1e4','certificado_csn_criado','Certificado AM-CSN-11/26 (Definitivo) - Barco kds','172.23.0.1','2026-07-06 16:28:42'),
+(167,'dd121661-feb4-42f6-895a-68eb0608d1e4','proposta_criada','Proposta AM-ORC-14/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 3.600,00 | Desconto: 0% | Total: R$ 3.600,00','172.23.0.1','2026-07-06 16:53:01'),
+(168,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-15/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 14.000,00 | Desconto: 15.08% | Total: R$ 11.889,00','172.23.0.1','2026-07-06 16:54:42'),
+(169,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_assinada','Proposta AM-ORC-15/26 assinada por Rosano Silva de Souza via link público','172.23.0.1','2026-07-06 16:55:36'),
+(170,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: 8b96f7e3-85fd-4908-bff2-cfe16b9cd6c3 atualizado.','172.23.0.1','2026-07-06 17:24:28'),
+(171,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico  salvo para agendamento ID: aa9c6b58-cc84-4150-8755-8ee1d04e1d26. Status: AGUARDANDO_APROVACAO.','172.23.0.1','2026-07-06 17:32:40'),
+(172,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico  salvo para agendamento ID: aa9c6b58-cc84-4150-8755-8ee1d04e1d26. Status: APROVADA.','172.23.0.1','2026-07-06 17:34:08'),
+(173,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-12/26 (Definitivo) - Barco kds','172.23.0.1','2026-07-06 17:35:01'),
+(174,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_excluido','Certificado ID: 62120e49-7628-11f1-85ad-621c498e207c','172.23.0.1','2026-07-06 17:35:54'),
+(175,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_excluido','Certificado ID: 620d8e83-7628-11f1-85ad-621c498e207c','172.23.0.1','2026-07-06 17:35:57'),
+(176,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_excluido','Certificado ID: 6209a5ce-7628-11f1-85ad-621c498e207c','172.23.0.1','2026-07-06 17:35:59'),
+(177,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_excluido','Certificado ID: 20b9c99e-3121-4790-bcaf-9c22151be3bd','172.23.0.1','2026-07-06 17:36:01'),
+(178,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_excluido','Certificado ID: d701806a-b045-4d7e-aab6-ad29ef5b7157','172.23.0.1','2026-07-06 17:36:04'),
+(179,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_excluido','Certificado ID: b6f85830-c806-4e85-913a-e5502c189f73','172.23.0.1','2026-07-06 17:36:07'),
+(180,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_excluido','Certificado ID: 73bd5dea-d344-4852-83af-a7bb8f1ef629','172.23.0.1','2026-07-06 17:36:09'),
+(181,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-4/26 salvo para agendamento ID: 83ad9b48-7666-11f1-9eb5-0a1b2af87b16. Status: APROVADA.','172.23.0.1','2026-07-06 20:00:04'),
+(182,'95eb5557-65e8-11f1-85ef-047c16b568a3','despachante_editado','Despachante \'Marcelo Augusto Pereira\' editado.','172.23.0.1','2026-07-07 02:15:16'),
+(183,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-16/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 13.000,00 | Desconto: 7.69% | Entrada: R$ 3.000,00 | Total: R$ 12.000,00','172.23.0.1','2026-07-07 02:41:11'),
+(184,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_assinada','Proposta AM-ORC-16/26 assinada por Rosano Silva de Souza via link público','172.23.0.1','2026-07-07 02:42:19'),
+(185,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: a4ce16b6-c087-426b-874d-0f6f441fc809 atualizado.','172.23.0.1','2026-07-07 03:47:14'),
+(186,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: a4ce16b6-c087-426b-874d-0f6f441fc809 atualizado.','172.23.0.1','2026-07-07 03:47:20'),
+(187,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: faf4be42-523f-48db-9776-1d08bce6d3e1 atualizado.','172.23.0.1','2026-07-07 08:44:34'),
+(188,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: faf4be42-523f-48db-9776-1d08bce6d3e1 atualizado.','172.23.0.1','2026-07-07 08:44:46'),
+(189,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: 4b624c2f-7830-11f1-88ab-1acc827a0ea9 atualizado.','172.23.0.1','2026-07-07 08:55:09'),
+(190,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: 4b624c2f-7830-11f1-88ab-1acc827a0ea9 atualizado.','172.23.0.1','2026-07-07 08:55:14'),
+(191,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: a4ce16b6-c087-426b-874d-0f6f441fc809 atualizado.','172.23.0.1','2026-07-07 08:57:58'),
+(192,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: a4ce16b6-c087-426b-874d-0f6f441fc809 atualizado.','172.23.0.1','2026-07-07 08:58:01'),
+(193,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: a4ce16b6-c087-426b-874d-0f6f441fc809 atualizado.','172.23.0.1','2026-07-07 08:58:11'),
+(194,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: 4b624c2f-7830-11f1-88ab-1acc827a0ea9 atualizado.','172.23.0.1','2026-07-07 08:58:50'),
+(195,'dd121661-feb4-42f6-895a-68eb0608d1e4','agendamento_editado','Agendamento ID: 4b624c2f-7830-11f1-88ab-1acc827a0ea9 atualizado.','172.23.0.1','2026-07-07 09:06:21'),
+(196,'dd121661-feb4-42f6-895a-68eb0608d1e4','agendamento_editado','Agendamento ID: 4b624c2f-7830-11f1-88ab-1acc827a0ea9 atualizado.','172.23.0.1','2026-07-07 09:08:01'),
+(197,'dd121661-feb4-42f6-895a-68eb0608d1e4','agendamento_editado','Agendamento ID: 4b624c2f-7830-11f1-88ab-1acc827a0ea9 atualizado.','172.23.0.1','2026-07-07 09:08:40'),
+(198,'dd121661-feb4-42f6-895a-68eb0608d1e4','agendamento_editado','Agendamento ID: 4b624c2f-7830-11f1-88ab-1acc827a0ea9 atualizado.','172.23.0.1','2026-07-07 09:09:11'),
+(199,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: 4b624c2f-7830-11f1-88ab-1acc827a0ea9 atualizado.','172.23.0.1','2026-07-07 09:12:54'),
+(200,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: 8b96f7e3-85fd-4908-bff2-cfe16b9cd6c3 atualizado.','172.23.0.1','2026-07-07 09:20:17'),
+(201,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-4/26 salvo para agendamento ID: 83ad9b48-7666-11f1-9eb5-0a1b2af87b16. Status: APROVADA_COM_EXIGENCIAS.','172.23.0.1','2026-07-07 11:42:09'),
+(202,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-4/26 salvo para agendamento ID: 83ad9b48-7666-11f1-9eb5-0a1b2af87b16. Status: APROVADA_COM_EXIGENCIAS.','172.23.0.1','2026-07-07 12:00:17'),
+(203,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-4/26 salvo para agendamento ID: 83ad9b48-7666-11f1-9eb5-0a1b2af87b16. Status: APROVADA_COM_EXIGENCIAS.','172.23.0.1','2026-07-07 16:43:08'),
+(204,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: b7ca73e7-782f-11f1-88ab-1acc827a0ea9 atualizado.','172.23.0.1','2026-07-07 16:43:55'),
+(205,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-V-6/26 salvo para agendamento ID: 517d7186-7894-11f1-bea6-861d3ff9e143. Status: AGUARDANDO_APROVACAO.','172.23.0.1','2026-07-07 16:45:12'),
+(206,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-V-6/26 salvo para agendamento ID: 517d7186-7894-11f1-bea6-861d3ff9e143. Status: AGUARDANDO_APROVACAO.','172.23.0.1','2026-07-07 16:56:56'),
+(207,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-V-6/26 salvo para agendamento ID: 517d7186-7894-11f1-bea6-861d3ff9e143. Status: AGUARDANDO_APROVACAO.','172.23.0.1','2026-07-07 17:00:35'),
+(208,'3774d80c-2574-470e-88a9-9781936c6de3','relatorio_salvo','Relatorio tecnico AM-REL-AP-1/26 salvo para agendamento ID: a4ce16b6-c087-426b-874d-0f6f441fc809. Status: AGUARDANDO_APROVACAO.','172.23.0.1','2026-07-07 17:10:53'),
+(209,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-17/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 9.800,00 | Desconto: 0% | Entrada: R$ 5.000,00 | Total: R$ 9.800,00','172.23.0.1','2026-07-07 18:07:11'),
+(210,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_assinada','Proposta AM-ORC-17/26 assinada por Rosano Silva de Souza via link público','172.23.0.1','2026-07-07 18:08:15'),
+(211,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_decisao_admin','Relatorio ID 1d897d7a-60d7-48ac-96b4-2035c97b9621 definido como CANCELADA.','172.23.0.1','2026-07-07 19:12:49'),
+(212,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_decisao_admin','Relatorio ID 96ad88be-ee14-405f-8ea1-f525afae4bd8 definido como APROVADA_COM_EXIGENCIAS.','172.23.0.1','2026-07-07 19:12:58'),
+(213,'d2a16613-dfa4-4948-8de4-8c802abdf394','vistoria_criada','Vistoria criada para embarcacao ID: 620a9dfa-7628-11f1-85ad-621c498e207c.','172.23.0.1','2026-07-07 19:26:10'),
+(214,'dd121661-feb4-42f6-895a-68eb0608d1e4','certificado_csn_criado','Certificado AM-CSN-13/26 (Condicional) - BALSA RIO MAR','172.23.0.1','2026-07-07 19:56:12'),
+(215,'dd121661-feb4-42f6-895a-68eb0608d1e4','certificado_csn_excluido','Certificado ID: 19fc6e8b-2e56-4953-9594-7ba7c8e5ae1f','172.23.0.1','2026-07-07 19:56:19'),
+(216,'dd121661-feb4-42f6-895a-68eb0608d1e4','certificado_csn_excluido','Certificado ID: 8b6582c8-f102-4aa2-bc2d-76d78a258361','172.23.0.1','2026-07-07 19:56:21'),
+(217,'dd121661-feb4-42f6-895a-68eb0608d1e4','certificado_csn_excluido','Certificado ID: 01087135-1331-464f-a498-b1e9ee998faa','172.23.0.1','2026-07-07 19:56:23'),
+(218,'dd121661-feb4-42f6-895a-68eb0608d1e4','certificado_csn_excluido','Certificado ID: 3f694510-d109-409a-8e17-d53b9dd29d85','172.23.0.1','2026-07-07 19:56:24'),
+(219,'dd121661-feb4-42f6-895a-68eb0608d1e4','certificado_csn_excluido','Certificado ID: c0250674-b85e-4c99-8576-8d78f3d2349b','172.23.0.1','2026-07-07 19:56:31'),
+(220,'dd121661-feb4-42f6-895a-68eb0608d1e4','certificado_csn_criado','Certificado AM-CSN-14/26 (Definitivo) - Barco kds','172.23.0.1','2026-07-07 22:20:34'),
+(221,'dd121661-feb4-42f6-895a-68eb0608d1e4','certificado_csn_criado','Certificado AM-CSN-15/26 (Definitivo) - Barco kds','172.23.0.1','2026-07-07 22:23:38'),
+(222,'dd121661-feb4-42f6-895a-68eb0608d1e4','proprietario_editado','Proprietário \'Rosano Silva de Souza\' editado.','172.23.0.1','2026-07-08 00:05:13'),
+(223,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-14/26 enviada por e-mail para ronokedas2020@gmail.com','0.0.0.0','2026-07-08 00:44:30'),
+(224,'dd121661-feb4-42f6-895a-68eb0608d1e4','proposta_enviada_email','Proposta AM-ORC-17/26 enviada por e-mail para ronokedas2020@gmail.com','172.23.0.1','2026-07-08 00:48:26'),
+(225,'dd121661-feb4-42f6-895a-68eb0608d1e4','certificado_csn_enviado_email','Certificado CSN ID: b0a5b2ea-d243-4dac-99f8-6affd62e46e7 enviado por e-mail.','172.23.0.1','2026-07-08 01:00:01'),
+(226,'d2a16613-dfa4-4948-8de4-8c802abdf394','certificado_cnbl_enviado_email','Certificado CNBL ID: 670f4d07-b570-46b9-ad0a-cb9cb1c43a09 enviado por e-mail.','172.23.0.1','2026-07-08 01:01:08'),
+(227,'95eb5557-65e8-11f1-85ef-047c16b568a3','proprietario_editado','Proprietário \'Rosano Silva de Souza\' editado.','172.23.0.1','2026-07-08 01:04:02'),
+(228,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnarq_enviado_email','Certificado CNARQ ID: e62fc8b3-2c5d-4333-9117-a0720f11900d enviado por e-mail.','172.23.0.1','2026-07-08 01:04:58'),
+(229,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnarq_assinatura_enviada','Link de assinatura CNARQ ID: e62fc8b3-2c5d-4333-9117-a0720f11900d enviado por e-mail.','172.23.0.1','2026-07-08 01:07:05'),
+(230,'95eb5557-65e8-11f1-85ef-047c16b568a3','proprietario_editado','Proprietário \'Rosano Silva de Souza\' editado.','172.23.0.1','2026-07-08 01:07:56'),
+(231,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-17/26 enviada por e-mail para ronokedas@gmail.com','172.23.0.1','2026-07-08 02:04:55'),
+(232,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_enviado_email','Certificado CSN ID: b0a5b2ea-d243-4dac-99f8-6affd62e46e7 enviado por e-mail.','172.23.0.1','2026-07-08 02:08:09'),
+(233,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_enviado_email','Certificado CSN ID: b0a5b2ea-d243-4dac-99f8-6affd62e46e7 enviado por e-mail.','172.23.0.1','2026-07-08 09:38:18'),
+(234,'95eb5557-65e8-11f1-85ef-047c16b568a3','proprietario_editado','Proprietário \'Rosano Silva de Souza\' editado.','172.23.0.1','2026-07-08 09:39:46'),
+(235,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_cnbl_enviado_email','Certificado CNBL ID: 670f4d07-b570-46b9-ad0a-cb9cb1c43a09 enviado por e-mail.','172.23.0.1','2026-07-08 09:40:02'),
+(236,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_enviado_email','Certificado CSN ID: b0a5b2ea-d243-4dac-99f8-6affd62e46e7 enviado por e-mail.','172.23.0.1','2026-07-08 09:40:50'),
+(237,'dd121661-feb4-42f6-895a-68eb0608d1e4','proprietario_editado','Proprietário \'Rosano Silva de Souza\' editado.','172.23.0.1','2026-07-08 11:42:14'),
+(238,'dd121661-feb4-42f6-895a-68eb0608d1e4','certificado_csn_enviado_email','Certificado CSN ID: b0a5b2ea-d243-4dac-99f8-6affd62e46e7 enviado por e-mail.','172.23.0.1','2026-07-08 12:16:19'),
+(239,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-17/26 enviada por e-mail para ronokedas2020@gmail.com','172.23.0.1','2026-07-08 17:24:21'),
+(240,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-17/26 enviada por e-mail para ronokedas2020@gmail.com','172.23.0.1','2026-07-08 17:26:43'),
+(241,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-17/26 enviada por e-mail para ronokedas2020@gmail.com','172.23.0.1','2026-07-08 17:33:15'),
+(242,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-18/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 16.000,00 | Desconto: 6.25% | Entrada: R$ 5.000,00 | Total: R$ 15.000,00','172.23.0.1','2026-07-08 21:00:18'),
+(243,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_aprovada_assinatura_manual','Proposta AM-ORC-18/26 aprovada internamente como assinada por Aprovação interna - Administrador.','172.23.0.1','2026-07-08 21:00:42'),
+(244,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: 3a45f350-7b29-11f1-a8a1-56798194b3af atualizado.','172.23.0.1','2026-07-08 21:02:04'),
+(245,'d2a16613-dfa4-4948-8de4-8c802abdf394','relatorio_salvo','Relatorio tecnico AM-REL-AP-2/26 salvo para agendamento ID: 3a45f350-7b29-11f1-a8a1-56798194b3af. Status: AGUARDANDO_APROVACAO.','172.23.0.1','2026-07-08 21:04:27'),
+(246,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_decisao_admin','Relatorio ID 90b14fb6-f742-448f-8708-d3bafeef8681 definido como APROVADA_COM_EXIGENCIAS.','172.23.0.1','2026-07-08 21:06:04'),
+(247,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-16/26 (Condicional) - BALSA RIO MAR','172.23.0.1','2026-07-08 21:06:57'),
+(248,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_criado','Certificado AM-CSN-17/26 (Condicional) - BALSA RIO MAR','172.23.0.1','2026-07-08 21:06:58'),
+(249,'95eb5557-65e8-11f1-85ef-047c16b568a3','certificado_csn_assinado','Certificado AM-CSN-16/26 assinado por Victal Donanzan via link público','172.23.0.1','2026-07-08 21:07:40'),
+(250,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-18/26 enviada por e-mail para ronokedas2020@gmail.com','172.23.0.1','2026-07-08 21:36:47'),
+(251,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-16/26 enviada por e-mail para ronokedas2020@gmail.com','172.23.0.1','2026-07-08 21:55:46'),
+(252,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-15/26 enviada por e-mail para ronokedas2020@gmail.com','172.23.0.1','2026-07-08 22:10:19'),
+(253,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-15/26 enviada por e-mail para ronokedas2020@gmail.com','172.23.0.1','2026-07-08 22:20:05'),
+(254,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-16/26 enviada por e-mail para ronokedas2020@gmail.com','172.23.0.1','2026-07-08 22:23:30'),
+(255,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-15/26 enviada por e-mail para ronokedas2020@gmail.com','172.23.0.1','2026-07-08 22:27:54'),
+(256,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-16/26 salvo para agendamento ID: 70000000-0000-4000-8000-000000000003. Status: PENDENTE.','172.23.0.1','2026-07-14 19:41:37'),
+(257,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-17/26 salvo para agendamento ID: 70000000-0000-4000-8000-000000000003. Status: PENDENTE.','172.23.0.1','2026-07-14 19:42:16'),
+(258,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-19/26 salvo para agendamento ID: 70000000-0000-4000-8000-000000000005. Status: PENDENTE.','172.23.0.1','2026-07-14 19:42:56'),
+(259,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-20/26 salvo para agendamento ID: 70000000-0000-4000-8000-000000000005. Status: PENDENTE.','172.23.0.1','2026-07-14 19:43:35'),
+(260,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-22/26 salvo para agendamento ID: 70000000-0000-4000-8000-000000000005. Status: PENDENTE.','172.23.0.1','2026-07-14 20:04:25'),
+(261,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-24/26 salvo para agendamento ID: 70000000-0000-4000-8000-000000000005. Status: PENDENTE.','172.23.0.1','2026-07-14 20:05:27'),
+(262,'95eb5557-65e8-11f1-85ef-047c16b568a3','relatorio_salvo','Relatorio tecnico AM-REL-V-26/26 salvo para agendamento ID: 70000000-0000-4000-8000-000000000005. Status: PENDENTE.','172.23.0.1','2026-07-14 20:06:10'),
+(263,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_criada','Proposta AM-ORC-19/26 criada para cliente \'Rosano Silva de Souza\'. Subtotal: R$ 9.800,00 | Desconto: 6.12% | Entrada: R$ 500,00 | Total: R$ 9.200,00','172.23.0.1','2026-07-16 13:23:44'),
+(264,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_enviada_email','Proposta AM-ORC-19/26 enviada por e-mail para ronokedas2020@gmail.com','172.23.0.1','2026-07-16 13:24:27'),
+(265,'95eb5557-65e8-11f1-85ef-047c16b568a3','proposta_assinada','Proposta AM-ORC-19/26 assinada por Rosano Silva de Souza via link público','172.23.0.1','2026-07-16 13:25:27'),
+(266,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: e2015b8b-92ba-40ee-848b-3f934605769f atualizado.','172.23.0.1','2026-07-16 13:36:44'),
+(267,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: 05ef6ca5-3621-446f-bb71-bd42b79d0678 atualizado.','172.23.0.1','2026-07-16 13:37:16'),
+(268,'95eb5557-65e8-11f1-85ef-047c16b568a3','agendamento_editado','Agendamento ID: 05ef6ca5-3621-446f-bb71-bd42b79d0678 atualizado.','172.23.0.1','2026-07-16 13:37:24');
+/*!40000 ALTER TABLE `logs_atividade` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `ordens_servico`
+--
+
+DROP TABLE IF EXISTS `ordens_servico`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ordens_servico` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `agendamento_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `proposta_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `vistoriador_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_vistoria` text COLLATE utf8mb4_general_ci NOT NULL,
+  `data_vistoria` date NOT NULL,
+  `hora_vistoria` time DEFAULT NULL,
+  `local` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `contato_nome` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `contato_telefone` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('pendente','em_andamento','executado','cancelado') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pendente',
+  `observacoes` text COLLATE utf8mb4_general_ci,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `numero` (`numero`),
+  UNIQUE KEY `agendamento_id` (`agendamento_id`),
+  KEY `proposta_id` (`proposta_id`),
+  KEY `embarcacao_id` (`embarcacao_id`),
+  KEY `cliente_id` (`cliente_id`),
+  KEY `vistoriador_id` (`vistoriador_id`),
+  KEY `status` (`status`),
+  KEY `data_vistoria` (`data_vistoria`),
+  KEY `criado_por` (`criado_por`),
+  CONSTRAINT `ordens_servico_ibfk_1` FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `ordens_servico_ibfk_2` FOREIGN KEY (`proposta_id`) REFERENCES `propostas` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `ordens_servico_ibfk_3` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `ordens_servico_ibfk_4` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `ordens_servico_ibfk_5` FOREIGN KEY (`vistoriador_id`) REFERENCES `usuarios` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `ordens_servico_ibfk_6` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ordens_servico`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `ordens_servico` WRITE;
+/*!40000 ALTER TABLE `ordens_servico` DISABLE KEYS */;
+/*!40000 ALTER TABLE `ordens_servico` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `propostas`
+--
+
+DROP TABLE IF EXISTS `propostas`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `propostas` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `armador_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `operador_nome` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_emissao` date NOT NULL,
+  `data_validade` date DEFAULT NULL,
+  `parcelas` tinyint unsigned NOT NULL DEFAULT '3',
+  `forma_pagamento` enum('a_vista','parcelado','boleto','pix') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'parcelado',
+  `valor_total` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `valor_entrada` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `desconto_percentual` decimal(5,2) NOT NULL DEFAULT '0.00',
+  `desconto_valor` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `observacoes` text COLLATE utf8mb4_general_ci,
+  `status` enum('rascunho','enviada','aprovada','recusada','cancelada','assinada') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'rascunho',
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `token_assinatura` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinado` tinyint(1) DEFAULT '0',
+  `assinatura_imagem` longtext COLLATE utf8mb4_general_ci,
+  `assinatura_url` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_em` datetime DEFAULT NULL,
+  `assinante_nome` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinante_documento` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `assinatura_ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `numero` (`numero`),
+  KEY `cliente_id` (`cliente_id`),
+  KEY `status` (`status`),
+  KEY `criado_por` (`criado_por`),
+  KEY `idx_propostas_armador_id` (`armador_id`),
+  CONSTRAINT `fk_propostas_armador` FOREIGN KEY (`armador_id`) REFERENCES `clientes` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `propostas_ibfk_1` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `propostas_ibfk_2` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_propostas_assinatura_status` CHECK (((`assinado` = 0) or (`status` = _latin1'assinada')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `propostas`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `propostas` WRITE;
+/*!40000 ALTER TABLE `propostas` DISABLE KEYS */;
+INSERT INTO `propostas` VALUES
+('07c2f09e-782d-11f1-88ab-1acc827a0ea9','AM-ORC-8/26','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'2026-07-05','2026-08-04',3,'parcelado',5000.00,0.00,28.57,2000.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 04:50:22','2026-07-05 04:55:09','e9a0dfd58b18c2641cce3346b4816bac6a49e28e682db',1,NULL,'http://localhost:8082/uploads/assinaturas/propostas/6a49e3ad391e8_1783227309.png','2026-07-05 01:55:09','Rosano Silva de Souza','','172.23.0.1'),
+('2a0108a7-782e-11f1-88ab-1acc827a0ea9','AM-ORC-9/26','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'2026-07-05','2026-08-04',3,'parcelado',7000.00,0.00,0.00,0.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 04:58:29','2026-07-05 04:58:54','d9c18becbceddfb4223f528a8e1b55e06a49e4755b1d7',1,NULL,'http://localhost:8082/uploads/assinaturas/propostas/6a49e48e0dbde_1783227534.png','2026-07-05 01:58:54','Rosano Silva de Souza','','172.23.0.1'),
+('2bd3ad77-7b29-11f1-a8a1-56798194b3af','AM-ORC-18/26','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,'Savio','2026-07-09','2026-08-08',3,'parcelado',15000.00,5000.00,6.25,1000.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:00:18','2026-07-09 00:00:42','e26c42dde8a66b97ff7165fd3046a8836a4ee4926a6cf',1,NULL,NULL,'2026-07-08 21:00:42','Aprovação interna - Administrador','Aprovação interna','172.23.0.1'),
+('41d931c6-7830-11f1-88ab-1acc827a0ea9','AM-ORC-13/26','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'2026-07-05','2026-08-04',3,'parcelado',3700.00,0.00,0.00,0.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:13:28','2026-07-05 05:13:44','255dca1390fab26f1d8fb4d3a2e75a9d6a49e7f85a907',1,NULL,'http://localhost:8082/uploads/assinaturas/propostas/6a49e80855e85_1783228424.png','2026-07-05 02:13:44','Rosano Silva de Souza','','172.23.0.1'),
+('4b5d9f51-7974-11f1-8c34-8a26e9191f69','AM-ORC-14/26','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'2026-07-06','2026-08-05',3,'parcelado',3600.00,0.00,0.00,0.00,NULL,'enviada','dd121661-feb4-42f6-895a-68eb0608d1e4','2026-07-06 19:53:01','2026-07-08 03:44:30','db6668c0847c08068e824b12cc97ae586a4c079d44069',0,NULL,NULL,NULL,NULL,NULL,NULL),
+('5b167c30-782f-11f1-88ab-1acc827a0ea9','AM-ORC-11/26','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'2026-07-05','2026-08-04',3,'parcelado',7000.00,0.00,0.00,0.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:07:01','2026-07-05 05:07:09','ef072af7033eb5fc409ff6a537f6f9ca6a49e6753572d',1,NULL,'http://localhost:8082/uploads/assinaturas/propostas/6a49e67d0e7ab_1783228029.png','2026-07-05 02:07:09','Rosano Silva de Souza','','172.23.0.1'),
+('6aa00f1a-782f-11f1-88ab-1acc827a0ea9','AM-ORC-12/26','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'2026-07-05','2026-08-04',3,'parcelado',7000.00,0.00,0.00,0.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:07:27','2026-07-05 05:09:36','bcb12a5ccc95b1fae796dbb6d24aa0ce6a49e68f45ecd',1,NULL,'http://localhost:8082/uploads/assinaturas/propostas/6a49e710b1ad7_1783228176.png','2026-07-05 02:09:36','Rosano Silva de Souza','','172.23.0.1'),
+('733dc145-7657-11f1-9eb5-0a1b2af87b16','AM-ORC-7/26','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'2026-07-02','2026-08-01',3,'parcelado',3150.00,0.00,10.00,350.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 20:48:59','2026-07-15 03:46:11','d18ad70a117e3c1854f36d8d73d28adc6a46cebb45946',1,'data:image/png;base64,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',NULL,'2026-07-02 17:53:26','Rosano Silva de Souza','','172.23.0.1'),
+('75eae56f-79c6-11f1-8c34-8a26e9191f69','AM-ORC-16/26','64e60ad7-3a78-4db0-9e03-cc529d935325','60977320-a7d1-49a7-8471-4909c5530d79',NULL,'2026-07-07','2026-08-06',1,'boleto',12000.00,3000.00,7.69,1000.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-07 05:41:11','2026-07-07 05:42:19','88b23106222cd96b34de956f2a4984266a4c917761c0e',1,NULL,'http://localhost:8082/uploads/assinaturas/propostas/6a4c91bbd82f3_1783402939.png','2026-07-07 02:42:19','Rosano Silva de Souza','','172.23.0.1'),
+('87daba67-7974-11f1-8c34-8a26e9191f69','AM-ORC-15/26','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'2026-07-06','2026-08-05',3,'a_vista',11889.00,0.00,15.08,2111.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-06 19:54:42','2026-07-06 19:55:36','b73994e3d4085c313d5ff5d3327a1cee6a4c0802ba019',1,NULL,'http://localhost:8082/uploads/assinaturas/propostas/6a4c08382df09_1783367736.png','2026-07-06 16:55:36','Rosano Silva de Souza','','172.23.0.1'),
+('b7196667-8132-11f1-a1f7-9ed3395acbbb','AM-ORC-19/26','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,'Saviobb','2026-07-16','2026-08-15',3,'parcelado',9200.00,500.00,6.12,600.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-16 16:23:44','2026-07-16 16:25:27','24fde2d388fa12769f4bf208e0b1a4ac6a59059084a94',1,NULL,'http://localhost:8082/uploads/assinaturas/propostas/6a5905f7bda8d_1784219127.png','2026-07-16 13:25:27','Rosano Silva de Souza','','172.23.0.1'),
+('b85e1add-782e-11f1-88ab-1acc827a0ea9','AM-ORC-10/26','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,'2026-07-05','2026-08-04',3,'parcelado',6667.00,0.00,4.76,333.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-05 05:02:28','2026-07-05 05:03:36','e950e898b7e8ff2c909cd30aa037f5be6a49e56435a53',1,NULL,'http://localhost:8082/uploads/assinaturas/propostas/6a49e5a82f52e_1783227816.png','2026-07-05 02:03:36','Rosano Silva de Souza','','172.23.0.1'),
+('d23048fa-7a47-11f1-8c34-8a26e9191f69','AM-ORC-17/26','64e60ad7-3a78-4db0-9e03-cc529d935325','60977320-a7d1-49a7-8471-4909c5530d79',NULL,'2026-07-07','2026-08-06',3,'parcelado',9800.00,5000.00,0.00,0.00,NULL,'assinada','95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-07 21:07:11','2026-07-07 21:08:15','b67da503263ab97f857aa27ef0ab5dfd6a4d6a7f452a3',1,NULL,'http://localhost:8082/uploads/assinaturas/propostas/6a4d6abfacfe2_1783458495.png','2026-07-07 18:08:15','Rosano Silva de Souza','','172.23.0.1');
+/*!40000 ALTER TABLE `propostas` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `propostas_embarcacoes`
+--
+
+DROP TABLE IF EXISTS `propostas_embarcacoes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `propostas_embarcacoes` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `proposta_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `proposta_embarcacao` (`proposta_id`,`embarcacao_id`),
+  KEY `embarcacao_id` (`embarcacao_id`),
+  CONSTRAINT `propostas_embarcacoes_ibfk_1` FOREIGN KEY (`proposta_id`) REFERENCES `propostas` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `propostas_embarcacoes_ibfk_2` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `propostas_embarcacoes`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `propostas_embarcacoes` WRITE;
+/*!40000 ALTER TABLE `propostas_embarcacoes` DISABLE KEYS */;
+INSERT INTO `propostas_embarcacoes` VALUES
+('07c339a9-782d-11f1-88ab-1acc827a0ea9','07c2f09e-782d-11f1-88ab-1acc827a0ea9','05a94606-59fe-4371-afbc-b7b094df2676'),
+('2a012bda-782e-11f1-88ab-1acc827a0ea9','2a0108a7-782e-11f1-88ab-1acc827a0ea9','05a94606-59fe-4371-afbc-b7b094df2676'),
+('2bd3dde8-7b29-11f1-a8a1-56798194b3af','2bd3ad77-7b29-11f1-a8a1-56798194b3af','620a9dfa-7628-11f1-85ad-621c498e207c'),
+('41d95196-7830-11f1-88ab-1acc827a0ea9','41d931c6-7830-11f1-88ab-1acc827a0ea9','05a94606-59fe-4371-afbc-b7b094df2676'),
+('4b5ddac8-7974-11f1-8c34-8a26e9191f69','4b5d9f51-7974-11f1-8c34-8a26e9191f69','05a94606-59fe-4371-afbc-b7b094df2676'),
+('4b5dcda8-7974-11f1-8c34-8a26e9191f69','4b5d9f51-7974-11f1-8c34-8a26e9191f69','620a9dfa-7628-11f1-85ad-621c498e207c'),
+('5b169bc2-782f-11f1-88ab-1acc827a0ea9','5b167c30-782f-11f1-88ab-1acc827a0ea9','05a94606-59fe-4371-afbc-b7b094df2676'),
+('6aa02fb1-782f-11f1-88ab-1acc827a0ea9','6aa00f1a-782f-11f1-88ab-1acc827a0ea9','05a94606-59fe-4371-afbc-b7b094df2676'),
+('733de9c5-7657-11f1-9eb5-0a1b2af87b16','733dc145-7657-11f1-9eb5-0a1b2af87b16','05a94606-59fe-4371-afbc-b7b094df2676'),
+('75eb1de7-79c6-11f1-8c34-8a26e9191f69','75eae56f-79c6-11f1-8c34-8a26e9191f69','620a9dfa-7628-11f1-85ad-621c498e207c'),
+('87dae121-7974-11f1-8c34-8a26e9191f69','87daba67-7974-11f1-8c34-8a26e9191f69','05a94606-59fe-4371-afbc-b7b094df2676'),
+('87dad917-7974-11f1-8c34-8a26e9191f69','87daba67-7974-11f1-8c34-8a26e9191f69','620a9dfa-7628-11f1-85ad-621c498e207c'),
+('b7199413-8132-11f1-a1f7-9ed3395acbbb','b7196667-8132-11f1-a1f7-9ed3395acbbb','620a9dfa-7628-11f1-85ad-621c498e207c'),
+('b85e3abc-782e-11f1-88ab-1acc827a0ea9','b85e1add-782e-11f1-88ab-1acc827a0ea9','05a94606-59fe-4371-afbc-b7b094df2676'),
+('d230d17b-7a47-11f1-8c34-8a26e9191f69','d23048fa-7a47-11f1-8c34-8a26e9191f69','620a9dfa-7628-11f1-85ad-621c498e207c');
+/*!40000 ALTER TABLE `propostas_embarcacoes` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `propostas_servicos`
+--
+
+DROP TABLE IF EXISTS `propostas_servicos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `propostas_servicos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `proposta_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `servico_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `preco_aplicado` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `quantidade` tinyint unsigned NOT NULL DEFAULT '1',
+  `subtotal` decimal(12,2) GENERATED ALWAYS AS ((`preco_aplicado` * `quantidade`)) STORED,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `proposta_embarcacao_servico` (`proposta_id`,`embarcacao_id`,`servico_id`),
+  KEY `servico_id` (`servico_id`),
+  KEY `idx_propserv_emb` (`embarcacao_id`),
+  CONSTRAINT `propostas_servicos_ibfk_1` FOREIGN KEY (`proposta_id`) REFERENCES `propostas` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `propostas_servicos_ibfk_2` FOREIGN KEY (`servico_id`) REFERENCES `servicos` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `propostas_servicos_ibfk_3` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `propostas_servicos`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `propostas_servicos` WRITE;
+/*!40000 ALTER TABLE `propostas_servicos` DISABLE KEYS */;
+INSERT INTO `propostas_servicos` VALUES
+('07c36217-782d-11f1-88ab-1acc827a0ea9','07c2f09e-782d-11f1-88ab-1acc827a0ea9','a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('07c3a262-782d-11f1-88ab-1acc827a0ea9','07c2f09e-782d-11f1-88ab-1acc827a0ea9','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('2a013b0a-782e-11f1-88ab-1acc827a0ea9','2a0108a7-782e-11f1-88ab-1acc827a0ea9','a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('2a0141df-782e-11f1-88ab-1acc827a0ea9','2a0108a7-782e-11f1-88ab-1acc827a0ea9','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('2bd3ff22-7b29-11f1-a8a1-56798194b3af','2bd3ad77-7b29-11f1-a8a1-56798194b3af','a1d98ef1-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3200.00,1,3200.00),
+('2bd4236c-7b29-11f1-a8a1-56798194b3af','2bd3ad77-7b29-11f1-a8a1-56798194b3af','a1d98eaf-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',2800.00,1,2800.00),
+('2bd42c9d-7b29-11f1-a8a1-56798194b3af','2bd3ad77-7b29-11f1-a8a1-56798194b3af','a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3500.00,1,3500.00),
+('2bd433ed-7b29-11f1-a8a1-56798194b3af','2bd3ad77-7b29-11f1-a8a1-56798194b3af','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3500.00,1,3500.00),
+('2bd43c37-7b29-11f1-a8a1-56798194b3af','2bd3ad77-7b29-11f1-a8a1-56798194b3af','a1d991e9-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3000.00,1,3000.00),
+('41d96075-7830-11f1-88ab-1acc827a0ea9','41d931c6-7830-11f1-88ab-1acc827a0ea9','a1d992d7-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',1500.00,1,1500.00),
+('41d9694c-7830-11f1-88ab-1acc827a0ea9','41d931c6-7830-11f1-88ab-1acc827a0ea9','a1d98f6a-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',2200.00,1,2200.00),
+('4b5def08-7974-11f1-8c34-8a26e9191f69','4b5d9f51-7974-11f1-8c34-8a26e9191f69','a1d98f2e-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',1800.00,1,1800.00),
+('4b5dfa79-7974-11f1-8c34-8a26e9191f69','4b5d9f51-7974-11f1-8c34-8a26e9191f69','a1d98f2e-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',1800.00,1,1800.00),
+('5b16aee8-782f-11f1-88ab-1acc827a0ea9','5b167c30-782f-11f1-88ab-1acc827a0ea9','a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('5b16b838-782f-11f1-88ab-1acc827a0ea9','5b167c30-782f-11f1-88ab-1acc827a0ea9','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('6aa040f9-782f-11f1-88ab-1acc827a0ea9','6aa00f1a-782f-11f1-88ab-1acc827a0ea9','a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('6aa048f8-782f-11f1-88ab-1acc827a0ea9','6aa00f1a-782f-11f1-88ab-1acc827a0ea9','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('733e1fcc-7657-11f1-9eb5-0a1b2af87b16','733dc145-7657-11f1-9eb5-0a1b2af87b16','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('75ebed1d-79c6-11f1-8c34-8a26e9191f69','75eae56f-79c6-11f1-8c34-8a26e9191f69','a1d98ef1-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3200.00,1,3200.00),
+('75ec0c3f-79c6-11f1-8c34-8a26e9191f69','75eae56f-79c6-11f1-8c34-8a26e9191f69','a1d98eaf-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',2800.00,1,2800.00),
+('75ec1690-79c6-11f1-8c34-8a26e9191f69','75eae56f-79c6-11f1-8c34-8a26e9191f69','a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3500.00,1,3500.00),
+('75ec2098-79c6-11f1-8c34-8a26e9191f69','75eae56f-79c6-11f1-8c34-8a26e9191f69','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3500.00,1,3500.00),
+('87daf229-7974-11f1-8c34-8a26e9191f69','87daba67-7974-11f1-8c34-8a26e9191f69','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3500.00,1,3500.00),
+('87dafac2-7974-11f1-8c34-8a26e9191f69','87daba67-7974-11f1-8c34-8a26e9191f69','a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3500.00,1,3500.00),
+('87db01b3-7974-11f1-8c34-8a26e9191f69','87daba67-7974-11f1-8c34-8a26e9191f69','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('87db0a3d-7974-11f1-8c34-8a26e9191f69','87daba67-7974-11f1-8c34-8a26e9191f69','a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('b719b0fb-8132-11f1-a1f7-9ed3395acbbb','b7196667-8132-11f1-a1f7-9ed3395acbbb','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3500.00,1,3500.00),
+('b719f630-8132-11f1-a1f7-9ed3395acbbb','b7196667-8132-11f1-a1f7-9ed3395acbbb','a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3500.00,1,3500.00),
+('b719fd38-8132-11f1-a1f7-9ed3395acbbb','b7196667-8132-11f1-a1f7-9ed3395acbbb','a1d98eaf-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',2800.00,1,2800.00),
+('b85e48d5-782e-11f1-88ab-1acc827a0ea9','b85e1add-782e-11f1-88ab-1acc827a0ea9','a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('b85e4fa8-782e-11f1-88ab-1acc827a0ea9','b85e1add-782e-11f1-88ab-1acc827a0ea9','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','05a94606-59fe-4371-afbc-b7b094df2676',3500.00,1,3500.00),
+('d2310bd8-7a47-11f1-8c34-8a26e9191f69','d23048fa-7a47-11f1-8c34-8a26e9191f69','a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3500.00,1,3500.00),
+('d231316d-7a47-11f1-8c34-8a26e9191f69','d23048fa-7a47-11f1-8c34-8a26e9191f69','a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',3500.00,1,3500.00),
+('d23138db-7a47-11f1-8c34-8a26e9191f69','d23048fa-7a47-11f1-8c34-8a26e9191f69','a1d98eaf-6ebc-11f1-86ce-7e17ff5f90bf','620a9dfa-7628-11f1-85ad-621c498e207c',2800.00,1,2800.00);
+/*!40000 ALTER TABLE `propostas_servicos` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `responsaveis_assinatura`
+--
+
+DROP TABLE IF EXISTS `responsaveis_assinatura`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `responsaveis_assinatura` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `nome_completo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `cargo_titulo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `registro_profissional` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `responsaveis_assinatura`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `responsaveis_assinatura` WRITE;
+/*!40000 ALTER TABLE `responsaveis_assinatura` DISABLE KEYS */;
+INSERT INTO `responsaveis_assinatura` VALUES
+(2,'Victal Donanzan','Engenheiro Naval','CREA: 22.537',1,'2026-07-02 04:58:28','2026-07-07 21:16:21'),
+(5,'João Responsável','Engenheiro Naval','123456',0,'2026-07-02 17:39:46','2026-07-07 21:13:53'),
+(6,'João Responsável','Engenheiro Naval','123456',0,'2026-07-02 17:43:53','2026-07-07 21:13:57');
+/*!40000 ALTER TABLE `responsaveis_assinatura` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `sequenciais_documentos`
+--
+
+DROP TABLE IF EXISTS `sequenciais_documentos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sequenciais_documentos` (
+  `tipo_documento` varchar(10) COLLATE utf8mb4_general_ci NOT NULL,
+  `ano` int NOT NULL,
+  `ultimo_numero` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`tipo_documento`,`ano`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sequenciais_documentos`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `sequenciais_documentos` WRITE;
+/*!40000 ALTER TABLE `sequenciais_documentos` DISABLE KEYS */;
+INSERT INTO `sequenciais_documentos` VALUES
+('CHT',2026,0),
+('CNARQ',2026,0),
+('CNBL',2026,0),
+('CSN',2026,0),
+('EC',2026,0),
+('LA',2026,0),
+('LC',2026,2),
+('LP',2026,2),
+('LR',2026,0),
+('ORC',2026,19),
+('OS',2026,0),
+('REL-AP',2026,2),
+('REL-HT',2026,2),
+('REL-V',2026,33);
+/*!40000 ALTER TABLE `sequenciais_documentos` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `servicos`
+--
+
+DROP TABLE IF EXISTS `servicos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `servicos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `nome` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `descricao` text COLLATE utf8mb4_general_ci,
+  `preco_padrao` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_servicos_ativo` (`ativo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `servicos`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `servicos` WRITE;
+/*!40000 ALTER TABLE `servicos` DISABLE KEYS */;
+INSERT INTO `servicos` VALUES
+('a1d980bd-6ebc-11f1-86ce-7e17ff5f90bf','Análise de Planos Ec1','Analise técnica de planos de embarcação“ Etapa 1',2500.00,1,NULL,'2026-06-23 04:33:07','2026-06-29 06:13:39'),
+('a1d98b0e-6ebc-11f1-86ce-7e17ff5f90bf','Análise de Planos Ec2','Analise técnica de planos de embarcação“ Etapa 2',2500.00,1,NULL,'2026-06-23 04:33:07','2026-06-29 06:14:16'),
+('a1d98d8e-6ebc-11f1-86ce-7e17ff5f90bf','Vistoria Inicial Seco','Vistoria inicial realizada com embarcação em seco (estaleiro/dique)',3500.00,1,NULL,'2026-06-23 04:33:07','2026-06-29 06:16:55'),
+('a1d98e55-6ebc-11f1-86ce-7e17ff5f90bf','Vistoria Inicial Flutuando','Vistoria inicial realizada com embarcação flutuando',3500.00,1,NULL,'2026-06-23 04:33:07','2026-06-29 06:16:44'),
+('a1d98eaf-6ebc-11f1-86ce-7e17ff5f90bf','Vistoria Inicial de Borda Livre','Vistoria inicial para certificação de borda livre',2800.00,1,NULL,'2026-06-23 04:33:07','2026-06-29 06:16:31'),
+('a1d98ef1-6ebc-11f1-86ce-7e17ff5f90bf','Vistoria Inicial de Arqueação','Vistoria inicial para calculo e certificação de ?????? bruta',3200.00,1,NULL,'2026-06-23 04:33:07','2026-06-29 06:16:14'),
+('a1d98f2e-6ebc-11f1-86ce-7e17ff5f90bf','Acompanhamento de Ultrassom','Acompanhamento de ensaios de ultrassom em casco/estruturas',1800.00,1,NULL,'2026-06-23 04:33:07','2026-06-29 06:13:07'),
+('a1d98f6a-6ebc-11f1-86ce-7e17ff5f90bf','Vistoria Anual','Vistoria anual obrigatória para manutenção de certificados',2200.00,1,NULL,'2026-06-23 04:33:07','2026-06-29 06:15:13'),
+('a1d99130-6ebc-11f1-86ce-7e17ff5f90bf','Vistoria Anual Periódica','Vistoria anual periodica conforme regulamento da Capitania',2500.00,1,NULL,'2026-06-23 04:33:07','2026-06-29 06:15:50'),
+('a1d991e9-6ebc-11f1-86ce-7e17ff5f90bf','Vistoria Intermediária','Vistoria intermediaria de meio-ciclo entre renovações',3000.00,1,NULL,'2026-06-23 04:33:07','2026-06-29 06:17:26'),
+('a1d992d7-6ebc-11f1-86ce-7e17ff5f90bf','Licença Provisória','Emissão de licença provisória para navegação',1500.00,1,NULL,'2026-06-23 04:33:07','2026-06-29 06:14:47');
+/*!40000 ALTER TABLE `servicos` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `tipos_embarcacao`
+--
+
+DROP TABLE IF EXISTS `tipos_embarcacao`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `tipos_embarcacao` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `nome` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `ativo` tinyint(1) DEFAULT '1',
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tipos_embarcacao`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `tipos_embarcacao` WRITE;
+/*!40000 ALTER TABLE `tipos_embarcacao` DISABLE KEYS */;
+INSERT INTO `tipos_embarcacao` VALUES
+('06a95b60-75d0-11f1-98f0-5ed0db5eacb7','Balsa',1,'2026-07-02 04:39:35'),
+('06a95eb2-75d0-11f1-98f0-5ed0db5eacb7','Empurrador',1,'2026-07-02 04:39:35'),
+('06a95ffa-75d0-11f1-98f0-5ed0db5eacb7','Lancha',1,'2026-07-02 04:39:35'),
+('06a96069-75d0-11f1-98f0-5ed0db5eacb7','Rebocador',1,'2026-07-02 04:39:35'),
+('06a96097-75d0-11f1-98f0-5ed0db5eacb7','Flutuante',1,'2026-07-02 04:39:35'),
+('06a960bd-75d0-11f1-98f0-5ed0db5eacb7','Draga',1,'2026-07-02 04:39:35'),
+('06a960df-75d0-11f1-98f0-5ed0db5eacb7','Pontão',1,'2026-07-02 04:39:35'),
+('06a96100-75d0-11f1-98f0-5ed0db5eacb7','Bote',1,'2026-07-02 04:39:35'),
+('06a96123-75d0-11f1-98f0-5ed0db5eacb7','Navio',1,'2026-07-02 04:39:35'),
+('06a96149-75d0-11f1-98f0-5ed0db5eacb7','Iate',1,'2026-07-02 04:39:35'),
+('06a96169-75d0-11f1-98f0-5ed0db5eacb7','Chata',1,'2026-07-02 04:39:35'),
+('06a96189-75d0-11f1-98f0-5ed0db5eacb7','Ferry Boat',1,'2026-07-02 04:39:35');
+/*!40000 ALTER TABLE `tipos_embarcacao` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `usuario_perfis`
+--
+
+DROP TABLE IF EXISTS `usuario_perfis`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `usuario_perfis` (
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `perfil` enum('ADMIN','VENDEDOR','VISTORIADOR','ANALISTA') COLLATE utf8mb4_general_ci NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`usuario_id`,`perfil`),
+  CONSTRAINT `fk_usuario_perfis_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `usuario_perfis`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `usuario_perfis` WRITE;
+/*!40000 ALTER TABLE `usuario_perfis` DISABLE KEYS */;
+INSERT INTO `usuario_perfis` VALUES
+('11111111-1111-1111-1111-111111111111','VISTORIADOR','2026-07-14 22:05:44'),
+('1c015cb0-3187-4068-bc6d-06585521e165','VENDEDOR','2026-07-14 22:05:44'),
+('22222222-2222-2222-2222-222222222222','VISTORIADOR','2026-07-14 22:05:44'),
+('33333333-3333-3333-3333-333333333333','VISTORIADOR','2026-07-14 22:05:44'),
+('3774d80c-2574-470e-88a9-9781936c6de3','VISTORIADOR','2026-07-14 22:05:44'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','VISTORIADOR','2026-07-14 22:05:44'),
+('95eb5557-65e8-11f1-85ef-047c16b568a3','ADMIN','2026-07-14 22:05:44'),
+('95eb5557-65e8-11f1-85ef-047c16b568a3','VISTORIADOR','2026-07-14 22:16:02'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','ANALISTA','2026-07-16 15:38:12'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','VISTORIADOR','2026-07-14 22:05:44'),
+('dd121661-feb4-42f6-895a-68eb0608d1e4','ADMIN','2026-07-14 22:05:44'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','VISTORIADOR','2026-07-14 22:05:44');
+/*!40000 ALTER TABLE `usuario_perfis` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `usuario_permissoes`
+--
+
+DROP TABLE IF EXISTS `usuario_permissoes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `usuario_permissoes` (
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `permissao` varchar(80) COLLATE utf8mb4_general_ci NOT NULL,
+  `permitido` tinyint(1) NOT NULL DEFAULT '0',
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`usuario_id`,`permissao`),
+  CONSTRAINT `fk_usuario_permissoes_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `usuario_permissoes`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `usuario_permissoes` WRITE;
+/*!40000 ALTER TABLE `usuario_permissoes` DISABLE KEYS */;
+INSERT INTO `usuario_permissoes` VALUES
+('11111111-1111-1111-1111-111111111111','agendamentos',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','armadores',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','certificados',1,'2026-07-16 18:20:12'),
+('11111111-1111-1111-1111-111111111111','comercial',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','configuracoes',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','contratos',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','dashboard',1,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','despachantes',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','documentacao',1,'2026-07-16 18:20:12'),
+('11111111-1111-1111-1111-111111111111','emails',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','embarcacoes',1,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','financeiro',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','portal_clientes',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','proprietarios',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','relatorios',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','relatorios_aprovacao',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','responsaveis_assinatura',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','servicos',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','usuarios',0,'2026-07-16 16:15:33'),
+('11111111-1111-1111-1111-111111111111','vistorias',1,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','agendamentos',1,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','armadores',1,'2026-07-16 18:20:12'),
+('1c015cb0-3187-4068-bc6d-06585521e165','certificados',0,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','comercial',1,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','configuracoes',0,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','contratos',1,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','dashboard',1,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','despachantes',1,'2026-07-16 18:20:12'),
+('1c015cb0-3187-4068-bc6d-06585521e165','documentacao',1,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','emails',1,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','embarcacoes',1,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','financeiro',1,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','portal_clientes',0,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','proprietarios',1,'2026-07-16 18:20:12'),
+('1c015cb0-3187-4068-bc6d-06585521e165','relatorios',0,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','relatorios_aprovacao',0,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','responsaveis_assinatura',0,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','servicos',1,'2026-07-16 18:20:12'),
+('1c015cb0-3187-4068-bc6d-06585521e165','usuarios',0,'2026-07-16 16:15:33'),
+('1c015cb0-3187-4068-bc6d-06585521e165','vistorias',1,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','agendamentos',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','armadores',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','certificados',1,'2026-07-16 18:20:12'),
+('22222222-2222-2222-2222-222222222222','comercial',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','configuracoes',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','contratos',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','dashboard',1,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','despachantes',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','documentacao',1,'2026-07-16 18:20:12'),
+('22222222-2222-2222-2222-222222222222','emails',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','embarcacoes',1,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','financeiro',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','portal_clientes',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','proprietarios',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','relatorios',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','relatorios_aprovacao',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','responsaveis_assinatura',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','servicos',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','usuarios',0,'2026-07-16 16:15:33'),
+('22222222-2222-2222-2222-222222222222','vistorias',1,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','agendamentos',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','armadores',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','certificados',1,'2026-07-16 18:20:12'),
+('33333333-3333-3333-3333-333333333333','comercial',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','configuracoes',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','contratos',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','dashboard',1,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','despachantes',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','documentacao',1,'2026-07-16 18:20:12'),
+('33333333-3333-3333-3333-333333333333','emails',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','embarcacoes',1,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','financeiro',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','portal_clientes',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','proprietarios',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','relatorios',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','relatorios_aprovacao',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','responsaveis_assinatura',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','servicos',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','usuarios',0,'2026-07-16 16:15:33'),
+('33333333-3333-3333-3333-333333333333','vistorias',1,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','agendamentos',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','armadores',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','certificados',1,'2026-07-16 18:20:12'),
+('3774d80c-2574-470e-88a9-9781936c6de3','comercial',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','configuracoes',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','contratos',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','dashboard',1,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','despachantes',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','documentacao',1,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','emails',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','embarcacoes',1,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','financeiro',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','portal_clientes',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','proprietarios',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','relatorios',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','relatorios_aprovacao',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','responsaveis_assinatura',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','servicos',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','usuarios',0,'2026-07-16 16:15:33'),
+('3774d80c-2574-470e-88a9-9781936c6de3','vistorias',1,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','agendamentos',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','armadores',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','certificados',1,'2026-07-16 18:20:12'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','comercial',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','configuracoes',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','contratos',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','dashboard',1,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','despachantes',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','documentacao',1,'2026-07-16 18:20:12'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','emails',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','embarcacoes',1,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','financeiro',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','portal_clientes',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','proprietarios',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','relatorios',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','relatorios_aprovacao',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','responsaveis_assinatura',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','servicos',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','usuarios',0,'2026-07-16 16:15:33'),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','vistorias',1,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','agendamentos',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','armadores',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','certificados',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','comercial',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','configuracoes',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','contratos',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','dashboard',1,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','despachantes',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','documentacao',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','emails',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','embarcacoes',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','financeiro',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','portal_clientes',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','proprietarios',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','relatorios',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','relatorios_aprovacao',1,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','responsaveis_assinatura',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','servicos',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','usuarios',0,'2026-07-16 16:15:33'),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','vistorias',1,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','agendamentos',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','armadores',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','certificados',1,'2026-07-16 16:39:29'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','comercial',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','configuracoes',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','contratos',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','dashboard',1,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','despachantes',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','documentacao',1,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','emails',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','embarcacoes',1,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','financeiro',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','portal_clientes',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','proprietarios',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','relatorios',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','relatorios_aprovacao',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','responsaveis_assinatura',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','servicos',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','usuarios',0,'2026-07-16 16:15:33'),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','vistorias',1,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','agendamentos',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','armadores',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','certificados',1,'2026-07-16 18:20:12'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','comercial',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','configuracoes',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','contratos',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','dashboard',1,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','despachantes',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','documentacao',1,'2026-07-16 18:20:12'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','emails',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','embarcacoes',1,'2026-07-16 18:20:12'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','financeiro',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','portal_clientes',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','proprietarios',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','relatorios',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','relatorios_aprovacao',1,'2026-07-16 16:16:22'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','responsaveis_assinatura',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','servicos',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','usuarios',0,'2026-07-16 16:15:33'),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','vistorias',1,'2026-07-16 16:15:33');
+/*!40000 ALTER TABLE `usuario_permissoes` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `usuarios`
+--
+
+DROP TABLE IF EXISTS `usuarios`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `usuarios` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `nome` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `email` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `senha_hash` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `cargo` enum('ADMIN','VENDEDOR','VISTORIADOR','ANALISTA') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'VISTORIADOR',
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `acesso_documentacao` tinyint(1) DEFAULT '0',
+  `acesso_financeiro` tinyint(1) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `usuarios`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `usuarios` WRITE;
+/*!40000 ALTER TABLE `usuarios` DISABLE KEYS */;
+INSERT INTO `usuarios` VALUES
+('11111111-1111-1111-1111-111111111111','Carlos Mendes','carlos@sistema.com','$2y$10$WkA/uXzt0FgkNZSgpV5IXuwgOYrjultBGwQMszFKOofoXqqTvG1aO','VISTORIADOR',0,'2026-06-24 17:33:03','2026-07-07 21:09:28',0,0),
+('1c015cb0-3187-4068-bc6d-06585521e165','anabe','anabe@sistema.com','$2y$10$UDkK9DefzbW7w92/ZzIhxetdeZdzCBTnE/ddncjkXHavkb4hI.KdW','VENDEDOR',0,'2026-06-27 03:51:48','2026-07-07 22:24:42',1,1),
+('22222222-2222-2222-2222-222222222222','Ana Paula Silva','ana@sistema.com','$2y$10$WkA/uXzt0FgkNZSgpV5IXuwgOYrjultBGwQMszFKOofoXqqTvG1aO','VISTORIADOR',0,'2026-06-24 17:33:03','2026-07-07 21:09:39',0,0),
+('33333333-3333-3333-3333-333333333333','Roberto Lima','roberto@sistema.com','$2y$10$WkA/uXzt0FgkNZSgpV5IXuwgOYrjultBGwQMszFKOofoXqqTvG1aO','VISTORIADOR',0,'2026-06-24 17:33:03','2026-07-07 21:09:26',0,0),
+('3774d80c-2574-470e-88a9-9781936c6de3','Any','ronokedas1@sistema.com','$2y$10$1nLg0u9FnsJqkE3ha9XPz.yrqrIJPiS5W77xGcbJIerWNBcsPO3Jq','VISTORIADOR',0,'2026-06-23 22:51:43','2026-07-07 22:24:42',1,0),
+('74e02f95-fbe6-42f3-bedf-f8535e4d13aa','Rosano Souza','ronokedas@sistema.com','$2y$10$GqsuS7U0TFTRQFRxJQF0puCxJbh65ABLEovfH4kQ0tpxtMi7zrD3W','VISTORIADOR',0,'2026-06-11 21:44:56','2026-07-07 21:09:21',0,0),
+('95eb5557-65e8-11f1-85ef-047c16b568a3','Administrador','admin@sistema.com','$2y$10$me4J46xJEQ9k/UEKfdlRBeWtGclStZKVFSH.HxqVjmsX/8ur8b.GC','ADMIN',1,'2026-06-11 19:55:04','2026-06-29 03:01:57',0,0),
+('9cd7e53a-da9d-4f2b-9b32-328be32da2f0','itamar','analista@teste.com','$2y$10$PftOdZbu7u.NZ65.r1NpO.s4jBDtysUHLwrLVH0jxALGB/VlWvn.2','ANALISTA',1,'2026-07-16 15:38:12','2026-07-16 15:38:12',0,0),
+('d2a16613-dfa4-4948-8de4-8c802abdf394','Neto','teste1@teste.com','$2y$10$nho8g81ikeWtP9U7G3Ft7uHZOARhHcfD.oVRW5/hMKQnZ7MRsLxOy','VISTORIADOR',1,'2026-07-07 21:10:28','2026-07-07 22:24:42',1,0),
+('dd121661-feb4-42f6-895a-68eb0608d1e4','teste admin','teste@teste.com','$2y$10$eK05TTRWPQmp7ldYEALHrOMRSVKUGMo6yqVv3kCU0yYiOz5KzBWw6','ADMIN',1,'2026-07-05 13:39:17','2026-07-15 23:52:54',0,0),
+('e5c68a85-c920-4b11-bc93-9343d9d94f14','vistoriador teste','vistoriador@sistema.com','$2y$10$PP4U57OhH0vNWBgjS2Fd.e51GcxjDg/QytGmyrfo6djZUl0M6svqW','VISTORIADOR',0,'2026-07-02 15:06:59','2026-07-07 21:09:30',0,0);
+/*!40000 ALTER TABLE `usuarios` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `vistoria_anexos`
+--
+
+DROP TABLE IF EXISTS `vistoria_anexos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `vistoria_anexos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `catalogo_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `url_arquivo` varchar(1000) COLLATE utf8mb4_general_ci NOT NULL,
+  `chave_arquivo` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `nome_original` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `mime_type` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `tamanho_bytes` int unsigned NOT NULL,
+  `sha256` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `capturado_em` datetime DEFAULT NULL,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_vistoria_anexo_hash` (`vistoria_id`,`sha256`),
+  KEY `idx_vistoria_anexos_catalogo` (`catalogo_id`),
+  KEY `idx_vistoria_anexos_criado_por` (`criado_por`),
+  CONSTRAINT `fk_vistoria_anexos_catalogo` FOREIGN KEY (`catalogo_id`) REFERENCES `exigencias_catalogo` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_vistoria_anexos_usuario` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_vistoria_anexos_vistoria` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vistoria_anexos`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `vistoria_anexos` WRITE;
+/*!40000 ALTER TABLE `vistoria_anexos` DISABLE KEYS */;
+/*!40000 ALTER TABLE `vistoria_anexos` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `vistoria_checklist_respostas`
+--
+
+DROP TABLE IF EXISTS `vistoria_checklist_respostas`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `vistoria_checklist_respostas` (
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `vistoria_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `catalogo_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `status` enum('CONFORME','NAO_CONFORME','NAO_SE_APLICA') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `observacao` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `item_normam` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vencimento` date DEFAULT NULL,
+  `sem_prazo` tinyint(1) NOT NULL DEFAULT '0',
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_vistoria_catalogo` (`vistoria_id`,`catalogo_id`),
+  KEY `catalogo_id` (`catalogo_id`),
+  CONSTRAINT `vistoria_checklist_respostas_ibfk_1` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `vistoria_checklist_respostas_ibfk_2` FOREIGN KEY (`catalogo_id`) REFERENCES `exigencias_catalogo` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vistoria_checklist_respostas`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `vistoria_checklist_respostas` WRITE;
+/*!40000 ALTER TABLE `vistoria_checklist_respostas` DISABLE KEYS */;
+INSERT INTO `vistoria_checklist_respostas` VALUES
+('09ab310b-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a371bf33-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('09ab49a5-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a371da38-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('09ab5f8f-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a371f205-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('09ab75f6-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a3721459-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('09ab8d3f-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a3725c4c-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('09aba44e-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a372a38d-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('09abba1d-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a372bc98-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('09abd9b5-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','191031d1-a918-4879-9118-a6bce6f4b56b','NAO_CONFORME',NULL,'NORMAM-202/DPC',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('09abf005-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','8d78d063-e888-4a5b-994b-5c61e704fc44','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção II.',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('09ac04eb-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','0a212a39-3f21-4932-ab3b-7d5bd4e8721f','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.29.',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('09ac1bc5-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','0bb736ea-8f70-4b80-9ac4-c441139fbe3c','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('09ac32fc-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','cad656d0-6125-4f9c-be76-9d9ce5e03c99','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.',NULL,0,'2026-07-06 20:34:08','2026-07-06 20:34:08'),
+('1496b26d-7a3c-11f1-8c34-8a26e9191f69','3b14c7df-5078-470a-afd1-41da3958260a','a371bf33-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-23',0,'2026-07-07 19:43:08','2026-07-07 19:43:08'),
+('1497096b-7a3c-11f1-8c34-8a26e9191f69','3b14c7df-5078-470a-afd1-41da3958260a','a371da38-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.',NULL,0,'2026-07-07 19:43:08','2026-07-07 19:43:08'),
+('2023ec22-8156-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','a371bf33-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-31',0,'2026-07-16 20:37:13','2026-07-16 20:56:59'),
+('2024077a-8156-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','a371f205-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-31',0,'2026-07-16 20:37:13','2026-07-16 20:56:59'),
+('30f84e9a-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','415b0057-acb3-4884-a57f-e8c3473b0e6f','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.14',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f86949-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','22f45a4b-749e-4340-93bb-4c18b3a8273b','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 08, Item 8.5',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f87e14-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','be414d13-fba6-478b-b244-8cae54e7532e','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção II.',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f89590-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','4f0cca2c-efa9-40d3-a863-0488fea72d05','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção II.',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f8adc5-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','3443b027-7b7e-4275-bdf3-a916184578f9','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.29',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f8c19c-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','b8b68324-6f6c-48d4-af7f-84d98d71eca7','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 09, Item 9.2',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f8d85b-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','99be0275-f74e-49e6-aac2-fce3b372fecf','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 09, Item 9.2',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f8ed3e-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','af6b1cb2-e94a-452c-a083-9b7e2f41ff69','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f90377-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f917ed-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','e2dc9cdc-437a-4c3a-8710-ce6bb9d4c3f6','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção IV.',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f92c54-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','45f242ee-96c4-4558-8a4f-86bdac810e1a','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f93fd3-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','1de8358a-fa6e-4cef-876d-6784f605e96d','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.2',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f955e1-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','83c0e7f6-6a1a-4383-ba22-9544c2018930','CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('30f960a3-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','cad656d0-6125-4f9c-be76-9d9ce5e03c99','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.',NULL,0,'2026-07-04 05:07:01','2026-07-04 05:07:01'),
+('3681baf6-8155-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','2c585b69-496a-420b-8fa7-14e372dda5dc','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção II.','2026-07-31',0,'2026-07-16 20:30:41','2026-07-16 20:56:59'),
+('3bcdded9-8155-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','5b502640-d457-410d-9580-8ed3d5e95d81','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.8), 4.8.1.','2026-07-31',0,'2026-07-16 20:30:50','2026-07-16 20:56:59'),
+('3d717341-8155-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','a3722d96-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.','2026-07-31',0,'2026-07-16 20:30:52','2026-07-16 20:56:59'),
+('3ff3bb3a-8155-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','a3721459-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC',NULL,1,'2026-07-16 20:30:57','2026-07-16 20:30:57'),
+('845b75cb-7a3e-11f1-8c34-8a26e9191f69','1d897d7a-60d7-48ac-96b4-2035c97b9621','a371bf33-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-23',0,'2026-07-07 20:00:35','2026-07-07 20:00:35'),
+('845bbdb8-7a3e-11f1-8c34-8a26e9191f69','1d897d7a-60d7-48ac-96b4-2035c97b9621','a3721459-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC','2026-07-23',0,'2026-07-07 20:00:35','2026-07-07 20:00:35'),
+('845bd32f-7a3e-11f1-8c34-8a26e9191f69','1d897d7a-60d7-48ac-96b4-2035c97b9621','a3722d96-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.',NULL,0,'2026-07-07 20:00:35','2026-07-07 20:00:35'),
+('845beb07-7a3e-11f1-8c34-8a26e9191f69','1d897d7a-60d7-48ac-96b4-2035c97b9621','a37275b5-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-23',0,'2026-07-07 20:00:35','2026-07-07 20:00:35'),
+('845c02af-7a3e-11f1-8c34-8a26e9191f69','1d897d7a-60d7-48ac-96b4-2035c97b9621','a372a38d-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.','2026-07-23',0,'2026-07-07 20:00:35','2026-07-07 20:00:35'),
+('b231b1cb-7fe4-11f1-8b90-2200d8415c9c','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','a371bf33-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.',NULL,0,'2026-07-15 00:32:44','2026-07-16 21:18:58'),
+('c073e8c9-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','be414d13-fba6-478b-b244-8cae54e7532e','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção II.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c0746227-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','b8b68324-6f6c-48d4-af7f-84d98d71eca7','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 09, Item 9.2',NULL,0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c07478fb-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','76ed1958-0074-4027-be8a-45a0f35ebaa8','NAO_CONFORME',NULL,'NORMAM-202/DPC','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c0748c8f-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','c01f90ce-7dc7-494d-ac0d-631ac1833ac4','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c0749f8d-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','5df039e6-b400-4fd0-abd2-83959587485a','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção IV.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c074bcf2-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','b5ce3089-e78e-4390-99bb-e8855acd1ffd','NAO_CONFORME',NULL,'NORMAM-202/DPC','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c074cf7b-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','7a31837c-64ee-47e2-9f6b-d4b5cd5108b1','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 09, Seção I.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c074e7bc-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','d7a3466c-1c51-4001-a537-7f02912156a8','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c074fe14-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c0751539-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','2a3a0379-b1ba-40fe-b676-809f122084a1','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c0752c88-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','e8afc2e7-7783-4ea7-9e95-fccf3e8499dd','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c07544b3-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','4e94ab4a-31be-4329-b6d5-bf08463c68c0','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.13.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c0755c71-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','ccaeea91-05ea-4864-a770-5c9b98ae8f48','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.13.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c07570ff-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','a0acbebe-660c-4f48-9da8-64bd45b91455','NAO_CONFORME',NULL,'RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c07586cc-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','55d90c7d-3aba-4255-970f-43ce4bcfdaff','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.12.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c0759b5b-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','d11e0a27-5ba2-4d6f-9d9d-1415a92db143','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.12.',NULL,0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c075b057-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','51377ad9-666c-49d1-80f0-6e43cd20c12a','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.12.',NULL,0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c075c5b3-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','a1d44288-9e8d-4cc9-abef-7bf1f296e426','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c075dba8-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','a3a06b64-50be-420a-9892-2c189dcbe724','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção IV.',NULL,0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c07650ce-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','33356298-d44a-451e-b38c-e360b2a5bed5','NAO_CONFORME',NULL,'RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c0766fcf-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','64264fe0-373e-4c75-82be-3665162220eb','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção IV.','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c0768718-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','1de8358a-fa6e-4cef-876d-6784f605e96d','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.2','2026-07-24',0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('c076a031-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','83c0e7f6-6a1a-4383-ba22-9544c2018930','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.',NULL,0,'2026-07-09 00:04:27','2026-07-09 00:04:27'),
+('d78da7a2-8158-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','a37244fe-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.',NULL,1,'2026-07-16 20:56:39','2026-07-16 20:56:39'),
+('f507a4a9-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','a371bf33-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-08',0,'2026-07-07 20:10:53','2026-07-07 20:10:53'),
+('f507ecc5-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','a3722d96-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.',NULL,0,'2026-07-07 20:10:53','2026-07-07 20:10:53'),
+('f50803a1-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','a3725c4c-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.','2026-07-08',0,'2026-07-07 20:10:53','2026-07-07 20:10:53'),
+('f508184b-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','a37275b5-76aa-11f1-9eb5-0a1b2af87b16','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-08',0,'2026-07-07 20:10:53','2026-07-07 20:10:53'),
+('f5082f56-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','191031d1-a918-4879-9118-a6bce6f4b56b','NAO_CONFORME',NULL,'NORMAM-202/DPC','2026-07-08',0,'2026-07-07 20:10:53','2026-07-07 20:10:53'),
+('f50856bd-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','58133b9a-53e9-454e-bdb7-e5e2b7a1d90c','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.2), 4.2.1, m, I.','2026-07-08',0,'2026-07-07 20:10:53','2026-07-07 20:10:53'),
+('f5087920-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','0fdc1e57-8063-4666-ab7d-cee70fff1cf4','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Seção III.',NULL,0,'2026-07-07 20:10:53','2026-07-07 20:10:53'),
+('f508962d-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','005da3a8-7a7b-4fab-b855-6dbbf28f8fa8','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.','2026-07-08',0,'2026-07-07 20:10:53','2026-07-07 20:10:53'),
+('f508ac59-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','ca1c1aed-7e2a-4d54-92cd-7567486150c7','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-08',0,'2026-07-07 20:10:53','2026-07-07 20:10:53'),
+('f508c709-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','83c0e7f6-6a1a-4383-ba22-9544c2018930','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.','2026-07-08',0,'2026-07-07 20:10:53','2026-07-07 20:10:53'),
+('f508e71f-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','cad656d0-6125-4f9c-be76-9d9ce5e03c99','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.',NULL,0,'2026-07-07 20:10:53','2026-07-07 20:10:53'),
+('f528aa30-815b-11f1-a1f7-9ed3395acbbb','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','9979e589-44dd-4790-9574-4adb561aaf7d','NAO_SE_APLICA',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.',NULL,0,'2026-07-16 21:18:58','2026-07-16 21:18:58'),
+('f528becc-815b-11f1-a1f7-9ed3395acbbb','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','0ddc6914-749b-40e7-8799-15c272201ebf','NAO_CONFORME',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.13.','2026-07-16',0,'2026-07-16 21:18:58','2026-07-16 21:18:58');
+/*!40000 ALTER TABLE `vistoria_checklist_respostas` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `vistoria_exigencias`
+--
+
+DROP TABLE IF EXISTS `vistoria_exigencias`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `vistoria_exigencias` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `catalogo_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `bloco_vistoria` enum('seco','flutuando','borda_livre','arqueacao') COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ordem` tinyint unsigned NOT NULL DEFAULT '0',
+  `item` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `descricao` text COLLATE utf8mb4_general_ci,
+  `conforme` enum('sim','nao','na') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'na',
+  `observacao` text COLLATE utf8mb4_general_ci,
+  `item_normam` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vencimento` date DEFAULT NULL,
+  `status_item` enum('pendente','cumprida','nao_cumprida_transcrita','cumprida_parcial_reescrita','inserida') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'inserida',
+  `exigencia_origem_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `vistoria_id` (`vistoria_id`),
+  KEY `ordem` (`ordem`),
+  KEY `fk_vistoria_exig_catalogo` (`catalogo_id`),
+  KEY `fk_vistoria_exig_origem` (`exigencia_origem_id`),
+  CONSTRAINT `fk_vistoria_exig_catalogo` FOREIGN KEY (`catalogo_id`) REFERENCES `exigencias_catalogo` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_vistoria_exig_origem` FOREIGN KEY (`exigencia_origem_id`) REFERENCES `vistoria_exigencias` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `vistoria_exigencias_ibfk_1` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vistoria_exigencias`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `vistoria_exigencias` WRITE;
+/*!40000 ALTER TABLE `vistoria_exigencias` DISABLE KEYS */;
+INSERT INTO `vistoria_exigencias` VALUES
+('06cfd8af-7662-11f1-9eb5-0a1b2af87b16','620765e4-7628-11f1-85ad-621c498e207c',NULL,NULL,1,'Casco e Estruturas','Verificar condiÃ§Ã£o geral do casco.','sim','Casco em bom estado, sem corrosÃ£o.',NULL,NULL,'cumprida',NULL),
+('06cfdf93-7662-11f1-9eb5-0a1b2af87b16','620765e4-7628-11f1-85ad-621c498e207c',NULL,NULL,2,'Governo e Leme','Verificar sistema de governo.','sim','Sistema de governo operacional.',NULL,NULL,'cumprida',NULL),
+('06cfe751-7662-11f1-9eb5-0a1b2af87b16','620765e4-7628-11f1-85ad-621c498e207c',NULL,NULL,3,'Combate a IncÃªndio','Testar sistema de combate a incÃªndio.','sim','Extintores vÃ¡lidos e sistema pressurizado.',NULL,NULL,'cumprida',NULL),
+('06cfedcb-7662-11f1-9eb5-0a1b2af87b16','620765e4-7628-11f1-85ad-621c498e207c',NULL,NULL,4,'Salvatagem','Verificar equipamentos salvatagem.','sim','Balsas e coletes em ordem.',NULL,NULL,'cumprida',NULL),
+('09ab407b-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a371bf33-76aa-11f1-9eb5-0a1b2af87b16',NULL,1,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção I.','Há passagem permanentemente desobstruída de proa à popa, que não é efetivada por cima de tampas de escotilhas. Tal passagem possui largura mínima em conformidade com o estabelecido no Anexo 3-M','nao',NULL,NULL,NULL,'pendente',NULL),
+('09ab587d-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a371da38-76aa-11f1-9eb5-0a1b2af87b16',NULL,2,'Item Normam: NORMAM-202/DPC, Cap. 04, Seção I.','Em todas as partes expostas dos conveses principais e de superestruturas há eficientes balaustradas ou bordas falsas (que poderão ser removíveis), com altura não inferior a 1 metro (para embarcações com AB maior que 20)','nao',NULL,NULL,NULL,'pendente',NULL),
+('09ab6ec6-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a371f205-76aa-11f1-9eb5-0a1b2af87b16',NULL,3,'Item Normam: NORMAM-202/DPC, Cap. 04, Seção I.','A abertura inferior da balaustrada apresenta altura menor ou igual a 230 mm e os demais vãos não poderão apresentar espaçamento superior a 380 mm. No caso de embarcações com bordas arredondadas, os suportes das balaustradas deverão ser colocados na parte plana do convés','nao',NULL,NULL,NULL,'pendente',NULL),
+('09ab8326-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a3721459-76aa-11f1-9eb5-0a1b2af87b16',NULL,4,'Item Normam: NORMAM-202/DPC','Para embarcações que possuam borda falsa, estas deverão possuir saídas d’água respeitando o determinado no item 0609','nao',NULL,NULL,NULL,'pendente',NULL),
+('09ab9ca9-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a3725c4c-76aa-11f1-9eb5-0a1b2af87b16',NULL,5,'Item Normam: NORMAM-202/DPC, Cap. 05, Item 5.1.','As portas externas que possibilitem, direta ou indiretamente, o acesso ao interior de qualquer compartimento localizado abaixo do convés de borda livre ou ao interior de uma superestrutura fechada, deverão ter uma soleira mínima de 150 mm (260 mm para embarcações que operam em área 2)','nao',NULL,NULL,NULL,'pendente',NULL),
+('09abb15a-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a372a38d-76aa-11f1-9eb5-0a1b2af87b16',NULL,6,'Item Normam: NORMAM-202/DPC, Cap. 05, Item 5.1.','Os suspiros externos, situados acima do convés de borda livre, deverão apresentar as seguintes caraterísticas: a) extremidade superior do suspiro em forma de “U” invertido ou com arranjo que proteja a sua abertura da entrada de água proveniente das intempéries; b) distância vertical entre o ponto a partir da qual a água efetivamente tem acesso ao tanque ou compartimento abaixo e o convés onde o suspiro se encontra instalado maior ou igual a 450 mm (760 mm nos conveses de borda livre e 450 mm nos demais conveses para embarcações que operam em área 2)','nao',NULL,NULL,NULL,'pendente',NULL),
+('09abc9ee-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','a372bc98-76aa-11f1-9eb5-0a1b2af87b16',NULL,7,'Item Normam: NORMAM-202/DPC, Cap. 05, Item 5.1.','Dispositivos de iluminação e ou ventilação natural (alboios) de compartimentos situados abaixo do convés de borda livre, que estão situados imediatamente acima do referido convés, deverão: a) ser estanque ao tempo (ou dispor de meios que possibilitem o seu fechamento estanque ao tempo) b) ser dotado de vidros com espessura compatível com sua área e máxima dimensão linear c) apresentar braçolas com, pelo menos, 150 mm de altura (260 mm para embarcações que operam em área 2)','nao',NULL,NULL,NULL,'pendente',NULL),
+('09abe777-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','191031d1-a918-4879-9118-a6bce6f4b56b',NULL,8,'Item Normam: NORMAM-202/DPC','Não são utilizados combustíveis com ponto de fulgor inferior a 60 °C (como álcool ou gasolina)','nao',NULL,NULL,NULL,'pendente',NULL),
+('09abfcf2-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','8d78d063-e888-4a5b-994b-5c61e704fc44',NULL,9,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção II.','Na saída de cada tanque de combustível há uma válvula de fechamento capaz de interromper o fluxo da rede','nao',NULL,NULL,NULL,'pendente',NULL),
+('09ac148d-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','0a212a39-3f21-4932-ab3b-7d5bd4e8721f',NULL,10,'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.29.','Os botijões de gás estão posicionados em áreas externas, em local seguro e arejado, protegidos do sol e afastados de fontes que possam causar ignição.','nao',NULL,NULL,NULL,'pendente',NULL),
+('09ac2a01-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','0bb736ea-8f70-4b80-9ac4-c441139fbe3c',NULL,11,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','Em EMPURRADORES e REBOCADORES a(s) bomba(s), as duas tomadas e as duas estações de incêndio completas deverão estar posicionadas nas proximidades da proa da embarcação','nao',NULL,NULL,NULL,'pendente',NULL),
+('09ac42e0-797a-11f1-8c34-8a26e9191f69','c274f2cf-9445-423e-8e5e-f91b21d4a0bc','cad656d0-6125-4f9c-be76-9d9ce5e03c99',NULL,12,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','Realizar verificação física detalhada de todo o hélice, leme, bucha e eixo propulsor da embarcação em seco, buscando desgastes, trincas ou folgas anômalas.','nao',NULL,NULL,NULL,'pendente',NULL),
+('0a3e37d2-815a-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','a371bf33-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',1,'NORMAM-202/DPC, Cap. 03, Seção I.','Há passagem permanentemente desobstruída de proa à popa, que não é efetivada por cima de tampas de escotilhas. Tal passagem possui largura mínima em conformidade com o estabelecido no Anexo 3-M','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-31','pendente',NULL),
+('0a3e589f-815a-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','a371f205-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',2,'NORMAM-202/DPC, Cap. 04, Seção I.','A abertura inferior da balaustrada apresenta altura menor ou igual a 230 mm e os demais vãos não poderão apresentar espaçamento superior a 380 mm. No caso de embarcações com bordas arredondadas, os suportes das balaustradas deverão ser colocados na parte plana do convés','nao',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-31','pendente',NULL),
+('0a3e80b9-815a-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','a3721459-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',3,'NORMAM-202/DPC','Para embarcações que possuam borda falsa, estas deverão possuir saídas d’água respeitando o determinado no item 0609','nao',NULL,'NORMAM-202/DPC',NULL,'pendente',NULL),
+('0a3ea2c8-815a-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','a3722d96-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',4,'NORMAM-202/DPC, Cap. 05, Item 5.1.','Nas embarcações dos tipos A, B ou D, as vigias e olhos de boi, se existentes nos costados abaixo do convés de borda livre, deverão apresentar as seguintes características: a) ser estanque à água (ou apresentar meios que possibilitem o seu fechamento estanque à água) b) ser de construção sólida c) ser provida de vidros temperados de espessura compatível com seu diâmetro d) não podem ser do tipo “removível” e) caso rebatíveis, deverão permanecer fechadas quando em viagem, devendo haver uma placa, permanentemente fixada junto à vigia, alertando que a mesma deverá permanecer fechada quando em viagem','nao',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.','2026-07-31','pendente',NULL),
+('0a3ec089-815a-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','a37244fe-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',5,'NORMAM-202/DPC, Cap. 03, Seção I.','As aberturas no costado de embarcações dos tipos A, B ou D deverão possuir tampas estanques à água ou vigias e olhos de boi e deverão estar posicionadas de forma que sua aresta inferior esteja a, pelo menos, 300 mm acima da linha d’água carregada, em qualquer condição esperada de trim. Para as embarcações dos tipos C ou E essa distância não deverá ser inferior a 500 mm','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.',NULL,'pendente',NULL),
+('0a3edbda-815a-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','2c585b69-496a-420b-8fa7-14e372dda5dc','flutuando',6,'NORMAM-202/DPC, Cap. 03, Seção II.','As portas de acesso de banheiros não abrem diretamente para cozinhas ou refeitórios','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção II.','2026-07-31','pendente',NULL),
+('0a3efb27-815a-11f1-a1f7-9ed3395acbbb','0121c151-a7ed-48f7-a2f9-11850e2fbf46','5b502640-d457-410d-9580-8ed3d5e95d81','flutuando',7,'NORMAM-202/DPC, Cap. 04, Item 4.8), 4.8.1.','Toda embarcação que seja dotada de um equipamento fixo de radiocomunicação, deverá possuir a licença rádio, emitida pela Agência Nacional de Telecomunicações (ANATEL).','nao',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.8), 4.8.1.','2026-07-31','pendente',NULL),
+('1496f1e8-7a3c-11f1-8c34-8a26e9191f69','3b14c7df-5078-470a-afd1-41da3958260a','a371bf33-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',1,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção I.','Há passagem permanentemente desobstruída de proa à popa, que não é efetivada por cima de tampas de escotilhas. Tal passagem possui largura mínima em conformidade com o estabelecido no Anexo 3-M','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-23','pendente',NULL),
+('149725ba-7a3c-11f1-8c34-8a26e9191f69','3b14c7df-5078-470a-afd1-41da3958260a','a371da38-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',2,'Item Normam: NORMAM-202/DPC, Cap. 04, Seção I.','Em todas as partes expostas dos conveses principais e de superestruturas há eficientes balaustradas ou bordas falsas (que poderão ser removíveis), com altura não inferior a 1 metro (para embarcações com AB maior que 20)','nao',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.',NULL,'pendente',NULL),
+('1497338b-7a3c-11f1-8c34-8a26e9191f69','3b14c7df-5078-470a-afd1-41da3958260a',NULL,'flutuando',3,'Equipamentos de Salvamento','nao tem segurança','nao','Marcas apagadas, necessita repintura.','Equipamentos de Salvamento',NULL,'pendente',NULL),
+('2a0c0ed8-7662-11f1-9eb5-0a1b2af87b16','620c6b1a-7628-11f1-85ad-621c498e207c',NULL,NULL,1,'Marcas de Borda Livre','Aferir marcas de borda livre.','nao','Marcas apagadas, necessita repintura.',NULL,NULL,'pendente',NULL),
+('2a0c171c-7662-11f1-9eb5-0a1b2af87b16','620c6b1a-7628-11f1-85ad-621c498e207c',NULL,NULL,2,'CÃ¡lculo de ArqueaÃ§Ã£o','Calcular arqueaÃ§Ã£o bruta e lÃ­quida.','sim','ArqueaÃ§Ã£o calculada conforme normas.',NULL,NULL,'cumprida',NULL),
+('30f86013-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','415b0057-acb3-4884-a57f-e8c3473b0e6f',NULL,1,'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.14','O sistema de bomba(s) consegue manter, pelo menos, duas tomadas de incêndio distintas com jatos d\'água nunca inferior a 15 m de alcance','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f876b6-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','22f45a4b-749e-4340-93bb-4c18b3a8273b',NULL,2,'Item Normam: NORMAM-202/DPC, Cap. 08, Item 8.5','Relatório de medição de espessura (cinco pontos por chapa), assinado por profissional qualificado e certificado, com reconhecimento no Sistema Nacional de Qualificação e Certificação de Pessoal em Ensaios Não Destrutivos (SNQC/END), acompanhado de documento que comprove a validade da citada habilitação na data de execução do serviço','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f88cef-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','be414d13-fba6-478b-b244-8cae54e7532e',NULL,3,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção II.','Verificar o estado físico de conservação, higiene e limpeza dos colchões fornecidos nos camarotes.','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f8a26e-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','4f0cca2c-efa9-40d3-a863-0488fea72d05',NULL,4,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção II.','Verificar se as tomadas elétricas instaladas nos camarotes estão em perfeito estado físico, com espelhos protetores e energizadas corretamente.','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f8bac4-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','3443b027-7b7e-4275-bdf3-a916184578f9',NULL,5,'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.29','Verificar a conformidade e a data de validade de cerca de 5 anos da mangueira de gás regulamentada pela ABNT e da válvula reguladora de pressão na cozinha.','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f8d1be-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','b8b68324-6f6c-48d4-af7f-84d98d71eca7',NULL,6,'Item Normam: NORMAM-202/DPC, Cap. 09, Item 9.2','Verificar a afixação de placa educativa em local visível no convés com os dizeres: \'Não jogue lixo no rio, deposite seu lixo aqui\'.','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f8e482-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','99be0275-f74e-49e6-aac2-fce3b372fecf',NULL,7,'Item Normam: NORMAM-202/DPC, Cap. 09, Item 9.2','Verificar a existência físico-documental e o correto preenchimento do livro de registro de lixo a bordo.','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f8fc67-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','af6b1cb2-e94a-452c-a083-9b7e2f41ff69',NULL,8,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','Motores cujo sistema de arrefecimento seja constituído por ventiladores deverão ter os mesmos providos de proteção','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f91063-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2',NULL,9,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','Motores providos de sistema de abertura das válvulas de admissão e descarga, por intermédio de balancins, deverão ter seus tuchos de acionamento protegidos','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f924b3-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','e2dc9cdc-437a-4c3a-8710-ce6bb9d4c3f6',NULL,10,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção IV.','Qualquer sistema de monitoramento e ou controle de equipamentos instalado no passadiço deverá ser dotado de placas identificadoras, assim como provido de uma iluminação apropriada','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f93977-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','45f242ee-96c4-4558-8a4f-86bdac810e1a',NULL,11,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','A fonte de energia elétrica principal foi dimensionada de forma que a potência aparente fornecida ao sistema seja suficiente para evitar quedas de tensões que resultem em desligamento ou oscilação de consumidores em operação devido a partida de motores elétricos de alta corrente','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f94de0-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','1de8358a-fa6e-4cef-876d-6784f605e96d',NULL,12,'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.2','Verificar a presença e o pleno funcionamento do sistema regulamentar \'Sistran\' no comando da embarcação.','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f97022-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467','cad656d0-6125-4f9c-be76-9d9ce5e03c99',NULL,13,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','Realizar verificação física detalhada de todo o hélice, leme, bucha e eixo propulsor da embarcação em seco, buscando desgastes, trincas ou folgas anômalas.','nao',NULL,NULL,NULL,'pendente',NULL),
+('30f97789-7766-11f1-8a63-ca7cdd5873bb','8f85d9b9-4606-49ac-8a9e-ce3943829467',NULL,NULL,14,'Equipamentos de Salvamento','nao tem segurança','nao',NULL,NULL,NULL,'pendente',NULL),
+('3241545d-7662-11f1-9eb5-0a1b2af87b16','620fefdc-7628-11f1-85ad-621c498e207c',NULL,NULL,1,'Casco e Estruturas','Verificar condiÃ§Ã£o geral do casco.','sim','Casco em excelente estado, pintura nova.',NULL,NULL,'cumprida',NULL),
+('32415be2-7662-11f1-9eb5-0a1b2af87b16','620fefdc-7628-11f1-85ad-621c498e207c',NULL,NULL,2,'Estabilidade','Verificar estabilidade intacta.','sim','Estabilidade dentro dos parÃ¢metros.',NULL,NULL,'cumprida',NULL),
+('32416409-7662-11f1-9eb5-0a1b2af87b16','620fefdc-7628-11f1-85ad-621c498e207c',NULL,NULL,3,'Combate a IncÃªndio','Testar sistema de combate a incÃªndio.','sim','Sistema pressurizado e extintores OK.',NULL,NULL,'cumprida',NULL),
+('32416cc1-7662-11f1-9eb5-0a1b2af87b16','620fefdc-7628-11f1-85ad-621c498e207c',NULL,NULL,4,'CTS','Apresentar CTS (CartÃ£o de TripulaÃ§Ã£o de SeguranÃ§a).','sim','CTS do comandante OK.',NULL,NULL,'cumprida',NULL),
+('845b913e-7a3e-11f1-8c34-8a26e9191f69','1d897d7a-60d7-48ac-96b4-2035c97b9621','a371bf33-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',1,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção I.','Há passagem permanentemente desobstruída de proa à popa, que não é efetivada por cima de tampas de escotilhas. Tal passagem possui largura mínima em conformidade com o estabelecido no Anexo 3-M','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-23','pendente',NULL),
+('845bcbd9-7a3e-11f1-8c34-8a26e9191f69','1d897d7a-60d7-48ac-96b4-2035c97b9621','a3721459-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',2,'Item Normam: NORMAM-202/DPC','Para embarcações que possuam borda falsa, estas deverão possuir saídas d’água respeitando o determinado no item 0609','nao',NULL,'NORMAM-202/DPC','2026-07-23','pendente',NULL),
+('845be3f5-7a3e-11f1-8c34-8a26e9191f69','1d897d7a-60d7-48ac-96b4-2035c97b9621','a3722d96-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',3,'Item Normam: NORMAM-202/DPC, Cap. 05, Item 5.1.','Nas embarcações dos tipos A, B ou D, as vigias e olhos de boi, se existentes nos costados abaixo do convés de borda livre, deverão apresentar as seguintes características: a) ser estanque à água (ou apresentar meios que possibilitem o seu fechamento estanque à água) b) ser de construção sólida c) ser provida de vidros temperados de espessura compatível com seu diâmetro d) não podem ser do tipo “removível” e) caso rebatíveis, deverão permanecer fechadas quando em viagem, devendo haver uma placa, permanentemente fixada junto à vigia, alertando que a mesma deverá permanecer fechada quando em viagem','nao',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.',NULL,'pendente',NULL),
+('845bfab4-7a3e-11f1-8c34-8a26e9191f69','1d897d7a-60d7-48ac-96b4-2035c97b9621','a37275b5-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',4,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção I.','Os escotilhões e as aberturas de escotilha possuem braçola de pelo menos 150 mm de altura (260 mm para embarcações que operam em área 2) e são dotados de tampas que possam ser fixadas às braçolas. As embarcações dos tipos “C” e “E” estão dispensadas da obrigatoriedade de possuírem tampas de escotilha ou dos escotilhões','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-23','pendente',NULL),
+('845c10e7-7a3e-11f1-8c34-8a26e9191f69','1d897d7a-60d7-48ac-96b4-2035c97b9621','a372a38d-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',5,'Item Normam: NORMAM-202/DPC, Cap. 05, Item 5.1.','Os suspiros externos, situados acima do convés de borda livre, deverão apresentar as seguintes caraterísticas: a) extremidade superior do suspiro em forma de “U” invertido ou com arranjo que proteja a sua abertura da entrada de água proveniente das intempéries; b) distância vertical entre o ponto a partir da qual a água efetivamente tem acesso ao tanque ou compartimento abaixo e o convés onde o suspiro se encontra instalado maior ou igual a 450 mm (760 mm nos conveses de borda livre e 450 mm nos demais conveses para embarcações que operam em área 2)','nao',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.','2026-07-23','pendente',NULL),
+('845c190f-7a3e-11f1-8c34-8a26e9191f69','1d897d7a-60d7-48ac-96b4-2035c97b9621',NULL,'flutuando',6,'Equipamentos de Salvamento','nao tem segurança','nao','Marcas apagadas, necessita repintura.','Equipamentos de Salvamento',NULL,'pendente',NULL),
+('c074264a-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','be414d13-fba6-478b-b244-8cae54e7532e','flutuando',1,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção II.','Verificar o estado físico de conservação, higiene e limpeza dos colchões fornecidos nos camarotes.','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção II.','2026-07-24','pendente',NULL),
+('c07470ff-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','b8b68324-6f6c-48d4-af7f-84d98d71eca7','flutuando',2,'Item Normam: NORMAM-202/DPC, Cap. 09, Item 9.2','Verificar a afixação de placa educativa em local visível no convés com os dizeres: \'Não jogue lixo no rio, deposite seu lixo aqui\'.','nao',NULL,'NORMAM-202/DPC, Cap. 09, Item 9.2',NULL,'pendente',NULL),
+('c0748613-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','76ed1958-0074-4027-be8a-45a0f35ebaa8','flutuando',3,'Item Normam: NORMAM-202/DPC','O arranjo físico da embarcação está de acordo com o Arranjo Geral. Devem ser verificados os compartimentos em relação ao seu posicionamento e destinação','nao',NULL,'NORMAM-202/DPC','2026-07-24','pendente',NULL),
+('c0749926-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','c01f90ce-7dc7-494d-ac0d-631ac1833ac4','flutuando',4,'Item Normam: NORMAM-202/DPC, Cap. 04, Seção I.','Quaisquer polias, correias e demais partes móveis utilizadas para acionamento de máquinas e ou mecanismos deverão ser dotadas de dispositivos adequados de proteção para as pessoas','nao',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-24','pendente',NULL),
+('c074ab44-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','5df039e6-b400-4fd0-abd2-83959587485a','flutuando',5,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção IV.','A iluminação deverá possibilitar que nenhuma área superior a 1 m² fique sem iluminação','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção IV.','2026-07-24','pendente',NULL),
+('c074c914-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','b5ce3089-e78e-4390-99bb-e8855acd1ffd','flutuando',6,'Item Normam: NORMAM-202/DPC','Todo espaço de máquinas deverá ter ventilação (forçada ou natural) apropriada ao funcionamento dos equipamentos','nao',NULL,'NORMAM-202/DPC','2026-07-24','pendente',NULL),
+('c074de15-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','7a31837c-64ee-47e2-9f6b-d4b5cd5108b1','flutuando',7,'Item Normam: NORMAM-202/DPC, Cap. 09, Seção I.','Os indicadores de níveis dos tanques de óleo deverão ser dotados de válvulas (preferencialmente do tipo esfera), que deverão ser instaladas na parte inferior do respectivo indicador','nao',NULL,'NORMAM-202/DPC, Cap. 09, Seção I.','2026-07-24','pendente',NULL),
+('c074f56d-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','d7a3466c-1c51-4001-a537-7f02912156a8','flutuando',8,'Item Normam: NORMAM-202/DPC, Cap. 04, Seção I.','Toda fiação elétrica dos motores principais, auxiliares e equipamentos acessórios deverá ser protegida por eletrodutos ou acondicionada em “chicotes” apropriados','nao',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-24','pendente',NULL),
+('c0750d23-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','cd2dfb47-4f43-46b4-a27b-1e977ae0f5f2','flutuando',9,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','Motores providos de sistema de abertura das válvulas de admissão e descarga, por intermédio de balancins, deverão ter seus tuchos de acionamento protegidos','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.','2026-07-24','pendente',NULL),
+('c075248c-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','2a3a0379-b1ba-40fe-b676-809f122084a1','flutuando',10,'Item Normam: NORMAM-202/DPC, Cap. 04, Seção I.','Verificar o indicador do sentido de impulsão do(s) propulsor(es) lateral(ais) no passadiço','nao',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-24','pendente',NULL),
+('c0753b11-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','e8afc2e7-7783-4ea7-9e95-fccf3e8499dd','flutuando',11,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','Verificar se os empurradores possuem placa física identificadora com o número do motor ou, se inexistente, exigir Nota Fiscal ou Recibo de Compra e Venda.','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.','2026-07-24','pendente',NULL),
+('c0755519-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','4e94ab4a-31be-4329-b6d5-bf08463c68c0','flutuando',12,'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.13.','Fabricante (Coletes salva-vidas)','nao',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.13.','2026-07-24','pendente',NULL),
+('c07568e4-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','ccaeea91-05ea-4864-a770-5c9b98ae8f48','flutuando',13,'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.13.','Tamanho (apenas para os coletes salva vidas)','nao',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.13.','2026-07-24','pendente',NULL),
+('c0757eec-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','a0acbebe-660c-4f48-9da8-64bd45b91455','flutuando',14,'Item Normam: RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','Os coletes salva vidas estão em bom estado de conservação e com apito','nao',NULL,'RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','2026-07-24','pendente',NULL),
+('c0759420-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','55d90c7d-3aba-4255-970f-43ce4bcfdaff','flutuando',15,'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.12.','As retinidas das boias salva vidas possuem 20 m de comprimento e são feitas de material sintético e capazes de flutuar.','nao',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.12.','2026-07-24','pendente',NULL),
+('c075a933-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','d11e0a27-5ba2-4d6f-9d9d-1415a92db143','flutuando',16,'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.12.','Número do certificado de homologação pela DPC (Embarcações de Sobrevivência/Boias)','nao',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.12.',NULL,'pendente',NULL),
+('c075bd7a-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','51377ad9-666c-49d1-80f0-6e43cd20c12a','flutuando',17,'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.12.','Número de série (se tiver) (Embarcações de Sobrevivência/Boias)','nao',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.12.',NULL,'pendente',NULL),
+('c075d3c9-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','a1d44288-9e8d-4cc9-abef-7bf1f296e426','flutuando',18,'Item Normam: NORMAM-202/DPC, Cap. 04, Seção I.','O grupo gerador de emergência ou a bateria de emergência foi instalado, preferencialmente, fora do compartimento das máquinas e dos geradores principais. A antepara de separação entre os compartimentos é, preferencialmente, estanque e resistente ao fogo','nao',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-24','pendente',NULL),
+('c075e96b-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','a3a06b64-50be-420a-9892-2c189dcbe724','flutuando',19,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção IV.','As baterias deverão: c) atender a uma altura mínima de 40 cm do piso, quando fixadas em conveses situados abaixo do convés principal','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção IV.',NULL,'pendente',NULL),
+('c0766766-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','33356298-d44a-451e-b38c-e360b2a5bed5','flutuando',20,'Item Normam: RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','O quadro das luzes de navegação é alimentado por uma linha independente derivada do quadro principal e de emergência','nao',NULL,'RIPEAM 72 / NORMAM-202/DPC, Cap. 04.','2026-07-24','pendente',NULL),
+('c0767e6e-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','64264fe0-373e-4c75-82be-3665162220eb','flutuando',21,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção IV.','Lanterna portátil com bateria recarregável ou pilhas sobressalentes','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção IV.','2026-07-24','pendente',NULL),
+('c076990b-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','1de8358a-fa6e-4cef-876d-6784f605e96d','flutuando',22,'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.2','Verificar a presença e o pleno funcionamento do sistema regulamentar \'Sistran\' no comando da embarcação.','nao',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.2','2026-07-24','pendente',NULL),
+('c076add5-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681','83c0e7f6-6a1a-4383-ba22-9544c2018930','seco',23,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','Estão em bom estado o(s) leme(s) e o(s) hélice(s)','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.',NULL,'pendente',NULL),
+('c076b5b2-7b29-11f1-a8a1-56798194b3af','90b14fb6-f742-448f-8708-d3bafeef8681',NULL,'seco',24,'Equipamentos de Salvamento','nao tem segurança','nao',NULL,'Equipamentos de Salvamento',NULL,'pendente',NULL),
+('f507b61e-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','a371bf33-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',1,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção I.','Há passagem permanentemente desobstruída de proa à popa, que não é efetivada por cima de tampas de escotilhas. Tal passagem possui largura mínima em conformidade com o estabelecido no Anexo 3-M','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-08','pendente',NULL),
+('f507fc01-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','a3722d96-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',2,'Item Normam: NORMAM-202/DPC, Cap. 05, Item 5.1.','Nas embarcações dos tipos A, B ou D, as vigias e olhos de boi, se existentes nos costados abaixo do convés de borda livre, deverão apresentar as seguintes características: a) ser estanque à água (ou apresentar meios que possibilitem o seu fechamento estanque à água) b) ser de construção sólida c) ser provida de vidros temperados de espessura compatível com seu diâmetro d) não podem ser do tipo “removível” e) caso rebatíveis, deverão permanecer fechadas quando em viagem, devendo haver uma placa, permanentemente fixada junto à vigia, alertando que a mesma deverá permanecer fechada quando em viagem','nao',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.',NULL,'pendente',NULL),
+('f508119a-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','a3725c4c-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',3,'Item Normam: NORMAM-202/DPC, Cap. 05, Item 5.1.','As portas externas que possibilitem, direta ou indiretamente, o acesso ao interior de qualquer compartimento localizado abaixo do convés de borda livre ou ao interior de uma superestrutura fechada, deverão ter uma soleira mínima de 150 mm (260 mm para embarcações que operam em área 2)','nao',NULL,'NORMAM-202/DPC, Cap. 05, Item 5.1.','2026-07-08','pendente',NULL),
+('f5082608-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','a37275b5-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',4,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção I.','Os escotilhões e as aberturas de escotilha possuem braçola de pelo menos 150 mm de altura (260 mm para embarcações que operam em área 2) e são dotados de tampas que possam ser fixadas às braçolas. As embarcações dos tipos “C” e “E” estão dispensadas da obrigatoriedade de possuírem tampas de escotilha ou dos escotilhões','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.','2026-07-08','pendente',NULL),
+('f5084dfd-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','191031d1-a918-4879-9118-a6bce6f4b56b','flutuando',5,'Item Normam: NORMAM-202/DPC','Não são utilizados combustíveis com ponto de fulgor inferior a 60 °C (como álcool ou gasolina)','nao',NULL,'NORMAM-202/DPC','2026-07-08','pendente',NULL),
+('f50871ce-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','58133b9a-53e9-454e-bdb7-e5e2b7a1d90c','flutuando',6,'Item Normam: NORMAM-202/DPC, Cap. 04, Item 4.2), 4.2.1, m, I.','A quantidade, capacidade, localização e tipo dos extintores de incêndio estão de acordo com a tabela da NORMAM. Quanto à localização deles, seguem o determinado no Plano de Segurança (se existente)','nao',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.2), 4.2.1, m, I.','2026-07-08','pendente',NULL),
+('f5088f00-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','0fdc1e57-8063-4666-ab7d-cee70fff1cf4','flutuando',7,'Item Normam: NORMAM-202/DPC, Cap. 04, Seção III.','Todos os extintores portáteis possuem o selo do INMETRO e estão dentro do prazo de validade, com as manutenções periódicas realizadas','nao',NULL,'NORMAM-202/DPC, Cap. 04, Seção III.',NULL,'pendente',NULL),
+('f508a49f-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','005da3a8-7a7b-4fab-b855-6dbbf28f8fa8','flutuando',8,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','As embarcações com AB maior que 500 deverão ter, pelo menos, duas bombas de incêndio de acionamento não manual, sendo que uma bomba deverá possuir força motriz distinta da outra e independente do motor principal.','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.','2026-07-08','pendente',NULL),
+('f508bfda-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','ca1c1aed-7e2a-4d54-92cd-7567486150c7','flutuando',9,'Item Normam: NORMAM-202/DPC, Cap. 04, Seção I.','Nas DEMAIS embarcações, as tomadas (hidrantes) deverão estar posicionadas de modo a propiciar, pelo menos, dois jatos d\'água não provenientes da mesma tomada de incêndio','nao',NULL,'NORMAM-202/DPC, Cap. 04, Seção I.','2026-07-08','pendente',NULL),
+('f508dfcf-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','83c0e7f6-6a1a-4383-ba22-9544c2018930','seco',10,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','Estão em bom estado o(s) leme(s) e o(s) hélice(s)','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.','2026-07-08','pendente',NULL),
+('f508f89a-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8','cad656d0-6125-4f9c-be76-9d9ce5e03c99','seco',11,'Item Normam: NORMAM-202/DPC, Cap. 03, Seção III.','Realizar verificação física detalhada de todo o hélice, leme, bucha e eixo propulsor da embarcação em seco, buscando desgastes, trincas ou folgas anômalas.','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção III.',NULL,'pendente',NULL),
+('f5090274-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8',NULL,'seco',12,'ssssssss sssssssss','ss1111 s11111','nao','wwwwwww','ssssssss sssssssss',NULL,'pendente',NULL),
+('f509090f-7a3f-11f1-8c34-8a26e9191f69','96ad88be-ee14-405f-8ea1-f525afae4bd8',NULL,'borda_livre',13,'sem capacete','nao tem segurança','nao','Marcas apagadas, necessita repintura.','sem capacete','2026-07-08','pendente',NULL),
+('f5289b58-815b-11f1-a1f7-9ed3395acbbb','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','a371bf33-76aa-11f1-9eb5-0a1b2af87b16','borda_livre',1,'NORMAM-202/DPC, Cap. 03, Seção I.','Há passagem permanentemente desobstruída de proa à popa, que não é efetivada por cima de tampas de escotilhas. Tal passagem possui largura mínima em conformidade com o estabelecido no Anexo 3-M','nao',NULL,'NORMAM-202/DPC, Cap. 03, Seção I.',NULL,'pendente',NULL),
+('f528cc6b-815b-11f1-a1f7-9ed3395acbbb','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','0ddc6914-749b-40e7-8799-15c272201ebf','flutuando',2,'NORMAM-202/DPC, Cap. 04, Item 4.13.','Modelo (Coletes salva-vidas)','nao',NULL,'NORMAM-202/DPC, Cap. 04, Item 4.13.','2026-07-16','pendente',NULL);
+/*!40000 ALTER TABLE `vistoria_exigencias` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `vistoria_mobile_sync`
+--
+
+DROP TABLE IF EXISTS `vistoria_mobile_sync`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `vistoria_mobile_sync` (
+  `operacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tipo` enum('RASCUNHO','ANEXO','FINALIZACAO') COLLATE utf8mb4_general_ci NOT NULL,
+  `payload_hash` char(64) COLLATE utf8mb4_general_ci NOT NULL,
+  `resposta_json` json DEFAULT NULL,
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`operacao_id`),
+  KEY `idx_mobile_sync_vistoria` (`vistoria_id`,`criado_em`),
+  KEY `fk_mobile_sync_usuario` (`usuario_id`),
+  CONSTRAINT `fk_mobile_sync_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_mobile_sync_vistoria` FOREIGN KEY (`vistoria_id`) REFERENCES `vistorias` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vistoria_mobile_sync`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `vistoria_mobile_sync` WRITE;
+/*!40000 ALTER TABLE `vistoria_mobile_sync` DISABLE KEYS */;
+INSERT INTO `vistoria_mobile_sync` VALUES
+('06cf900d-8ca8-4165-9477-6e4d8579b524','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','95eb5557-65e8-11f1-85ef-047c16b568a3','RASCUNHO','e1d4dc1fd69573805acfc7fd2a1f48a0e32a738b0b4aeae8e34e968f5b7f5fdd','{\"ok\": true, \"dados\": {\"versao\": 1, \"salvo_em\": \"2026-07-14T21:32:44-03:00\", \"vistoria_id\": \"2a31e0e8-90cc-41ba-bed0-b6cabdff9544\"}}','2026-07-15 00:32:44'),
+('1443c4b9-b910-42bd-9c72-d9d2cb53a012','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','6e61445bbf31aa03e20ccb06770fb3eb08323438516257a8bcf2d3adae1df953','{\"ok\": true, \"dados\": {\"versao\": 1, \"salvo_em\": \"2026-07-16T17:26:41-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:26:41'),
+('1fa5780b-412d-44eb-a870-48a8b0a4a618','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','c30fab5aa374ab7e150b75fb1a0f52579d57250d111ad207e6d579aa010b6a52','{\"ok\": true, \"dados\": {\"versao\": 9, \"salvo_em\": \"2026-07-16T17:31:06-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:31:06'),
+('268e5528-3dd1-4a96-bec7-512c4ed6513c','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','95eb5557-65e8-11f1-85ef-047c16b568a3','RASCUNHO','36d114ee961541693686a44689150c0dd306e02297c2405cc021d407c7e6f93a','{\"ok\": true, \"dados\": {\"versao\": 7, \"salvo_em\": \"2026-07-16T18:18:58-03:00\", \"vistoria_id\": \"2a31e0e8-90cc-41ba-bed0-b6cabdff9544\"}}','2026-07-16 21:18:58'),
+('26ba601d-59f0-413d-ae00-8256c4585ec9','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','d1dd6a0659bb40dbbd72197abf628ad43052e24325d0c0044c810287e8bbe1e3','{\"ok\": true, \"dados\": {\"versao\": 14, \"salvo_em\": \"2026-07-16T17:56:59-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:56:59'),
+('297d16fa-8527-426f-8414-466365a7b86f','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','95eb5557-65e8-11f1-85ef-047c16b568a3','RASCUNHO','f4aa2beac52fbd8028597657896027d2431c205702c1b691536d7587786ddbc1','{\"ok\": true, \"dados\": {\"versao\": 5, \"salvo_em\": \"2026-07-14T22:19:04-03:00\", \"vistoria_id\": \"2a31e0e8-90cc-41ba-bed0-b6cabdff9544\"}}','2026-07-15 01:19:04'),
+('3edd8fc4-370a-4750-a70b-3e4c0611a3b7','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','25d5bfaabd0756049b8d8cef405c3dbf0ea00295b65ea6795b22cd5011c69995','{\"ok\": true, \"dados\": {\"versao\": 10, \"salvo_em\": \"2026-07-16T17:37:13-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:37:13'),
+('40814a55-3759-4a9b-b743-241b17611563','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','8c9034d22757d54009587b741e285aeeedd90643ba4202ccd1d757a6fa803dbf','{\"ok\": true, \"dados\": {\"versao\": 13, \"salvo_em\": \"2026-07-16T17:56:50-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:56:50'),
+('587b468b-9038-4d94-bcba-6ba361f37ce7','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','95eb5557-65e8-11f1-85ef-047c16b568a3','RASCUNHO','772c5bf09798b19f762c3c4077759e1ed66b9efc15fde0651c287af4535c614f','{\"ok\": true, \"dados\": {\"versao\": 6, \"salvo_em\": \"2026-07-14T22:19:05-03:00\", \"vistoria_id\": \"2a31e0e8-90cc-41ba-bed0-b6cabdff9544\"}}','2026-07-15 01:19:05'),
+('5eb639f8-922c-4aba-ac6c-ea2c24cb2e4c','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','8003802ff142c357f42af304565d5bbd1b37cabee80cf7a3c316270cff3788bc','{\"ok\": true, \"dados\": {\"versao\": 3, \"salvo_em\": \"2026-07-16T17:29:23-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:29:23'),
+('5ecfe68c-99c9-4f59-8580-4b97e9cef7e7','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','db2d57d8d029f4400ac3742bddd79080ea20567b8b51f02354259344ab919b42','{\"ok\": true, \"dados\": {\"versao\": 2, \"salvo_em\": \"2026-07-16T17:26:50-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:26:50'),
+('66cbc600-adc2-4d83-8d6c-2112668b1189','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','089e1f097bd7015295301b6cd432881a8cc3f93c7913df085ea1ebbee377d8a8','{\"ok\": true, \"dados\": {\"versao\": 8, \"salvo_em\": \"2026-07-16T17:31:02-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:31:02'),
+('8b4eea34-136c-4602-9d9c-e45556ed54dd','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','95eb5557-65e8-11f1-85ef-047c16b568a3','RASCUNHO','aab2353b0b692d8e4a26cae2495d989b251a691189779ba73d79f893f5449ca6','{\"ok\": true, \"dados\": {\"versao\": 2, \"salvo_em\": \"2026-07-14T21:32:45-03:00\", \"vistoria_id\": \"2a31e0e8-90cc-41ba-bed0-b6cabdff9544\"}}','2026-07-15 00:32:45'),
+('8f7b74a2-c820-4bc0-a42f-8979a927ad3d','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','f9cad6dbfe8de6098f33f68629cd07ba29a1cc9bb3f4e822e8f04b8f9ed68c51','{\"ok\": true, \"dados\": {\"versao\": 16, \"salvo_em\": \"2026-07-16T18:05:14-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 21:05:14'),
+('95896fa4-2139-4cd6-936d-820b7e48a680','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','95eb5557-65e8-11f1-85ef-047c16b568a3','RASCUNHO','066f4ee10e789102c0ece1086a5f135fbbd068be181a8ff33b481b2baa4f2778','{\"ok\": true, \"dados\": {\"versao\": 3, \"salvo_em\": \"2026-07-14T21:37:33-03:00\", \"vistoria_id\": \"2a31e0e8-90cc-41ba-bed0-b6cabdff9544\"}}','2026-07-15 00:37:33'),
+('9df6f48f-0281-459a-9426-46d7d3b61668','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','FINALIZACAO','0088112d7d35a9e3eacd9d24eafb99f215463fe9c360ce64d0f64048bef19f6a','{\"ok\": true, \"dados\": {\"status\": \"AGUARDANDO_APROVACAO\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\", \"relatorio_url\": \"http://localhost:8082/vistorias/relatorio?agendamento_id=e2015b8b-92ba-40ee-848b-3f934605769f\"}}','2026-07-16 21:05:14'),
+('a39bd25b-4d9b-4ee8-87d1-3823d7a3d4c5','2a31e0e8-90cc-41ba-bed0-b6cabdff9544','95eb5557-65e8-11f1-85ef-047c16b568a3','RASCUNHO','bdfcc84725eaf761be4a565d184d96e2a056c9f1ef200177a59bac1973ea56b9','{\"ok\": true, \"dados\": {\"versao\": 4, \"salvo_em\": \"2026-07-14T21:37:35-03:00\", \"vistoria_id\": \"2a31e0e8-90cc-41ba-bed0-b6cabdff9544\"}}','2026-07-15 00:37:35'),
+('acdc25a7-9625-4039-a165-cc72b80671b5','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','acd5c24855af330662c5e0dd46138e474c07d2594faa7310fcb79e3624e39136','{\"ok\": true, \"dados\": {\"versao\": 15, \"salvo_em\": \"2026-07-16T18:05:12-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 21:05:12'),
+('b2c32237-fc49-40ba-a936-041287d82120','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','66d132374c3441f1340e10e46ef7fc1c05af8cb6c95f46aa94c3cbae5d40fe03','{\"ok\": true, \"dados\": {\"versao\": 6, \"salvo_em\": \"2026-07-16T17:30:52-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:30:52'),
+('d39e8da3-f154-4ae5-9f7a-97cfc704f066','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','eb1fba6919c263eaf0e403650ea1027d343118cf069c26737ab254b8554c6d44','{\"ok\": true, \"dados\": {\"versao\": 12, \"salvo_em\": \"2026-07-16T17:56:43-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:56:43'),
+('da23b31f-a533-46a1-aa89-e9e1ed4d7372','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','7ccfbe5aea986eaf365ff4d627edb5c124acbd2b538842ca3878bf1655784db0','{\"ok\": true, \"dados\": {\"versao\": 5, \"salvo_em\": \"2026-07-16T17:30:50-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:30:50'),
+('dafc8b4e-3b91-4d87-b159-8d0ded7bc715','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','4dc4104e5821d65e471d7a03be618c96d984ae501ae54bfca26957e76d1938ee','{\"ok\": true, \"dados\": {\"versao\": 7, \"salvo_em\": \"2026-07-16T17:30:57-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:30:57'),
+('f80a0b2b-b870-4a34-97a2-a32b9d4468c3','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','855d7ea1785469bca25da2412fdbfd7e70fab10522a32ca3fc7210da8e805d04','{\"ok\": true, \"dados\": {\"versao\": 11, \"salvo_em\": \"2026-07-16T17:56:39-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:56:39'),
+('fd7cc6b0-7456-495c-8c0b-4b2c1961b3c6','0121c151-a7ed-48f7-a2f9-11850e2fbf46','d2a16613-dfa4-4948-8de4-8c802abdf394','RASCUNHO','fe85d52f5e9ce2f5a5c4e688d7605993c1fb66c2efb0da04a3c82ab9a99593e0','{\"ok\": true, \"dados\": {\"versao\": 4, \"salvo_em\": \"2026-07-16T17:30:41-03:00\", \"vistoria_id\": \"0121c151-a7ed-48f7-a2f9-11850e2fbf46\"}}','2026-07-16 20:30:41');
+/*!40000 ALTER TABLE `vistoria_mobile_sync` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `vistorias`
+--
+
+DROP TABLE IF EXISTS `vistorias`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `vistorias` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL DEFAULT (uuid()),
+  `numero` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `pessoa_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `armador_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `operador_nome` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `agendamento_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `relatorio_anterior_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_vistoria` date NOT NULL,
+  `data_emissao` date DEFAULT NULL,
+  `status` enum('PENDENTE','AGUARDANDO_APROVACAO','APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA','CANCELADA') COLLATE utf8mb4_general_ci DEFAULT 'PENDENTE',
+  `mobile_versao` int unsigned NOT NULL DEFAULT '0',
+  `mobile_finalizada_em` datetime DEFAULT NULL,
+  `aprovado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `data_aprovacao` datetime DEFAULT NULL,
+  `observacao_admin` text COLLATE utf8mb4_general_ci,
+  `observacoes` text COLLATE utf8mb4_general_ci,
+  `resultado` text COLLATE utf8mb4_general_ci,
+  `observacoes_tecnicas` text COLLATE utf8mb4_general_ci,
+  `texto_observacoes_geradas` text COLLATE utf8mb4_general_ci,
+  `criado_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `numero` (`numero`),
+  KEY `embarcacao_id` (`embarcacao_id`),
+  KEY `pessoa_id` (`pessoa_id`),
+  KEY `criado_por` (`criado_por`),
+  KEY `agendamento_id` (`agendamento_id`),
+  KEY `vistorias_ibfk_aprovado_por` (`aprovado_por`),
+  KEY `fk_vistoria_anterior` (`relatorio_anterior_id`),
+  KEY `fk_vistorias_armador` (`armador_id`),
+  CONSTRAINT `fk_vistoria_anterior` FOREIGN KEY (`relatorio_anterior_id`) REFERENCES `vistorias` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_vistorias_armador` FOREIGN KEY (`armador_id`) REFERENCES `clientes` (`id`),
+  CONSTRAINT `vistorias_ibfk_1` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`),
+  CONSTRAINT `vistorias_ibfk_3` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `vistorias_ibfk_agendamento` FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `vistorias_ibfk_aprovado_por` FOREIGN KEY (`aprovado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vistorias`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `vistorias` WRITE;
+/*!40000 ALTER TABLE `vistorias` DISABLE KEYS */;
+INSERT INTO `vistorias` VALUES
+('0121c151-a7ed-48f7-a2f9-11850e2fbf46','AM-REL-V-31/26','620a9dfa-7628-11f1-85ad-621c498e207c','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,'Saviobb','e2015b8b-92ba-40ee-848b-3f934605769f',NULL,'2026-07-16',NULL,'AGUARDANDO_APROVACAO',17,'2026-07-16 21:05:14',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'d2a16613-dfa4-4948-8de4-8c802abdf394','2026-07-16 20:26:41','2026-07-16 21:05:14'),
+('1d897d7a-60d7-48ac-96b4-2035c97b9621','AM-REL-V-6/26','05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,'Victal Neto','517d7186-7894-11f1-bea6-861d3ff9e143','8f85d9b9-4606-49ac-8a9e-ce3943829467','2026-07-07',NULL,'CANCELADA',0,NULL,NULL,NULL,NULL,NULL,NULL,'fffffffffffffffffffffffffffff fffffffffffffffffffffffff ffffffffffffffffffffffffffff fffffffffffffffffffffff',NULL,'3774d80c-2574-470e-88a9-9781936c6de3','2026-07-07 19:45:12','2026-07-07 22:12:49'),
+('2a31e0e8-90cc-41ba-bed0-b6cabdff9544','AM-REL-V-27/26','70000000-0000-4000-8000-000000000002','70000000-0000-4000-8000-000000000001',NULL,NULL,'70000000-0000-4000-8000-000000000003',NULL,'2026-07-14',NULL,'PENDENTE',7,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-15 00:32:44','2026-07-16 21:18:58'),
+('3617dcbd-7640-11f1-85ad-621c498e207c',NULL,'6205b1f7-7628-11f1-85ad-621c498e207c',NULL,NULL,NULL,NULL,NULL,'2026-07-02',NULL,'AGUARDANDO_APROVACAO',0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2026-07-02 18:02:38','2026-07-02 18:02:38'),
+('3b14c7df-5078-470a-afd1-41da3958260a','AM-REL-V-4/26','05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325','60977320-a7d1-49a7-8471-4909c5530d79','gggggggggggggggggg ggggggggggggg ggggggg','83ad9b48-7666-11f1-9eb5-0a1b2af87b16','8f85d9b9-4606-49ac-8a9e-ce3943829467','2026-07-03',NULL,'APROVADA_COM_EXIGENCIAS',0,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-07 19:43:08',NULL,NULL,NULL,'organizar jjjjjjjjjj',NULL,'e5c68a85-c920-4b11-bc93-9343d9d94f14','2026-07-02 23:03:15','2026-07-07 19:43:08'),
+('620765e4-7628-11f1-85ad-621c498e207c','VST-2026-001','6205b1f7-7628-11f1-85ad-621c498e207c','620624f7-7628-11f1-85ad-621c498e207c',NULL,NULL,'6206e36e-7628-11f1-85ad-621c498e207c','620765e4-7628-11f1-85ad-621c498e207c','2026-07-10','2026-07-10','CANCELADA',0,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04',NULL,'Vistoria aprovada. EmbarcaÃ§Ã£o em condiÃ§Ãµes.','Aprovado','Casco em bom estado. Motor funcionando adequadamente.','As exigências n.º 1, 2, 3, 4 foram CUMPRIDAS.\n','11111111-1111-1111-1111-111111111111','2026-07-02 15:12:04','2026-07-02 22:04:41'),
+('620c6b1a-7628-11f1-85ad-621c498e207c','VST-2026-002','620a9dfa-7628-11f1-85ad-621c498e207c','620b1381-7628-11f1-85ad-621c498e207c',NULL,NULL,'620bf6aa-7628-11f1-85ad-621c498e207c',NULL,'2026-07-15','2026-07-15','CANCELADA',0,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 22:05:18',NULL,'Aprovada com exigÃªncias de borda livre.','Aprovado com ExigÃªncias','Marcas de borda livre precisam ser repintadas.','As exigências n.º 2 foram CUMPRIDAS.\n','22222222-2222-2222-2222-222222222222','2026-07-02 15:12:04','2026-07-02 22:05:40'),
+('620fefdc-7628-11f1-85ad-621c498e207c','VST-2026-003','620e4464-7628-11f1-85ad-621c498e207c','620ebfc8-7628-11f1-85ad-621c498e207c',NULL,NULL,'620f7603-7628-11f1-85ad-621c498e207c','620fefdc-7628-11f1-85ad-621c498e207c','2026-07-20','2026-07-20','CANCELADA',0,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-02 15:12:04',NULL,'Vistoria aprovada sem restriÃ§Ãµes.','Aprovado','EmbarcaÃ§Ã£o nova em perfeitas condiÃ§Ãµes. Motor Cummins operando dentro dos parÃ¢metros.','As exigências n.º 1, 2, 3, 4 foram CUMPRIDAS.\n','33333333-3333-3333-3333-333333333333','2026-07-02 15:12:04','2026-07-02 22:05:54'),
+('7d40b4b4-a933-4cda-bc86-3eda52278086',NULL,'620a9dfa-7628-11f1-85ad-621c498e207c','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,NULL,NULL,NULL,'2026-07-09',NULL,'PENDENTE',0,NULL,NULL,NULL,NULL,'',NULL,NULL,NULL,'d2a16613-dfa4-4948-8de4-8c802abdf394','2026-07-07 22:26:10','2026-07-07 22:26:10'),
+('8f85d9b9-4606-49ac-8a9e-ce3943829467','AM-REL-V-5/26','05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325','60977320-a7d1-49a7-8471-4909c5530d79',NULL,'9c4e5534-76e1-11f1-9eb5-0a1b2af87b16','8f85d9b9-4606-49ac-8a9e-ce3943829467','2026-07-17',NULL,'APROVADA',0,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-04 05:07:01',NULL,NULL,NULL,NULL,NULL,'3774d80c-2574-470e-88a9-9781936c6de3','2026-07-03 13:30:32','2026-07-04 05:07:01'),
+('90b14fb6-f742-448f-8708-d3bafeef8681','AM-REL-AP-2/26','620a9dfa-7628-11f1-85ad-621c498e207c','64e60ad7-3a78-4db0-9e03-cc529d935325',NULL,'Savio','3a45f350-7b29-11f1-a8a1-56798194b3af','96ad88be-ee14-405f-8ea1-f525afae4bd8','2026-07-10',NULL,'APROVADA_COM_EXIGENCIAS',0,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-09 00:06:04',NULL,NULL,NULL,'descricao-aqui',NULL,'d2a16613-dfa4-4948-8de4-8c802abdf394','2026-07-09 00:04:27','2026-07-09 00:06:04'),
+('96ad88be-ee14-405f-8ea1-f525afae4bd8','AM-REL-AP-1/26','620a9dfa-7628-11f1-85ad-621c498e207c','64e60ad7-3a78-4db0-9e03-cc529d935325','60977320-a7d1-49a7-8471-4909c5530d79',NULL,'a4ce16b6-c087-426b-874d-0f6f441fc809',NULL,'2026-07-08',NULL,'APROVADA_COM_EXIGENCIAS',0,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-07 22:12:58',NULL,NULL,NULL,'todos os itens tem que ser melhorados',NULL,'3774d80c-2574-470e-88a9-9781936c6de3','2026-07-07 20:10:53','2026-07-07 22:12:58'),
+('c274f2cf-9445-423e-8e5e-f91b21d4a0bc',NULL,'05a94606-59fe-4371-afbc-b7b094df2676','64e60ad7-3a78-4db0-9e03-cc529d935325','60977320-a7d1-49a7-8471-4909c5530d79',NULL,'aa9c6b58-cc84-4150-8755-8ee1d04e1d26','8f85d9b9-4606-49ac-8a9e-ce3943829467','2026-07-08',NULL,'APROVADA',0,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-06 20:34:08',NULL,'','',NULL,NULL,'95eb5557-65e8-11f1-85ef-047c16b568a3','2026-07-04 05:53:04','2026-07-06 20:34:08');
+/*!40000 ALTER TABLE `vistorias` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Dumping events for database 'erp_sistema'
+--
+
+--
+-- Dumping routines for database 'erp_sistema'
+--
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
+
+-- Dump completed on 2026-07-16 23:12:43
