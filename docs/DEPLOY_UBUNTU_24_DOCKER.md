@@ -313,6 +313,38 @@ docker compose up -d
 docker compose up -d --build
 ```
 
+### Aplicar alterações feitas no `.env` da VPS
+
+Depois de editar o `.env`, valide o arquivo e recrie os containers para que as
+novas variáveis sejam carregadas:
+
+```bash
+cd /opt/sistema-amazon
+docker compose config --quiet
+docker compose up -d --force-recreate
+docker compose ps
+```
+
+Se também houve alteração no código, Dockerfile ou dependências, use:
+
+```bash
+cd /opt/sistema-amazon
+docker compose config --quiet
+docker compose up -d --build --force-recreate
+docker compose ps
+```
+
+Confira os logs:
+
+```bash
+docker compose logs --tail=100 app
+docker compose logs --tail=100 db
+docker compose logs --tail=100 worker
+```
+
+Não execute `git reset --hard origin/main` depois de editar o `.env` diretamente
+na VPS, pois isso substituirá o arquivo pela versão publicada no GitHub.
+
 ## 11. Diagnóstico do portal de documentos
 
 Se o portal mostrar:
