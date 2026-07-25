@@ -225,19 +225,23 @@ repositório da VPS modificado. Pare-os antes de atualizar:
 ```bash
 cd /opt/sistema-amazon
 docker compose down
+sudo chown -R "$USER":"$USER" /opt/sistema-amazon
 git fetch origin main
 git reset --hard origin/main
 git clean -fd
-sudo chown -R www-data:www-data storage uploads logs temp_pdf tmp
+mkdir -p storage uploads logs temp_pdf tmp minio-data
+sudo chown -R "$USER":www-data storage uploads logs temp_pdf tmp
 sudo chmod -R u+rwX,g+rwX storage uploads logs temp_pdf tmp
-sudo chown -R root:root minio-data
+sudo chown -R "$USER":"$USER" minio-data
 docker compose up -d --build
 docker compose ps
 ```
 
-`git reset --hard` e `git clean -fd` descartam alterações existentes somente
-na VPS. Esse fluxo é apropriado quando o computador local/GitHub é a fonte
-oficial de todo o conteúdo.
+O primeiro `chown` é obrigatório porque os containers podem criar arquivos
+como `www-data` ou `root`; sem ele, o Git não conseguirá substituir logs,
+backups, PDFs, `tmp` ou objetos do MinIO. `git reset --hard` e `git clean -fd`
+descartam alterações existentes somente na VPS. Esse fluxo é apropriado quando
+o computador local/GitHub é a fonte oficial de todo o conteúdo.
 
 Uma atualização comum não recria o banco, pois o volume `db_data` já existe.
 Para substituir também o banco pelo `db.sql`, siga a seção 5.
