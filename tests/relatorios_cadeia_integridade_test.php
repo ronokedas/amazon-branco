@@ -18,6 +18,7 @@ $agendamentoRaiz = gerarUUID();
 $agendamentoRetorno = gerarUUID();
 $raizId = gerarUUID();
 $exigenciaId = gerarUUID();
+$exigenciaComumId = gerarUUID();
 $retornoId = gerarUUID();
 $sufixo = substr(str_replace('-', '', $raizId), 0, 8);
 $usuarioTeste = (string)($base['criado_por'] ?: $base['vistoriador_id'] ?: $pdo->query('SELECT id FROM usuarios LIMIT 1')->fetchColumn());
@@ -52,8 +53,14 @@ try {
     ]);
     $stmt = $pdo->prepare("INSERT INTO vistoria_exigencias
         (id,vistoria_id,ordem,item,conforme,antes_de_suspender,status_item)
-        VALUES (:id,:vistoria,1,'A/S teste','nao',1,'pendente')");
-    $stmt->execute([':id' => $exigenciaId, ':vistoria' => $raizId]);
+        VALUES (:id,:vistoria,1,'A/S teste','nao',1,'pendente'),
+               (:comum,:vistoria2,2,'Exigencia comum teste','nao',0,'pendente')");
+    $stmt->execute([
+        ':id' => $exigenciaId,
+        ':vistoria' => $raizId,
+        ':comum' => $exigenciaComumId,
+        ':vistoria2' => $raizId,
+    ]);
     $stmt = $pdo->prepare("INSERT INTO vistoria_retornos
         (id,relatorio_origem_id,status)
         VALUES (:id,:origem,'PENDENTE_AGENDAMENTO')");
@@ -79,6 +86,21 @@ try {
     $filho = $pdo->query("SELECT * FROM vistorias WHERE id=" . $pdo->quote($filhoId))->fetch(PDO::FETCH_ASSOC);
     assertCadeiaIntegridade($filho['relatorio_anterior_id'] === $raizId, 'O retorno nao preservou a origem formal.');
     assertCadeiaIntegridade($filho['finalidade'] === 'CUMPRIMENTO_EXIGENCIAS', 'Finalidade incorreta no retorno.');
+    $copiadas = $pdo->query("SELECT antes_de_suspender,exigencia_origem_id
+        FROM vistoria_exigencias
+        WHERE vistoria_id=" . $pdo->quote($filhoId) . "
+        ORDER BY ordem")->fetchAll(PDO::FETCH_ASSOC);
+    assertCadeiaIntegridade(count($copiadas) === 2, 'O retorno nao copiou todas as exigencias pendentes.');
+    assertCadeiaIntegridade(
+        (int)$copiadas[0]['antes_de_suspender'] === 1
+        && $copiadas[0]['exigencia_origem_id'] === $exigenciaId,
+        'O retorno nao preservou o vinculo e o marcador da exigencia A/S.'
+    );
+    assertCadeiaIntegridade(
+        (int)$copiadas[1]['antes_de_suspender'] === 0
+        && $copiadas[1]['exigencia_origem_id'] === $exigenciaComumId,
+        'O retorno nao preservou o vinculo da exigencia comum.'
+    );
 
     $duplicouAgendamento = false;
     try {

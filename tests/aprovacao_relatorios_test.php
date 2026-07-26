@@ -70,8 +70,10 @@ $certificados = file_get_contents(__DIR__ . '/../modules/documentacao/certificad
 $wizard = file_get_contents(__DIR__ . '/../modules/certificados/wizard.php');
 $wizardStep2 = file_get_contents(__DIR__ . '/../modules/certificados/wizard_step2.php');
 $funcoes = file_get_contents(__DIR__ . '/../includes/functions.php');
+$assinaturas = file_get_contents(__DIR__ . '/../includes/assinaturas_usuarios.php');
+$selecaoCertificado = file_get_contents(__DIR__ . '/../modules/documentacao/novo_certificado.php');
 
-foreach ([$actions, $relatorio, $endpoint, $approvalDomain, $approvalUi, $detalhe, $certificados, $wizard, $wizardStep2, $funcoes] as $codigo) {
+foreach ([$actions, $relatorio, $endpoint, $approvalDomain, $approvalUi, $detalhe, $certificados, $wizard, $wizardStep2, $funcoes, $assinaturas, $selecaoCertificado] as $codigo) {
     assertAprovacao($codigo !== false, 'Nao foi possivel ler um dos arquivos do fluxo.');
 }
 
@@ -112,6 +114,14 @@ assertAprovacao(!avaliarEdicaoRelatorio($pdo, $aguardandoEditavel, 'admin-teste'
 assertAprovacao(!avaliarEdicaoRelatorio($pdo, $aguardandoEditavel, 'analista-teste', 'ANALISTA')['permitido'], 'Analista nao pode editar o conteudo do relatorio.');
 assertAprovacao(str_contains($relatorio, 'Visualizar PDF do relat'), 'O PDF nao esta exposto para relatorio persistido.');
 assertAprovacao(str_contains($relatorio, 'Assinar como substituto'), 'A revisao admin nao oferece assinatura substituta para relatorio sem assinatura.');
+assertAprovacao(str_contains($relatorio, 'id="modalAssinaturaSubstituta"'), 'A assinatura substituta nao abre em modal no relatorio.');
+assertAprovacao(str_contains($relatorio, "document.querySelectorAll('.js-assinar-substituto')"), 'O botao de assinatura substituta nao aciona o modal local.');
+assertAprovacao(!str_contains($relatorio, 'href="<?= APP_URL ?>minhas-assinaturas" class="btn btn-warning"'), 'O botao de assinatura ainda redireciona para Minhas assinaturas.');
+assertAprovacao(str_contains($assinaturas, "'proxima_url'=>\$proximaUrl"), 'A assinatura nao devolve o destino da selecao de certificado.');
+assertAprovacao(str_contains($assinaturas, "'vistoria_id'=>\$id"), 'A assinatura nao preserva o ID do relatorio.');
+assertAprovacao(str_contains($selecaoCertificado, "\$_GET['vistoria_id']"), 'A selecao de certificado nao recebe o ID do relatorio.');
+assertAprovacao(str_contains($selecaoCertificado, '&vistoria_id=<?= urlencode($vistoria_id) ?>'), 'A escolha do modelo nao encaminha o ID do relatorio ao wizard.');
+assertAprovacao(str_contains($wizard, "\$_GET['vistoria_id']"), 'O wizard nao fixa o relatorio recebido na URL.');
 assertAprovacao(str_contains($actions, "getCargo() !== 'VISTORIADOR'"), 'O endpoint de salvamento nao restringe alteracoes ao vistoriador.');
 
 echo "Testes do fluxo de aprovacao de relatorios concluidos com sucesso.\n";

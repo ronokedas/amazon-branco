@@ -73,6 +73,7 @@ function buscarDadosVistoriaCertificado(PDO $pdo, string $vistoria_id): ?array
         $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
         $dados['relatorio_numero'] = relatorioNumerosReferenciaCertificado($pdo, $vistoria_id);
         $dados['relatorio_status'] = $liberacao['status'] ?? $dados['relatorio_status'];
+        $dados['mensagem_definitivo'] = $liberacao['mensagem_definitivo'] ?? '';
     }
 
     return $dados ?: null;
@@ -179,7 +180,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         )) {
             $erro = 'A embarcação possui propulsão. Preencha fabricante, modelo, número do motor e potência antes de gerar o CSN.';
         } elseif ($tipo === 'Definitivo' && $dados_emb['relatorio_status'] === 'APROVADA_COM_EXIGENCIAS') {
-            $erro = 'Não é possível emitir um Certificado Definitivo para um relatório aprovado com exigências. Use Provisório ou Condicional.';
+            $erro = (string)($dados_emb['mensagem_definitivo'] ?? '')
+                ?: 'O relatório vigente ainda possui exigências comuns pendentes. Conclua a verificação antes de emitir o Certificado Definitivo.';
         } else {
             $stmtResp = $pdo->prepare("SELECT ra.nome_completo,ra.cargo_titulo,ra.registro_profissional FROM responsaveis_assinatura ra JOIN usuarios u ON u.id=ra.usuario_id WHERE ra.id=:id AND ra.ativo=1 AND u.ativo=1 AND u.excluido_em IS NULL AND ra.email<>'' AND ra.assinatura_arquivo<>'' AND ra.assinatura_hash<>'' AND (u.cargo<>'ANALISTA' OR u.id=:criador)");
             $stmtResp->execute([':id' => $responsavel_id_selecionado, ':criador'=>(string)($_SESSION['usuario_id']??'')]);
@@ -358,7 +360,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!in_array($dados_emb['relatorio_status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)) {
             $erro = 'Não é possível emitir certificado. O relatório selecionado não está aprovado.';
         } elseif ($tipo === 'Definitivo' && $dados_emb['relatorio_status'] === 'APROVADA_COM_EXIGENCIAS') {
-            $erro = 'Não é possível emitir um Certificado Definitivo para um relatório aprovado com exigências. Use Provisório ou Condicional.';
+            $erro = (string)($dados_emb['mensagem_definitivo'] ?? '')
+                ?: 'O relatório vigente ainda possui exigências comuns pendentes. Conclua a verificação antes de emitir o Certificado Definitivo.';
         } else {
             $stmtResp = $pdo->prepare("SELECT ra.nome_completo,ra.cargo_titulo,ra.registro_profissional FROM responsaveis_assinatura ra JOIN usuarios u ON u.id=ra.usuario_id WHERE ra.id=:id AND ra.ativo=1 AND u.ativo=1 AND u.excluido_em IS NULL AND ra.email<>'' AND ra.assinatura_arquivo<>'' AND ra.assinatura_hash<>'' AND (u.cargo<>'ANALISTA' OR u.id=:criador)");
             $stmtResp->execute([':id' => $responsavel_id_selecionado, ':criador'=>(string)($_SESSION['usuario_id']??'')]);
@@ -518,7 +521,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!in_array($dados_emb['relatorio_status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)) {
             $erro = 'Não é possível emitir certificado. O relatório selecionado não está aprovado.';
         } elseif ($tipo === 'Definitivo' && $dados_emb['relatorio_status'] === 'APROVADA_COM_EXIGENCIAS') {
-            $erro = 'Não é possível emitir um Certificado Definitivo para um relatório aprovado com exigências. Use Provisório ou Condicional.';
+            $erro = (string)($dados_emb['mensagem_definitivo'] ?? '')
+                ?: 'O relatório vigente ainda possui exigências comuns pendentes. Conclua a verificação antes de emitir o Certificado Definitivo.';
         } else {
             $stmtResp = $pdo->prepare("SELECT ra.nome_completo,ra.cargo_titulo,ra.registro_profissional FROM responsaveis_assinatura ra JOIN usuarios u ON u.id=ra.usuario_id WHERE ra.id=:id AND ra.ativo=1 AND u.ativo=1 AND u.excluido_em IS NULL AND ra.email<>'' AND ra.assinatura_arquivo<>'' AND ra.assinatura_hash<>'' AND (u.cargo<>'ANALISTA' OR u.id=:criador)");
             $stmtResp->execute([':id' => $responsavel_id_selecionado, ':criador'=>(string)($_SESSION['usuario_id']??'')]);
@@ -882,7 +886,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <p class="page-subtitle"><?= h($modelo) ?><?= in_array($modelo, $modelos_sem_tipo, true) ? '' : ' · ' . h($tipo) ?></p>
         </div>
         <div class="page-actions">
-            <a href="<?= APP_URL ?>certificados<?= in_array($modelo, $modelos_sem_tipo, true) ? '' : '/wizard?modelo=' . urlencode($modelo) . (!empty($agendamento_id) ? '&agendamento_id=' . urlencode($agendamento_id) : '') ?>" class="btn btn-secondary">
+            <a href="<?= APP_URL ?>certificados<?= in_array($modelo, $modelos_sem_tipo, true) ? '' : '/wizard?modelo=' . urlencode($modelo) . (!empty($agendamento_id) ? '&agendamento_id=' . urlencode($agendamento_id) : '') . (!empty($vistoria_id) ? '&vistoria_id=' . urlencode($vistoria_id) : '') ?>" class="btn btn-secondary">
                 <i class="fa-solid fa-arrow-left"></i> <?= in_array($modelo, $modelos_sem_tipo, true) ? 'Voltar aos modelos' : 'Voltar ao tipo' ?>
             </a>
         </div>
@@ -1070,7 +1074,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <?php endif; ?>
 
                     <div class="cert-action-bar">
-                        <a href="<?= APP_URL ?>certificados/wizard?modelo=<?= urlencode($modelo) ?><?= !empty($agendamento_id) ? '&agendamento_id=' . urlencode($agendamento_id) : '' ?>" class="btn btn-secondary">
+                        <a href="<?= APP_URL ?>certificados/wizard?modelo=<?= urlencode($modelo) ?><?= !empty($agendamento_id) ? '&agendamento_id=' . urlencode($agendamento_id) : '' ?><?= !empty($vistoria_id) ? '&vistoria_id=' . urlencode($vistoria_id) : '' ?>" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Voltar
                         </a>
                         <button type="submit" class="btn btn-primary">

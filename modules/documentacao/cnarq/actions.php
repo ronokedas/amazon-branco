@@ -103,7 +103,11 @@ if ($action === 'salvar') {
         }
         $relatorio_numero = relatorioNumerosReferenciaCertificado($pdo, (string)$vistoria_id);
         if ($tipo === 'Definitivo' && ($liberacao['status'] ?? '') === 'APROVADA_COM_EXIGENCIAS') {
-            setMensagem('error', 'Certificado Definitivo bloqueado enquanto houver exigência comum pendente no relatório técnico original.');
+            setMensagem(
+                'error',
+                (string)($liberacao['mensagem_definitivo'] ?? '')
+                    ?: 'O relatório vigente ainda possui exigências comuns pendentes. Conclua a verificação antes de emitir o Certificado Definitivo.'
+            );
             redirecionar(APP_URL . 'documentacao/cnarq/form' . ($editando ? "?id={$id}" : ''));
         }
     }

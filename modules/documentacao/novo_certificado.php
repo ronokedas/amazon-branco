@@ -10,12 +10,14 @@ if (!podeAcessar('documentacao')) {
 }
 
 $agendamento_id = $_GET['agendamento_id'] ?? '';
+$vistoria_id = trim((string)($_GET['vistoria_id'] ?? ''));
 
-if (empty($agendamento_id)) {
-    setMensagem('error', 'ID do agendamento não informado.');
+if (empty($agendamento_id) && $vistoria_id === '') {
+    setMensagem('error', 'Relatório ou agendamento não informado.');
     redirecionar(APP_URL . 'vistorias');
 }
 
+$filtroRelatorio = $vistoria_id !== '';
 $stmt = $pdo->prepare("
     SELECT a.*,
            e.nome AS emb_nome,
@@ -26,23 +28,39 @@ $stmt = $pdo->prepare("
            v.id AS vistoria_id,
            v.status,
            v.numero AS relatorio_numero
-    FROM agendamentos a
+    FROM vistorias v
+    JOIN agendamentos a ON a.id = v.agendamento_id
     JOIN embarcacoes e ON a.embarcacao_id = e.id
-    LEFT JOIN vistorias v ON v.id = (
-        SELECT v2.id FROM vistorias v2
-         WHERE v2.agendamento_id = a.id
-         ORDER BY v2.criado_em DESC, v2.id DESC LIMIT 1
-    )
-    WHERE a.id = :agendamento_id
+    WHERE " . ($filtroRelatorio
+        ? 'v.id = :vistoria_id'
+        : "v.id = (
+            SELECT v2.id FROM vistorias v2
+             WHERE v2.agendamento_id = :agendamento_id
+             ORDER BY v2.criado_em DESC, v2.id DESC LIMIT 1
+        )") . "
     LIMIT 1
 ");
-$stmt->execute([':agendamento_id' => $agendamento_id]);
+$stmt->execute($filtroRelatorio
+    ? [':vistoria_id' => $vistoria_id]
+    : [':agendamento_id' => $agendamento_id]);
 $dados = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$dados) {
     setMensagem('error', 'Agendamento não encontrado.');
     redirecionar(APP_URL . 'agendamentos');
 }
+
+$vigente = obterRelatorioVigenteCadeia($pdo, (string)$dados['vistoria_id']);
+if (!$vigente) {
+    setMensagem('error', 'Não foi possível localizar o relatório vigente desta cadeia.');
+    redirecionar(APP_URL . 'vistorias');
+}
+if ((string)$vigente['id'] !== (string)$dados['vistoria_id']) {
+    redirecionar(APP_URL . 'documentacao/novo_certificado?vistoria_id=' . urlencode((string)$vigente['id'])
+        . '&agendamento_id=' . urlencode((string)$vigente['agendamento_id']));
+}
+$vistoria_id = (string)$dados['vistoria_id'];
+$agendamento_id = (string)$dados['id'];
 
 $status = $dados['status'] ?? '';
 $pode_etapa2 = in_array($status, ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true);
@@ -78,7 +96,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <p>O relatório já foi aprovado. Escolha o documento correto para gerar o certificado com os dados da vistoria.</p>
         </div>
         <div class="flow-actions">
-            <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($agendamento_id) ?>" class="btn btn-secondary btn-sm">
+            <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($agendamento_id) ?>&vistoria_id=<?= urlencode($vistoria_id) ?>" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left"></i> Voltar ao relatório
             </a>
         </div>
@@ -116,7 +134,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <?php else: ?>
                 <div class="certificate-choice-grid">
                     <?php foreach ($tipos as $tipo => $info): ?>
-                        <a href="<?= APP_URL ?>certificados/wizard?modelo=<?= urlencode($tipo) ?>&agendamento_id=<?= urlencode($agendamento_id) ?>" class="certificate-choice-card">
+                        <a href="<?= APP_URL ?>certificados/wizard?modelo=<?= urlencode($tipo) ?>&agendamento_id=<?= urlencode($agendamento_id) ?>&vistoria_id=<?= urlencode($vistoria_id) ?>" class="certificate-choice-card">
                             <span class="certificate-choice-icon"><i class="fas <?= h($info['icone']) ?>"></i></span>
                             <strong><?= h($tipo) ?></strong>
                             <small><?= h($info['label']) ?></small>

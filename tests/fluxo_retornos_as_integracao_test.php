@@ -21,6 +21,7 @@ $agendamentoFilhoId = gerarUUID();
 $asRaizId = gerarUUID();
 $comumRaizId = gerarUUID();
 $asFilhoId = gerarUUID();
+$comumFilhoId = gerarUUID();
 $sufixo = substr(str_replace('-', '', $raizId), 0, 8);
 
 $pdo->beginTransaction();
@@ -92,8 +93,30 @@ try {
 
     $liberacao = avaliarLiberacaoCertificacao($pdo, $filhoId);
     assertRetornoIntegracao($liberacao['permitido'], 'A cadeia continuou bloqueada depois do cumprimento A/S.');
-    assertRetornoIntegracao($liberacao['status'] === 'APROVADA_COM_EXIGENCIAS', 'A exigencia comum da raiz nao bloqueou o definitivo.');
+    assertRetornoIntegracao(
+        $liberacao['status'] === 'APROVADA',
+        'A aprovacao final legada nao encerrou as exigencias comuns que o sistema antigo deixou de copiar.'
+    );
     assertRetornoIntegracao(str_contains($liberacao['relatorios_referencia'], ' e '), 'A referencia nao contem original e cumprimento.');
+
+    $stmt = $pdo->prepare("INSERT INTO vistoria_exigencias
+        (id,vistoria_id,ordem,item,conforme,antes_de_suspender,status_item,exigencia_origem_id)
+        VALUES (:id,:vistoria,2,'Comum teste','nao',0,'pendente',:origem)");
+    $stmt->execute([':id'=>$comumFilhoId, ':vistoria'=>$filhoId, ':origem'=>$comumRaizId]);
+    $comumPendente = avaliarLiberacaoCertificacao($pdo, $filhoId);
+    assertRetornoIntegracao(
+        $comumPendente['status'] === 'APROVADA_COM_EXIGENCIAS',
+        'Uma exigencia comum aberta no relatorio vigente liberou o definitivo.'
+    );
+
+    $pdo->prepare("UPDATE vistoria_exigencias
+        SET conforme='sim',status_item='cumprida',observacao='Cumprimento verificado'
+        WHERE id=:id")->execute([':id'=>$comumFilhoId]);
+    $cumprimentoIntegral = avaliarLiberacaoCertificacao($pdo, $filhoId);
+    assertRetornoIntegracao(
+        $cumprimentoIntegral['status'] === 'APROVADA',
+        'O cumprimento integral da exigencia comum nao liberou o definitivo.'
+    );
 
     $retornoId = criarPendenciaRetornoAS($pdo, $raizId, null);
     assertRetornoIntegracao($retornoId !== '', 'A pendencia auditavel nao foi criada.');

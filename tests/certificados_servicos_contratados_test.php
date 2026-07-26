@@ -38,7 +38,10 @@ $legacyActions = [
 ];
 $migration = file_get_contents(__DIR__ . '/../migrations/085_servicos_habilitam_certificados.sql');
 assertCertificadoServico(str_contains($selection, 'certificadoModelosPermitidosPorAgendamento'), 'A selecao de modelos nao usa a regra central.');
+assertCertificadoServico(str_contains($selection, "\$_GET['vistoria_id']"), 'A selecao de modelos nao aceita um relatorio pre-selecionado.');
+assertCertificadoServico(str_contains($selection, '&vistoria_id=<?= urlencode($vistoria_id) ?>'), 'A selecao de modelos perde o relatorio ao abrir o wizard.');
 assertCertificadoServico(str_contains($wizard, 'certificadoModeloPermitidoPorAgendamento'), 'A URL direta do wizard nao esta protegida.');
+assertCertificadoServico(str_contains($wizard, "\$_GET['vistoria_id']"), 'O wizard nao preserva o ID do relatorio escolhido.');
 assertCertificadoServico(str_contains($step2, 'certificadoModeloPermitidoPorVistoria'), 'O POST final nao repete a validacao do servico.');
 foreach ($legacyActions as $modelo => $source) {
     assertCertificadoServico(str_contains($source, "certificadoModeloPermitidoPorVistoria(\$pdo, (string)\$vistoria_id, '{$modelo}')"), "A criacao direta de {$modelo} nao esta protegida.");

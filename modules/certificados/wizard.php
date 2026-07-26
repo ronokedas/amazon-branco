@@ -32,32 +32,35 @@ $erro = '';
 $tipo_selecionado = $_POST['tipo'] ?? ($_SESSION['wizard_certificado']['tipo'] ?? '');
 $modelos_sem_tipo = ['LP', 'LC', 'CHT'];
 $relatorio_status = '';
-$vistoria_id = '';
+$vistoria_id = trim((string)($_GET['vistoria_id'] ?? ($_SESSION['wizard_certificado']['vistoria_id'] ?? '')));
+
+if ($vistoria_id !== '') {
+    try {
+        $relatorioVigente = obterRelatorioVigenteCadeia($pdo, $vistoria_id) ?: [];
+        $vistoria_id = (string)($relatorioVigente['id'] ?? '');
+        $relatorio_status = (string)($relatorioVigente['status'] ?? '');
+        $agendamento_id = (string)($relatorioVigente['agendamento_id'] ?? $agendamento_id);
+    } catch (Exception $e) {
+        error_log('Erro ao buscar status do relatorio no wizard: ' . $e->getMessage());
+    }
+} elseif (!empty($agendamento_id)) {
+    try {
+        $relatorioVigente = obterRelatorioVigenteAgendamento($pdo, (string)$agendamento_id) ?: [];
+        $vistoria_id = (string)($relatorioVigente['id'] ?? '');
+        $relatorio_status = (string)($relatorioVigente['status'] ?? '');
+        $agendamento_id = (string)($relatorioVigente['agendamento_id'] ?? $agendamento_id);
+    } catch (Exception $e) {
+        error_log('Erro ao buscar status do relatorio no wizard: ' . $e->getMessage());
+    }
+}
 
 if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true)) {
     if ($agendamento_id === '' || !certificadoModeloPermitidoPorAgendamento($pdo, (string)$agendamento_id, $modelo)) {
         setMensagem('error', certificadoMensagemServicoObrigatorio($modelo));
         redirecionar($agendamento_id !== ''
             ? APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id)
+                . ($vistoria_id !== '' ? '&vistoria_id=' . urlencode($vistoria_id) : '')
             : APP_URL . 'certificados');
-    }
-}
-
-if (!empty($agendamento_id)) {
-    try {
-        $stmtRelatorioStatus = $pdo->prepare("
-            SELECT id, status
-            FROM vistorias
-            WHERE agendamento_id = :agendamento_id
-            ORDER BY criado_em DESC
-            LIMIT 1
-        ");
-        $stmtRelatorioStatus->execute([':agendamento_id' => $agendamento_id]);
-        $relatorioVigente = $stmtRelatorioStatus->fetch(PDO::FETCH_ASSOC) ?: [];
-        $vistoria_id = (string)($relatorioVigente['id'] ?? '');
-        $relatorio_status = (string)($relatorioVigente['status'] ?? '');
-    } catch (Exception $e) {
-        error_log('Erro ao buscar status do relatorio no wizard: ' . $e->getMessage());
     }
 }
 
@@ -65,6 +68,8 @@ if (!empty($vistoria_id)) {
     $liberacaoCertificacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
     if (empty($liberacaoCertificacao['permitido'])) {
         $erro = $liberacaoCertificacao['mensagem'];
+    } else {
+        $relatorio_status = (string)($liberacaoCertificacao['status'] ?? $relatorio_status);
     }
 }
 
@@ -96,7 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (empty($tipo)) {
         $erro = 'Selecione o tipo do certificado antes de avançar.';
     } elseif ($bloquear_definitivo && $tipo === 'Definitivo') {
-        $erro = 'Relatorio aprovado com exigencias nao permite certificado Definitivo. Use Provisorio ou Condicional.';
+        $erro = (string)($liberacaoCertificacao['mensagem_definitivo'] ?? '')
+            ?: 'O relatório vigente ainda possui exigências comuns pendentes. Conclua a verificação antes de emitir o Certificado Definitivo.';
     } else {
         $_SESSION['wizard_certificado'] = [
             'modelo' => $modelo,
@@ -230,7 +236,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
 
                 <div class="cert-action-bar">
-                    <a href="<?= !empty($agendamento_id) ? APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode($agendamento_id) : APP_URL . 'certificados' ?>" class="btn btn-secondary">
+                    <a href="<?= !empty($agendamento_id) ? APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode($agendamento_id) . ($vistoria_id !== '' ? '&vistoria_id=' . urlencode($vistoria_id) : '') : APP_URL . 'certificados' ?>" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Voltar
                     </a>
                     <button type="submit" class="btn btn-primary">

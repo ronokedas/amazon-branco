@@ -545,7 +545,7 @@ switch ($action) {
                         if (!in_array($situacao, $statusPermitidos, true)) $situacao = 'pendente';
                         $observacaoCumprimento = trim((string)($observacoesCumprimento[$exigenciaId] ?? ''));
                         if ($statusCumprimentoSalvar === 'AGUARDANDO_APROVACAO' && $observacaoCumprimento === '') {
-                            throw new Exception('Descreva as evidencias verificadas para cada exigencia A/S antes de enviar.');
+                            throw new Exception('Descreva as evidencias verificadas para cada exigencia herdada antes de enviar.');
                         }
                         $stmtAtualizar->execute([
                             ':status_item' => $situacao,
@@ -1228,7 +1228,8 @@ switch ($action) {
         if ($aprovando) {
             $liberacao = avaliarLiberacaoCertificacao($pdo, $id);
             if (!empty($liberacao['permitido'])) {
-                redirecionar(APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id));
+                redirecionar(APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id)
+                    . '&vistoria_id=' . urlencode($id));
             }
             setMensagem('warning', $liberacao['mensagem'] ?? 'Certificacao permanece bloqueada.');
             if (($liberacao['possui_as'] ?? false) === true) {

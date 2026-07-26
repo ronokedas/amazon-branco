@@ -1009,17 +1009,96 @@ function relatorioNumerosReferenciaCertificado(PDO $pdo, string $vistoriaId): st
     return $primeiro . ' e ' . $ultimo;
 }
 
+/**
+ * Retorna as exigencias comuns que continuam abertas no estado efetivo da cadeia.
+ *
+ * Cada retorno novo copia todas as exigencias abertas e aponta para a exigencia
+ * imediatamente anterior. Assim, a situacao valida e sempre a do ultimo item de
+ * cada linhagem, sem alterar o relatorio historico.
+ *
+ * Compatibilidade: relatorios de cumprimento criados antes da copia integral
+ * levavam apenas as A/S. Quando o ultimo desses relatorios foi expressamente
+ * aprovado sem exigencias, essa aprovacao final encerra as exigencias comuns
+ * antigas que nao chegaram a ser copiadas. Uma exigencia aberta no proprio
+ * relatorio vigente nunca e encerrada por essa compatibilidade.
+ */
+function obterExigenciasComunsPendentesCadeia(PDO $pdo, string $vistoriaId): array
+{
+    $cadeia = obterCadeiaRelatorios($pdo, $vistoriaId);
+    if (!$cadeia) return [];
+
+    $posicaoRelatorio = [];
+    $parametros = [];
+    $placeholders = [];
+    foreach ($cadeia as $indice => $relatorio) {
+        $id = (string)$relatorio['id'];
+        $posicaoRelatorio[$id] = $indice;
+        $placeholder = ':relatorio_' . $indice;
+        $placeholders[] = $placeholder;
+        $parametros[$placeholder] = $id;
+    }
+
+    $stmt = $pdo->prepare("SELECT id,vistoria_id,catalogo_id,item,descricao,conforme,
+                                  antes_de_suspender,status_item,exigencia_origem_id
+        FROM vistoria_exigencias
+        WHERE vistoria_id IN (" . implode(',', $placeholders) . ")
+        ORDER BY ordem,id");
+    $stmt->execute($parametros);
+    $exigencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!$exigencias) return [];
+
+    $porId = [];
+    foreach ($exigencias as $exigencia) {
+        $porId[(string)$exigencia['id']] = $exigencia;
+    }
+
+    $ultimaPorLinhagem = [];
+    foreach ($exigencias as $exigencia) {
+        if ((int)$exigencia['antes_de_suspender'] !== 0) continue;
+
+        $raizId = (string)$exigencia['id'];
+        $origemId = trim((string)($exigencia['exigencia_origem_id'] ?? ''));
+        $visitados = [];
+        while ($origemId !== '' && isset($porId[$origemId]) && !isset($visitados[$origemId])) {
+            $visitados[$origemId] = true;
+            $raizId = $origemId;
+            $origemId = trim((string)($porId[$origemId]['exigencia_origem_id'] ?? ''));
+        }
+
+        $posicao = $posicaoRelatorio[(string)$exigencia['vistoria_id']] ?? -1;
+        $anterior = $ultimaPorLinhagem[$raizId] ?? null;
+        $posicaoAnterior = $anterior
+            ? ($posicaoRelatorio[(string)$anterior['vistoria_id']] ?? -1)
+            : -1;
+        if (!$anterior || $posicao >= $posicaoAnterior) {
+            $ultimaPorLinhagem[$raizId] = $exigencia;
+        }
+    }
+
+    $vigente = $cadeia[count($cadeia) - 1];
+    $posicaoVigente = count($cadeia) - 1;
+    $aprovacaoFinalLegada = $posicaoVigente > 0
+        && (string)($vigente['finalidade'] ?? '') === 'CUMPRIMENTO_EXIGENCIAS'
+        && (string)($vigente['status'] ?? '') === 'APROVADA';
+
+    $pendentes = [];
+    foreach ($ultimaPorLinhagem as $exigencia) {
+        $cumprida = (string)$exigencia['conforme'] === 'sim'
+            && (string)$exigencia['status_item'] === 'cumprida';
+        if ($cumprida) continue;
+
+        $posicaoExigencia = $posicaoRelatorio[(string)$exigencia['vistoria_id']] ?? -1;
+        if ($aprovacaoFinalLegada && $posicaoExigencia < $posicaoVigente) {
+            continue;
+        }
+        $pendentes[] = $exigencia;
+    }
+    return $pendentes;
+}
+
 function relatorioPossuiExigenciaComumPendenteNaRaiz(PDO $pdo, string $vistoriaId): bool
 {
-    $raiz = obterRelatorioRaizCadeia($pdo, $vistoriaId);
-    if (!$raiz) return false;
-    $stmt = $pdo->prepare("SELECT EXISTS(
-        SELECT 1 FROM vistoria_exigencias
-        WHERE vistoria_id=:id AND antes_de_suspender=0
-          AND conforme='nao' AND status_item<>'cumprida'
-    )");
-    $stmt->execute([':id' => $raiz['id']]);
-    return (bool)$stmt->fetchColumn();
+    return obterExigenciasComunsPendentesCadeia($pdo, $vistoriaId) !== [];
 }
 
 /** Matriz unica de decisao administrativa do relatorio tecnico. */
@@ -1208,7 +1287,8 @@ function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, stri
         ':anterior' => $origemId,
         ':data' => $agendamento['data_vistoria'],
         ':prazo' => $origem['prazo_exigencias_dias'],
-        ':observacoes' => 'Cumprimento das exigencias A/S do relatorio ' . ($origem['numero'] ?: $origemId),
+        ':observacoes' => 'Cumprimento das exigencias pendentes do relatorio ' . ($origem['numero'] ?: $origemId)
+            . ' (retorno A/S)',
         ':usuario' => $usuarioId,
     ]);
 
@@ -1216,13 +1296,13 @@ function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, stri
         (id,vistoria_id,catalogo_id,bloco_vistoria,ordem,item,descricao,conforme,
          observacao,item_normam,vencimento,antes_de_suspender,status_item,exigencia_origem_id)
         SELECT UUID(),:novo,catalogo_id,bloco_vistoria,ordem,item,descricao,'nao',
-               observacao,item_normam,vencimento,1,'pendente',id
+               observacao,item_normam,vencimento,antes_de_suspender,'pendente',id
         FROM vistoria_exigencias
-        WHERE vistoria_id=:origem AND antes_de_suspender=1
+        WHERE vistoria_id=:origem
           AND conforme='nao' AND status_item<>'cumprida'");
     $stmt->execute([':novo' => $novoId, ':origem' => $origemId]);
     if ($stmt->rowCount() === 0) {
-        throw new RuntimeException('Nenhuma A/S pendente foi encontrada para o retorno.');
+        throw new RuntimeException('Nenhuma exigencia pendente foi encontrada para o retorno.');
     }
     $stmtRetorno = $pdo->prepare("UPDATE vistoria_retornos
         SET status='AGENDADO',agendamento_id=:agendamento,relatorio_resultado_id=:relatorio
@@ -1324,7 +1404,9 @@ function avaliarLiberacaoCertificacao(PDO $pdo, string $vistoriaId): array
         ];
     }
 
-    $possuiExigenciasComuns = relatorioPossuiExigenciaComumPendenteNaRaiz($pdo, $vigente['id']);
+    $exigenciasComunsPendentes = obterExigenciasComunsPendentesCadeia($pdo, $vigente['id']);
+    $quantidadeExigenciasComuns = count($exigenciasComunsPendentes);
+    $possuiExigenciasComuns = $quantidadeExigenciasComuns > 0;
     return [
         'permitido' => true,
         'mensagem' => '',
@@ -1332,6 +1414,12 @@ function avaliarLiberacaoCertificacao(PDO $pdo, string $vistoriaId): array
         'status' => $possuiExigenciasComuns ? 'APROVADA_COM_EXIGENCIAS' : $vigente['status'],
         'possui_as' => false,
         'possui_exigencias_comuns' => $possuiExigenciasComuns,
+        'quantidade_exigencias_comuns' => $quantidadeExigenciasComuns,
+        'mensagem_definitivo' => $possuiExigenciasComuns
+            ? 'O relatorio vigente ainda possui ' . $quantidadeExigenciasComuns
+                . ($quantidadeExigenciasComuns === 1 ? ' exigencia comum pendente.' : ' exigencias comuns pendentes.')
+                . ' Conclua a verificacao para emitir o Certificado Definitivo.'
+            : '',
         'relatorios_referencia' => relatorioNumerosReferenciaCertificado($pdo, $vigente['id']),
     ];
 }

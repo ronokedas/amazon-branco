@@ -624,7 +624,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 <?php elseif (getCargo() === 'ADMIN' && !empty($liberacao_certificacao['permitido'])): ?>
     <div class="alert alert-success" style="margin-bottom:20px;">
         <strong>Relatório vigente aprovado.</strong> Você pode gerar os certificados agora.
-        <a href="<?= APP_URL ?>documentacao/novo_certificado?agendamento_id=<?= urlencode($agendamento_id) ?>" class="btn btn-success ms-3"><i class="fas fa-certificate"></i> Ir para Etapa 2 — Gerar Certificado</a>
+        <a href="<?= APP_URL ?>documentacao/novo_certificado?agendamento_id=<?= urlencode($agendamento_id) ?>&vistoria_id=<?= urlencode((string)$vistoria['id']) ?>" class="btn btn-success ms-3"><i class="fas fa-certificate"></i> Ir para Etapa 2 — Gerar Certificado</a>
     </div>
 <?php endif; ?>
     <div class="form-container">
@@ -809,9 +809,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                                     </button>
                                                 <?php else: ?>
                                                     <div style="margin-bottom:10px"><strong>Etapa 1 de 2:</strong> assine o relat&oacute;rio t&eacute;cnico.</div>
-                                                    <a href="<?= APP_URL ?>minhas-assinaturas" class="btn btn-warning">
+                                                    <button type="button" class="btn btn-warning js-assinar-substituto"
+                                                            data-documento-id="<?= h($vistoria['id']) ?>">
                                                         <i class="fas fa-file-signature"></i> 1. Assinar como substituto
-                                                    </a>
+                                                    </button>
                                                     <button type="button" class="btn btn-danger" disabled style="margin-top:8px;opacity:.65">
                                                         <i class="fas fa-calendar-plus"></i> 2. Enviar para Retornos A/S
                                                     </button>
@@ -827,7 +828,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                             </button>
                                         <?php else: ?>
                                             <div class="admin-review-text" style="margin-bottom:10px">O relat&oacute;rio ainda n&atilde;o foi assinado.</div>
-                                            <a href="<?= APP_URL ?>minhas-assinaturas" class="btn btn-warning"><i class="fas fa-file-signature"></i> Assinar como substituto</a>
+                                            <button type="button" class="btn btn-warning js-assinar-substituto"
+                                                    data-documento-id="<?= h($vistoria['id']) ?>">
+                                                <i class="fas fa-file-signature"></i> Assinar como substituto
+                                            </button>
                                         <?php endif; ?>
                                     </div>
                                     <hr style="border:0;border-top:1px solid #dfe9e5;margin:16px 0">
@@ -962,7 +966,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <?php if ($eh_relatorio_cumprimento): ?>
                 <div style="margin:20px;padding:18px;border:1px solid #f59e0b;border-radius:10px;background:rgba(245,158,11,.08);">
                     <h4 style="margin-top:0;"><i class="fas fa-clipboard-check"></i> Relatório de Verificação de Cumprimento de Exigências</h4>
-                    <p>Continuação do relatório <strong><?= h($relatorio_anterior_numero_ui ?: $vistoria['relatorio_anterior_id']) ?></strong>. Classifique as exigências copiadas e registre qualquer nova deficiência encontrada.</p>
+                    <p>Continuação do relatório <strong><?= h($relatorio_anterior_numero_ui ?: $vistoria['relatorio_anterior_id']) ?></strong>. Classifique todas as exigências pendentes herdadas, inclusive as comuns, e registre qualquer nova deficiência encontrada.</p>
                 </div>
                 <div style="padding:0 20px 20px;display:grid;gap:14px;">
                     <div class="form-group">
@@ -1321,7 +1325,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <span class="report-pdf-after-save"><i class="fas fa-file-pdf"></i> O PDF estará disponível após salvar.</span>
                 <?php endif; ?>
                 <?php if ($editando && $pode_ir_etapa2): ?>
-                    <a href="<?php echo APP_URL; ?>documentacao/novo_certificado?agendamento_id=<?php echo urlencode($agendamento_id); ?>" class="btn btn-success">
+                    <a href="<?php echo APP_URL; ?>documentacao/novo_certificado?agendamento_id=<?php echo urlencode($agendamento_id); ?>&vistoria_id=<?php echo urlencode((string)$vistoria['id']); ?>" class="btn btn-success">
                         <i class="fas fa-certificate"></i> Gerar Certificado
                     </a>
                 <?php endif; ?>
@@ -1343,6 +1347,41 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <?php endif; ?>
     </div>
 </div>
+
+<?php if ($admin_review_mode
+    && $cargo === 'ADMIN'
+    && $eh_relatorio_vigente
+    && ($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO'
+    && ($vistoria['assinatura_status'] ?? '') !== 'ASSINADO'): ?>
+<div id="modalAssinaturaSubstituta" role="dialog" aria-modal="true" aria-labelledby="tituloAssinaturaSubstituta"
+     style="display:none;position:fixed;inset:0;background:rgba(4,35,28,.68);z-index:10050;align-items:center;justify-content:center;padding:18px;">
+    <div style="background:#fff;border-radius:14px;width:min(560px,100%);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.28);">
+        <div style="padding:20px 22px;background:#073f34;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <strong id="tituloAssinaturaSubstituta"><i class="fas fa-file-signature"></i> Autorizar assinatura substituta</strong>
+            <button type="button" id="fecharAssinaturaSubstituta" aria-label="Fechar"
+                    style="border:0;background:transparent;color:#fff;font-size:1.25rem;cursor:pointer;">&times;</button>
+        </div>
+        <div style="padding:22px;">
+            <p style="margin-top:0;">Será aplicada a assinatura cadastrada no seu perfil administrativo ao relatório <strong><?= h($vistoria['numero'] ?? '') ?></strong>.</p>
+            <p style="margin-bottom:14px;color:#52635e;">
+                Localização, IP, data e hora serão registrados para auditoria.
+                <?php if (($resumo_aprovacao_relatorio['pendentes_as'] ?? 0) > 0): ?>
+                    Como existem exigências A/S, a assinatura não aprovará o relatório; você permanecerá nesta tela para encaminhá-lo a Retornos A/S.
+                <?php else: ?>
+                    Após a aprovação, você seguirá para escolher o certificado com este relatório já selecionado.
+                <?php endif; ?>
+            </p>
+            <div id="mensagemAssinaturaSubstituta" class="alert" aria-live="polite" style="display:none;margin:0;"></div>
+        </div>
+        <div style="padding:15px 22px;background:#f4f7f6;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary" id="cancelarAssinaturaSubstituta">Cancelar</button>
+            <button type="button" class="btn btn-success" id="confirmarAssinaturaSubstituta">
+                <i class="fas fa-location-dot"></i> Permitir localização e assinar
+            </button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if (!$admin_review_mode): ?>
 <script>
@@ -1735,6 +1774,102 @@ document.getElementById('formRelatorio').addEventListener('submit', function(e) 
 </script>
 <?php else: ?>
 <script>
+const modalAssinaturaSubstituta = document.getElementById('modalAssinaturaSubstituta');
+const mensagemAssinaturaSubstituta = document.getElementById('mensagemAssinaturaSubstituta');
+const confirmarAssinaturaSubstituta = document.getElementById('confirmarAssinaturaSubstituta');
+let relatorioAssinaturaSubstituta = '';
+
+function fecharModalAssinaturaSubstituta() {
+    if (!modalAssinaturaSubstituta || confirmarAssinaturaSubstituta?.disabled) return;
+    modalAssinaturaSubstituta.style.display = 'none';
+    document.body.style.overflow = '';
+    relatorioAssinaturaSubstituta = '';
+}
+
+function exibirMensagemAssinaturaSubstituta(texto, erro = false) {
+    if (!mensagemAssinaturaSubstituta) return;
+    mensagemAssinaturaSubstituta.style.display = 'block';
+    mensagemAssinaturaSubstituta.className = 'alert ' + (erro ? 'alert-danger' : 'alert-info');
+    mensagemAssinaturaSubstituta.textContent = texto;
+}
+
+document.querySelectorAll('.js-assinar-substituto').forEach(function(botao) {
+    botao.addEventListener('click', function() {
+        relatorioAssinaturaSubstituta = this.dataset.documentoId || '';
+        if (!modalAssinaturaSubstituta || !relatorioAssinaturaSubstituta) return;
+        mensagemAssinaturaSubstituta.style.display = 'none';
+        confirmarAssinaturaSubstituta.disabled = false;
+        modalAssinaturaSubstituta.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        confirmarAssinaturaSubstituta.focus();
+    });
+});
+
+document.getElementById('cancelarAssinaturaSubstituta')?.addEventListener('click', fecharModalAssinaturaSubstituta);
+document.getElementById('fecharAssinaturaSubstituta')?.addEventListener('click', fecharModalAssinaturaSubstituta);
+modalAssinaturaSubstituta?.addEventListener('click', function(evento) {
+    if (evento.target === modalAssinaturaSubstituta) fecharModalAssinaturaSubstituta();
+});
+document.addEventListener('keydown', function(evento) {
+    if (evento.key === 'Escape' && modalAssinaturaSubstituta?.style.display === 'flex') {
+        fecharModalAssinaturaSubstituta();
+    }
+});
+
+confirmarAssinaturaSubstituta?.addEventListener('click', function() {
+    if (!relatorioAssinaturaSubstituta) return;
+    if (!navigator.geolocation) {
+        exibirMensagemAssinaturaSubstituta('Este navegador não oferece geolocalização.', true);
+        return;
+    }
+
+    confirmarAssinaturaSubstituta.disabled = true;
+    exibirMensagemAssinaturaSubstituta('Obtendo localização e preparando a assinatura...');
+    navigator.geolocation.getCurrentPosition(function(posicao) {
+        const dados = new FormData();
+        dados.append('csrf_token', <?= json_encode(gerarCSRF()) ?>);
+        dados.append('action', 'assinar');
+        dados.append('documento_tipo', 'RELATORIO');
+        dados.append('documento_id', relatorioAssinaturaSubstituta);
+        dados.append('latitude', posicao.coords.latitude);
+        dados.append('longitude', posicao.coords.longitude);
+        dados.append('geo_precisao_m', posicao.coords.accuracy || '');
+
+        fetch(<?= json_encode(APP_URL . 'minhas-assinaturas/actions') ?>, {
+            method: 'POST',
+            body: dados,
+            credentials: 'same-origin',
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        }).then(async function(resposta) {
+            const retorno = await resposta.json().catch(function() {
+                return {success:false,message:'O servidor retornou uma resposta inválida.'};
+            });
+            if (!resposta.ok || !retorno.success) {
+                throw new Error(retorno.message || 'Não foi possível assinar o relatório.');
+            }
+            exibirMensagemAssinaturaSubstituta(retorno.message || 'Relatório assinado com sucesso.');
+            const proximaUrl = retorno.data?.proxima_url;
+            window.setTimeout(function() {
+                window.location.assign(proximaUrl || <?= json_encode(
+                    (($resumo_aprovacao_relatorio['pendentes_as'] ?? 0) > 0
+                        ? APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode((string)$agendamento_id)
+                        : APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id))
+                    . '&vistoria_id=' . urlencode((string)($vistoria['id'] ?? ''))
+                ) ?>);
+            }, 650);
+        }).catch(function(erro) {
+            exibirMensagemAssinaturaSubstituta(erro.message, true);
+            confirmarAssinaturaSubstituta.disabled = false;
+        });
+    }, function(erro) {
+        const mensagem = erro.code === 1
+            ? 'A localização é obrigatória para autorizar a assinatura.'
+            : 'Não foi possível obter a localização. Verifique a permissão do navegador e tente novamente.';
+        exibirMensagemAssinaturaSubstituta(mensagem, true);
+        confirmarAssinaturaSubstituta.disabled = false;
+    }, {enableHighAccuracy:true,timeout:15000,maximumAge:0});
+});
+
 document.getElementById('formDecisaoAdmin')?.addEventListener('submit', function(e) {
     if (e.submitter?.name === 'decisao' && e.submitter.value === 'aprovar') {
         return;

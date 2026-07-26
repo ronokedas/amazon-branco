@@ -34,7 +34,18 @@ assertRetornoAS(str_contains($migration096, 'GREATEST(r.sem_prazo, ve.antes_de_s
 
 assertRetornoAS(str_contains($functions, 'obterRelatorioVigenteCadeia'), 'A certificacao ainda nao resolve a cadeia entre agendamentos.');
 assertRetornoAS(str_contains($functions, 'relatorioNumerosReferenciaCertificado'), 'A referencia dupla de relatorios nao foi centralizada.');
-assertRetornoAS(str_contains($functions, "antes_de_suspender=1"), 'A criacao do retorno nao filtra somente A/S.');
+assertRetornoAS(
+    str_contains($functions, "vencimento,antes_de_suspender,'pendente',id"),
+    'A criacao do retorno nao preserva a classificacao A/S ou comum.'
+);
+assertRetornoAS(
+    str_contains($functions, "WHERE vistoria_id=:origem\n          AND conforme='nao'"),
+    'A criacao do retorno nao copia todas as exigencias ainda pendentes.'
+);
+assertRetornoAS(
+    str_contains($functions, 'obterExigenciasComunsPendentesCadeia'),
+    'A certificacao nao resolve as exigencias comuns pelo estado efetivo da cadeia.'
+);
 assertRetornoAS(str_contains($functions, "status='PENDENTE_AGENDAMENTO'"), 'A validacao nao cria a pendencia de agendamento.');
 assertRetornoAS(str_contains($functions, 'gerarNumeroDocumento'), 'O retorno nao recebe novo numero sequencial.');
 
