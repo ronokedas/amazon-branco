@@ -49,7 +49,7 @@ try {
     $stmt = $pdo->prepare("INSERT INTO vistorias
         (id,numero,embarcacao_id,pessoa_id,agendamento_id,finalidade,data_vistoria,status)
         VALUES
-        (:id,:numero,:embarcacao,:pessoa,:agendamento,'VISTORIA',CURDATE(),'APROVADA_COM_EXIGENCIAS')");
+        (:id,:numero,:embarcacao,:pessoa,:agendamento,'VISTORIA',CURDATE(),'RETORNO_AS')");
     $stmt->execute([
         ':id'=>$raizId, ':numero'=>"TEST-AS-{$sufixo}-0",
         ':embarcacao'=>$base['embarcacao_id'], ':pessoa'=>$base['cliente_id'],

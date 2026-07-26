@@ -1022,25 +1022,49 @@ function relatorioPossuiExigenciaComumPendenteNaRaiz(PDO $pdo, string $vistoriaI
     return (bool)$stmt->fetchColumn();
 }
 
+/** Matriz unica de decisao administrativa do relatorio tecnico. */
+function resolverStatusDecisaoRelatorio(int $pendentes, int $pendentesAs): string
+{
+    if ($pendentesAs > 0) return 'RETORNO_AS';
+    return $pendentes > 0 ? 'APROVADA_COM_EXIGENCIAS' : 'APROVADA';
+}
+
 function criarPendenciaRetornoAS(PDO $pdo, string $relatorioOrigemId, ?string $usuarioId): string
 {
-    $stmt = $pdo->prepare('SELECT id,status FROM vistoria_retornos WHERE relatorio_origem_id=:id LIMIT 1');
+    $sufixoLock = $pdo->inTransaction() ? ' FOR UPDATE' : '';
+    $stmt = $pdo->prepare('SELECT id,status FROM vistoria_retornos WHERE relatorio_origem_id=:id LIMIT 1' . $sufixoLock);
     $stmt->execute([':id' => $relatorioOrigemId]);
     $retorno = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($retorno) {
         if ($retorno['status'] === 'CANCELADO') {
-            $pdo->prepare("UPDATE vistoria_retornos SET status='PENDENTE_AGENDAMENTO',
+            $reabrir = $pdo->prepare("UPDATE vistoria_retornos SET status='PENDENTE_AGENDAMENTO',
                 agendamento_id=NULL,relatorio_resultado_id=NULL,motivo_cancelamento=NULL,
-                cancelado_por=NULL,cancelado_em=NULL WHERE id=:id")
-                ->execute([':id' => $retorno['id']]);
+                cancelado_por=NULL,cancelado_em=NULL WHERE id=:id AND status='CANCELADO'");
+            $reabrir->execute([':id' => $retorno['id']]);
+            if ($reabrir->rowCount() !== 1) {
+                throw new RuntimeException('O retorno A/S foi alterado por outra operacao.');
+            }
         }
         return (string)$retorno['id'];
     }
+
+    $stmtVistoriador = $pdo->prepare("SELECT a.vistoriador_id
+        FROM vistorias v
+        LEFT JOIN agendamentos a ON a.id=v.agendamento_id
+        WHERE v.id=:id LIMIT 1");
+    $stmtVistoriador->execute([':id' => $relatorioOrigemId]);
+    $vistoriadorOrigemId = trim((string)$stmtVistoriador->fetchColumn()) ?: null;
+
     $id = gerarUUID();
     $stmt = $pdo->prepare("INSERT INTO vistoria_retornos
-        (id,relatorio_origem_id,status,criado_por)
-        VALUES (:id,:origem,'PENDENTE_AGENDAMENTO',:usuario)");
-    $stmt->execute([':id' => $id, ':origem' => $relatorioOrigemId, ':usuario' => $usuarioId ?: null]);
+        (id,relatorio_origem_id,status,criado_por,vistoriador_origem_id)
+        VALUES (:id,:origem,'PENDENTE_AGENDAMENTO',:usuario,:vistoriador)");
+    $stmt->execute([
+        ':id' => $id,
+        ':origem' => $relatorioOrigemId,
+        ':usuario' => $usuarioId ?: null,
+        ':vistoriador' => $vistoriadorOrigemId,
+    ]);
     return $id;
 }
 
@@ -1048,13 +1072,58 @@ function concluirRetornoDoRelatorio(PDO $pdo, string $relatorioId): void
 {
     $stmt = $pdo->prepare("UPDATE vistoria_retornos
         SET status='CONCLUIDO', relatorio_resultado_id=:relatorio
-        WHERE agendamento_id=(SELECT agendamento_id FROM vistorias WHERE id=:relatorio2)
-           OR relatorio_resultado_id=:relatorio3");
+        WHERE (agendamento_id=(SELECT agendamento_id FROM vistorias WHERE id=:relatorio2)
+           OR relatorio_resultado_id=:relatorio3)
+          AND status IN ('AGENDADO','RELATORIO_ENVIADO')");
     $stmt->execute([
         ':relatorio' => $relatorioId,
         ':relatorio2' => $relatorioId,
         ':relatorio3' => $relatorioId,
     ]);
+}
+
+/**
+ * Encaminha o relatorio vigente com A/S para um novo ciclo sem registra-lo como aprovado.
+ * Deve ser chamado dentro da mesma transacao que conclui agendamento e OS.
+ */
+function encaminharRelatorioParaRetornoAS(
+    PDO $pdo,
+    array $vistoria,
+    string $usuarioId,
+    ?string $observacao = null
+): string {
+    $id = trim((string)($vistoria['id'] ?? ''));
+    if ($id === '' || (string)($vistoria['status'] ?? '') !== 'AGUARDANDO_APROVACAO') {
+        throw new RuntimeException('Somente relatorios aguardando analise podem ser encaminhados para retorno A/S.');
+    }
+    if (!relatorioPossuiASPendente($pdo, $id)) {
+        throw new RuntimeException('O relatorio nao possui exigencia A/S pendente.');
+    }
+    $vigente = obterRelatorioVigenteCadeia($pdo, $id);
+    if (!$vigente || (string)$vigente['id'] !== $id) {
+        $numero = trim((string)($vigente['numero'] ?? ''));
+        throw new RuntimeException('Este relatorio foi substituido. Abra o relatorio vigente'
+            . ($numero !== '' ? ' ' . $numero : '') . ' para registrar a decisao.');
+    }
+
+    if (($vistoria['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS') {
+        concluirRetornoDoRelatorio($pdo, $id);
+    }
+
+    $stmt = $pdo->prepare("UPDATE vistorias
+        SET status='RETORNO_AS',observacao_admin=:observacao,
+            aprovado_por=:usuario,data_aprovacao=NOW()
+        WHERE id=:id AND status='AGUARDANDO_APROVACAO'");
+    $stmt->execute([
+        ':observacao' => trim((string)$observacao) ?: null,
+        ':usuario' => $usuarioId,
+        ':id' => $id,
+    ]);
+    if ($stmt->rowCount() !== 1) {
+        throw new RuntimeException('O relatorio foi alterado por outra operacao.');
+    }
+
+    return criarPendenciaRetornoAS($pdo, $id, $usuarioId);
 }
 
 /** Cria, uma unica vez, o relatorio numerado do agendamento de retorno A/S. */
@@ -1102,8 +1171,8 @@ function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, stri
     $stmt = $pdo->prepare('SELECT * FROM vistorias WHERE id=:id FOR UPDATE');
     $stmt->execute([':id' => $origemId]);
     $origem = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$origem || !in_array($origem['status'], ['APROVADA','APROVADA_COM_EXIGENCIAS'], true)) {
-        throw new RuntimeException('O relatorio de origem do retorno nao esta validado.');
+    if (!$origem || (string)$origem['status'] !== 'RETORNO_AS') {
+        throw new RuntimeException('O relatorio de origem nao esta encaminhado para retorno A/S.');
     }
     $vigente = obterRelatorioVigenteCadeia($pdo, $origemId);
     if (!$vigente || $vigente['id'] !== $origemId) {
@@ -1235,9 +1304,12 @@ function avaliarLiberacaoCertificacao(PDO $pdo, string $vistoriaId): array
         ];
     }
     if (!in_array($vigente['status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)) {
+        $mensagem = (string)$vigente['status'] === 'RETORNO_AS'
+            ? 'A certificacao esta bloqueada: o relatorio vigente exige retorno A/S.'
+            : 'A certificacao aguarda a aprovacao do relatorio vigente.';
         return [
             'permitido' => false,
-            'mensagem' => 'A certificacao aguarda a aprovacao do relatorio vigente.',
+            'mensagem' => $mensagem,
             'vistoria_id' => $vigente['id'],
             'status' => $vigente['status'],
         ];

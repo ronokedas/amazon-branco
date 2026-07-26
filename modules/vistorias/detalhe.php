@@ -144,6 +144,7 @@ $statusConfig = [
     'AGUARDANDO_APROVACAO' => ['class' => 'badge-warning', 'icon' => 'fa-hourglass-half', 'cor' => '#d99700'],
     'APROVADA'  => ['class' => 'badge-success', 'icon' => 'fa-check-circle', 'cor' => '#28a745'],
     'APROVADA_COM_EXIGENCIAS' => ['class' => 'badge-info', 'icon' => 'fa-clipboard-check', 'cor' => '#0d8aa6'],
+    'RETORNO_AS' => ['class' => 'badge-danger', 'icon' => 'fa-calendar-plus', 'cor' => '#b42318'],
     'REPROVADA' => ['class' => 'badge-danger',  'icon' => 'fa-times-circle', 'cor' => '#dc3545'],
     'CANCELADA' => ['class' => 'badge-secondary', 'icon' => 'fa-ban',  'cor' => '#6c757d'],
 ];

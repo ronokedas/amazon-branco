@@ -131,7 +131,23 @@ try {
         $exigencias_avulsas = $stmtE->fetchAll(PDO::FETCH_ASSOC);
 
         // Carregar respostas do checklist
-        $stmtResp = $pdo->prepare("SELECT * FROM vistoria_checklist_respostas WHERE vistoria_id = :v");
+        $stmtResp = $pdo->prepare("
+            SELECT r.*,
+                   CASE
+                     WHEN EXISTS (
+                         SELECT 1
+                         FROM vistoria_exigencias ve
+                         WHERE ve.vistoria_id = r.vistoria_id
+                           AND ve.catalogo_id = r.catalogo_id
+                           AND ve.antes_de_suspender = 1
+                           AND ve.conforme = 'nao'
+                           AND ve.status_item <> 'cumprida'
+                     ) THEN 1
+                     ELSE COALESCE(r.sem_prazo, 0)
+                   END AS sem_prazo
+            FROM vistoria_checklist_respostas r
+            WHERE r.vistoria_id = :v
+        ");
         $stmtResp->execute([':v' => $vistoria['id']]);
         while ($r = $stmtResp->fetch(PDO::FETCH_ASSOC)) {
             $checklist_respostas[$r['catalogo_id']] = $r;
@@ -215,7 +231,7 @@ if ($pode_ir_etapa2) $etapa_atual = 2;
 $relatorio_anterior_id = $vistoria['relatorio_anterior_id'] ?? '';
 $possui_as_pendente = $vistoria ? relatorioPossuiASPendente($pdo, $vistoria['id']) : false;
 $relatorio_cumprimento_aberto_id = null;
-if ($vistoria && $possui_as_pendente && in_array($vistoria['status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)) {
+if ($vistoria && $possui_as_pendente && (string)$vistoria['status'] === 'RETORNO_AS') {
     $stmtCumprimentoAberto = $pdo->prepare("SELECT id FROM vistorias
         WHERE relatorio_anterior_id = :anterior
           AND finalidade = 'CUMPRIMENTO_EXIGENCIAS'
@@ -230,8 +246,15 @@ $relatorio_vigente_cadeia = null;
 $eh_relatorio_vigente = true;
 $cadeia_relatorios = [];
 $retorno_as = null;
+$relatorio_anterior_numero_ui = '';
 if ($vistoria) {
     $cadeia_relatorios = obterCadeiaRelatorios($pdo, (string)$vistoria['id']);
+    foreach ($cadeia_relatorios as $indiceCadeiaUi => $itemCadeiaUi) {
+        if ((string)$itemCadeiaUi['id'] === (string)$vistoria['id'] && $indiceCadeiaUi > 0) {
+            $relatorio_anterior_numero_ui = (string)($cadeia_relatorios[$indiceCadeiaUi - 1]['numero'] ?? '');
+            break;
+        }
+    }
     $relatorio_vigente_cadeia = obterRelatorioVigenteCadeia($pdo, (string)$vistoria['id']);
     $eh_relatorio_vigente = !empty($relatorio_vigente_cadeia)
         && (string)$relatorio_vigente_cadeia['id'] === (string)$vistoria['id'];
@@ -567,7 +590,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode((string)$relatorio_substituto_aprovado['agendamento_id']) ?>&vistoria_id=<?= urlencode((string)$relatorio_substituto_aprovado['id']) ?>"><?= h($relatorio_substituto_aprovado['numero']) ?></a>.
     </div>
 <?php endif; ?>
-<?php if ($vistoria && $possui_as_pendente && in_array($vistoria['status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true)): ?>
+<?php if ($vistoria && $possui_as_pendente && (string)$vistoria['status'] === 'RETORNO_AS'): ?>
     <div class="alert alert-danger" style="margin-bottom:20px;">
         <strong>Certificação bloqueada por exigência A/S.</strong>
         A embarcação não pode receber certificados até a aprovação da verificação de cumprimento.
@@ -681,6 +704,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 'AGUARDANDO_APROVACAO' => 'Aguardando aprovacao',
                 'APROVADA' => 'Aprovada',
                 'APROVADA_COM_EXIGENCIAS' => 'Aprovada com exigencias',
+                'RETORNO_AS' => 'Retorno A/S necessario',
                 'REPROVADA' => 'Reprovada',
                 'CANCELADA' => 'Cancelada',
             ];
@@ -747,9 +771,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                                 <span><strong>Aprovada</strong><br><small>Libera certificados Provis&oacute;rio, Condicional e Definitivo.</small></span>
                                             </label>
                                             <label style="display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid #efd39e;border-radius:9px;background:#fff9ed;<?= $resumo_aprovacao_relatorio['pendentes'] === 0 ? 'opacity:.55' : '' ?>">
-                                                <input type="radio" name="resultado_relatorio" value="APROVADA_COM_EXIGENCIAS" <?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'checked' : 'disabled' ?>>
+                                                <input type="radio" name="resultado_relatorio"
+                                                       value="<?= $resumo_aprovacao_relatorio['pendentes_as'] > 0 ? 'RETORNO_AS' : 'APROVADA_COM_EXIGENCIAS' ?>"
+                                                       <?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'checked' : 'disabled' ?>>
                                                 <?php if ($resumo_aprovacao_relatorio['pendentes_as'] > 0): ?>
-                                                    <span><strong>Validar com A/S — certifica&ccedil;&atilde;o bloqueada</strong><br><small>Valida o documento técnico, cria o retorno obrigatório e não permite qualquer certificado.</small></span>
+                                                    <span><strong>Encaminhar para Retorno A/S</strong><br><small>O relatório não será aprovado. O processo ficará aguardando o agendamento de uma nova visita.</small></span>
                                                 <?php else: ?>
                                                     <span><strong>Aprovada com exig&ecirc;ncias</strong><br><small>Permite apenas certificados Provis&oacute;rio e Condicional.</small></span>
                                                 <?php endif; ?>
@@ -765,15 +791,43 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         <?php endif; ?>
                                     </div>
                                     <div style="margin-bottom:16px">
-                                        <?php if (($vistoria['assinatura_status'] ?? '') === 'ASSINADO'): ?>
-                                            <button type="submit" name="decisao" value="aprovar" class="btn btn-warning"
-                                                    onclick="return confirm('<?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar este relatorio com exigencias?' : 'Aprovar este relatorio?' ?>')">
+                                        <?php if ($resumo_aprovacao_relatorio['pendentes_as'] > 0): ?>
+                                            <div style="padding:14px;border:2px solid #d95047;border-radius:10px;background:#fff4f2">
+                                                <strong style="display:block;color:#9f261f;margin-bottom:6px">
+                                                    <i class="fas fa-ban"></i> Decis&atilde;o obrigat&oacute;ria: n&atilde;o aprovar
+                                                </strong>
+                                                <div style="margin-bottom:12px;color:#65322e">
+                                                    Encaminhe este relat&oacute;rio para <strong>Retornos A/S</strong>. Depois, a pr&oacute;xima a&ccedil;&atilde;o no dashboard ser&aacute; agendar uma nova visita.
+                                                </div>
+                                                <?php if (($vistoria['assinatura_status'] ?? '') === 'ASSINADO'): ?>
+                                                    <div style="margin-bottom:8px;color:#23754f"><i class="fas fa-circle-check"></i> Etapa 1 conclu&iacute;da: relat&oacute;rio assinado.</div>
+                                                    <button type="submit" name="decisao" value="retorno_as"
+                                                            class="btn btn-danger"
+                                                            onclick="return confirm('Este relatorio nao sera aprovado. Encaminhar agora para Retornos A/S e abrir a etapa de novo agendamento?')">
+                                                        <i class="fas fa-calendar-plus"></i>
+                                                        N&atilde;o aprovar e enviar para Retornos A/S
+                                                    </button>
+                                                <?php else: ?>
+                                                    <div style="margin-bottom:10px"><strong>Etapa 1 de 2:</strong> assine o relat&oacute;rio t&eacute;cnico.</div>
+                                                    <a href="<?= APP_URL ?>minhas-assinaturas" class="btn btn-warning">
+                                                        <i class="fas fa-file-signature"></i> 1. Assinar como substituto
+                                                    </a>
+                                                    <button type="button" class="btn btn-danger" disabled style="margin-top:8px;opacity:.65">
+                                                        <i class="fas fa-calendar-plus"></i> 2. Enviar para Retornos A/S
+                                                    </button>
+                                                    <small style="display:block;margin-top:8px;color:#765a56">A assinatura n&atilde;o aprova o relat&oacute;rio com A/S. Ela apenas libera a etapa 2.</small>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php elseif (($vistoria['assinatura_status'] ?? '') === 'ASSINADO'): ?>
+                                            <button type="submit" name="decisao" value="aprovar"
+                                                    class="btn btn-warning"
+                                                    onclick="return confirm('<?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar este relatorio com exigencias comuns?' : 'Aprovar este relatorio?' ?>')">
                                                 <i class="fas fa-check-circle"></i>
-                                                <?= $resumo_aprovacao_relatorio['pendentes_as'] > 0 ? 'Validar com A/S' : ($resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar com exig&ecirc;ncias' : 'Aprovar relat&oacute;rio') ?>
+                                                <?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar com exig&ecirc;ncias' : 'Aprovar relat&oacute;rio' ?>
                                             </button>
                                         <?php else: ?>
-                                            <div class="admin-review-text" style="margin-bottom:10px">O relat&oacute;rio ainda n&atilde;o foi assinado. O administrador pode assin&aacute;-lo como substituto; a assinatura concluir&aacute; tamb&eacute;m a aprova&ccedil;&atilde;o.</div>
-                                            <a href="<?= APP_URL ?>minhas-assinaturas" class="btn btn-warning"><i class="fas fa-file-signature"></i> Assinar como substituto e aprovar</a>
+                                            <div class="admin-review-text" style="margin-bottom:10px">O relat&oacute;rio ainda n&atilde;o foi assinado.</div>
+                                            <a href="<?= APP_URL ?>minhas-assinaturas" class="btn btn-warning"><i class="fas fa-file-signature"></i> Assinar como substituto</a>
                                         <?php endif; ?>
                                     </div>
                                     <hr style="border:0;border-top:1px solid #dfe9e5;margin:16px 0">
@@ -908,7 +962,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <?php if ($eh_relatorio_cumprimento): ?>
                 <div style="margin:20px;padding:18px;border:1px solid #f59e0b;border-radius:10px;background:rgba(245,158,11,.08);">
                     <h4 style="margin-top:0;"><i class="fas fa-clipboard-check"></i> Relatório de Verificação de Cumprimento de Exigências</h4>
-                    <p>Relatório substituto de <strong><?= h($vistoria['relatorio_anterior_id']) ?></strong>. Classifique somente as exigências pendentes copiadas do relatório anterior.</p>
+                    <p>Continuação do relatório <strong><?= h($relatorio_anterior_numero_ui ?: $vistoria['relatorio_anterior_id']) ?></strong>. Classifique as exigências copiadas e registre qualquer nova deficiência encontrada.</p>
                 </div>
                 <div style="padding:0 20px 20px;display:grid;gap:14px;">
                     <div class="form-group">
@@ -935,10 +989,18 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             </div>
                             <div class="form-group">
                                 <label>Observações e evidências verificadas</label>
-                                <textarea name="cumprimento_observacao[<?= h($ex['id']) ?>]" rows="3" placeholder="Descreva o que foi verificado e as evidências apresentadas."><?= h($ex['observacao'] ?? '') ?></textarea>
+                                <textarea name="cumprimento_observacao[<?= h($ex['id']) ?>]" rows="3" required placeholder="Descreva o que foi verificado e as evidências apresentadas."><?= h($ex['observacao'] ?? '') ?></textarea>
                             </div>
                         </article>
                     <?php endforeach; ?>
+                    <div style="padding:16px;border:1px dashed var(--cor-borda,#777);border-radius:9px;">
+                        <h4 style="margin-top:0;">Novas exigências encontradas nesta visita</h4>
+                        <p>Use esta área somente para uma deficiência nova, que não veio do relatório anterior.</p>
+                        <div id="novasExigenciasRetorno"></div>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="adicionarNovaExigenciaRetorno()">
+                            <i class="fas fa-plus"></i> Adicionar nova exigência
+                        </button>
+                    </div>
                     <div class="form-group">
                         <label for="observacoes_tecnicas">Observações técnicas gerais</label>
                         <textarea id="observacoes_tecnicas" name="observacoes_tecnicas" rows="4"><?= h($vistoria['observacoes_tecnicas'] ?? '') ?></textarea>
@@ -1100,6 +1162,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <label style="display:flex; align-items:center; gap:8px; margin-top: 10px;">
                                         <input type="checkbox"
                                                class="checklist-sem-prazo"
+                                               name="checklist_sem_prazo_por_id[<?= h($item['id']) ?>]"
+                                               value="1"
                                                data-target="sem_prazo_<?= $item['id'] ?>"
                                                <?= $semPrazo ? 'checked' : '' ?>>
                                         A/S — Antes de suspender
@@ -1519,6 +1583,37 @@ document.getElementById('buscaChecklist').addEventListener('input', function() {
 
 atualizarContadoresChecklist();
 
+let contadorNovasExigenciasRetorno = 0;
+function adicionarNovaExigenciaRetorno() {
+    const container = document.getElementById('novasExigenciasRetorno');
+    if (!container) return;
+    const indice = contadorNovasExigenciasRetorno++;
+    const bloco = document.createElement('article');
+    bloco.style.cssText = 'margin:12px 0;padding:14px;border:1px solid var(--cor-borda,#555);border-radius:8px;';
+    bloco.innerHTML = `
+        <div class="form-row">
+            <div class="form-group col-8">
+                <label>Descrição da nova exigência *</label>
+                <input type="text" name="nova_exigencia_descricao[${indice}]" required>
+            </div>
+            <div class="form-group col-4">
+                <label>Item da NORMAM</label>
+                <input type="text" name="nova_exigencia_item_normam[${indice}]">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Observação e evidência *</label>
+            <textarea name="nova_exigencia_observacao[${indice}]" rows="2" required></textarea>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center">
+            <input type="checkbox" name="nova_exigencia_as[${indice}]" value="1"> A/S — Antes de suspender
+        </label>
+        <button type="button" class="btn btn-danger btn-sm" style="margin-top:10px" onclick="this.closest('article').remove()">
+            <i class="fas fa-trash"></i> Remover
+        </button>`;
+    container.appendChild(bloco);
+}
+
 // Tabela Avulsa
 let contadorLinhasAvulsa = <?php echo count($exigencias_avulsas); ?>;
 const blocosVistoriaAvulsa = <?php echo json_encode($blocos_vistoria_disponiveis, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
@@ -1664,6 +1759,7 @@ document.getElementById('formDecisaoAdmin')?.addEventListener('submit', function
         AGUARDANDO_APROVACAO: 'Aguardando Aprovacao',
         APROVADA: 'Aprovada',
         APROVADA_COM_EXIGENCIAS: 'Aprovada com Exigencias',
+        RETORNO_AS: 'Retorno A/S Necessario',
         REPROVADA: 'Reprovada',
         CANCELADA: 'Cancelada'
     };

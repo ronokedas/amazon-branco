@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/financeiro_escritorios.php';
 
-$matriz = $pdo->query("SELECT id FROM escritorios WHERE nome='Matriz' AND ativo=1 LIMIT 1")->fetchColumn();
+$matriz = $pdo->query("SELECT id FROM escritorios WHERE ativo=1 AND (nome='Matriz' OR nome LIKE 'Matriz %') ORDER BY (nome='Matriz') DESC,nome LIMIT 1")->fetchColumn();
 if (!$matriz) throw new RuntimeException('A Matriz nao foi criada.');
 
 foreach (['usuarios', 'propostas', 'financeiro_lancamentos'] as $tabela) {

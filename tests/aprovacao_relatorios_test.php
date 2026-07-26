@@ -28,11 +28,20 @@ $semExigencias = [
 $comExigencias = [
     'pendentes' => 2,
     'status_esperado' => 'APROVADA_COM_EXIGENCIAS',
+    'pendentes_as' => 0,
     'versao' => hash('sha256', 'com-exigencias'),
 ];
+$comAs = [
+    'pendentes' => 1,
+    'pendentes_as' => 1,
+    'status_esperado' => 'RETORNO_AS',
+    'versao' => hash('sha256', 'com-as'),
+];
+$semExigencias['pendentes_as'] = 0;
 
 aprovacaoRelatorioValidarResultado($semExigencias, 'APROVADA', $semExigencias['versao']);
 aprovacaoRelatorioValidarResultado($comExigencias, 'APROVADA_COM_EXIGENCIAS', $comExigencias['versao']);
+aprovacaoRelatorioValidarResultado($comAs, 'RETORNO_AS', $comAs['versao']);
 
 assertAprovacaoFalha(
     fn() => aprovacaoRelatorioValidarResultado($comExigencias, 'APROVADA', $comExigencias['versao']),
@@ -45,6 +54,10 @@ assertAprovacaoFalha(
 assertAprovacaoFalha(
     fn() => aprovacaoRelatorioValidarResultado($semExigencias, 'APROVADA', hash('sha256', 'alterado')),
     'foram alterados'
+);
+assertAprovacaoFalha(
+    fn() => aprovacaoRelatorioValidarResultado($comAs, 'APROVADA_COM_EXIGENCIAS', $comAs['versao']),
+    'deve ser encaminhado para Retorno A/S'
 );
 
 $actions = file_get_contents(__DIR__ . '/../modules/vistorias/actions.php');
@@ -65,10 +78,12 @@ foreach ([$actions, $relatorio, $endpoint, $approvalDomain, $approvalUi, $detalh
 assertAprovacao(str_contains($actions, "getCargo() !== 'ADMIN'"), 'A decisao administrativa nao esta restrita ao cargo principal ADMIN.');
 assertAprovacao(str_contains($endpoint, "getCargo() !== 'ADMIN'"), 'O endpoint de assinatura nao esta restrito ao cargo principal ADMIN.');
 assertAprovacao(str_contains($relatorio, 'value="APROVADA"'), 'A opcao Aprovada nao aparece na revisao.');
-assertAprovacao(str_contains($relatorio, 'value="APROVADA_COM_EXIGENCIAS"'), 'A opcao Aprovada com exigencias nao aparece na revisao.');
+assertAprovacao(str_contains($relatorio, "'APROVADA_COM_EXIGENCIAS'"), 'A opcao Aprovada com exigencias nao aparece na revisao.');
+assertAprovacao(str_contains($relatorio, "'RETORNO_AS'"), 'A opcao impeditiva de Retorno A/S nao aparece na revisao.');
 assertAprovacao(str_contains($relatorio, 'name="versao_relatorio"'), 'A revisao nao envia a versao concorrente do relatorio.');
-assertAprovacao(str_contains($relatorio, 'name="decisao" value="aprovar"'), 'A revisao nao oferece aprovacao direta do relatorio.');
+assertAprovacao(str_contains($relatorio, "name=\"decisao\"") && str_contains($relatorio, "'aprovar'"), 'A revisao nao oferece aprovacao direta do relatorio.');
 assertAprovacao(str_contains($relatorio, 'Aprovar com exig&ecirc;ncias'), 'O botao contextual de aprovacao com exigencias nao aparece.');
+assertAprovacao(str_contains($relatorio, 'Encaminhar para Retorno A/S'), 'O botao impeditivo de Retorno A/S nao aparece.');
 assertAprovacao(!str_contains($relatorio, "renderBotaoAprovacaoDocumento(\$pdo,'RELATORIO'"), 'O relatorio ainda oferece assinatura eletronica.');
 assertAprovacao(!str_contains($relatorio, 'renderAprovacaoUi'), 'O modal de assinatura ainda e carregado no relatorio.');
 assertAprovacao(str_contains($actions, 'aprovacaoRelatorioValidarResultado'), 'A aprovacao direta nao valida status e versao no servidor.');
@@ -90,13 +105,13 @@ assertAprovacao(avaliarEdicaoRelatorio($pdo, $baseEditavel, 'vistoriador-teste',
 $aguardandoEditavel = array_merge($baseEditavel, ['status'=>'AGUARDANDO_APROVACAO']);
 assertAprovacao(avaliarEdicaoRelatorio($pdo, $aguardandoEditavel, 'vistoriador-teste', 'VISTORIADOR')['permitido'], 'Aguardando aprovacao sem assinatura deveria permanecer editavel.');
 assertAprovacao(!avaliarEdicaoRelatorio($pdo, array_merge($aguardandoEditavel, ['assinatura_status'=>'ASSINADO']), 'vistoriador-teste', 'VISTORIADOR')['permitido'], 'Relatorio assinado nao pode permanecer editavel.');
-foreach (['APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA','CANCELADA'] as $statusFinal) {
+foreach (['APROVADA','APROVADA_COM_EXIGENCIAS','RETORNO_AS','REPROVADA','CANCELADA'] as $statusFinal) {
     assertAprovacao(!avaliarEdicaoRelatorio($pdo, array_merge($baseEditavel, ['status'=>$statusFinal]), 'vistoriador-teste', 'VISTORIADOR')['permitido'], "Status final {$statusFinal} nao foi congelado.");
 }
 assertAprovacao(!avaliarEdicaoRelatorio($pdo, $aguardandoEditavel, 'admin-teste', 'ADMIN')['permitido'], 'Admin nao pode editar o conteudo do relatorio.');
 assertAprovacao(!avaliarEdicaoRelatorio($pdo, $aguardandoEditavel, 'analista-teste', 'ANALISTA')['permitido'], 'Analista nao pode editar o conteudo do relatorio.');
 assertAprovacao(str_contains($relatorio, 'Visualizar PDF do relat'), 'O PDF nao esta exposto para relatorio persistido.');
-assertAprovacao(str_contains($relatorio, 'Assinar como substituto e aprovar'), 'A revisao admin nao oferece assinatura substituta para relatorio sem assinatura.');
+assertAprovacao(str_contains($relatorio, 'Assinar como substituto'), 'A revisao admin nao oferece assinatura substituta para relatorio sem assinatura.');
 assertAprovacao(str_contains($actions, "getCargo() !== 'VISTORIADOR'"), 'O endpoint de salvamento nao restringe alteracoes ao vistoriador.');
 
 echo "Testes do fluxo de aprovacao de relatorios concluidos com sucesso.\n";

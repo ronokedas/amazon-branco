@@ -12,6 +12,7 @@
 /minio-data/
 /storage/sessions/
 /storage/documentos_assinados/
+/storage/documentos_aprovados/
 /uploads/
 /tmp/
 /temp_pdf/

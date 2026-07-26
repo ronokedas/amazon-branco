@@ -188,6 +188,8 @@ switch ($action) {
             $vistoriador_id  = $_POST['vistoriador_id'] ?? null;
             $vendedor_id     = $_POST['vendedor_id'] ?? null;
             $relatorio_origem_id = trim((string)($_POST['relatorio_origem_id'] ?? ''));
+            $motivo_reatribuicao = trim(sanitizar($_POST['motivo_reatribuicao'] ?? ''));
+            $vistoriador_origem_id = null;
 
             if ($relatorio_origem_id !== '' && $cargo !== 'ADMIN') {
                 throw new RuntimeException('Somente o administrador pode criar retorno de cumprimento A/S.');
@@ -242,18 +244,30 @@ switch ($action) {
             }
 
             if ($relatorio_origem_id !== '') {
-                $stmtOrigem = $pdo->prepare("SELECT v.embarcacao_id,COALESCE(a.cliente_id,v.pessoa_id) cliente_id
+                $stmtOrigem = $pdo->prepare("SELECT v.embarcacao_id,COALESCE(a.cliente_id,v.pessoa_id) cliente_id,
+                        a.vistoriador_id
                     FROM vistorias v LEFT JOIN agendamentos a ON a.id=v.agendamento_id
-                    WHERE v.id=:id AND v.status='APROVADA_COM_EXIGENCIAS'
+                    WHERE v.id=:id AND v.status='RETORNO_AS'
                       AND EXISTS (
                         SELECT 1 FROM vistoria_exigencias ve
                         WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1
                           AND ve.conforme='nao' AND ve.status_item<>'cumprida'
+                      )
+                      AND NOT EXISTS (
+                        SELECT 1 FROM vistorias vf
+                        WHERE vf.relatorio_anterior_id=v.id AND vf.status<>'CANCELADA'
                       ) LIMIT 1");
                 $stmtOrigem->execute([':id' => $relatorio_origem_id]);
                 $origem = $stmtOrigem->fetch(PDO::FETCH_ASSOC);
                 if (!$origem || $origem['embarcacao_id'] !== $embarcacao_id || $origem['cliente_id'] !== $cliente_id) {
                     throw new RuntimeException('Os dados do retorno A/S não correspondem ao relatório de origem.');
+                }
+                $vistoriador_origem_id = trim((string)($origem['vistoriador_id'] ?? ''));
+                if ($vistoriador_origem_id === '') {
+                    throw new RuntimeException('O relatório de origem não possui vistoriador responsável.');
+                }
+                if ((string)$vistoriador_id !== $vistoriador_origem_id && $motivo_reatribuicao === '') {
+                    throw new RuntimeException('Informe o motivo da troca do vistoriador responsável.');
                 }
                 $stmtRetorno = $pdo->prepare("SELECT status FROM vistoria_retornos WHERE relatorio_origem_id=:id LIMIT 1");
                 $stmtRetorno->execute([':id' => $relatorio_origem_id]);
@@ -309,13 +323,23 @@ switch ($action) {
             ]);
             if ($relatorio_origem_id !== '') {
                 $stmtVincularRetorno = $pdo->prepare("UPDATE vistoria_retornos
-                    SET status='AGENDADO',agendamento_id=:agendamento
+                    SET status='AGENDADO',agendamento_id=:agendamento,
+                        vistoriador_origem_id=COALESCE(vistoriador_origem_id,:vistoriador_origem),
+                        vistoriador_retorno_id=:vistoriador_retorno,
+                        motivo_reatribuicao=:motivo,
+                        reatribuido_por=:reatribuido_por,
+                        reatribuido_em=:reatribuido_em
                     WHERE relatorio_origem_id=:origem
                       AND status='PENDENTE_AGENDAMENTO'
                       AND agendamento_id IS NULL");
                 $stmtVincularRetorno->execute([
                     ':agendamento' => $novoAgendamentoId,
                     ':origem' => $relatorio_origem_id,
+                    ':vistoriador_origem' => $vistoriador_origem_id,
+                    ':vistoriador_retorno' => $vistoriador_id,
+                    ':motivo' => (string)$vistoriador_id !== $vistoriador_origem_id ? $motivo_reatribuicao : null,
+                    ':reatribuido_por' => (string)$vistoriador_id !== $vistoriador_origem_id ? $_SESSION['usuario_id'] : null,
+                    ':reatribuido_em' => (string)$vistoriador_id !== $vistoriador_origem_id ? date('Y-m-d H:i:s') : null,
                 ]);
                 if ($stmtVincularRetorno->rowCount() !== 1) {
                     throw new RuntimeException('O retorno A/S foi agendado por outra operacao.');
@@ -358,6 +382,7 @@ switch ($action) {
             $observacoes     = sanitizar($_POST['observacoes'] ?? '');
             $vistoriador_id  = $_POST['vistoriador_id'] ?? null;
             $vendedor_id     = $_POST['vendedor_id'] ?? null;
+            $motivo_reatribuicao = trim(sanitizar($_POST['motivo_reatribuicao'] ?? ''));
 
             $agendamentoAtual = !empty($id) ? obterAgendamento($pdo, $id) : null;
             if ($agendamentoAtual && !empty($agendamentoAtual['relatorio_origem_id']) && $cargo !== 'ADMIN') {
@@ -418,6 +443,23 @@ switch ($action) {
                 $vistoriador_id = $_SESSION['usuario_id'];
             }
 
+            $pdo->beginTransaction();
+            $vistoriadorOrigemRetorno = null;
+            if ($agendamentoAtual && !empty($agendamentoAtual['relatorio_origem_id'])) {
+                $stmtRetornoAudit = $pdo->prepare("SELECT vr.vistoriador_origem_id,a0.vistoriador_id vistoriador_original
+                    FROM vistoria_retornos vr
+                    JOIN vistorias v0 ON v0.id=vr.relatorio_origem_id
+                    LEFT JOIN agendamentos a0 ON a0.id=v0.agendamento_id
+                    WHERE vr.agendamento_id=:agendamento FOR UPDATE");
+                $stmtRetornoAudit->execute([':agendamento' => $id]);
+                $retornoAudit = $stmtRetornoAudit->fetch(PDO::FETCH_ASSOC);
+                if (!$retornoAudit) throw new RuntimeException('O vínculo auditável do retorno A/S não foi encontrado.');
+                $vistoriadorOrigemRetorno = trim((string)($retornoAudit['vistoriador_origem_id'] ?: $retornoAudit['vistoriador_original']));
+                if ((string)$vistoriador_id !== $vistoriadorOrigemRetorno && $motivo_reatribuicao === '') {
+                    throw new RuntimeException('Informe o motivo da troca do vistoriador responsável.');
+                }
+            }
+
             $stmt = $pdo->prepare("
                 UPDATE agendamentos 
                 SET proposta_id = :proposta_id,
@@ -453,12 +495,41 @@ switch ($action) {
                 ':observacoes'     => $observacoes ?: null,
                 ':id'              => $id,
             ]);
+            if ($agendamentoAtual && !empty($agendamentoAtual['relatorio_origem_id'])) {
+                $stmtAudit = $pdo->prepare("UPDATE vistoria_retornos
+                    SET vistoriador_origem_id=COALESCE(vistoriador_origem_id,:origem),
+                        vistoriador_retorno_id=:retorno,
+                        motivo_reatribuicao=:motivo,
+                        reatribuido_por=:usuario,
+                        reatribuido_em=:data
+                    WHERE agendamento_id=:agendamento");
+                $trocou = (string)$vistoriador_id !== (string)$vistoriadorOrigemRetorno;
+                $stmtAudit->execute([
+                    ':origem' => $vistoriadorOrigemRetorno,
+                    ':retorno' => $vistoriador_id,
+                    ':motivo' => $trocou ? $motivo_reatribuicao : null,
+                    ':usuario' => $trocou ? $_SESSION['usuario_id'] : null,
+                    ':data' => $trocou ? date('Y-m-d H:i:s') : null,
+                    ':agendamento' => $id,
+                ]);
+                if ($stmtAudit->rowCount() === 0) {
+                    $stmtAuditCheck = $pdo->prepare('SELECT 1 FROM vistoria_retornos WHERE agendamento_id=:agendamento');
+                    $stmtAuditCheck->execute([':agendamento' => $id]);
+                    if ($stmtAuditCheck->fetchColumn()) {
+                        // Atualizacao idempotente: o vinculo auditavel continua valido.
+                    } else {
+                    throw new RuntimeException('A auditoria da reatribuição foi alterada por outra operação.');
+                }
+            }
+            }
+            $pdo->commit();
 
             log_atividade('agendamento_editado', "Agendamento ID: {$id} atualizado.");
             setMensagem('success', 'Agendamento atualizado com sucesso!');
             redirecionar(APP_URL . 'agendamentos');
 
         } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao editar agendamento: ' . $e->getMessage());
             setMensagem('error', 'Erro ao atualizar agendamento.');
             redirecionar(APP_URL . 'agendamentos/form?id=' . urlencode($id));
@@ -516,12 +587,27 @@ switch ($action) {
 
             $pdo->beginTransaction();
 
+            $stmtAgLock = $pdo->prepare('SELECT * FROM agendamentos WHERE id=:id FOR UPDATE');
+            $stmtAgLock->execute([':id' => $id]);
+            $ag = $stmtAgLock->fetch(PDO::FETCH_ASSOC);
+            if (!$ag || (string)$ag['status'] !== 'pendente') {
+                throw new RuntimeException('O agendamento foi confirmado ou alterado por outra operação.');
+            }
+            $stmtOsLock = $pdo->prepare('SELECT id FROM ordens_servico WHERE agendamento_id=:id LIMIT 1 FOR UPDATE');
+            $stmtOsLock->execute([':id' => $id]);
+            if ($stmtOsLock->fetchColumn()) {
+                throw new RuntimeException('Já existe uma Ordem de Serviço para este agendamento.');
+            }
+
             // Gerar número da OS
             $numero_os = gerarNumeroDocumento('OS', 'AM-OS');
 
             // Atualizar status do agendamento para confirmado
-            $stmtUpd = $pdo->prepare("UPDATE agendamentos SET status = 'confirmado' WHERE id = :id");
+            $stmtUpd = $pdo->prepare("UPDATE agendamentos SET status = 'confirmado' WHERE id = :id AND status='pendente'");
             $stmtUpd->execute([':id' => $id]);
+            if ($stmtUpd->rowCount() !== 1) {
+                throw new RuntimeException('O agendamento foi confirmado por outra operação.');
+            }
 
             // Criar OS
             $stmtOs = $pdo->prepare("

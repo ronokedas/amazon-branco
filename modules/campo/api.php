@@ -423,7 +423,7 @@ try {
                        e.id AS embarcacao_id, e.nome AS embarcacao, e.registro, e.foto_url, e.foto_atualizada_em,
                        c.nome AS cliente,
                        v.id AS vistoria_id, v.status AS vistoria_status, v.finalidade, v.mobile_versao,
-                       (v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS') AND EXISTS (
+                       (v.status='RETORNO_AS' AND EXISTS (
                            SELECT 1 FROM vistoria_exigencias ve
                             WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1
                               AND ve.conforme='nao' AND ve.status_item<>'cumprida'
@@ -437,7 +437,7 @@ try {
                 WHERE (
                     (a.status IN ('pendente','confirmado','em_andamento') AND (v.id IS NULL OR v.status = 'PENDENTE'))
                     OR (v.finalidade='CUMPRIMENTO_EXIGENCIAS' AND v.status='PENDENTE')
-                    OR (v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS') AND EXISTS (
+                    OR (v.status='RETORNO_AS' AND EXISTS (
                         SELECT 1 FROM vistoria_exigencias ve
                          WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1
                            AND ve.conforme='nao' AND ve.status_item<>'cumprida'

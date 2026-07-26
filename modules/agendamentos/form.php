@@ -33,6 +33,8 @@ $agendamento = [
     'status'           => 'pendente',
     'observacoes'      => '',
     'relatorio_origem_id' => '',
+    'vistoriador_origem_id' => '',
+    'motivo_reatribuicao' => '',
 ];
 
 if (!$editando && $relatorioOrigemId !== '') {
@@ -41,10 +43,10 @@ if (!$editando && $relatorioOrigemId !== '') {
         redirecionar(APP_URL . 'vistorias');
     }
     $stmtRetorno = $pdo->prepare("SELECT v.id,v.numero,v.agendamento_id,v.embarcacao_id,v.pessoa_id,v.armador_id,
-            v.operador_nome,a.proposta_id,a.cliente_id,a.local,a.contato_nome,a.contato_telefone
+            v.operador_nome,a.proposta_id,a.cliente_id,a.local,a.contato_nome,a.contato_telefone,a.vistoriador_id
         FROM vistorias v
         LEFT JOIN agendamentos a ON a.id=v.agendamento_id
-        WHERE v.id=:id AND v.status='APROVADA_COM_EXIGENCIAS'
+        WHERE v.id=:id AND v.status='RETORNO_AS'
           AND EXISTS (
             SELECT 1 FROM vistoria_exigencias ve
             WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1
@@ -75,6 +77,8 @@ if (!$editando && $relatorioOrigemId !== '') {
         'contato_telefone' => $origemRetorno['contato_telefone'] ?? '',
         'observacoes' => 'Retorno obrigatório para verificar o cumprimento das exigências A/S.',
         'relatorio_origem_id' => $relatorioOrigemId,
+        'vistoriador_id' => $origemRetorno['vistoriador_id'] ?? '',
+        'vistoriador_origem_id' => $origemRetorno['vistoriador_id'] ?? '',
     ]);
 }
 
@@ -94,6 +98,20 @@ if ($editando) {
                 redirecionar(APP_URL . 'agendamentos');
             }
             $agendamento = array_merge($agendamento, $dados);
+            if (!empty($dados['relatorio_origem_id'])) {
+                $stmtAuditRetorno = $pdo->prepare("SELECT vr.vistoriador_origem_id,vr.motivo_reatribuicao,
+                        a0.vistoriador_id vistoriador_original
+                    FROM vistoria_retornos vr
+                    JOIN vistorias v0 ON v0.id=vr.relatorio_origem_id
+                    LEFT JOIN agendamentos a0 ON a0.id=v0.agendamento_id
+                    WHERE vr.agendamento_id=:agendamento LIMIT 1");
+                $stmtAuditRetorno->execute([':agendamento' => $id]);
+                $auditRetorno = $stmtAuditRetorno->fetch(PDO::FETCH_ASSOC) ?: [];
+                $agendamento['vistoriador_origem_id'] = $auditRetorno['vistoriador_origem_id']
+                    ?? $auditRetorno['vistoriador_original']
+                    ?? '';
+                $agendamento['motivo_reatribuicao'] = $auditRetorno['motivo_reatribuicao'] ?? '';
+            }
         } else {
             setMensagem('error', 'Agendamento não encontrado.');
             redirecionar(APP_URL . 'agendamentos');
@@ -184,6 +202,7 @@ $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['
             <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
             <input type="hidden" name="action" value="<?php echo $editando ? 'editar' : 'inserir'; ?>">
             <input type="hidden" name="relatorio_origem_id" value="<?php echo h($agendamento['relatorio_origem_id']); ?>">
+            <input type="hidden" id="vistoriador_origem_id" name="vistoriador_origem_id" value="<?php echo h($agendamento['vistoriador_origem_id']); ?>">
             <?php if (!empty($agendamento['relatorio_origem_id'])): ?>
                 <div class="alert alert-warning">
                     <strong>Retorno obrigatório A/S.</strong>
@@ -308,6 +327,16 @@ $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['
                         <?php endif; ?>
                     </div>
                 </div>
+                <?php if (!empty($agendamento['relatorio_origem_id'])): ?>
+                    <div class="form-row">
+                        <div class="form-group col-12">
+                            <label for="motivo_reatribuicao">Motivo da troca de vistoriador</label>
+                            <textarea id="motivo_reatribuicao" name="motivo_reatribuicao" rows="2"
+                                      placeholder="Obrigatório somente se o responsável pelo retorno for diferente do vistoriador anterior."><?php echo h($agendamento['motivo_reatribuicao']); ?></textarea>
+                            <small>O mesmo vistoriador é mantido por padrão. Toda substituição ficará registrada para auditoria.</small>
+                        </div>
+                    </div>
+                <?php endif; ?>
                 <div class="form-row">
                     <div class="form-group col-4">
                         <label for="data_vistoria">Data da vistoria *</label>

@@ -52,6 +52,14 @@ if (!$v) {
     exit("Relatório não encontrado.");
 }
 
+$cadeiaPdf = obterCadeiaRelatorios($pdo, (string)$v['id']);
+$relatorioRaizNumero = '';
+$etapaRetorno = 0;
+foreach ($cadeiaPdf as $indicePdf => $itemPdf) {
+    if ($indicePdf === 0) $relatorioRaizNumero = (string)($itemPdf['numero'] ?? '');
+    if ((string)$itemPdf['id'] === (string)$v['id']) $etapaRetorno = $indicePdf;
+}
+
 if ($requisicaoExterna && getCargo() === 'VISTORIADOR'
     && (string)($v['agendamento_vistoriador_id'] ?? '') !== (string)($_SESSION['usuario_id'] ?? '')) {
     http_response_code(403);
@@ -291,7 +299,7 @@ $pdf = new RelatorioVistoriaPDF(h($v['numero']));
 $pdf->SetCreator(APP_NAME);
 $pdf->SetAuthor('Amazon Naval Ltda');
 $tituloDocumento = (($v['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS')
-    ? 'Relatório de Verificação de Cumprimento de Exigências'
+    ? 'Relatório de Cumprimento de Exigências A/S'
     : 'Relatório de Vistoria';
 $pdf->SetTitle($tituloDocumento . ' - ' . $v['numero']);
 $pdf->SetMargins(15, 28, 15);
@@ -303,9 +311,10 @@ $pdf->SetTextColor(0, 0, 0);
 if (($v['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS') {
     $pdf->SetFont('helvetica', 'B', 11);
     $pdf->SetTextColor(153, 83, 0);
-    $pdf->Cell(0, 7, mb_strtoupper('Verificação de cumprimento de exigências'), 0, 1, 'C');
+    $pdf->Cell(0, 7, mb_strtoupper('Relatório de cumprimento de exigências A/S'), 0, 1, 'C');
     $pdf->SetFont('helvetica', '', 9);
     $pdf->Cell(0, 5, 'Relatório anterior: ' . ($v['relatorio_anterior_numero'] ?: $v['relatorio_anterior_id']), 0, 1, 'C');
+    $pdf->Cell(0, 5, 'Relatório raiz: ' . ($relatorioRaizNumero ?: '-') . ' | Etapa do retorno: ' . $etapaRetorno, 0, 1, 'C');
     $pdf->SetTextColor(0, 0, 0);
     $pdf->Ln(2);
 }
@@ -428,33 +437,21 @@ $pdf->SetFont('helvetica', '', 9);
 $obs_counter = 1;
 
 if (!empty($v['relatorio_anterior_id'])) {
-    // Buscar exigências do relatório anterior para encontrar as que foram cumpridas
-    $stmtAnt = $pdo->prepare("SELECT id, ordem, status_item FROM vistoria_exigencias WHERE vistoria_id = :id");
-    $stmtAnt->execute([':id' => $v['relatorio_anterior_id']]);
-    $exig_ant = $stmtAnt->fetchAll(PDO::FETCH_ASSOC);
-    
     // Obter agrupamentos da vistoria ATUAL
     $transcritas = [];
     $reescritas = [];
     $inseridas = [];
+    $cumpridas = [];
     
     foreach ($exigencias as $ex) {
-        if ($ex['status_item'] === 'nao_cumprida_transcrita') {
+        if ($ex['status_item'] === 'cumprida') {
+            $cumpridas[] = $ex['ordem'];
+        } elseif ($ex['status_item'] === 'nao_cumprida_transcrita' || $ex['status_item'] === 'pendente') {
             $transcritas[] = $ex['ordem'];
         } elseif ($ex['status_item'] === 'cumprida_parcial_reescrita') {
             $reescritas[] = $ex['ordem'];
         } elseif ($ex['status_item'] === 'inserida') {
             $inseridas[] = $ex['ordem'];
-        }
-    }
-    
-    // Obter cumpridas (exigências da vistoria anterior que agora estão marcadas como cumprida nela mesma)
-    // Em muitos sistemas, quando você cumpre, você altera o status na vistoria anterior.
-    // Vamos varrer a vistoria anterior e pegar as que estão como "cumprida"
-    $cumpridas = [];
-    foreach ($exig_ant as $ant) {
-        if ($ant['status_item'] === 'cumprida') {
-            $cumpridas[] = $ant['ordem'];
         }
     }
     

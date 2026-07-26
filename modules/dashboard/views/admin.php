@@ -43,7 +43,7 @@ $decisoesPendentes = (int)$dashboard['acoes']['assinadas'] + (int)$dashboard['ac
                 <?php endforeach; ?>
             </div>
         </article>
-        <article class="admin-flow-lane is-commercial">
+        <article class="admin-flow-lane is-commercial" id="retornos-as">
             <div class="admin-flow-lane__heading"><i class="fa-solid fa-calendar-plus"></i><span><strong>Retornos A/S</strong><small>Próxima ação: agendar nova visita</small></span><b><?= (int)$dashboard['acoes']['retornos_as'] ?></b></div>
             <div class="admin-flow-items">
                 <?php if (!$dashboard['fluxo_retornos_as']): ?><p class="admin-flow-empty"><i class="fa-solid fa-circle-check"></i>Nenhum retorno A/S aguardando agendamento.</p><?php endif; ?>
@@ -185,12 +185,13 @@ $decisoesPendentes = (int)$dashboard['acoes']['assinadas'] + (int)$dashboard['ac
                     'AGUARDANDO_APROVACAO' => ['Aguardando análise', 'analysis'],
                     'APROVADA' => ['Aprovada', 'approved'],
                     'APROVADA_COM_EXIGENCIAS' => ['Aprovada c/ exigências', 'approved'],
+                    'RETORNO_AS' => ['Retorno A/S necessário', 'rejected'],
                     'REPROVADA' => ['Reprovada', 'rejected'],
                     'CANCELADA' => ['Cancelada', 'cancelled'],
                 ];
                 [$statusLabel, $statusClass] = $statusMap[$vistoria['status']] ?? ['Em andamento', 'progress'];
-                if (!empty($vistoria['possui_as']) && $vistoria['status'] === 'APROVADA_COM_EXIGENCIAS') {
-                    $statusLabel = 'Validado com A/S — bloqueado';
+                if (!empty($vistoria['possui_as']) && $vistoria['status'] === 'RETORNO_AS') {
+                    $statusLabel = 'Retorno A/S necessário';
                     $statusClass = 'rejected';
                 }
                 $dataVistoria = new DateTimeImmutable($vistoria['data_vistoria']);

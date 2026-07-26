@@ -48,7 +48,7 @@ try {
 
     if ($filtro_status === 'APROVADA') {
         $sql .= " WHERE v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')" . $where_extra;
-    } elseif (!empty($filtro_status) && in_array($filtro_status, ['PENDENTE', 'REPROVADA', 'CANCELADA'], true)) {
+    } elseif (!empty($filtro_status) && in_array($filtro_status, ['PENDENTE', 'RETORNO_AS', 'REPROVADA', 'CANCELADA'], true)) {
         $sql .= " WHERE v.status = :status" . $where_extra;
         $params[':status'] = $filtro_status;
     } elseif ($where_extra !== '') {
@@ -101,6 +101,7 @@ function vistoriaStatusMeta(string $status): array
         'PENDENTE' => ['badge-warning', 'fa-clock', 'Pendente'],
         'AGUARDANDO_APROVACAO' => ['badge-warning', 'fa-hourglass-half', 'Aguardando aprovação'],
         'APROVADA_COM_EXIGENCIAS' => ['badge-info', 'fa-clipboard-check', 'Aprovada com exigências'],
+        'RETORNO_AS' => ['badge-danger', 'fa-calendar-plus', 'Retorno A/S necessário'],
         'APROVADA' => ['badge-success', 'fa-check-circle', 'Aprovada'],
         'REPROVADA' => ['badge-danger', 'fa-times-circle', 'Reprovada'],
         'CANCELADA' => ['badge-secondary', 'fa-ban', 'Cancelada'],
@@ -131,6 +132,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             '' => ['fa-list', 'Todas', $total_geral],
             'PENDENTE' => ['fa-clock', 'Pendentes', $contadores['PENDENTE'] ?? 0],
             'APROVADA' => ['fa-check-circle', 'Aprovadas', ($contadores['APROVADA'] ?? 0) + ($contadores['APROVADA_COM_EXIGENCIAS'] ?? 0)],
+            'RETORNO_AS' => ['fa-calendar-plus', 'Retornos A/S', $contadores['RETORNO_AS'] ?? 0],
             'REPROVADA' => ['fa-times-circle', 'Reprovadas', $contadores['REPROVADA'] ?? 0],
             'CANCELADA' => ['fa-ban', 'Canceladas', $contadores['CANCELADA'] ?? 0],
         ];

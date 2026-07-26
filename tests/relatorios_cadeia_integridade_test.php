@@ -42,7 +42,7 @@ try {
     $stmt = $pdo->prepare("INSERT INTO vistorias
         (id,numero,embarcacao_id,pessoa_id,agendamento_id,relatorio_anterior_id,
          finalidade,data_vistoria,status)
-        VALUES (:id,:numero,:embarcacao,:pessoa,:agendamento,NULL,'VISTORIA',CURDATE(),'APROVADA_COM_EXIGENCIAS')");
+        VALUES (:id,:numero,:embarcacao,:pessoa,:agendamento,NULL,'VISTORIA',CURDATE(),'RETORNO_AS')");
     $stmt->execute([
         ':id' => $raizId,
         ':numero' => "TEST-INTEGRIDADE-{$sufixo}-0",
@@ -112,12 +112,30 @@ try {
     }
     assertCadeiaIntegridade(!$duplicouFilho, 'O banco permitiu dois filhos ativos para a mesma origem.');
 
+    $pdo->prepare("UPDATE vistorias SET status='CANCELADA' WHERE id=:id")->execute([':id' => $filhoId]);
+    $pdo->prepare("UPDATE vistoria_retornos
+        SET status='CANCELADO',cancelado_em=NOW()
+        WHERE id=:id")->execute([':id' => $retornoId]);
+    assertCadeiaIntegridade(
+        criarPendenciaRetornoAS($pdo, $raizId, $usuarioTeste) === $retornoId,
+        'O cancelamento criou outra ramificacao em vez de reabrir o retorno.'
+    );
+    $retornoReaberto = $pdo->query("SELECT * FROM vistoria_retornos WHERE id=" . $pdo->quote($retornoId))->fetch(PDO::FETCH_ASSOC);
+    assertCadeiaIntegridade(
+        $retornoReaberto['status'] === 'PENDENTE_AGENDAMENTO'
+        && empty($retornoReaberto['agendamento_id'])
+        && empty($retornoReaberto['relatorio_resultado_id']),
+        'O retorno cancelado nao foi reaberto sem vinculos antigos.'
+    );
+
     $relatorioTela = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio.php');
     $fila = file_get_contents(__DIR__ . '/../modules/documentacao/aprovacao_relatorios.php');
     $acoes = file_get_contents(__DIR__ . '/../modules/vistorias/actions.php');
     assertCadeiaIntegridade(str_contains($relatorioTela, '$eh_relatorio_vigente'), 'A tela nao bloqueia decisoes historicas.');
     assertCadeiaIntegridade(str_contains($fila, 'vf.relatorio_anterior_id=v.id'), 'A fila ainda inclui relatorios substituidos.');
     assertCadeiaIntegridade(str_contains($acoes, "SET status='CANCELADO'"), 'O cancelamento nao atualiza o retorno A/S.');
+    assertCadeiaIntegridade(str_contains($acoes, "\$status_vistoria !== 'CANCELADA'"), 'O cancelamento pode ser sobrescrito como concluido.');
+    assertCadeiaIntegridade(str_contains($acoes, 'criarPendenciaRetornoAS($pdo, $origemReabrir'), 'O cancelamento nao reabre o retorno para novo agendamento.');
 
     $pdo->rollBack();
     echo "relatorios_cadeia_integridade_test: OK\n";

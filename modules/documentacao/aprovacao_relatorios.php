@@ -13,7 +13,7 @@ $stmt = $pdo->prepare("SELECT v.id, v.numero, v.status, v.data_vistoria, v.atual
 $stmt->execute();
 $pendentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt2 = $pdo->prepare("SELECT v.id, v.numero, v.status, v.data_aprovacao, v.observacao_admin, v.agendamento_id, e.nome as embarcacao, COALESCE(u.nome,'Sem vistoriador vinculado') as vistoriador, adm.nome as aprovado_por_nome, EXISTS(SELECT 1 FROM vistoria_exigencias ve WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1 AND ve.conforme='nao' AND ve.status_item<>'cumprida') possui_as FROM vistorias v JOIN embarcacoes e ON v.embarcacao_id = e.id LEFT JOIN agendamentos a ON v.agendamento_id = a.id LEFT JOIN usuarios u ON a.vistoriador_id = u.id LEFT JOIN usuarios adm ON v.aprovado_por = adm.id WHERE v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS','REPROVADA') ORDER BY v.data_aprovacao DESC LIMIT 20");
+$stmt2 = $pdo->prepare("SELECT v.id, v.numero, v.status, v.data_aprovacao, v.observacao_admin, v.agendamento_id, e.nome as embarcacao, COALESCE(u.nome,'Sem vistoriador vinculado') as vistoriador, adm.nome as aprovado_por_nome, EXISTS(SELECT 1 FROM vistoria_exigencias ve WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1 AND ve.conforme='nao' AND ve.status_item<>'cumprida') possui_as FROM vistorias v JOIN embarcacoes e ON v.embarcacao_id = e.id LEFT JOIN agendamentos a ON v.agendamento_id = a.id LEFT JOIN usuarios u ON a.vistoriador_id = u.id LEFT JOIN usuarios adm ON v.aprovado_por = adm.id WHERE v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS','RETORNO_AS','REPROVADA') ORDER BY v.data_aprovacao DESC LIMIT 20");
 $stmt2->execute();
 $historico = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
@@ -133,10 +133,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <td><?= h($h['vistoriador']) ?></td>
                             <td>
                                 <?php
-                                $cores = ['APROVADA'=>'badge-success','APROVADA_COM_EXIGENCIAS'=>'badge-warning','REPROVADA'=>'badge-danger'];
-                                $labels = ['APROVADA'=>'Aprovada','APROVADA_COM_EXIGENCIAS'=>'Aprovada c/ Exigências','REPROVADA'=>'Reprovada'];
+                                $cores = ['APROVADA'=>'badge-success','APROVADA_COM_EXIGENCIAS'=>'badge-warning','RETORNO_AS'=>'badge-danger','REPROVADA'=>'badge-danger'];
+                                $labels = ['APROVADA'=>'Aprovada','APROVADA_COM_EXIGENCIAS'=>'Aprovada c/ Exigências','RETORNO_AS'=>'Retorno A/S necessário','REPROVADA'=>'Reprovada'];
                                 $cor = $cores[$h['status']] ?? 'badge-secondary';
-                                $label = !empty($h['possui_as']) ? 'Validado com A/S — bloqueado' : ($labels[$h['status']] ?? $h['status']);
+                                $label = $labels[$h['status']] ?? $h['status'];
                                 ?>
                                 <span class="badge <?= $cor ?>"><?= $label ?></span>
                             </td>

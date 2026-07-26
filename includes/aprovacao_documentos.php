@@ -129,7 +129,7 @@ function aprovacaoRelatorioResumoExigencias(PDO $pdo, string $vistoriaId): array
         'pendentes' => $pendentes,
         'pendentes_as' => $pendentesAs,
         'pendentes_comuns' => $pendentes - $pendentesAs,
-        'status_esperado' => $pendentes > 0 ? 'APROVADA_COM_EXIGENCIAS' : 'APROVADA',
+        'status_esperado' => resolverStatusDecisaoRelatorio($pendentes, $pendentesAs),
         'versao' => hash('sha256', json_encode(
             ['vistoria' => $vistoria, 'exigencias' => $exigencias],
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
@@ -139,17 +139,19 @@ function aprovacaoRelatorioResumoExigencias(PDO $pdo, string $vistoriaId): array
 
 function aprovacaoRelatorioValidarResultado(array $resumo, string $resultado, string $versao): void
 {
-    $permitidos = ['APROVADA', 'APROVADA_COM_EXIGENCIAS'];
+    $permitidos = ['APROVADA', 'APROVADA_COM_EXIGENCIAS', 'RETORNO_AS'];
     if (!in_array($resultado, $permitidos, true)) {
-        throw new InvalidArgumentException('Selecione um resultado valido para aprovar o relatorio.');
+        throw new InvalidArgumentException('Selecione um resultado valido para decidir o relatorio.');
     }
     if ($versao === '' || !hash_equals((string)$resumo['versao'], $versao)) {
         throw new RuntimeException('O relatorio ou suas exigencias foram alterados. Atualize a pagina e revise novamente antes de aprovar.');
     }
     if ($resultado !== (string)$resumo['status_esperado']) {
-        $mensagem = ((int)$resumo['pendentes'] > 0)
-            ? 'O relatorio possui exigencias abertas e deve ser aprovado com exigencias.'
-            : 'O relatorio nao possui exigencias abertas e deve ser aprovado sem exigencias.';
+        $mensagem = ((int)$resumo['pendentes_as'] > 0)
+            ? 'O relatorio possui A/S pendente e deve ser encaminhado para Retorno A/S.'
+            : (((int)$resumo['pendentes'] > 0)
+                ? 'O relatorio possui exigencias comuns abertas e deve ser aprovado com exigencias.'
+                : 'O relatorio nao possui exigencias abertas e deve ser aprovado sem exigencias.');
         throw new RuntimeException($mensagem);
     }
 }

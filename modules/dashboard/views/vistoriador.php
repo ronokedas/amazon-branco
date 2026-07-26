@@ -17,6 +17,7 @@ function dashboardStatusHistorico(string $status): array
     return match ($status) {
         'APROVADA' => ['Aprovada', 'approved'],
         'APROVADA_COM_EXIGENCIAS' => ['Aprovada com exigências', 'approved'],
+        'RETORNO_AS' => ['Retorno A/S necessário', 'rejected'],
         'AGUARDANDO_APROVACAO' => ['Aguardando aprovação', 'waiting'],
         'REPROVADA' => ['Reprovada', 'rejected'],
         default => ['Rascunho', 'draft'],

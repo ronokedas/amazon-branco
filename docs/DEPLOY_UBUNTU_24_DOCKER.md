@@ -304,6 +304,29 @@ executar o commit.
 
 ## 10. Comandos úteis
 
+
+depois de enviar do pc para o github comando mais seguro:
+
+
+cd /opt/sistema-amazon && \
+docker compose down && \
+BACKUP="/root/sistema-runtime-$(date +%Y%m%d-%H%M%S).tar" && \
+sudo tar -cf "$BACKUP" .env storage uploads minio-data logs tmp temp_pdf 2>/dev/null || true && \
+sudo chown -R "$USER":"$USER" /opt/sistema-amazon && \
+git fetch origin main && \
+git reset --hard origin/main && \
+sudo tar -xf "$BACKUP" -C /opt/sistema-amazon && \
+mkdir -p storage uploads logs tmp temp_pdf minio-data && \
+sudo chown -R "$USER":www-data storage uploads logs tmp temp_pdf && \
+sudo chmod -R u+rwX,g+rwX storage uploads logs tmp temp_pdf && \
+sudo chown -R "$USER":"$USER" minio-data && \
+docker compose up -d --build --force-recreate && \
+docker compose ps && \
+echo "Atualização concluída. Backup preservado em: $BACKUP"
+
+
+=====================================
+
 ```bash
 docker compose ps
 docker compose logs -f app
