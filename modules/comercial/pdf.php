@@ -175,24 +175,59 @@ function valorPorExtenso($valor) {
 // ============================================
 // CLASSE PDF PERSONALIZADA
 // ============================================
-class PropostaPDF extends TCPDF {
+class PropostaPDF extends \setasign\Fpdi\Tcpdf\Fpdi {
     protected $proposta;
     protected $numero;
     protected $totalPages;
+    protected $aplicarMarcaDagua;
 
-    public function __construct($proposta) {
+    public function __construct($proposta, $aplicarMarcaDagua = true) {
         parent::__construct('P', 'mm', 'A4', true, 'UTF-8', false);
         $this->proposta = $proposta;
         $this->numero  = $proposta['numero'];
+        $this->aplicarMarcaDagua = (bool) $aplicarMarcaDagua;
 
         $this->SetCreator(APP_NAME);
         $this->SetAuthor('Amazon Naval Ltda');
         $this->SetTitle('Proposta de Serviço - ' . $proposta['numero']);
+        // Cabecalho e rodape sao aplicados pelo ciclo de pagina abaixo para
+        // cobrir tambem quebras automaticas abertas dentro de MultiCell.
         $this->setPrintHeader(false);
         $this->setPrintFooter(false);
-        $this->SetMargins(15, 15, 15);
+        $this->SetMargins(15, 42, 15);
         $this->SetAutoPageBreak(true, 20);
         $this->setImageScale(PDF_IMAGE_SCALE_RATIO);
+    }
+
+    /**
+     * Repete a marca-d'agua tambem nas paginas abertas automaticamente.
+     */
+    public function AddPage($orientation = '', $format = '', $keepmargins = false, $tocpage = false) {
+        parent::AddPage($orientation, $format, $keepmargins, $tocpage);
+
+        if ($this->aplicarMarcaDagua) {
+            $estadoGrafico = $this->getGraphicVars();
+            $this->InHeader = true;
+            $this->desenharMarcaDagua();
+            $this->InHeader = false;
+            $this->setGraphicVars($estadoGrafico);
+        }
+        $this->SetTopMargin(42);
+        $this->SetXY(15, 42);
+    }
+
+    /**
+     * Desenha a marca-d'agua antes do conteudo para que ela fique ao fundo.
+     */
+    public function desenharMarcaDagua() {
+        $marcaDaguaPath = __DIR__ . '/../../img/marca-dagua.png';
+        if (file_exists($marcaDaguaPath) && filesize($marcaDaguaPath) > 100) {
+            $largura = 105;
+            $altura = $largura * 1239 / 1280;
+            $x = ($this->getPageWidth() - $largura) / 2;
+            $y = ($this->getPageHeight() - $altura) / 2;
+            $this->Image($marcaDaguaPath, $x, $y, $largura, 0, 'PNG', '', '', true, 300);
+        }
     }
 
     /**
@@ -203,10 +238,11 @@ class PropostaPDF extends TCPDF {
         $this->SetFillColor(0, 51, 102);
         $this->Rect(15, 10, 180, 3, 'F');
 
-        // Logo Amazon Naval (esquerda)
-        $logo_path = __DIR__ . '/../../assets/img/logo.png';
+        // Logo oficial Amazon Naval (esquerda)
+        $logo_path = __DIR__ . '/../../img/logo.png';
         if (file_exists($logo_path) && filesize($logo_path) > 100) {
-            $this->Image($logo_path, 17, 16, 22, 22, 'PNG', '', '', true, 150);
+            // Mantem a logo inteira entre a faixa superior e a linha inferior.
+            $this->Image($logo_path, 17, 14.5, 18, 0, 'PNG', '', '', true, 150);
         }
 
         // Título central
@@ -258,13 +294,19 @@ class PropostaPDF extends TCPDF {
         $this->Cell(0, 4, $this->getAliasNumPage() . ' / ' . $this->getAliasNbPages(), 0, 0, 'R');
     }
 
-    public function Header() {
+    /**
+     * Aplica os elementos fixos depois que o conteudo da pagina foi importado.
+     */
+    public function desenharIdentidadeFinal() {
+        $this->InHeader = true;
         $this->desenharCabecalho();
+        $this->InHeader = false;
+
+        $this->InFooter = true;
+        $this->desenharRodape();
+        $this->InFooter = false;
     }
 
-    public function Footer() {
-        $this->desenharRodape();
-    }
 }
 
 // ============================================
@@ -730,10 +772,11 @@ $pdf->Cell(70, 4, $cpfCnpjLimpo, 0, 0, 'C');
 $pdf->SetXY(115, $assinaturaY + 47);
 $pdf->Cell(72, 4, 'CPF/CNPJ: 60.360.061/0001-91', 0, 0, 'C');
 
-// Logo Amazon Naval no quadro direito
-$logo_path2 = __DIR__ . '/../../assets/img/logo.png';
+// Logo oficial Amazon Naval no quadro direito
+$logo_path2 = __DIR__ . '/../../img/logo.png';
 if (file_exists($logo_path2) && filesize($logo_path2) > 100) {
-    $pdf->Image($logo_path2, 135, $assinaturaY + 14, 18, 18, 'PNG', '', '', true, 150);
+    // Centro horizontal do quadro interno do PROPONENTE: 151 mm.
+    $pdf->Image($logo_path2, 142, $assinaturaY + 14, 18, 0, 'PNG', '', '', true, 150);
 }
 
 // Imagem da Assinatura do Cliente
@@ -912,9 +955,31 @@ if (!empty($proposta['token_assinatura'])) {
 // SAÍDA DO PDF
 // ============================================
 $nomeArquivo = 'Proposta_' . str_replace('/', '-', $proposta['numero']) . '.pdf';
-if (!empty($GLOBALS['PROPOSTA_PDF_RETURN_STRING'])) {
-    return $pdf->Output($nomeArquivo, 'S');
+$conteudoBase = $pdf->Output($nomeArquivo, 'S');
+
+// O TCPDF pode reordenar o buffer de paginas criadas dentro de MultiCell.
+// Uma segunda passagem aplica cabecalho e rodape somente depois que todo o
+// conteudo e a paginacao estao fechados, garantindo a repeticao em cada pagina.
+$pdfFinal = new PropostaPDF($proposta, false);
+$leitor = \setasign\Fpdi\PdfParser\StreamReader::createByString($conteudoBase);
+$totalPaginas = $pdfFinal->setSourceFile($leitor);
+
+for ($pagina = 1; $pagina <= $totalPaginas; $pagina++) {
+    $template = $pdfFinal->importPage($pagina);
+    $tamanho = $pdfFinal->getTemplateSize($template);
+    $pdfFinal->AddPage($tamanho['orientation'], [$tamanho['width'], $tamanho['height']]);
+    $pdfFinal->useTemplate($template, 0, 0, $tamanho['width'], $tamanho['height']);
+    $pdfFinal->desenharIdentidadeFinal();
 }
 
-$pdf->Output($nomeArquivo, 'I');
+// Forca o fechamento da ultima pagina pelo mesmo ciclo das anteriores.
+// A pagina tecnica adicional e removida antes da saida final.
+$pdfFinal->AddPage();
+$pdfFinal->deletePage($pdfFinal->getPage());
+
+if (!empty($GLOBALS['PROPOSTA_PDF_RETURN_STRING'])) {
+    return $pdfFinal->Output($nomeArquivo, 'S');
+}
+
+$pdfFinal->Output($nomeArquivo, 'I');
 exit;

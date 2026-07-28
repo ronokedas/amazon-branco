@@ -102,15 +102,20 @@ function aprovacaoPdfCriarComBloco(string $origem, string $destino, array $a): v
             'CPF/CNPJ: ' . aprovacaoPdfTextoSeguro($a['responsavel_cpf_cnpj'] ?? ''),
             'Cargo/função: ' . aprovacaoPdfTextoSeguro($a['responsavel_cargo'] ?? ''),
             !empty($a['responsavel_registro']) ? 'Registro profissional: ' . aprovacaoPdfTextoSeguro($a['responsavel_registro']) : null,
-            'Aprovado por: ' . aprovacaoPdfTextoSeguro($a['aprovador_nome'] ?? ''),
+            $tipoDocumento === 'RELATORIO'
+                ? 'Aprovação administrativa: ' . aprovacaoPdfTextoSeguro($a['aprovador_nome'] ?? '')
+                : 'Aprovado por: ' . aprovacaoPdfTextoSeguro($a['aprovador_nome'] ?? ''),
+            $tipoDocumento === 'RELATORIO'
+                ? 'Assinatura aplicada por: ' . aprovacaoPdfTextoSeguro($a['executor_assinatura_nome'] ?? $a['responsavel_nome'] ?? '')
+                : null,
             'Data e hora: ' . aprovacaoPdfTextoSeguro($a['data_hora_formatada'] ?? ''),
             'Geolocalização: ' . aprovacaoPdfTextoSeguro($a['latitude'] ?? '') . ', ' . aprovacaoPdfTextoSeguro($a['longitude'] ?? '') . (!empty($a['geo_precisao_m']) ? ' (precisão ' . aprovacaoPdfTextoSeguro($a['geo_precisao_m']) . ' m)' : ''),
             'Endereço IP: ' . aprovacaoPdfTextoSeguro($a['ip'] ?? ''),
         ];
         $lines = array_values(array_filter($lines, static fn($v) => $v !== null));
         $pdf->SetXY($rx, $y + 6);
-        $pdf->SetFont('helvetica', '', 5.4);
-        $pdf->MultiCell($rw, 2.45, implode("\n", $lines), 0, 'L');
+        $pdf->SetFont('helvetica', '', $tipoDocumento === 'RELATORIO' ? 5.0 : 5.4);
+        $pdf->MultiCell($rw, $tipoDocumento === 'RELATORIO' ? 2.15 : 2.45, implode("\n", $lines), 0, 'L');
 
         $pdf->SetXY($rx, $y + 27.5);
         $pdf->SetFont('helvetica', 'B', 5.2);

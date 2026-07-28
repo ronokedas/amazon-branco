@@ -20,7 +20,10 @@ foreach([$servico,$wizard,$painel,$actions,$router,$cadastro] as $codigo)assertA
 assertAssinatura(str_contains($cadastro,'Este usuario ja possui um perfil de assinatura.'),'Cadastro nao bloqueia vinculo duplicado.');
 assertAssinatura(str_contains($wizard,"assinaturaEnviarConviteCertificado(\$pdo, 'CSN'")&&str_contains($wizard,"assinaturaEnviarConviteCertificado(\$pdo, 'CNBL'")&&str_contains($wizard,"assinaturaEnviarConviteCertificado(\$pdo, 'CNARQ'"),'Wizard nao envia convites para os tres certificados.');
 assertAssinatura(str_contains($servico,"\$doc['usuario_id']!==\$usuarioId")||str_contains($servico,"\$doc['usuario_id'] !== \$usuarioId"),'Assinatura de certificado nao confere usuario atribuido.');
-assertAssinatura(str_contains($servico,"cargo==='VISTORIADOR'&&\$v['vistoriador_id']!==\$usuario"),'Vistoriador nao esta limitado ao proprio relatorio.');
+assertAssinatura(str_contains($servico,"\$cargo==='VISTORIADOR'&&\$v['vistoriador_id']!==\$usuario"),'Vistoriador nao esta limitado ao proprio relatorio.');
+assertAssinatura(str_contains($servico,"v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')"),'Relatorios ainda aparecem para assinatura antes da aprovacao.');
+assertAssinatura(str_contains($servico,'somente pode ser assinado depois da aprovacao administrativa'), 'O endpoint nao rejeita assinatura anterior a aprovacao.');
+assertAssinatura(str_contains($servico,"assinaturaResponsavelUsuario(\$pdo,(string)\$v['vistoriador_id'],true)"),'O admin nao usa a assinatura do vistoriador atribuido.');
 assertAssinatura(str_contains($servico,'Assine o parecer dentro do processo atribuído'), 'Parecer do analista ainda pode contornar o fluxo próprio de assinatura.');
 assertAssinatura(str_contains($router,"login_return_to")&&str_contains($router,"validar-assinatura/"),'Roteador nao preserva retorno autenticado ou validacao.');
 assertAssinatura(str_contains($painel,'Permitir localização e assinar')&&str_contains($actions,'verificarCSRF'),'Painel ou endpoint nao exige confirmacao segura.');

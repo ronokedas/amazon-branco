@@ -11,7 +11,7 @@ $where=[];$p=[];$uid=(string)($_SESSION['usuario_id']??'');
 if(getCargo()!=='ADMIN'){
  $where[]='(d.criado_por=:uid OR EXISTS(SELECT 1 FROM propostas px WHERE px.id=d.proposta_id AND px.criado_por=:uid) OR EXISTS(SELECT 1 FROM analises_planos ax WHERE ax.id=d.analise_id AND ax.analista_id=:uid) OR EXISTS(SELECT 1 FROM vistorias vx JOIN agendamentos gx ON gx.id=vx.agendamento_id WHERE vx.id=d.vistoria_id AND gx.vistoriador_id=:uid))';$p[':uid']=$uid;
 }
-if($f['busca']!==''){$where[]='(d.numero LIKE :b OR d.assunto LIKE :b OR e.nome LIKE :b OR c.nome LIKE :b OR d.protocolo_externo_numero LIKE :b)';$p[':b']='%'.$f['busca'].'%';}
+if($f['busca']!==''){$where[]='(d.numero LIKE :b OR d.assunto LIKE :b OR e.nome LIKE :b OR c.nome LIKE :b)';$p[':b']='%'.$f['busca'].'%';}
 $labels=protocoloRotulosStatus();if(isset($labels[$f['status']])){$where[]='d.status=:status';$p[':status']=$f['status'];}
 foreach(['unidade'=>'d.unidade_maritima_id','responsavel'=>'d.criado_por','embarcacao_id'=>'d.embarcacao_id'] as $k=>$col)if($f[$k]!==''){$where[]="$col=:$k";$p[":$k"]=$f[$k];}
 if($f['cidade']!==''){$where[]='EXISTS(SELECT 1 FROM protocolo_movimentacoes mc WHERE mc.dossie_id=d.id AND mc.cidade LIKE :cidade)';$p[':cidade']='%'.$f['cidade'].'%';}
@@ -37,7 +37,7 @@ $titulo_page='Protocolos documentais - ERP';require __DIR__.'/../../includes/hea
   <div class="prot-kpi"><strong><?= array_sum(array_map(fn($x)=>(int)$x['originais_pendentes'],$dossies)) ?></strong><br><small>Originais a devolver</small></div>
  </div>
  <section class="card"><div class="card-body"><form class="prot-filtros" method="get" action="<?= APP_URL ?>protocolos">
-  <input class="form-control" name="busca" value="<?= h($f['busca']) ?>" placeholder="Número, embarcação, cliente, SISAP...">
+  <input class="form-control" name="busca" value="<?= h($f['busca']) ?>" placeholder="Número, embarcação, cliente ou assunto...">
   <select class="form-control" name="status"><option value="">Todas as situações</option><?php foreach($labels as $v=>$l): ?><option value="<?= h($v) ?>" <?= $f['status']===$v?'selected':'' ?>><?= h($l) ?></option><?php endforeach; ?></select>
   <select class="form-control" name="unidade"><option value="">Todas as unidades</option><?php foreach($unidades as $u): ?><option value="<?= h($u['id']) ?>" <?= $f['unidade']===$u['id']?'selected':'' ?>><?= h($u['nome'].' — '.$u['cidade'].'/'.$u['uf']) ?></option><?php endforeach; ?></select>
   <input class="form-control" name="cidade" value="<?= h($f['cidade']) ?>" placeholder="Cidade">
@@ -51,7 +51,7 @@ $titulo_page='Protocolos documentais - ERP';require __DIR__.'/../../includes/hea
    <td><strong><?= h($d['numero']) ?></strong><br><small><?= h($d['assunto']) ?> · <?= (int)$d['eventos'] ?> evento(s)</small></td>
    <td><?= h($d['embarcacao_nome']) ?><br><small><?= h($d['cliente_nome']?:'Cliente não informado') ?></small></td>
    <td><span class="prot-status"><?= h($labels[$d['status']]??$d['status']) ?></span><?php if($d['originais_pendentes']): ?><br><small style="color:#a45b00"><?= (int)$d['originais_pendentes'] ?> original(is) pendente(s)</small><?php endif; ?></td>
-   <td><?= h($d['unidade_nome']?:'—') ?><br><small><?= h($d['protocolo_externo_numero']?:'Sem protocolo externo') ?></small></td>
+   <td><?= h($d['unidade_nome']?:'—') ?><br><small><?= $d['protocolo_externo_em']?formatarDataCompleta($d['protocolo_externo_em']):'Atendimento não registrado' ?></small></td>
    <td><?= h($d['responsavel_nome']) ?><br><small><?= formatarDataCompleta($d['atualizado_em']) ?></small></td>
    <td><a class="btn btn-sm btn-primary" href="<?= APP_URL ?>protocolos/form?id=<?= urlencode($d['id']) ?>">Abrir</a></td>
   </tr><?php endforeach; ?><?php if(!$dossies): ?><tr><td colspan="6">Nenhum protocolo encontrado.</td></tr><?php endif; ?></tbody></table>

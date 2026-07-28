@@ -799,38 +799,19 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                                 <div style="margin-bottom:12px;color:#65322e">
                                                     Encaminhe este relat&oacute;rio para <strong>Retornos A/S</strong>. Depois, a pr&oacute;xima a&ccedil;&atilde;o no dashboard ser&aacute; agendar uma nova visita.
                                                 </div>
-                                                <?php if (($vistoria['assinatura_status'] ?? '') === 'ASSINADO'): ?>
-                                                    <div style="margin-bottom:8px;color:#23754f"><i class="fas fa-circle-check"></i> Etapa 1 conclu&iacute;da: relat&oacute;rio assinado.</div>
-                                                    <button type="submit" name="decisao" value="retorno_as"
-                                                            class="btn btn-danger"
-                                                            onclick="return confirm('Este relatorio nao sera aprovado. Encaminhar agora para Retornos A/S e abrir a etapa de novo agendamento?')">
-                                                        <i class="fas fa-calendar-plus"></i>
-                                                        N&atilde;o aprovar e enviar para Retornos A/S
-                                                    </button>
-                                                <?php else: ?>
-                                                    <div style="margin-bottom:10px"><strong>Etapa 1 de 2:</strong> assine o relat&oacute;rio t&eacute;cnico.</div>
-                                                    <button type="button" class="btn btn-warning js-assinar-substituto"
-                                                            data-documento-id="<?= h($vistoria['id']) ?>">
-                                                        <i class="fas fa-file-signature"></i> 1. Assinar como substituto
-                                                    </button>
-                                                    <button type="button" class="btn btn-danger" disabled style="margin-top:8px;opacity:.65">
-                                                        <i class="fas fa-calendar-plus"></i> 2. Enviar para Retornos A/S
-                                                    </button>
-                                                    <small style="display:block;margin-top:8px;color:#765a56">A assinatura n&atilde;o aprova o relat&oacute;rio com A/S. Ela apenas libera a etapa 2.</small>
-                                                <?php endif; ?>
+                                                <button type="submit" name="decisao" value="retorno_as"
+                                                        class="btn btn-danger"
+                                                        onclick="return confirm('Este relatorio nao sera aprovado. Encaminhar agora para Retornos A/S e abrir a etapa de novo agendamento?')">
+                                                    <i class="fas fa-calendar-plus"></i>
+                                                    N&atilde;o aprovar e enviar para Retornos A/S
+                                                </button>
                                             </div>
-                                        <?php elseif (($vistoria['assinatura_status'] ?? '') === 'ASSINADO'): ?>
+                                        <?php else: ?>
                                             <button type="submit" name="decisao" value="aprovar"
                                                     class="btn btn-warning"
                                                     onclick="return confirm('<?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar este relatorio com exigencias comuns?' : 'Aprovar este relatorio?' ?>')">
                                                 <i class="fas fa-check-circle"></i>
                                                 <?= $resumo_aprovacao_relatorio['pendentes'] > 0 ? 'Aprovar com exig&ecirc;ncias' : 'Aprovar relat&oacute;rio' ?>
-                                            </button>
-                                        <?php else: ?>
-                                            <div class="admin-review-text" style="margin-bottom:10px">O relat&oacute;rio ainda n&atilde;o foi assinado.</div>
-                                            <button type="button" class="btn btn-warning js-assinar-substituto"
-                                                    data-documento-id="<?= h($vistoria['id']) ?>">
-                                                <i class="fas fa-file-signature"></i> Assinar como substituto
                                             </button>
                                         <?php endif; ?>
                                     </div>
@@ -877,6 +858,19 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         <br><br>Observacao do admin: <?= h($vistoria['observacao_admin']) ?>
                                     <?php endif; ?>
                                 </div>
+                                <?php if ($cargo === 'ADMIN'
+                                    && $eh_relatorio_vigente
+                                    && in_array(($vistoria['status'] ?? ''), ['APROVADA','APROVADA_COM_EXIGENCIAS'], true)
+                                    && ($vistoria['assinatura_status'] ?? 'PENDENTE') !== 'ASSINADO'): ?>
+                                    <div style="margin-top:12px;padding:14px;border:1px solid #efd39e;border-radius:10px;background:#fff9ed">
+                                        <strong style="display:block;margin-bottom:7px"><i class="fas fa-clock"></i> Aguardando assinatura do vistoriador</strong>
+                                        <p style="margin:0 0 10px;color:#66573b">Certificados, OS e agendamento permanecem bloqueados até a assinatura. O administrador pode aplicar somente a assinatura cadastrada do vistoriador atribuído.</p>
+                                        <button type="button" class="btn btn-warning js-assinar-substituto"
+                                                data-documento-id="<?= h($vistoria['id']) ?>">
+                                            <i class="fas fa-file-signature"></i> Assinar pelo vistoriador
+                                        </button>
+                                    </div>
+                                <?php endif; ?>
                                 <div style="margin-top: 12px;">
                                     <a href="<?= APP_URL ?>documentacao/aprovacao_relatorios" class="btn btn-secondary">
                                         Voltar para aprovacoes
@@ -1023,8 +1017,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="status_vistoria">Situação do relatório *</label>
                         <select id="status_vistoria" name="status_vistoria" required>
-                            <option value="PENDENTE" <?= ($vistoria['status'] ?? '') === 'PENDENTE' ? 'selected' : '' ?>>Salvar como pendente</option>
-                            <option value="AGUARDANDO_APROVACAO" <?= ($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO' ? 'selected' : '' ?>>Enviar para análise</option>
+                            <option value="" selected disabled>Selecione o resultado...</option>
+                            <option value="PENDENTE">Salvar como pendente</option>
+                            <option value="AGUARDANDO_APROVACAO">Enviar para análise</option>
                         </select>
                     </div>
                 </div>
@@ -1295,11 +1290,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </label>
                     <select id="status_vistoria" name="status_vistoria" required
                             style="width: 100%; padding: 10px 14px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 6px; color: var(--cor-texto, #ddd); font-size: 1rem;">
-                        <option value="PENDENTE" <?php echo ($vistoria['status'] ?? '') === 'PENDENTE' ? 'selected' : ''; ?>>Pendente (relatório em andamento)</option>
-                        <option value="AGUARDANDO_APROVACAO" <?php echo ($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO' ? 'selected' : ''; ?>>Aguardando Aprovação</option>
+                        <option value="" selected disabled>Selecione o resultado...</option>
+                        <option value="PENDENTE">Pendente (relatório em andamento)</option>
+                        <option value="AGUARDANDO_APROVACAO">Aguardando Aprovação</option>
                         <?php if (getCargo() === 'ADMIN'): ?>
-                        <option value="REPROVADA" <?php echo ($vistoria['status'] ?? '') === 'REPROVADA' ? 'selected' : ''; ?>>Reprovada</option>
-                        <option value="CANCELADA" <?php echo ($vistoria['status'] ?? '') === 'CANCELADA' ? 'selected' : ''; ?>>Cancelada</option>
+                        <option value="REPROVADA">Reprovada</option>
+                        <option value="CANCELADA">Cancelada</option>
                         <?php endif; ?>
                     </select>
                 </div>
@@ -1351,7 +1347,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 <?php if ($admin_review_mode
     && $cargo === 'ADMIN'
     && $eh_relatorio_vigente
-    && ($vistoria['status'] ?? '') === 'AGUARDANDO_APROVACAO'
+    && in_array(($vistoria['status'] ?? ''), ['APROVADA','APROVADA_COM_EXIGENCIAS'], true)
     && ($vistoria['assinatura_status'] ?? '') !== 'ASSINADO'): ?>
 <div id="modalAssinaturaSubstituta" role="dialog" aria-modal="true" aria-labelledby="tituloAssinaturaSubstituta"
      style="display:none;position:fixed;inset:0;background:rgba(4,35,28,.68);z-index:10050;align-items:center;justify-content:center;padding:18px;">
@@ -1362,14 +1358,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     style="border:0;background:transparent;color:#fff;font-size:1.25rem;cursor:pointer;">&times;</button>
         </div>
         <div style="padding:22px;">
-            <p style="margin-top:0;">Será aplicada a assinatura cadastrada no seu perfil administrativo ao relatório <strong><?= h($vistoria['numero'] ?? '') ?></strong>.</p>
+            <p style="margin-top:0;">Será aplicada ao relatório <strong><?= h($vistoria['numero'] ?? '') ?></strong> a assinatura cadastrada do vistoriador atribuído <strong><?= h($ag['vistoriador_nome'] ?? 'Não atribuído') ?></strong>.</p>
             <p style="margin-bottom:14px;color:#52635e;">
-                Localização, IP, data e hora serão registrados para auditoria.
-                <?php if (($resumo_aprovacao_relatorio['pendentes_as'] ?? 0) > 0): ?>
-                    Como existem exigências A/S, a assinatura não aprovará o relatório; você permanecerá nesta tela para encaminhá-lo a Retornos A/S.
-                <?php else: ?>
-                    Após a aprovação, você seguirá para escolher o certificado com este relatório já selecionado.
-                <?php endif; ?>
+                O vistoriador continuará identificado como responsável técnico. Seu usuário administrativo, localização, IP, data e hora serão registrados como executor da assinatura substituta. Depois da assinatura, certificados, OS e agendamento serão liberados.
             </p>
             <div id="mensagemAssinaturaSubstituta" class="alert" aria-live="polite" style="display:none;margin:0;"></div>
         </div>
@@ -1392,7 +1383,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     if (!form || typeof localStorage === 'undefined') return;
 
     const draftKey = <?= json_encode('erp:relatorio:rascunho:' . $agendamento_id . ':' . ($vistoria['id'] ?? 'novo'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
-    const ignorados = new Set(['csrf_token', 'formulario_completo', 'agendamento_id', 'vistoria_id']);
+    const ignorados = new Set(['csrf_token', 'formulario_completo', 'agendamento_id', 'vistoria_id', 'status_vistoria']);
     const status = document.getElementById('rascunhoRelatorioStatus');
 
     function controlesPersistiveis() {
@@ -1851,9 +1842,7 @@ confirmarAssinaturaSubstituta?.addEventListener('click', function() {
             const proximaUrl = retorno.data?.proxima_url;
             window.setTimeout(function() {
                 window.location.assign(proximaUrl || <?= json_encode(
-                    (($resumo_aprovacao_relatorio['pendentes_as'] ?? 0) > 0
-                        ? APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode((string)$agendamento_id)
-                        : APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id))
+                    APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id)
                     . '&vistoria_id=' . urlencode((string)($vistoria['id'] ?? ''))
                 ) ?>);
             }, 650);

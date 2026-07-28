@@ -271,7 +271,7 @@ function clientePortalSelectDocumentos(PDO $pdo, string $clienteId, array $filtr
 
     $tipoFiltro=$filtros['tipo']??'';$params=[];$in=clientePortalSqlIn($embarcacaoIds,'extra_emb_',$params);
     if($tipoFiltro===''||$tipoFiltro==='rel_vistoria'){
-        $sql="SELECT v.id,'rel_vistoria' tipo,'Relatório de Vistoria' tipo_label,v.numero,v.data_vistoria data_emissao,NULL data_validade,v.status,1 assinado,v.criado_em,v.embarcacao_id,e.nome embarcacao_nome FROM vistorias v INNER JOIN embarcacoes e ON e.id=v.embarcacao_id WHERE v.embarcacao_id IN ({$in}) AND v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS','RETORNO_AS')";
+        $sql="SELECT v.id,'rel_vistoria' tipo,'Relatório de Vistoria' tipo_label,v.numero,v.data_vistoria data_emissao,NULL data_validade,v.status,1 assinado,v.criado_em,v.embarcacao_id,e.nome embarcacao_nome FROM vistorias v INNER JOIN embarcacoes e ON e.id=v.embarcacao_id WHERE v.embarcacao_id IN ({$in}) AND ((v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS') AND v.assinatura_status='ASSINADO') OR v.status='RETORNO_AS')";
         if(!empty($filtros['embarcacao_id'])){$sql.=' AND v.embarcacao_id=:extra_vist_emb';$params[':extra_vist_emb']=$filtros['embarcacao_id'];}
         if(!empty($filtros['busca'])){$sql.=' AND (v.numero LIKE :extra_vist_busca OR e.nome LIKE :extra_vist_busca)';$params[':extra_vist_busca']='%'.$filtros['busca'].'%';}
         $st=$pdo->prepare($sql);$st->execute($params);$documentos=array_merge($documentos,$st->fetchAll(PDO::FETCH_ASSOC));

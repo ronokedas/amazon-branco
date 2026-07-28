@@ -30,13 +30,9 @@ try {
                 : assinaturaAssinarCertificado($pdo, $_POST));
 
         if ($tipo === 'RELATORIO') {
-            if (getCargo() === 'ADMIN' && !empty($resultado['admin_aprovou'])) {
-                $mensagem = 'Relatório assinado e aprovado.';
-            } elseif (getCargo() === 'ADMIN') {
-                $mensagem = 'Relatório assinado. Como existem exigências A/S, ele não foi aprovado; volte ao relatório para encaminhá-lo a Retornos A/S.';
-            } else {
-                $mensagem = 'Relatório assinado e enviado para aprovação.';
-            }
+            $mensagem = getCargo() === 'ADMIN'
+                ? 'Assinatura do vistoriador aplicada pelo administrador. Relatório concluído e certificação liberada.'
+                : 'Relatório aprovado assinado com sucesso. Certificação liberada.';
         } elseif ($tipo === 'PARECER_PLANOS') {
             $mensagem = 'Parecer assinado e publicado.';
         } else {

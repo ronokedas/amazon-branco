@@ -361,13 +361,16 @@ switch ($action) {
 
     // ==================== EDITAR ====================
     case 'editar':
+        $id = $_POST['id'] ?? '';
+        $fluxoProposta = (string)($_POST['fluxo_proposta'] ?? '') === '1';
+        $destinoFormulario = APP_URL . 'agendamentos/form?id=' . urlencode($id)
+            . ($fluxoProposta ? '&fluxo_proposta=1' : '');
         try {
         // VISTORIADOR não pode editar agendamentos
         if ($cargo === 'VISTORIADOR') {
             setMensagem('error', 'Acesso negado. Vistoriadores não podem editar agendamentos.');
             redirecionar(APP_URL . 'agendamentos');
         }
-            $id              = $_POST['id'] ?? '';
             $proposta_id     = !empty($_POST['proposta_id']) ? $_POST['proposta_id'] : null;
             $embarcacao_id   = $_POST['embarcacao_id'] ?? '';
             $cliente_id      = $_POST['cliente_id'] ?? '';
@@ -410,7 +413,7 @@ switch ($action) {
             }
             if (!horaVistoriaValida($hora_vistoria)) {
                 setMensagem('error', 'Selecione um horário redondo, de meia em meia hora.');
-                redirecionar(APP_URL . 'agendamentos/form?id=' . urlencode($id));
+                redirecionar($destinoFormulario);
             }
             $hora_vistoria = !empty($hora_vistoria) ? substr($hora_vistoria, 0, 5) : null;
 
@@ -429,7 +432,7 @@ switch ($action) {
             if (!empty($errosCampos)) {
                 setMensagem('error', 'Revise os campos destacados e tente novamente.', $errosCampos);
                 $destino = !empty($id)
-                    ? APP_URL . 'agendamentos/form?id=' . urlencode($id)
+                    ? $destinoFormulario
                     : APP_URL . 'agendamentos';
                 redirecionar($destino);
             }
@@ -522,9 +525,29 @@ switch ($action) {
                 }
             }
             }
+            $proximoAgendamentoId = null;
+            if ($fluxoProposta && !empty($proposta_id)) {
+                $proximoAgendamentoId = proximoAgendamentoPendenteProposta(
+                    $pdo,
+                    (string)$proposta_id,
+                    (string)$id
+                );
+            }
             $pdo->commit();
 
             log_atividade('agendamento_editado', "Agendamento ID: {$id} atualizado.");
+            if ($fluxoProposta && !empty($proposta_id)) {
+                if ($proximoAgendamentoId !== null) {
+                    setMensagem('success', 'Agendamento atualizado. Continue com o próximo agendamento desta proposta.');
+                    redirecionar(
+                        APP_URL . 'agendamentos/form?id=' . urlencode($proximoAgendamentoId) . '&fluxo_proposta=1'
+                    );
+                }
+
+                setMensagem('success', 'Todos os agendamentos desta proposta foram preenchidos.');
+                redirecionar(APP_URL . 'agendamentos');
+            }
+
             setMensagem('success', 'Agendamento atualizado com sucesso!');
             redirecionar(APP_URL . 'agendamentos');
 
@@ -532,7 +555,7 @@ switch ($action) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao editar agendamento: ' . $e->getMessage());
             setMensagem('error', 'Erro ao atualizar agendamento.');
-            redirecionar(APP_URL . 'agendamentos/form?id=' . urlencode($id));
+            redirecionar($destinoFormulario);
         }
         break;
 

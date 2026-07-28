@@ -2,12 +2,14 @@
 require_once __DIR__.'/../config.php';
 function assertProtocolo(bool $ok,string $msg):void{if(!$ok)throw new RuntimeException($msg);}
 $migration=file_get_contents(__DIR__.'/../migrations/091_protocolos_documentais.sql');
+$migration097=file_get_contents(__DIR__.'/../migrations/097_protocolos_documentos_pdf_final.sql');
 $helper=file_get_contents(__DIR__.'/../includes/protocolos.php');
 $actions=file_get_contents(__DIR__.'/../modules/protocolos/actions.php');
 $form=file_get_contents(__DIR__.'/../modules/protocolos/form.php');
 $pdf=file_get_contents(__DIR__.'/../modules/protocolos/pdf.php');
+$pdfDossie=file_get_contents(__DIR__.'/../modules/protocolos/pdf_dossie.php');
 $router=file_get_contents(__DIR__.'/../index.php');
-foreach([$migration,$helper,$actions,$form,$pdf,$router] as $f)assertProtocolo($f!==false,'Arquivo obrigatório do protocolo não encontrado.');
+foreach([$migration,$migration097,$helper,$actions,$form,$pdf,$pdfDossie,$router] as $f)assertProtocolo($f!==false,'Arquivo obrigatório do protocolo não encontrado.');
 foreach(['protocolo_dossies','protocolo_movimentacoes','protocolo_movimentacao_itens','protocolo_comprovantes','protocolo_aceites','protocolo_auditoria'] as $t)assertProtocolo(str_contains($migration,'CREATE TABLE '.$t),'Migração não cria '.$t);
 foreach(['EM_PREPARACAO','ENVIADO_AO_ORGAO','PROTOCOLADO','EM_ANALISE_NO_ORGAO','EM_EXIGENCIA','A_DISPOSICAO','RETIRADO','ENTREGUE_AO_CLIENTE','ENCERRADO','CANCELADO'] as $s)assertProtocolo(str_contains($migration,"'".$s."'"),'Status ausente: '.$s);
 assertProtocolo(str_contains($actions,"gerarNumeroDocumento('PROTOCOLO','AM-PROT')"),'Numeração AM-PROT não usa sequencial transacional.');
@@ -16,6 +18,14 @@ assertProtocolo(str_contains($actions,"status='CONFIRMADA',snapshot_json=:snapsh
 assertProtocolo(!str_contains($actions,"DELETE FROM protocolo_"),'Fluxo não deve apagar protocolo.');
 assertProtocolo(str_contains($actions,'protocolo_anterior_id')&&str_contains($form,'Cumprimento de exigência'),'Cumprimento não mantém vínculo anterior.');
 assertProtocolo(str_contains($pdf,'hash_equals')&&str_contains($pdf,'Código de validação'),'PDF não valida integridade.');
+assertProtocolo(str_contains($migration097,"'DOCUMENTO'"),'Migração não adiciona o tipo genérico DOCUMENTO.');
+assertProtocolo(str_contains($actions,"\$acao==='registro_orgao'")&&!str_contains($actions,"\$acao==='protocolo_externo'"),'Registro no órgão ainda depende do fluxo de protocolo externo.');
+assertProtocolo(!str_contains($form,'protocolo_externo_numero')&&!str_contains($form,'Número SISAP'),'Tela ainda solicita número SISAP.');
+assertProtocolo(str_contains($form,'name="documentos[]"')&&str_contains($form,'multiple'),'Tela não oferece upload múltiplo de documentos.');
+assertProtocolo(str_contains($actions,'count($arquivos)>10')&&str_contains($actions,"'DOCUMENTO_ANEXADO'"),'Limite ou auditoria do upload múltiplo não foi implementado.');
+assertProtocolo(str_contains($helper,'protocoloNormalizarArquivos')&&str_contains($helper,'15*1024*1024'),'Validação de documentos não preserva normalização e limite.');
+assertProtocolo(str_contains($router,"'protocolos/pdf-dossie'")&&str_contains($pdfDossie,'Relatório de tramitação documental'),'PDF consolidado não foi integrado.');
+assertProtocolo(str_contains($pdfDossie,'getAliasNbPages')&&str_contains($pdfDossie,'SHA-256 dos dados consolidados'),'PDF consolidado não apresenta paginação e integridade.');
 assertProtocolo(str_contains($router,'protocolo-aceite/')&&str_contains($form,'Gerar link de aceite'),'Aceite público não foi integrado.');
 $tabelas=$pdo->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE 'protocolo_%'")->fetchAll(PDO::FETCH_COLUMN);
 assertProtocolo(count($tabelas)>=8,'Migração 091 não está aplicada.');
@@ -25,4 +35,6 @@ $fk=$pdo->query("SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS
 assertProtocolo((int)$fk>=15,'Relações do módulo não estão protegidas por chaves estrangeiras.');
 $rotulo=$pdo->query("SELECT nome FROM protocolo_catalogo_documentos WHERE codigo='ART'")->fetchColumn();
 assertProtocolo($rotulo==='Anotação de Responsabilidade Técnica (ART)','Catálogo UTF-8 foi corrompido.');
+$tipoDocumento=$pdo->query("SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='protocolo_comprovantes' AND COLUMN_NAME='tipo'")->fetchColumn();
+assertProtocolo(str_contains((string)$tipoDocumento,"'DOCUMENTO'"),'Migração 097 não está aplicada.');
 echo "protocolos_documentais_test: OK\n";

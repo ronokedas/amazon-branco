@@ -92,7 +92,31 @@ function assinaturaPendencias(PDO $pdo,string $usuarioId,string $cargo): array
 {
     $itens=[];$resp=assinaturaResponsavelUsuario($pdo,$usuarioId,false);
     if($resp){foreach(assinaturaCertificadosMapas() as $tipo=>$m){$extra=$tipo==='LC'?',analise_id':'';$stmt=$pdo->prepare("SELECT id,{$m['number']} numero,nome_embarcacao,data_emissao,status,token_assinatura,criado_por{$extra} FROM {$m['table']} WHERE responsavel_assinatura_id=:resp AND ativo=1 AND assinado=0 AND status='emitido' ORDER BY criado_em DESC");$stmt->execute([':resp'=>$resp['id']]);foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $r){if($cargo==='ANALISTA'&&$r['criado_por']!==$usuarioId){$permitidaPorAnalise=false;if($tipo==='LC'&&!empty($r['analise_id'])){$q=$pdo->prepare('SELECT COUNT(*) FROM analises_planos WHERE id=:id AND analista_id=:usuario');$q->execute([':id'=>$r['analise_id'],':usuario'=>$usuarioId]);$permitidaPorAnalise=(int)$q->fetchColumn()===1;}if(!$permitidaPorAnalise)continue;}$r['tipo']=$tipo;$r['responsavel_id']=$resp['id'];$r['origem']=$m['list'];$itens[]=$r;}}}
-    if(in_array($cargo,['ADMIN','VISTORIADOR'],true)&&$resp){$sql="SELECT v.id,v.numero,e.nome nome_embarcacao,v.data_vistoria data_emissao,v.status,a.vistoriador_id,v.criado_por FROM vistorias v JOIN embarcacoes e ON e.id=v.embarcacao_id LEFT JOIN agendamentos a ON a.id=v.agendamento_id WHERE v.status='AGUARDANDO_APROVACAO' AND COALESCE(v.assinatura_status,'PENDENTE')<>'ASSINADO'";$params=[];if($cargo==='VISTORIADOR'){$sql.=' AND a.vistoriador_id=:usuario';$params[':usuario']=$usuarioId;}$sql.=' ORDER BY v.atualizado_em DESC';$stmt=$pdo->prepare($sql);$stmt->execute($params);foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $r){$r['tipo']='RELATORIO';$r['responsavel_id']=$resp['id'];$r['origem']='vistorias/relatorio?vistoria_id='.urlencode($r['id']);$itens[]=$r;}}
+    if(in_array($cargo,['ADMIN','VISTORIADOR'],true)){
+        $sql="SELECT v.id,v.numero,e.nome nome_embarcacao,v.data_vistoria data_emissao,
+                     v.status,a.vistoriador_id,v.criado_por,u.nome vistoriador_nome
+              FROM vistorias v
+              JOIN embarcacoes e ON e.id=v.embarcacao_id
+              LEFT JOIN agendamentos a ON a.id=v.agendamento_id
+              LEFT JOIN usuarios u ON u.id=a.vistoriador_id
+              WHERE v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')
+                AND COALESCE(v.assinatura_status,'PENDENTE')<>'ASSINADO'";
+        $params=[];
+        if($cargo==='VISTORIADOR'){
+            $sql.=' AND a.vistoriador_id=:usuario';
+            $params[':usuario']=$usuarioId;
+        }
+        $sql.=' ORDER BY v.atualizado_em DESC';
+        $stmt=$pdo->prepare($sql);
+        $stmt->execute($params);
+        foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $r){
+            $r['tipo']='RELATORIO';
+            $r['responsavel_id']=$resp['id']??null;
+            $r['assinatura_substituta']=$cargo==='ADMIN';
+            $r['origem']='vistorias/relatorio?vistoria_id='.urlencode($r['id']);
+            $itens[]=$r;
+        }
+    }
     usort($itens,static fn($a,$b)=>strcmp((string)$b['data_emissao'],(string)$a['data_emissao']));return $itens;
 }
 
@@ -139,30 +163,171 @@ function assinaturaAssinarParecer(PDO $pdo,array $input): array
 
 function assinaturaAssinarRelatorio(PDO $pdo,array $input): array
 {
-    $id=trim((string)($input['documento_id']??''));$usuario=(string)($_SESSION['usuario_id']??'');$cargo=getCargo();
-    $res=[];
-    $lat=filter_var($input['latitude']??null,FILTER_VALIDATE_FLOAT);$lng=filter_var($input['longitude']??null,FILTER_VALIDATE_FLOAT);$prec=filter_var($input['geo_precisao_m']??null,FILTER_VALIDATE_FLOAT);
-    if($id===''||$usuario===''||$lat===false||$lng===false)throw new InvalidArgumentException('Relatorio e geolocalizacao sao obrigatorios.');
-    $resp=assinaturaResponsavelUsuario($pdo,$usuario,true);if(!$resp)throw new RuntimeException('Seu usuario nao possui perfil de assinatura completo.');
-    $stmt=$pdo->prepare("SELECT v.*,a.vistoriador_id,e.nome embarcacao_nome FROM vistorias v LEFT JOIN agendamentos a ON a.id=v.agendamento_id JOIN embarcacoes e ON e.id=v.embarcacao_id WHERE v.id=:id");$stmt->execute([':id'=>$id]);$v=$stmt->fetch(PDO::FETCH_ASSOC);if(!$v||$v['status']!=='AGUARDANDO_APROVACAO')throw new RuntimeException('O relatorio nao esta aguardando assinatura.');
-    if($cargo==='VISTORIADOR'&&$v['vistoriador_id']!==$usuario)throw new RuntimeException('Vistoriadores somente podem assinar os proprios relatorios.');if($cargo!=='ADMIN'&&$cargo!=='VISTORIADOR')throw new RuntimeException('Seu perfil nao pode assinar relatorios de vistoria.');
-    $q=$pdo->prepare("SELECT COUNT(*) FROM documento_assinaturas WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='ASSINADO'");$q->execute([':id'=>$id]);if($q->fetchColumn())throw new RuntimeException('Este relatorio ja possui assinatura ativa.');
-    $tz=new DateTimeZone('America/Sao_Paulo');$now=new DateTimeImmutable('now',$tz);$uuid=gerarUUID();$token=bin2hex(random_bytes(32));$year=$now->format('Y');$dirRel='storage/documentos_assinados/'.$year.'/relatorio/';$dirAbs=__DIR__.'/../'.$dirRel;if(!is_dir($dirAbs)&&!mkdir($dirAbs,0750,true)&&!is_dir($dirAbs))throw new RuntimeException('Falha ao preparar armazenamento.');$tmp=__DIR__.'/../tmp/pdfs/';if(!is_dir($tmp))mkdir($tmp,0750,true);
-    $originalTmp=$tmp.$uuid.'_original.pdf';$finalTmp=$tmp.$uuid.'_assinado.pdf';$originalAbs=$dirAbs.$uuid.'_original.pdf';$finalAbs=$dirAbs.$uuid.'.pdf';
-    $GLOBALS['APROVACAO_RESPONSAVEL_PDF']=$resp;$pdfLayout=aprovacaoDocumentoGerarOriginal('RELATORIO',$id,$originalTmp);unset($GLOBALS['APROVACAO_RESPONSAVEL_PDF']);$hashOriginal=hash_file('sha256',$originalTmp);$sigAbs=__DIR__.'/../'.ltrim($resp['assinatura_arquivo'],'/\\');
-    $ctx=['documento_tipo'=>'RELATORIO','token_validacao'=>$token,'responsavel_nome'=>$resp['nome_completo'],'responsavel_cpf_cnpj'=>$resp['cpf_cnpj'],'responsavel_cargo'=>$resp['cargo_titulo'],'responsavel_registro'=>$resp['registro_profissional'],'aprovador_nome'=>$resp['usuario_nome'],'data_hora_formatada'=>$now->format('d/m/Y H:i:s').' (America/Sao_Paulo)','latitude'=>(string)$lat,'longitude'=>(string)$lng,'geo_precisao_m'=>$prec===false?null:(string)$prec,'ip'=>obterIpCliente(),'hash_pdf_original'=>$hashOriginal,'assinatura_caminho_absoluto'=>$sigAbs,'bloco_pagina'=>$pdfLayout['bloco_pagina']??null,'bloco_y'=>$pdfLayout['bloco_y']??null];
-    aprovacaoPdfCriarComBloco($originalTmp,$finalTmp,$ctx);$hashFinal=hash_file('sha256',$finalTmp);rename($originalTmp,$originalAbs);rename($finalTmp,$finalAbs);
-    $pdo->beginTransaction();try{$ver=$pdo->prepare("SELECT COALESCE(MAX(versao),0)+1 FROM documento_assinaturas WHERE documento_tipo='RELATORIO' AND documento_id=:id FOR UPDATE");$ver->execute([':id'=>$id]);$versao=(int)$ver->fetchColumn();$ins=$pdo->prepare("INSERT INTO documento_assinaturas (id,documento_tipo,documento_id,versao,responsavel_id,usuario_id,assinatura_arquivo,assinatura_hash,hash_pdf_original,hash_pdf_assinado,caminho_pdf_original,caminho_pdf_assinado,token_validacao,latitude,longitude,geo_precisao_m,ip,user_agent,status,assinado_em) VALUES (:id,'RELATORIO',:doc,:versao,:resp,:usuario,:arquivo,:hashassinatura,:original,:final,:caminhooriginal,:caminhofinal,:token,:lat,:lng,:prec,:ip,:ua,'ASSINADO',:data)");$ins->execute([':id'=>$uuid,':doc'=>$id,':versao'=>$versao,':resp'=>$resp['id'],':usuario'=>$usuario,':arquivo'=>$resp['assinatura_arquivo'],':hashassinatura'=>$resp['assinatura_hash'],':original'=>$hashOriginal,':final'=>$hashFinal,':caminhooriginal'=>$dirRel.$uuid.'_original.pdf',':caminhofinal'=>$dirRel.$uuid.'.pdf',':token'=>$token,':lat'=>$lat,':lng'=>$lng,':prec'=>$prec===false?null:$prec,':ip'=>obterIpCliente(),':ua'=>substr($_SERVER['HTTP_USER_AGENT']??'',0,500),':data'=>$now->format('Y-m-d H:i:s')]);$pdo->prepare("UPDATE vistorias SET responsavel_assinatura_id=:resp,assinatura_status='ASSINADO',assinatura_em=:data WHERE id=:id")->execute([':resp'=>$resp['id'],':data'=>$now->format('Y-m-d H:i:s'),':id'=>$id]);if($cargo==='ADMIN'){$res=aprovacaoRelatorioResumoExigencias($pdo,$id);if((int)($res['pendentes_as']??0)===0){$pdo->prepare("UPDATE vistorias SET status=:status,aprovado_por=:usuario,data_aprovacao=:data WHERE id=:id")->execute([':status'=>$res['status_esperado'],':usuario'=>$usuario,':data'=>$now->format('Y-m-d H:i:s'),':id'=>$id]);if(($v['finalidade']??'VISTORIA')==='CUMPRIMENTO_EXIGENCIAS'){concluirRetornoDoRelatorio($pdo,$id);}if(!empty($v['agendamento_id'])){$pdo->prepare("UPDATE ordens_servico SET status='executado' WHERE agendamento_id=:agendamento AND status IN ('pendente','em_andamento')")->execute([':agendamento'=>$v['agendamento_id']]);$pdo->prepare("UPDATE agendamentos SET status='concluido' WHERE id=:agendamento")->execute([':agendamento'=>$v['agendamento_id']]);}}}$pdo->commit();}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();@unlink($originalAbs);@unlink($finalAbs);throw $e;}
-    $adminAprovou=$cargo==='ADMIN'&&((int)($res['pendentes_as']??0)===0);
-    $proximaUrl=$adminAprovou&& !empty($v['agendamento_id'])
+    $id=trim((string)($input['documento_id']??''));
+    $usuario=(string)($_SESSION['usuario_id']??'');
+    $cargo=getCargo();
+    $lat=filter_var($input['latitude']??null,FILTER_VALIDATE_FLOAT);
+    $lng=filter_var($input['longitude']??null,FILTER_VALIDATE_FLOAT);
+    $prec=filter_var($input['geo_precisao_m']??null,FILTER_VALIDATE_FLOAT);
+    if($id===''||$usuario===''||$lat===false||$lng===false){
+        throw new InvalidArgumentException('Relatorio e geolocalizacao sao obrigatorios.');
+    }
+    if(!in_array($cargo,['ADMIN','VISTORIADOR'],true)){
+        throw new RuntimeException('Seu perfil nao pode assinar relatorios de vistoria.');
+    }
+
+    $stmt=$pdo->prepare("SELECT v.*,a.vistoriador_id,e.nome embarcacao_nome,
+                               aprovador.nome aprovador_nome
+                        FROM vistorias v
+                        LEFT JOIN agendamentos a ON a.id=v.agendamento_id
+                        JOIN embarcacoes e ON e.id=v.embarcacao_id
+                        LEFT JOIN usuarios aprovador ON aprovador.id=v.aprovado_por
+                        WHERE v.id=:id");
+    $stmt->execute([':id'=>$id]);
+    $v=$stmt->fetch(PDO::FETCH_ASSOC);
+    if(!$v||!in_array($v['status'],['APROVADA','APROVADA_COM_EXIGENCIAS'],true)){
+        throw new RuntimeException('O relatorio somente pode ser assinado depois da aprovacao administrativa.');
+    }
+    if(empty($v['vistoriador_id'])){
+        throw new RuntimeException('O relatorio aprovado nao possui vistoriador atribuido.');
+    }
+    if($cargo==='VISTORIADOR'&&$v['vistoriador_id']!==$usuario){
+        throw new RuntimeException('Vistoriadores somente podem assinar os proprios relatorios.');
+    }
+    $vigente=obterRelatorioVigenteCadeia($pdo,$id);
+    if(!$vigente||$vigente['id']!==$id){
+        throw new RuntimeException('Somente o relatorio vigente da cadeia pode ser assinado.');
+    }
+
+    // O responsavel tecnico e sempre o vistoriador atribuido. Quando um admin
+    // executa a acao, sua identidade fica separada no campo usuario_id.
+    $resp=assinaturaResponsavelUsuario($pdo,(string)$v['vistoriador_id'],true);
+    if(!$resp){
+        throw new RuntimeException('O vistoriador atribuido precisa cadastrar uma assinatura ativa e completa.');
+    }
+    $executorNome=trim((string)($_SESSION['usuario_nome']??$_SESSION['nome']??''));
+    if($executorNome===''){
+        $executorStmt=$pdo->prepare('SELECT nome FROM usuarios WHERE id=:id');
+        $executorStmt->execute([':id'=>$usuario]);
+        $executorNome=(string)($executorStmt->fetchColumn()?:'Usuario do sistema');
+    }
+
+    $q=$pdo->prepare("SELECT COUNT(*) FROM documento_assinaturas WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='ASSINADO'");
+    $q->execute([':id'=>$id]);
+    if($q->fetchColumn())throw new RuntimeException('Este relatorio ja possui assinatura ativa.');
+
+    $tz=new DateTimeZone('America/Sao_Paulo');
+    $now=new DateTimeImmutable('now',$tz);
+    $uuid=gerarUUID();
+    $token=bin2hex(random_bytes(32));
+    $year=$now->format('Y');
+    $dirRel='storage/documentos_assinados/'.$year.'/relatorio/';
+    $dirAbs=__DIR__.'/../'.$dirRel;
+    if(!is_dir($dirAbs)&&!mkdir($dirAbs,0750,true)&&!is_dir($dirAbs)){
+        throw new RuntimeException('Falha ao preparar armazenamento.');
+    }
+    $tmp=__DIR__.'/../tmp/pdfs/';
+    if(!is_dir($tmp))mkdir($tmp,0750,true);
+    $originalTmp=$tmp.$uuid.'_original.pdf';
+    $finalTmp=$tmp.$uuid.'_assinado.pdf';
+    $originalAbs=$dirAbs.$uuid.'_original.pdf';
+    $finalAbs=$dirAbs.$uuid.'.pdf';
+
+    $GLOBALS['APROVACAO_RESPONSAVEL_PDF']=$resp;
+    try{
+        $pdfLayout=aprovacaoDocumentoGerarOriginal('RELATORIO',$id,$originalTmp);
+    }finally{
+        unset($GLOBALS['APROVACAO_RESPONSAVEL_PDF']);
+    }
+    $hashOriginal=hash_file('sha256',$originalTmp);
+    $sigAbs=__DIR__.'/../'.ltrim($resp['assinatura_arquivo'],'/\\');
+    $ctx=[
+        'documento_tipo'=>'RELATORIO',
+        'token_validacao'=>$token,
+        'responsavel_nome'=>$resp['nome_completo'],
+        'responsavel_cpf_cnpj'=>$resp['cpf_cnpj'],
+        'responsavel_cargo'=>$resp['cargo_titulo'],
+        'responsavel_registro'=>$resp['registro_profissional'],
+        'aprovador_nome'=>(string)($v['aprovador_nome']??''),
+        'executor_assinatura_nome'=>$executorNome,
+        'data_hora_formatada'=>$now->format('d/m/Y H:i:s').' (America/Sao_Paulo)',
+        'latitude'=>(string)$lat,
+        'longitude'=>(string)$lng,
+        'geo_precisao_m'=>$prec===false?null:(string)$prec,
+        'ip'=>obterIpCliente(),
+        'hash_pdf_original'=>$hashOriginal,
+        'assinatura_caminho_absoluto'=>$sigAbs,
+        'bloco_pagina'=>$pdfLayout['bloco_pagina']??null,
+        'bloco_y'=>$pdfLayout['bloco_y']??null,
+    ];
+    aprovacaoPdfCriarComBloco($originalTmp,$finalTmp,$ctx);
+    $hashFinal=hash_file('sha256',$finalTmp);
+    rename($originalTmp,$originalAbs);
+    rename($finalTmp,$finalAbs);
+
+    $pdo->beginTransaction();
+    try{
+        $lock=$pdo->prepare("SELECT status,COALESCE(assinatura_status,'PENDENTE') assinatura_status
+                             FROM vistorias WHERE id=:id FOR UPDATE");
+        $lock->execute([':id'=>$id]);
+        $estado=$lock->fetch(PDO::FETCH_ASSOC);
+        if(!$estado||!in_array($estado['status'],['APROVADA','APROVADA_COM_EXIGENCIAS'],true)){
+            throw new RuntimeException('O relatorio deixou de estar aprovado antes da assinatura.');
+        }
+        if($estado['assinatura_status']==='ASSINADO'){
+            throw new RuntimeException('Este relatorio ja possui assinatura ativa.');
+        }
+        $ver=$pdo->prepare("SELECT COALESCE(MAX(versao),0)+1 FROM documento_assinaturas WHERE documento_tipo='RELATORIO' AND documento_id=:id FOR UPDATE");
+        $ver->execute([':id'=>$id]);
+        $versao=(int)$ver->fetchColumn();
+        $ins=$pdo->prepare("INSERT INTO documento_assinaturas
+            (id,documento_tipo,documento_id,versao,responsavel_id,usuario_id,assinatura_arquivo,assinatura_hash,
+             hash_pdf_original,hash_pdf_assinado,caminho_pdf_original,caminho_pdf_assinado,token_validacao,
+             latitude,longitude,geo_precisao_m,ip,user_agent,status,assinado_em)
+            VALUES (:id,'RELATORIO',:doc,:versao,:resp,:usuario,:arquivo,:hashassinatura,:original,:final,
+                    :caminhooriginal,:caminhofinal,:token,:lat,:lng,:prec,:ip,:ua,'ASSINADO',:data)");
+        $ins->execute([
+            ':id'=>$uuid,':doc'=>$id,':versao'=>$versao,':resp'=>$resp['id'],':usuario'=>$usuario,
+            ':arquivo'=>$resp['assinatura_arquivo'],':hashassinatura'=>$resp['assinatura_hash'],
+            ':original'=>$hashOriginal,':final'=>$hashFinal,':caminhooriginal'=>$dirRel.$uuid.'_original.pdf',
+            ':caminhofinal'=>$dirRel.$uuid.'.pdf',':token'=>$token,':lat'=>$lat,':lng'=>$lng,
+            ':prec'=>$prec===false?null:$prec,':ip'=>obterIpCliente(),
+            ':ua'=>substr($_SERVER['HTTP_USER_AGENT']??'',0,500),':data'=>$now->format('Y-m-d H:i:s'),
+        ]);
+        $pdo->prepare("UPDATE vistorias
+                       SET responsavel_assinatura_id=:resp,assinatura_status='ASSINADO',assinatura_em=:data
+                       WHERE id=:id")
+            ->execute([':resp'=>$resp['id'],':data'=>$now->format('Y-m-d H:i:s'),':id'=>$id]);
+        if(($v['finalidade']??'VISTORIA')==='CUMPRIMENTO_EXIGENCIAS'){
+            concluirRetornoDoRelatorio($pdo,$id);
+        }
+        if(!empty($v['agendamento_id'])){
+            $pdo->prepare("UPDATE ordens_servico SET status='executado'
+                           WHERE agendamento_id=:agendamento AND status IN ('pendente','em_andamento')")
+                ->execute([':agendamento'=>$v['agendamento_id']]);
+            $pdo->prepare("UPDATE agendamentos SET status='concluido' WHERE id=:agendamento")
+                ->execute([':agendamento'=>$v['agendamento_id']]);
+        }
+        $pdo->commit();
+    }catch(Throwable $e){
+        if($pdo->inTransaction())$pdo->rollBack();
+        @unlink($originalAbs);
+        @unlink($finalAbs);
+        throw $e;
+    }
+    log_atividade(
+        $cargo==='ADMIN'?'relatorio_assinatura_substituta':'relatorio_assinado_vistoriador',
+        "Relatorio ID {$id}; responsavel tecnico {$resp['usuario_id']}; executor {$usuario}."
+    );
+    $proximaUrl=!empty($v['agendamento_id'])
         ? APP_URL.'documentacao/novo_certificado?agendamento_id='.urlencode((string)$v['agendamento_id'])
             .'&vistoria_id='.urlencode($id)
-        : APP_URL.'vistorias/relatorio?agendamento_id='.urlencode((string)($v['agendamento_id']??''))
-            .'&vistoria_id='.urlencode($id);
+        : APP_URL.'vistorias/relatorio?vistoria_id='.urlencode($id);
     return [
         'token'=>$token,
         'validation_url'=>APP_URL.'validar-assinatura/'.$token,
-        'admin_aprovou'=>$adminAprovou,
+        'fluxo_finalizado'=>true,
+        'assinatura_substituta'=>$cargo==='ADMIN',
         'vistoria_id'=>$id,
         'agendamento_id'=>(string)($v['agendamento_id']??''),
         'proxima_url'=>$proximaUrl,

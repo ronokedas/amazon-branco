@@ -448,7 +448,7 @@ switch ($action) {
         $operador_nome        = trim($_POST['operador_nome'] ?? '');
         $data_vistoria        = trim($_POST['data_vistoria'] ?? '');
         $observacoes_tecnicas = trim($_POST['observacoes_tecnicas'] ?? '');
-        $status_vistoria      = $_POST['status_vistoria'] ?? 'PENDENTE';
+        $status_vistoria      = trim((string)($_POST['status_vistoria'] ?? ''));
         $prazo_exigencias_dias = (int)($_POST['prazo_exigencias_dias'] ?? 0);
         $prazo_padrao_exigencias = null;
         
@@ -476,6 +476,10 @@ switch ($action) {
         }
 
         $statusValidos = ['PENDENTE', 'AGUARDANDO_APROVACAO', 'REPROVADA', 'CANCELADA'];
+        if ($status_vistoria === '') {
+            setMensagem('error', 'Selecione obrigatoriamente o Resultado Final da Vistoria.');
+            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id));
+        }
         if (!in_array($status_vistoria, $statusValidos)) {
             setMensagem('error', 'Status de vistoria invalido.');
             redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id));
@@ -1095,9 +1099,6 @@ switch ($action) {
             }
 
             if ($aprovando || $encaminhandoAs) {
-                if (($vistoria['assinatura_status'] ?? 'PENDENTE') !== 'ASSINADO') {
-                    throw new Exception('O relatorio precisa ser assinado antes da decisao administrativa.');
-                }
                 $resumoAprovacao = aprovacaoRelatorioResumoExigencias($pdo, $id);
                 if ($aprovando && (int)$resumoAprovacao['pendentes_as'] > 0) {
                     throw new Exception('O relatorio possui A/S pendente e nao pode ser aprovado. Encaminhe-o para Retorno A/S.');
@@ -1107,7 +1108,9 @@ switch ($action) {
                 $status_vistoria = $encaminhandoAs ? 'RETORNO_AS' : (string)$resumoAprovacao['status_esperado'];
             }
 
-            $statusFinalizaFluxo = $aprovando || $encaminhandoAs || in_array($status_vistoria, ['REPROVADA','CANCELADA'], true);
+            // Relatorios aprovados somente concluem o fluxo depois da assinatura
+            // tecnica. Retorno A/S, reprovacao e cancelamento continuam terminais.
+            $statusFinalizaFluxo = $encaminhandoAs || in_array($status_vistoria, ['REPROVADA','CANCELADA'], true);
             if (!$aprovando && in_array($status_vistoria, ['PENDENTE','REPROVADA','CANCELADA'], true) && ($vistoria['assinatura_status'] ?? '') === 'ASSINADO') {
                 $pdo->prepare("UPDATE documento_assinaturas SET status='CANCELADO',cancelado_em=NOW(),cancelado_por=:usuario,motivo_cancelamento=:motivo WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='ASSINADO'")->execute([':usuario'=>$_SESSION['usuario_id'],':motivo'=>$observacao?:'Relatorio devolvido para correcao.',':id'=>$id]);
                 $pdo->prepare("UPDATE vistorias SET assinatura_status='CANCELADO',assinatura_em=NULL,responsavel_assinatura_id=NULL WHERE id=:id")->execute([':id'=>$id]);
@@ -1125,15 +1128,19 @@ switch ($action) {
                     SET status = :status,
                         observacao_admin = :obs,
                         aprovado_por = IF(:finaliza = 1, :aprovador, aprovado_por),
-                        data_aprovacao = IF(:finaliza_data = 1, NOW(), data_aprovacao)
+                        data_aprovacao = IF(:finaliza_data = 1, NOW(), data_aprovacao),
+                        assinatura_status = IF(:aguarda_assinatura = 1, 'PENDENTE', assinatura_status),
+                        assinatura_em = IF(:aguarda_assinatura = 1, NULL, assinatura_em),
+                        responsavel_assinatura_id = IF(:aguarda_assinatura = 1, NULL, responsavel_assinatura_id)
                     WHERE id = :id AND status='AGUARDANDO_APROVACAO'
                 ");
                 $stmt->execute([
                     ':status' => $status_vistoria,
                     ':obs' => $observacao ?: null,
-                    ':finaliza' => $statusFinalizaFluxo ? 1 : 0,
+                    ':finaliza' => ($statusFinalizaFluxo || $aprovando) ? 1 : 0,
                     ':aprovador' => $_SESSION['usuario_id'],
-                    ':finaliza_data' => $statusFinalizaFluxo ? 1 : 0,
+                    ':finaliza_data' => ($statusFinalizaFluxo || $aprovando) ? 1 : 0,
+                    ':aguarda_assinatura' => $aprovando ? 1 : 0,
                     ':id' => $id
                 ]);
                 if ($stmt->rowCount() !== 1) {
@@ -1175,12 +1182,6 @@ switch ($action) {
                     ->execute([':agendamento' => $agendamento_id]);
             }
 
-            if ($aprovando) {
-                if (($vistoria['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS') {
-                    concluirRetornoDoRelatorio($pdo, $id);
-                }
-            }
-
             if ($agendamento_id && $statusFinalizaFluxo && $status_vistoria !== 'CANCELADA') {
                 $pdo->prepare("UPDATE ordens_servico SET status = 'executado' WHERE agendamento_id = :agendamento_id AND status IN ('pendente', 'em_andamento')")->execute([':agendamento_id' => $agendamento_id]);
                 $pdo->prepare("UPDATE agendamentos SET status = 'concluido' WHERE id = :id")->execute([':id' => $agendamento_id]);
@@ -1192,8 +1193,8 @@ switch ($action) {
             $mensagensStatus = [
                 'PENDENTE' => 'Relatorio mantido como pendente.',
                 'AGUARDANDO_APROVACAO' => 'Relatorio mantido aguardando aprovacao.',
-                'APROVADA' => 'Relatorio aprovado com sucesso.',
-                'APROVADA_COM_EXIGENCIAS' => 'Relatorio aprovado com exigencias com sucesso.',
+                'APROVADA' => 'Relatorio aprovado. Aguardando assinatura do vistoriador.',
+                'APROVADA_COM_EXIGENCIAS' => 'Relatorio aprovado com exigencias. Aguardando assinatura do vistoriador.',
                 'RETORNO_AS' => 'Relatorio encaminhado para Retorno A/S. Agende a nova visita pelo painel.',
                 'REPROVADA' => 'Relatorio reprovado. Agendamento concluido.',
                 'CANCELADA' => 'Relatorio cancelado.'
@@ -1225,17 +1226,6 @@ switch ($action) {
             redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode((string)$agendamento_id) . '&vistoria_id=' . urlencode($id));
         }
 
-        if ($aprovando) {
-            $liberacao = avaliarLiberacaoCertificacao($pdo, $id);
-            if (!empty($liberacao['permitido'])) {
-                redirecionar(APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id)
-                    . '&vistoria_id=' . urlencode($id));
-            }
-            setMensagem('warning', $liberacao['mensagem'] ?? 'Certificacao permanece bloqueada.');
-            if (($liberacao['possui_as'] ?? false) === true) {
-                redirecionar(APP_URL . 'agendamentos/form?relatorio_origem_id=' . urlencode($id));
-            }
-        }
         if ($encaminhandoAs) {
             redirecionar(APP_URL . 'dashboard#retornos-as');
         }

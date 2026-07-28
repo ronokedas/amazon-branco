@@ -49,7 +49,7 @@ $iniciada=!empty($a['iniciado_em'])||in_array($a['status'],['EM_ANALISE','AGUARD
 $tecnicoEditavel=$podeTecnico&&in_array($a['status'],['AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true);
 $analiseAberta=$podeTecnico&&in_array($a['status'],['EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true);
 $statusLabels=['AGUARDANDO_AGENDAMENTO'=>'Aguardando agendamento','AGENDADA'=>'Agendada','EM_ANALISE'=>'Em análise','AGUARDANDO_DOCUMENTOS'=>'Aguardando documentos','AGUARDANDO_ASSINATURA_ANALISTA'=>'Aguardando assinatura do analista','AGUARDANDO_APROVACAO_ADMIN'=>'Aguardando admin','CONCLUIDA'=>'Concluída','REPROVADA'=>'Reprovada','CANCELADA'=>'Cancelada'];
-$protocolos=[];if(podeAcessar('protocolos_documentais')){try{$q=$pdo->prepare('SELECT id,numero,assunto,status,protocolo_externo_numero FROM protocolo_dossies WHERE analise_id=:id ORDER BY criado_em');$q->execute([':id'=>$id]);$protocolos=$q->fetchAll(PDO::FETCH_ASSOC);}catch(Throwable $e){}}
+$protocolos=[];if(podeAcessar('protocolos_documentais')){try{$q=$pdo->prepare('SELECT id,numero,assunto,status FROM protocolo_dossies WHERE analise_id=:id ORDER BY criado_em');$q->execute([':id'=>$id]);$protocolos=$q->fetchAll(PDO::FETCH_ASSOC);}catch(Throwable $e){}}
 $titulo_page=$a['numero'].' - Análise de Planos';
 require_once __DIR__ . '/../../includes/header.php';
 ?>

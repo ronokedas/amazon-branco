@@ -856,6 +856,41 @@ function certificadoLocaisVistoria(PDO $pdo): array {
     return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'local');
 }
 
+/**
+ * Retorna o proximo agendamento pendente que ainda precisa de data ou vistoriador.
+ */
+function proximoAgendamentoPendenteProposta(PDO $pdo, string $propostaId, ?string $ignorarId = null): ?string {
+    $propostaId = trim($propostaId);
+    $ignorarId = trim((string)$ignorarId);
+    if ($propostaId === '') {
+        return null;
+    }
+
+    $sql = "SELECT id
+        FROM agendamentos
+        WHERE proposta_id = :proposta_id
+          AND status = 'pendente'
+          AND (
+              data_vistoria IS NULL
+              OR vistoriador_id IS NULL OR vistoriador_id = ''
+          )";
+    $params = [':proposta_id' => $propostaId];
+    if ($ignorarId !== '') {
+        $sql .= ' AND id <> :ignorar_id';
+        $params[':ignorar_id'] = $ignorarId;
+    }
+    $sql .= " ORDER BY
+        CASE WHEN data_vistoria IS NULL THEN 0 ELSE 1 END,
+        created_at ASC,
+        id ASC
+        LIMIT 1";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $id = $stmt->fetchColumn();
+    return $id !== false ? (string)$id : null;
+}
+
 function certificadoUltimaVistoriaParaConvalidacao(PDO $pdo, ?string $vistoriaBaseId): ?array {
     if (empty($vistoriaBaseId)) {
         return null;
@@ -1394,6 +1429,15 @@ function avaliarLiberacaoCertificacao(PDO $pdo, string $vistoriaId): array
             'status' => $vigente['status'],
         ];
     }
+    if (($vigente['assinatura_status'] ?? 'PENDENTE') !== 'ASSINADO') {
+        return [
+            'permitido' => false,
+            'mensagem' => 'A certificacao aguarda a assinatura do relatorio aprovado.',
+            'vistoria_id' => $vigente['id'],
+            'status' => $vigente['status'],
+            'aguarda_assinatura' => true,
+        ];
+    }
     if (relatorioPossuiASPendente($pdo, $vigente['id'])) {
         return [
             'permitido' => false,
@@ -1471,4 +1515,55 @@ function certificadoMensagemServicoObrigatorio(string $modelo): string
     ];
     $modelo = strtoupper(trim($modelo));
     return 'O certificado ' . $modelo . ' só pode ser emitido quando a proposta da embarcação inclui o serviço ' . ($servicos[$modelo] ?? 'correspondente') . '.';
+}
+
+function normalizarTipoVistoriaPdf(string $texto): string
+{
+    $texto = mb_strtolower($texto, 'UTF-8');
+    $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto);
+    return $ascii !== false ? $ascii : $texto;
+}
+
+function blocosDisponiveisRelatorioPdf(string $tipoVistoria, array $todos): array
+{
+    $texto = normalizarTipoVistoriaPdf($tipoVistoria);
+    $selecionados = [];
+
+    if (strpos($texto, 'seco') !== false) {
+        $selecionados['seco'] = true;
+    }
+    if (strpos($texto, 'flutu') !== false || strpos($texto, 'agua') !== false || strpos($texto, 'licenca provisoria') !== false) {
+        $selecionados['flutuando'] = true;
+    }
+    if (strpos($texto, 'borda') !== false || strpos($texto, 'cnbl') !== false) {
+        $selecionados['borda_livre'] = true;
+    }
+    if (strpos($texto, 'arquea') !== false || strpos($texto, 'cnarq') !== false) {
+        $selecionados['arqueacao'] = true;
+    }
+
+    if (!$selecionados) return $todos;
+    return array_intersect_key($todos, $selecionados);
+}
+
+/**
+ * Mantem os blocos previstos pelo agendamento e acrescenta qualquer bloco que
+ * possua exigencias persistidas. O PDF nunca deve ocultar um achado de campo.
+ */
+function blocosComExigenciasRelatorioPdf(string $tipoVistoria, array $todos, array $exigencias): array
+{
+    $selecionados = blocosDisponiveisRelatorioPdf($tipoVistoria, $todos);
+    $blocosComExigencias = [];
+    foreach ($exigencias as $exigencia) {
+        $bloco = trim((string)($exigencia['bloco_vistoria'] ?? '')) ?: 'flutuando';
+        if (array_key_exists($bloco, $todos)) $blocosComExigencias[$bloco] = true;
+    }
+
+    $resultado = [];
+    foreach ($todos as $id => $nome) {
+        if (array_key_exists($id, $selecionados) || isset($blocosComExigencias[$id])) {
+            $resultado[$id] = $nome;
+        }
+    }
+    return $resultado;
 }

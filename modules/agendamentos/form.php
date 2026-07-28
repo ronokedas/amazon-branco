@@ -15,6 +15,7 @@ exigirAcesso('agendamentos');
 $id = $_GET['id'] ?? null;
 $editando = !empty($id);
 $relatorioOrigemId = trim((string)($_GET['relatorio_origem_id'] ?? ''));
+$fluxoPropostaSolicitado = (string)($_GET['fluxo_proposta'] ?? '') === '1';
 
 $agendamento = [
     'id'               => '',
@@ -159,6 +160,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
 $servicosTravados = !empty($agendamento['proposta_id']);
 $origemTravada = ($editando && !empty($agendamento['proposta_id'])) || !empty($agendamento['relatorio_origem_id']);
+$fluxoProposta = $fluxoPropostaSolicitado && $editando && !empty($agendamento['proposta_id']);
 $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['hora_vistoria'], 0, 5) : '';
 
 ?>
@@ -203,6 +205,7 @@ $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['
             <input type="hidden" name="action" value="<?php echo $editando ? 'editar' : 'inserir'; ?>">
             <input type="hidden" name="relatorio_origem_id" value="<?php echo h($agendamento['relatorio_origem_id']); ?>">
             <input type="hidden" id="vistoriador_origem_id" name="vistoriador_origem_id" value="<?php echo h($agendamento['vistoriador_origem_id']); ?>">
+            <input type="hidden" name="fluxo_proposta" value="<?php echo $fluxoProposta ? '1' : '0'; ?>">
             <?php if (!empty($agendamento['relatorio_origem_id'])): ?>
                 <div class="alert alert-warning">
                     <strong>Retorno obrigatório A/S.</strong>

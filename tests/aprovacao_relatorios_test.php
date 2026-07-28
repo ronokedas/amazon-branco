@@ -72,8 +72,10 @@ $wizardStep2 = file_get_contents(__DIR__ . '/../modules/certificados/wizard_step
 $funcoes = file_get_contents(__DIR__ . '/../includes/functions.php');
 $assinaturas = file_get_contents(__DIR__ . '/../includes/assinaturas_usuarios.php');
 $selecaoCertificado = file_get_contents(__DIR__ . '/../modules/documentacao/novo_certificado.php');
+$pdfAssinatura = file_get_contents(__DIR__ . '/../includes/aprovacao_pdf.php');
+$validacaoAssinatura = file_get_contents(__DIR__ . '/../modules/documentos/validar_assinatura.php');
 
-foreach ([$actions, $relatorio, $endpoint, $approvalDomain, $approvalUi, $detalhe, $certificados, $wizard, $wizardStep2, $funcoes, $assinaturas, $selecaoCertificado] as $codigo) {
+foreach ([$actions, $relatorio, $endpoint, $approvalDomain, $approvalUi, $detalhe, $certificados, $wizard, $wizardStep2, $funcoes, $assinaturas, $selecaoCertificado, $pdfAssinatura, $validacaoAssinatura] as $codigo) {
     assertAprovacao($codigo !== false, 'Nao foi possivel ler um dos arquivos do fluxo.');
 }
 
@@ -89,9 +91,11 @@ assertAprovacao(str_contains($relatorio, 'Encaminhar para Retorno A/S'), 'O bota
 assertAprovacao(!str_contains($relatorio, "renderBotaoAprovacaoDocumento(\$pdo,'RELATORIO'"), 'O relatorio ainda oferece assinatura eletronica.');
 assertAprovacao(!str_contains($relatorio, 'renderAprovacaoUi'), 'O modal de assinatura ainda e carregado no relatorio.');
 assertAprovacao(str_contains($actions, 'aprovacaoRelatorioValidarResultado'), 'A aprovacao direta nao valida status e versao no servidor.');
-assertAprovacao(str_contains($actions, "assinatura_status'] ?? 'PENDENTE') !== 'ASSINADO'"), 'A aprovacao administrativa nao exige assinatura previa do relatorio.');
+assertAprovacao(!str_contains($actions, 'O relatorio precisa ser assinado antes da decisao administrativa.'), 'A aprovacao administrativa ainda exige assinatura previa do relatorio.');
+assertAprovacao(str_contains($actions, "'PENDENTE', assinatura_status"), 'A aprovacao nao cria a pendencia de assinatura.');
+assertAprovacao(str_contains($actions, '$statusFinalizaFluxo = $encaminhandoAs ||'), 'A aprovacao ainda conclui OS e agendamento antes da assinatura.');
 assertAprovacao(str_contains($actions, "UPDATE documento_assinaturas SET status='CANCELADO'"), 'A devolucao nao cancela a assinatura anterior do relatorio.');
-assertAprovacao(str_contains($actions, 'documentacao/novo_certificado?agendamento_id='), 'A aprovacao liberada nao segue para os certificados.');
+assertAprovacao(!str_contains($actions, "if (\$aprovando) {\n            \$liberacao = avaliarLiberacaoCertificacao"), 'A aprovacao ainda redireciona diretamente para certificados.');
 assertAprovacao(str_contains($endpoint, "=== 'RELATORIO'"), 'O endpoint de assinatura ainda aceita novas aprovacoes de relatorios.');
 assertAprovacao(str_contains($approvalDomain, 'Relatorios de vistoria nao exigem assinatura eletronica.'), 'O dominio de assinatura ainda aceita relatorios diretamente.');
 assertAprovacao(str_contains($approvalUi, "\$tipo==='RELATORIO'?false"), 'A interface generica ainda habilita assinatura de relatorio.');
@@ -101,6 +105,7 @@ assertAprovacao(str_contains($wizard, "\$bloquear_definitivo = (\$relatorio_stat
 assertAprovacao(substr_count($wizardStep2, "\$tipo === 'Definitivo' && \$dados_emb['relatorio_status'] === 'APROVADA_COM_EXIGENCIAS'") >= 3, 'O backend nao protege CSN, CNBL e CNARQ contra emissao definitiva.');
 assertAprovacao(str_contains($funcoes, 'relatorioPossuiASPendente'), 'A regra central nao verifica exigencia A/S.');
 assertAprovacao(str_contains($funcoes, 'Certificacao bloqueada por exigencia A/S'), 'A regra central nao bloqueia certificacao por A/S.');
+assertAprovacao(str_contains($funcoes, "assinatura_status'] ?? 'PENDENTE') !== 'ASSINADO'"), 'A regra central nao bloqueia certificacao antes da assinatura.');
 
 $baseEditavel = ['status'=>'PENDENTE','assinatura_status'=>'PENDENTE','vistoriador_id'=>'vistoriador-teste'];
 assertAprovacao(avaliarEdicaoRelatorio($pdo, $baseEditavel, 'vistoriador-teste', 'VISTORIADOR')['permitido'], 'Relatorio pendente deveria permanecer editavel pelo vistoriador atribuido.');
@@ -113,12 +118,18 @@ foreach (['APROVADA','APROVADA_COM_EXIGENCIAS','RETORNO_AS','REPROVADA','CANCELA
 assertAprovacao(!avaliarEdicaoRelatorio($pdo, $aguardandoEditavel, 'admin-teste', 'ADMIN')['permitido'], 'Admin nao pode editar o conteudo do relatorio.');
 assertAprovacao(!avaliarEdicaoRelatorio($pdo, $aguardandoEditavel, 'analista-teste', 'ANALISTA')['permitido'], 'Analista nao pode editar o conteudo do relatorio.');
 assertAprovacao(str_contains($relatorio, 'Visualizar PDF do relat'), 'O PDF nao esta exposto para relatorio persistido.');
-assertAprovacao(str_contains($relatorio, 'Assinar como substituto'), 'A revisao admin nao oferece assinatura substituta para relatorio sem assinatura.');
+assertAprovacao(str_contains($relatorio, 'Assinar pelo vistoriador'), 'A revisao admin nao oferece assinatura substituta depois da aprovacao.');
 assertAprovacao(str_contains($relatorio, 'id="modalAssinaturaSubstituta"'), 'A assinatura substituta nao abre em modal no relatorio.');
 assertAprovacao(str_contains($relatorio, "document.querySelectorAll('.js-assinar-substituto')"), 'O botao de assinatura substituta nao aciona o modal local.');
 assertAprovacao(!str_contains($relatorio, 'href="<?= APP_URL ?>minhas-assinaturas" class="btn btn-warning"'), 'O botao de assinatura ainda redireciona para Minhas assinaturas.');
 assertAprovacao(str_contains($assinaturas, "'proxima_url'=>\$proximaUrl"), 'A assinatura nao devolve o destino da selecao de certificado.');
 assertAprovacao(str_contains($assinaturas, "'vistoria_id'=>\$id"), 'A assinatura nao preserva o ID do relatorio.');
+assertAprovacao(str_contains($assinaturas, "['APROVADA','APROVADA_COM_EXIGENCIAS']"), 'A assinatura nao exige aprovacao administrativa previa.');
+assertAprovacao(str_contains($assinaturas, "assinaturaResponsavelUsuario(\$pdo,(string)\$v['vistoriador_id'],true)"), 'A assinatura substituta nao usa o perfil do vistoriador atribuido.');
+assertAprovacao(str_contains($assinaturas, "':usuario'=>\$usuario"), 'A assinatura nao registra separadamente o usuario executor.');
+assertAprovacao(str_contains($assinaturas, "UPDATE ordens_servico SET status='executado'") && str_contains($assinaturas, "UPDATE agendamentos SET status='concluido'"), 'A assinatura nao conclui o fluxo operacional aprovado.');
+assertAprovacao(str_contains($pdfAssinatura, 'Aprovação administrativa:') && str_contains($pdfAssinatura, 'Assinatura aplicada por:'), 'O PDF nao separa aprovador administrativo e executor da assinatura.');
+assertAprovacao(str_contains($validacaoAssinatura, 'executor.nome executor_nome') && str_contains($validacaoAssinatura, 'aprovador.nome aprovador_nome'), 'A validacao publica nao identifica aprovador e executor.');
 assertAprovacao(str_contains($selecaoCertificado, "\$_GET['vistoria_id']"), 'A selecao de certificado nao recebe o ID do relatorio.');
 assertAprovacao(str_contains($selecaoCertificado, '&vistoria_id=<?= urlencode($vistoria_id) ?>'), 'A escolha do modelo nao encaminha o ID do relatorio ao wizard.');
 assertAprovacao(str_contains($wizard, "\$_GET['vistoria_id']"), 'O wizard nao fixa o relatorio recebido na URL.');

@@ -13,11 +13,11 @@ function ChecklistItem({ item, resposta, onChange, onEvidence }) {
     <article className="check-item">
       <div className="item-heading"><strong>{item.descricao}</strong>{item.item_normam ? <small>{item.item_normam}</small> : null}</div>
       <div className="status-grid">
-        <StatusButton kind="conforme" active={resposta?.status === 'CONFORME'} onClick={() => onChange(item, 'CONFORME')}>Conforme</StatusButton>
+        <StatusButton kind="conforme" active={resposta?.status === 'CONFORME'} onClick={() => { if (onChange(item, 'CONFORME') !== false) onEvidence(item) }}>Conforme</StatusButton>
         <StatusButton kind="nao-conforme" active={resposta?.status === 'NAO_CONFORME'} onClick={() => { if (onChange(item, 'NAO_CONFORME') !== false) onEvidence(item) }}>Não conforme</StatusButton>
         <StatusButton kind="na" active={resposta?.status === 'NAO_SE_APLICA'} onClick={() => onChange(item, 'NAO_SE_APLICA')}>Não se aplica</StatusButton>
       </div>
-      {resposta?.status === 'NAO_CONFORME' ? (
+      {['CONFORME', 'NAO_CONFORME'].includes(resposta?.status) ? (
         <button className="evidence-summary" onClick={() => onEvidence(item)}>
           <span><Paperclip size={17} /> {anexos.length ? `${anexos.length} foto${anexos.length > 1 ? 's' : ''} adicionada${anexos.length > 1 ? 's' : ''}` : 'Adicionar evidências'}</span>
           <ChevronRight size={18} />

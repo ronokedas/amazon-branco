@@ -49,7 +49,11 @@ test('preserva o rascunho offline e só envia ao finalizar', async ({ page, cont
   await page.locator('.standalone-heading').getByRole('button', { name: 'Adicionar' }).click()
   await page.locator('textarea[placeholder^="Descreva o item"]').last().fill('Exigência avulsa criada no aplicativo.')
   const primeiroConforme = page.locator('.check-item .status-button.conforme').first()
-  if (!(await primeiroConforme.getAttribute('class')).includes('selected')) await primeiroConforme.click()
+  if (!(await primeiroConforme.getAttribute('class')).includes('selected')) {
+    await primeiroConforme.click()
+    await expect(page.getByRole('heading', { name: 'Evidências do item' })).toBeVisible()
+    await page.getByRole('button', { name: 'Salvar evidências' }).click()
+  }
   await expect(page.getByText('Salvo automaticamente neste aparelho')).toBeVisible()
   await expect(page.getByRole('button', { name: /Sincronizar|Enviar agora|Salvar rascunho/ })).toHaveCount(0)
   await page.getByRole('button', { name: 'Revisar e enviar' }).click()
@@ -59,7 +63,11 @@ test('preserva o rascunho offline e só envia ao finalizar', async ({ page, cont
 
   await context.setOffline(true)
   const segundoConforme = page.locator('.check-item .status-button.conforme').nth(1)
-  if (!(await segundoConforme.getAttribute('class')).includes('selected')) await segundoConforme.click()
+  if (!(await segundoConforme.getAttribute('class')).includes('selected')) {
+    await segundoConforme.click()
+    await expect(page.getByRole('heading', { name: 'Evidências do item' })).toBeVisible()
+    await page.getByRole('button', { name: 'Salvar evidências' }).click()
+  }
   await expect(page.getByText('Modo offline · salvo neste aparelho')).toBeVisible()
 
   await page.reload()
@@ -133,6 +141,34 @@ test('foto oficial da embarcação fica local até o envio final', async ({ page
   expect(uploads).toBe(0)
   const fotoCampo = await card.locator('.vessel-photo-control img').getAttribute('src')
   expect(fotoCampo).toContain('blob:')
+})
+
+test('item conforme aceita evidência fotográfica e preserva a foto no aparelho', async ({ page }) => {
+  await entrar(page)
+  await page.locator('.agenda-card').first().getByRole('button', { name: /Iniciar vistoria|Continuar vistoria/ }).click()
+
+  const prazoCorrecao = page.getByRole('combobox', { name: 'Prazo para correção' })
+  await prazoCorrecao.selectOption('60')
+
+  const item = page.locator('.check-item').first()
+  const conforme = item.locator('.status-button.conforme')
+  if ((await conforme.getAttribute('class')).includes('selected')) await conforme.click()
+  await conforme.click()
+
+  await expect(page.getByRole('heading', { name: 'Evidências do item' })).toBeVisible()
+  await page.locator('.photo-add input[type="file"]').setInputFiles(
+    path.resolve(process.cwd(), '..', 'assets', 'img', 'portal-hero-ship.png'),
+  )
+  await expect(page.locator('.photo-grid figure')).toHaveCount(1)
+  await expect(page.getByText('Foto protegida neste aparelho')).toBeVisible()
+  await page.getByRole('button', { name: 'Salvar evidências' }).click()
+
+  await expect(item.locator('.status-button.conforme')).toHaveClass(/selected/)
+  await expect(item.getByRole('button', { name: /1 foto adicionada/ })).toBeVisible()
+  await page.reload()
+  await page.locator('.agenda-card').first().getByRole('button', { name: /Iniciar vistoria|Continuar vistoria/ }).click()
+  await expect(page.locator('.check-item').first().locator('.status-button.conforme')).toHaveClass(/selected/)
+  await expect(page.locator('.check-item').first().getByRole('button', { name: /1 foto adicionada/ })).toBeVisible()
 })
 
 test('navegação principal abre áreas funcionais sem controles inertes', async ({ page, context }) => {

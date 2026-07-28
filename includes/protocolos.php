@@ -90,10 +90,12 @@ function protocoloProcessarAlertas(PDO $pdo): int
 {
     if(getCargo()!=='ADMIN')return 0;
     try{$cfg=$pdo->query('SELECT chave,valor FROM protocolo_configuracoes')->fetchAll(PDO::FETCH_KEY_PAIR);}catch(Throwable $e){return 0;}
-    $semComp=max(1,(int)($cfg['dias_sem_comprovante']??3));$semOficial=max(1,(int)($cfg['dias_sem_protocolo_oficial']??3));$validade=max(1,(int)($cfg['dias_alerta_validade']??15));
+    $semDocumento=max(1,(int)($cfg['dias_sem_documento']??$cfg['dias_sem_comprovante']??3));
+    $semRegistro=max(1,(int)($cfg['dias_sem_registro_orgao']??$cfg['dias_sem_protocolo_oficial']??3));
+    $validade=max(1,(int)($cfg['dias_alerta_validade']??15));
     $sql="SELECT d.id,d.numero,d.status,d.protocolo_externo_validade,
-      EXISTS(SELECT 1 FROM protocolo_movimentacoes m WHERE m.dossie_id=d.id AND m.status='CONFIRMADA' AND m.tipo='SAIDA' AND m.confirmado_em<DATE_SUB(NOW(),INTERVAL {$semComp} DAY) AND NOT EXISTS(SELECT 1 FROM protocolo_comprovantes c WHERE c.movimentacao_id=m.id AND c.tipo IN('RECIBO','COMPROVANTE_ENTREGA'))) sem_comprovante,
-      EXISTS(SELECT 1 FROM protocolo_movimentacoes m WHERE m.dossie_id=d.id AND m.status='CONFIRMADA' AND m.natureza IN('ENVIO_ORGAO','CUMPRIMENTO_EXIGENCIA') AND m.confirmado_em<DATE_SUB(NOW(),INTERVAL {$semOficial} DAY)) AND d.protocolo_externo_numero IS NULL sem_oficial,
+      EXISTS(SELECT 1 FROM protocolo_movimentacoes m WHERE m.dossie_id=d.id AND m.status='CONFIRMADA' AND m.tipo='SAIDA' AND m.confirmado_em<DATE_SUB(NOW(),INTERVAL {$semDocumento} DAY) AND NOT EXISTS(SELECT 1 FROM protocolo_comprovantes c WHERE c.movimentacao_id=m.id)) sem_documento,
+      EXISTS(SELECT 1 FROM protocolo_movimentacoes m WHERE m.dossie_id=d.id AND m.status='CONFIRMADA' AND m.natureza IN('ENVIO_ORGAO','CUMPRIMENTO_EXIGENCIA') AND m.confirmado_em<DATE_SUB(NOW(),INTERVAL {$semRegistro} DAY)) AND d.protocolo_externo_em IS NULL sem_registro,
       EXISTS(SELECT 1 FROM protocolo_movimentacao_itens i JOIN protocolo_movimentacoes m ON m.id=i.movimentacao_id WHERE m.dossie_id=d.id AND m.status IN('CONFIRMADA','RETIFICADA') AND i.requer_devolucao=1 AND i.devolvido_em IS NULL) original_pendente
       FROM protocolo_dossies d WHERE d.status NOT IN('ENCERRADO','CANCELADO')";
     $rows=$pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);$criados=0;
@@ -101,8 +103,8 @@ function protocoloProcessarAlertas(PDO $pdo): int
     $ins=$pdo->prepare("INSERT INTO notificacoes(id,usuario_id,evento,titulo,mensagem,referencia_tipo,referencia_id,url)
       SELECT UUID(),:usuario,:evento,:titulo,:mensagem,'PROTOCOLO',:ref,:url FROM DUAL WHERE NOT EXISTS(SELECT 1 FROM notificacoes WHERE usuario_id=:usuario2 AND evento=:evento2 AND referencia_id=:ref2 AND lida_em IS NULL)");
     foreach($rows as $r){$eventos=[];
-      if($r['sem_comprovante'])$eventos['PROTOCOLO_SEM_COMPROVANTE']='Saída sem comprovante de recebimento';
-      if($r['sem_oficial'])$eventos['PROTOCOLO_SEM_NUMERO_OFICIAL']='Envio à Marinha ainda sem número oficial';
+      if($r['sem_documento'])$eventos['PROTOCOLO_SEM_DOCUMENTO']='Saída sem documento anexado';
+      if($r['sem_registro'])$eventos['PROTOCOLO_SEM_REGISTRO_ORGAO']='Envio ao órgão ainda sem registro do atendimento';
       if($r['status']==='EM_EXIGENCIA')$eventos['PROTOCOLO_EM_EXIGENCIA']='Processo documental em exigência';
       if($r['status']==='A_DISPOSICAO')$eventos['PROTOCOLO_A_DISPOSICAO']='Documento disponível para retirada';
       if($r['original_pendente'])$eventos['PROTOCOLO_ORIGINAL_PENDENTE']='Documento original ainda sob custódia';
@@ -113,20 +115,38 @@ function protocoloProcessarAlertas(PDO $pdo): int
 
 function protocoloValidarArquivo(array $arquivo):array
 {
-    if(($arquivo['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK||empty($arquivo['tmp_name']))throw new RuntimeException('Selecione um comprovante válido.');
-    $tam=(int)($arquivo['size']??0);if($tam<1||$tam>15*1024*1024)throw new RuntimeException('O comprovante deve ter no máximo 15 MB.');
+    if(($arquivo['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK||empty($arquivo['tmp_name']))throw new RuntimeException('Selecione um documento válido.');
+    $tam=(int)($arquivo['size']??0);if($tam<1||$tam>15*1024*1024)throw new RuntimeException('Cada documento deve ter no máximo 15 MB.');
     $mime=(new finfo(FILEINFO_MIME_TYPE))->file($arquivo['tmp_name']);
     $permitidos=['application/pdf'=>'pdf','image/jpeg'=>'jpg','image/png'=>'png'];
-    if(!isset($permitidos[$mime]))throw new RuntimeException('Envie comprovante em PDF, JPG ou PNG.');
-    return ['mime'=>$mime,'ext'=>$permitidos[$mime],'tam'=>$tam,'hash'=>hash_file('sha256',$arquivo['tmp_name']),'nome'=>mb_substr(basename($arquivo['name']??'comprovante'),0,255)];
+    if(!isset($permitidos[$mime]))throw new RuntimeException('Envie documentos em PDF, JPG ou PNG.');
+    $extensao=strtolower(pathinfo((string)($arquivo['name']??''),PATHINFO_EXTENSION));
+    $extensoesAceitas=$permitidos[$mime]==='jpg'?['jpg','jpeg']:[$permitidos[$mime]];
+    if(!in_array($extensao,$extensoesAceitas,true))throw new RuntimeException('A extensão do documento não corresponde ao conteúdo enviado.');
+    return ['mime'=>$mime,'ext'=>$permitidos[$mime],'tam'=>$tam,'hash'=>hash_file('sha256',$arquivo['tmp_name']),'nome'=>mb_substr(basename($arquivo['name']??'documento'),0,255)];
 }
 
 function protocoloGuardarArquivo(array $arquivo,array $meta,string $dossieId):string
 {
     $rel='storage/protocolos/'.date('Y').'/'.$dossieId.'/'.bin2hex(random_bytes(16)).'.'.$meta['ext'];
     $abs=dirname(__DIR__).'/'.$rel;if(!is_dir(dirname($abs))&&!mkdir(dirname($abs),0750,true)&&!is_dir(dirname($abs)))throw new RuntimeException('Não foi possível preparar o armazenamento.');
-    if(!move_uploaded_file($arquivo['tmp_name'],$abs))throw new RuntimeException('Não foi possível guardar o comprovante.');
+    if(!move_uploaded_file($arquivo['tmp_name'],$abs))throw new RuntimeException('Não foi possível guardar o documento.');
     return $rel;
+}
+
+function protocoloNormalizarArquivos(array $campo):array
+{
+    if(!isset($campo['name']))return [];
+    if(!is_array($campo['name']))return [$campo];
+    $arquivos=[];
+    foreach($campo['name'] as $i=>$nome)$arquivos[]=[
+        'name'=>$nome,
+        'type'=>$campo['type'][$i]??'',
+        'tmp_name'=>$campo['tmp_name'][$i]??'',
+        'error'=>$campo['error'][$i]??UPLOAD_ERR_NO_FILE,
+        'size'=>$campo['size'][$i]??0,
+    ];
+    return $arquivos;
 }
 
 function protocoloSnapshot(PDO $pdo,string $movId):array

@@ -2,6 +2,23 @@
 $hoje = date('Y-m-d');
 $agenda = $dashboard['agenda_prioritaria'] ?? [];
 $historico = $dashboard['historico'] ?? [];
+$campoUrl = rtrim((string) APP_URL, '/') . '/campo/';
+$campoQrDataUri = null;
+
+try {
+    require_once dirname(__DIR__, 3) . '/vendor/autoload.php';
+
+    $campoQrCode = \Endroid\QrCode\QrCode::create($campoUrl)
+        ->setEncoding(new \Endroid\QrCode\Encoding\Encoding('UTF-8'))
+        ->setErrorCorrectionLevel(\Endroid\QrCode\ErrorCorrectionLevel::Medium)
+        ->setSize(220)
+        ->setMargin(10);
+    $campoQrDataUri = (new \Endroid\QrCode\Writer\SvgWriter())
+        ->write($campoQrCode)
+        ->getDataUri();
+} catch (\Throwable $e) {
+    error_log('Nao foi possivel gerar o QR Code do Amazon Campo: ' . $e->getMessage());
+}
 
 function dashboardStatusAgenda(array $agendamento, string $hoje): array
 {
@@ -120,7 +137,16 @@ function dashboardStatusHistorico(string $status): array
                 <span><i class="fa-solid fa-mobile-screen-button"></i></span>
                 <div><h2>Execute vistorias em campo</h2><p>Registre dados, evidências e finalize a vistoria diretamente pelo aplicativo.</p></div>
             </div>
-            <a href="<?= APP_URL ?>campo/" target="_blank" rel="noopener">
+            <?php if ($campoQrDataUri): ?>
+                <a class="campo-launcher__qr" href="<?= h($campoUrl) ?>" target="_blank" rel="noopener" aria-label="Abrir Amazon Campo no celular">
+                    <img src="<?= h($campoQrDataUri) ?>" width="116" height="116" alt="QR Code para acessar o Amazon Campo">
+                    <span>
+                        <strong>Abra no celular</strong>
+                        <small>Aponte a câmera para o QR Code e acesse o aplicativo.</small>
+                    </span>
+                </a>
+            <?php endif; ?>
+            <a class="campo-launcher__button" href="<?= h($campoUrl) ?>" target="_blank" rel="noopener">
                 Abrir Amazon Campo <i class="fa-solid fa-arrow-up-right-from-square"></i>
             </a>
             <small>O acesso é exclusivo para o perfil VISTORIADOR.</small>

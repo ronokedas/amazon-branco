@@ -80,6 +80,13 @@ try {
         ':embarcacao'=>$base['embarcacao_id'], ':pessoa'=>$base['cliente_id'],
         ':agendamento'=>$agendamentoFilhoId, ':anterior'=>$raizId,
     ]);
+    $semAssinatura = avaliarLiberacaoCertificacao($pdo, $filhoId);
+    assertRetornoIntegracao(
+        !$semAssinatura['permitido'] && !empty($semAssinatura['aguarda_assinatura']),
+        'Um relatorio aprovado sem assinatura liberou a certificacao.'
+    );
+    $pdo->prepare("UPDATE vistorias SET assinatura_status='ASSINADO',assinatura_em=NOW() WHERE id=:id")
+        ->execute([':id'=>$filhoId]);
     $stmt = $pdo->prepare("INSERT INTO vistoria_exigencias
         (id,vistoria_id,ordem,item,conforme,antes_de_suspender,status_item,exigencia_origem_id)
         VALUES (:id,:vistoria,1,'A/S teste','sim',1,'cumprida',:origem)");

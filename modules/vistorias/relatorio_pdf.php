@@ -134,34 +134,6 @@ function formatarDataBR($data) {
     return date('d/m/Y', strtotime($data));
 }
 
-function normalizarTipoVistoriaPdf(string $texto): string
-{
-    $texto = mb_strtolower($texto, 'UTF-8');
-    $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto);
-    return $ascii !== false ? $ascii : $texto;
-}
-
-function blocosDisponiveisRelatorioPdf(string $tipoVistoria, array $todos): array
-{
-    $texto = normalizarTipoVistoriaPdf($tipoVistoria);
-    $blocos = [];
-
-    if (strpos($texto, 'seco') !== false) {
-        $blocos['seco'] = $todos['seco'];
-    }
-    if (strpos($texto, 'flutu') !== false || strpos($texto, 'agua') !== false || strpos($texto, 'licenca provisoria') !== false) {
-        $blocos['flutuando'] = $todos['flutuando'];
-    }
-    if (strpos($texto, 'borda') !== false || strpos($texto, 'cnbl') !== false) {
-        $blocos['borda_livre'] = $todos['borda_livre'];
-    }
-    if (strpos($texto, 'arquea') !== false || strpos($texto, 'cnarq') !== false) {
-        $blocos['arqueacao'] = $todos['arqueacao'];
-    }
-
-    return !empty($blocos) ? $blocos : $todos;
-}
-
 // Buscar assinante responsável técnico ativo do banco de dados
 $assinante_nome = $v['assinante_nome'] ?? 'RESPONSÁVEL TÉCNICO';
 $assinante_titulo = 'Engenheiro Naval';
@@ -192,12 +164,11 @@ $blocos_todos = [
     'arqueacao' => 'Vistoria de Arqueação'
 ];
 
-$blocos = blocosDisponiveisRelatorioPdf((string)($v['agendamento_tipo_vistoria'] ?? ''), $blocos_todos);
-$blocos_permitidos = array_keys($blocos);
-$exigencias = array_values(array_filter($exigencias, function ($ex) use ($blocos_permitidos) {
-    $bloco = $ex['bloco_vistoria'] ?? 'flutuando';
-    return in_array($bloco, $blocos_permitidos, true);
-}));
+$blocos = blocosComExigenciasRelatorioPdf(
+    (string)($v['agendamento_tipo_vistoria'] ?? ''),
+    $blocos_todos,
+    $exigencias
+);
 
 $datas_blocos = [];
 foreach (array_keys($blocos) as $b_id) {

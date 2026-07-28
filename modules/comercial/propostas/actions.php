@@ -595,11 +595,19 @@ switch ($action) {
             $prop['assinado'] = 1;
             $prop['status'] = 'assinada';
             gerarEfeitosPropostaAssinada($pdo, $prop, $_SESSION['usuario_id'] ?? null, true);
+            $proximoAgendamentoId = proximoAgendamentoPendenteProposta($pdo, (string)$prop['id']);
 
             $pdo->commit();
 
             log_atividade('proposta_aprovada_assinatura_manual', "Proposta {$prop['numero']} autorizada internamente sem assinatura digital por {$assinanteNome}.");
-            setMensagem('success', "Proposta {$prop['numero']} autorizada e marcada como assinada. Financeiro e agendamentos foram gerados.");
+            if ($proximoAgendamentoId !== null) {
+                setMensagem('success', "Proposta {$prop['numero']} autorizada e marcada como assinada. Complete agora os dados do agendamento.");
+                redirecionar(
+                    APP_URL . 'agendamentos/form?id=' . urlencode($proximoAgendamentoId) . '&fluxo_proposta=1'
+                );
+            }
+
+            setMensagem('success', "Proposta {$prop['numero']} autorizada e marcada como assinada. Não há vistoria pendente para agendar.");
             redirecionar(APP_URL . 'comercial?proposta=' . urlencode($id));
         } catch (Exception $e) {
             if ($pdo->inTransaction()) {

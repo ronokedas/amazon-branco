@@ -10,14 +10,15 @@ function Foto({ anexo, onDelete }) {
     setSrc(url)
     return () => URL.revokeObjectURL(url)
   }, [anexo.blob])
-  return <figure><img src={src} alt="Evidência da não conformidade" /><figcaption><span>{anexo.local ? 'Salva no aparelho' : 'Enviada'}</span><button type="button" onClick={() => onDelete(anexo)} aria-label={`Excluir foto ${anexo.nome || anexo.nome_original || ''}`}><Trash2 size={16} /></button></figcaption></figure>
+  return <figure><img src={src} alt="Evidência do item vistoriado" /><figcaption><span>{anexo.local ? 'Salva no aparelho' : 'Enviada'}</span><button type="button" onClick={() => onDelete(anexo)} aria-label={`Excluir foto ${anexo.nome || anexo.nome_original || ''}`}><Trash2 size={16} /></button></figcaption></figure>
 }
 
 export function EvidenceScreen({ item, resposta, prazoCorrecao, online, error, onBack, onUpdate, onPhoto, onDeletePhoto, onSave }) {
   const anexos = item.anexos || []
+  const conforme = resposta.status === 'CONFORME'
   return (
-    <AppShell title="Não conformidade" online={online} onBack={onBack}>
-      <section className="issue-banner"><CircleX size={25} /><span><strong>Item não conforme</strong><small>{item.descricao}</small></span></section>
+    <AppShell title="Evidências do item" online={online} onBack={onBack}>
+      <section className="issue-banner"><CircleX size={25} /><span><strong>{conforme ? 'Item conforme' : 'Item não conforme'}</strong><small>{item.descricao}</small></span></section>
       <section className="evidence-content">
         <label className="field-label">Evidência fotográfica <small>(opcional)</small></label>
         <div className="photo-grid">
@@ -36,7 +37,7 @@ export function EvidenceScreen({ item, resposta, prazoCorrecao, online, error, o
         <label className="field-label" htmlFor="normam">Referência NORMAM</label>
         <input id="normam" value={resposta.item_normam || ''} onChange={e => onUpdate({ item_normam: e.target.value })} placeholder="Ex.: NORMAM-202/DPC, item 2.1" />
       </section>
-      <div className="sticky-actions"><label className="secondary-button file-button"><ImagePlus size={18} /> Outra foto<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onPhoto(file) }} /></label><button className="danger-button" onClick={onSave}><Save size={18} /> Salvar exigência</button></div>
+      <div className="sticky-actions"><label className="secondary-button file-button"><ImagePlus size={18} /> Outra foto<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onPhoto(file) }} /></label><button className="danger-button" onClick={onSave}><Save size={18} /> Salvar evidências</button></div>
     </AppShell>
   )
 }

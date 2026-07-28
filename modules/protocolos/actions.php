@@ -24,7 +24,7 @@ try{
   $q->execute([':id'=>$id,':numero'=>$numero,':emb'=>$emb,':cliente'=>$cliente?:null,':assunto'=>$assunto,':servico'=>trim($_POST['servico_id']??'')?:null,':proposta'=>$proposta,':analise'=>$analise,':vistoria'=>$vistoria,':ctipo'=>trim($_POST['certificado_tipo']??'')?:null,':cid'=>trim($_POST['certificado_id']??'')?:null,':usuario'=>$_SESSION['usuario_id']]);
   protocoloAuditar($pdo,$id,null,'DOSSIE_CRIADO',null,'EM_PREPARACAO',$numero);$pdo->commit();setMensagem('success','Dossiê '.$numero.' criado.');redirecionar($voltar($id));
  }
- if($id==='')throw new RuntimeException('Dossiê não informado.');$d=protocoloCarregar($pdo,$id,in_array($acao,['adicionar_movimentacao','confirmar','protocolo_externo','encerrar','cancelar'],true));
+ if($id==='')throw new RuntimeException('Dossiê não informado.');$d=protocoloCarregar($pdo,$id,in_array($acao,['adicionar_movimentacao','confirmar','registro_orgao','encerrar','cancelar'],true));
  if(in_array($d['status'],['ENCERRADO','CANCELADO'],true)&&!in_array($acao,['criar_aceite'],true))throw new RuntimeException('Dossiê encerrado ou cancelado é somente leitura.');
  if($acao==='adicionar_movimentacao'){
   $tipo=trim($_POST['tipo']??'');$nat=trim($_POST['natureza']??'');$tipos=['ENTRADA','SAIDA'];$nats=['RECEBIMENTO_CLIENTE','ENVIO_ORGAO','RETORNO_ORGAO','CUMPRIMENTO_EXIGENCIA','RETIRADA_ORGAO','ENTREGA_CLIENTE','TRANSFERENCIA_INTERNA','OUTRA'];
@@ -53,23 +53,29 @@ try{
   if($m['retifica_movimentacao_id'])$pdo->prepare("UPDATE protocolo_movimentacoes SET status='RETIFICADA' WHERE id=:id AND dossie_id=:dossie AND status='CONFIRMADA'")->execute([':id'=>$m['retifica_movimentacao_id'],':dossie'=>$id]);
   $pdo->prepare('UPDATE protocolo_dossies SET status=:status,unidade_maritima_id=COALESCE(:unidade,unidade_maritima_id) WHERE id=:id')->execute([':status'=>$novo,':unidade'=>$m['unidade_maritima_id'],':id'=>$id]);protocoloAuditar($pdo,$id,$mov,'MOVIMENTACAO_CONFIRMADA',$d['status'],$novo,'Evento '.str_pad((string)$m['sequencia'],2,'0',STR_PAD_LEFT),$hash);$pdo->commit();protocoloNotificarAdmins($pdo,'PROTOCOLO_MOVIMENTADO','Protocolo movimentado',$d['numero'].' recebeu um evento '.$m['tipo'].'.',$id);setMensagem('success','Movimentação confirmada e PDF congelado.');redirecionar($voltar($id));
  }
- if($acao==='protocolo_externo'){
-  $numero=trim($_POST['protocolo_externo_numero']??'');$data=trim($_POST['protocolo_externo_em']??'');$unidade=trim($_POST['unidade_maritima_id']??'');if(!$numero||!$data||!$unidade)throw new InvalidArgumentException('Informe número, data e unidade do protocolo oficial.');
-  $q=$pdo->prepare('SELECT formato_protocolo_regex FROM protocolo_unidades_maritimas WHERE id=:id AND ativo=1');$q->execute([':id'=>$unidade]);$regex=$q->fetchColumn();if($regex&&!@preg_match($regex,$numero))throw new InvalidArgumentException('O número não corresponde ao formato configurado para a unidade.');
-  $pdo->beginTransaction();$pdo->prepare("UPDATE protocolo_dossies SET protocolo_externo_numero=:numero,protocolo_externo_em=:data,protocolo_externo_validade=:validade,unidade_maritima_id=:unidade,status='PROTOCOLADO' WHERE id=:id")->execute([':numero'=>$numero,':data'=>str_replace('T',' ',$data),':validade'=>trim($_POST['validade']??'')?:null,':unidade'=>$unidade,':id'=>$id]);
-  if(!empty($_FILES['comprovante']['tmp_name'])){$meta=protocoloValidarArquivo($_FILES['comprovante']);$caminho=protocoloGuardarArquivo($_FILES['comprovante'],$meta,$id);$pdo->prepare("INSERT INTO protocolo_comprovantes(id,dossie_id,tipo,nome_original,mime_type,tamanho_bytes,sha256,caminho,criado_por)VALUES(UUID(),:dossie,'PROTOCOLO_EXTERNO',:nome,:mime,:tam,:hash,:caminho,:usuario)")->execute([':dossie'=>$id,':nome'=>$meta['nome'],':mime'=>$meta['mime'],':tam'=>$meta['tam'],':hash'=>$meta['hash'],':caminho'=>$caminho,':usuario'=>$_SESSION['usuario_id']]);}
-  protocoloAuditar($pdo,$id,null,'PROTOCOLO_EXTERNO_REGISTRADO',$d['status'],'PROTOCOLADO',$numero);$pdo->commit();setMensagem('success','Protocolo oficial registrado sem alterar as movimentações anteriores.');redirecionar($voltar($id));
+ if($acao==='registro_orgao'){
+  $data=trim($_POST['protocolo_externo_em']??'');$unidade=trim($_POST['unidade_maritima_id']??'');if(!$data||!$unidade)throw new InvalidArgumentException('Informe a unidade e a data do atendimento no órgão.');
+  $q=$pdo->prepare('SELECT 1 FROM protocolo_unidades_maritimas WHERE id=:id AND ativo=1');$q->execute([':id'=>$unidade]);if(!$q->fetchColumn())throw new InvalidArgumentException('Unidade marítima inválida.');
+  $pdo->beginTransaction();$pdo->prepare("UPDATE protocolo_dossies SET protocolo_externo_em=:data,protocolo_externo_validade=:validade,unidade_maritima_id=:unidade,status='PROTOCOLADO' WHERE id=:id")->execute([':data'=>str_replace('T',' ',$data),':validade'=>trim($_POST['validade']??'')?:null,':unidade'=>$unidade,':id'=>$id]);
+  protocoloAuditar($pdo,$id,null,'REGISTRO_ORGAO',$d['status'],'PROTOCOLADO','Atendimento registrado em '.str_replace('T',' ',$data));$pdo->commit();setMensagem('success','Atendimento no órgão registrado.');redirecionar($voltar($id));
  }
  if($acao==='criar_aceite'){
   $mov=trim($_POST['movimentacao_id']??'');$q=$pdo->prepare("SELECT 1 FROM protocolo_movimentacoes WHERE id=:id AND dossie_id=:dossie AND status='CONFIRMADA'");$q->execute([':id'=>$mov,':dossie'=>$id]);if(!$q->fetchColumn())throw new RuntimeException('Movimentação confirmada não encontrada.');$token=bin2hex(random_bytes(32));$hash=hash('sha256',$token);
   $pdo->prepare("INSERT INTO protocolo_aceites(id,movimentacao_id,token_hash,expira_em,criado_por)VALUES(UUID(),:mov,:hash,DATE_ADD(NOW(),INTERVAL 15 DAY),:usuario) ON DUPLICATE KEY UPDATE token_hash=VALUES(token_hash),expira_em=VALUES(expira_em),criado_por=VALUES(criado_por),nome=NULL,documento_mascarado=NULL,termo_aceito=0,ip=NULL,aceito_em=NULL")->execute([':mov'=>$mov,':hash'=>$hash,':usuario'=>$_SESSION['usuario_id']]);protocoloAuditar($pdo,$id,$mov,'ACEITE_CRIADO',null,'PENDENTE');setMensagem('success','Link de aceite: '.APP_URL.'protocolo-aceite/'.$token);redirecionar($voltar($id));
  }
- if($acao==='anexar_comprovante'){
-  $mov=trim($_POST['movimentacao_id']??'')?:null;$tipo=trim($_POST['tipo_comprovante']??'RECIBO');if(!in_array($tipo,['RECIBO','COMPROVANTE_ENTREGA','RASTREIO','OUTRO'],true))throw new InvalidArgumentException('Tipo de comprovante inválido.');
+ if($acao==='anexar_documentos'){
+  $mov=trim($_POST['movimentacao_id']??'')?:null;
   if($mov){$q=$pdo->prepare("SELECT 1 FROM protocolo_movimentacoes WHERE id=:id AND dossie_id=:dossie AND status IN ('CONFIRMADA','RETIFICADA')");$q->execute([':id'=>$mov,':dossie'=>$id]);if(!$q->fetchColumn())throw new RuntimeException('Movimentação confirmada não encontrada.');}
-  $meta=protocoloValidarArquivo($_FILES['comprovante']??[]);$caminho=protocoloGuardarArquivo($_FILES['comprovante'],$meta,$id);
-  $pdo->prepare('INSERT INTO protocolo_comprovantes(id,dossie_id,movimentacao_id,tipo,nome_original,mime_type,tamanho_bytes,sha256,caminho,criado_por)VALUES(UUID(),:dossie,:mov,:tipo,:nome,:mime,:tam,:hash,:caminho,:usuario)')->execute([':dossie'=>$id,':mov'=>$mov,':tipo'=>$tipo,':nome'=>$meta['nome'],':mime'=>$meta['mime'],':tam'=>$meta['tam'],':hash'=>$meta['hash'],':caminho'=>$caminho,':usuario'=>$_SESSION['usuario_id']]);
-  protocoloAuditar($pdo,$id,$mov,'COMPROVANTE_ANEXADO',null,$tipo,$meta['nome'],$meta['hash']);setMensagem('success','Comprovante anexado e protegido contra substituição.');redirecionar($voltar($id));
+  $arquivos=protocoloNormalizarArquivos($_FILES['documentos']??[]);$arquivos=array_values(array_filter($arquivos,fn($a)=>(int)($a['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE));
+  if(!$arquivos)throw new InvalidArgumentException('Selecione ao menos um documento.');if(count($arquivos)>10)throw new InvalidArgumentException('Envie no máximo 10 documentos por vez.');
+  $validados=[];foreach($arquivos as $arquivo)$validados[]=['arquivo'=>$arquivo,'meta'=>protocoloValidarArquivo($arquivo)];
+  $novosCaminhos=[];$pdo->beginTransaction();
+  try{
+   $ins=$pdo->prepare("INSERT INTO protocolo_comprovantes(id,dossie_id,movimentacao_id,tipo,nome_original,mime_type,tamanho_bytes,sha256,caminho,criado_por)VALUES(UUID(),:dossie,:mov,'DOCUMENTO',:nome,:mime,:tam,:hash,:caminho,:usuario)");
+   foreach($validados as $item){$caminho=protocoloGuardarArquivo($item['arquivo'],$item['meta'],$id);$novosCaminhos[]=$caminho;$ins->execute([':dossie'=>$id,':mov'=>$mov,':nome'=>$item['meta']['nome'],':mime'=>$item['meta']['mime'],':tam'=>$item['meta']['tam'],':hash'=>$item['meta']['hash'],':caminho'=>$caminho,':usuario'=>$_SESSION['usuario_id']]);protocoloAuditar($pdo,$id,$mov,'DOCUMENTO_ANEXADO',null,'DOCUMENTO',$item['meta']['nome'],$item['meta']['hash']);}
+   $pdo->commit();
+  }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();foreach($novosCaminhos as $rel){$abs=dirname(__DIR__,2).'/'.$rel;if(is_file($abs))@unlink($abs);}throw $e;}
+  setMensagem('success',count($validados).' documento(s) anexado(s) e protegido(s) contra substituição.');redirecionar($voltar($id));
  }
  if($acao==='registrar_devolucao'){
   $item=trim($_POST['item_id']??'');$q=$pdo->prepare("SELECT i.id,m.id movimentacao_id FROM protocolo_movimentacao_itens i JOIN protocolo_movimentacoes m ON m.id=i.movimentacao_id WHERE i.id=:item AND m.dossie_id=:dossie AND m.status IN('CONFIRMADA','RETIFICADA') AND i.requer_devolucao=1 AND i.devolvido_em IS NULL");$q->execute([':item'=>$item,':dossie'=>$id]);$it=$q->fetch(PDO::FETCH_ASSOC);if(!$it)throw new RuntimeException('Original pendente não encontrado.');
