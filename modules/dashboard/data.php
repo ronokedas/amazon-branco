@@ -68,32 +68,6 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
     $params = [':uid'=>$usuarioId];
 
     if ($cargo === 'VISTORIADOR') {
-        $base['tarefas_as'] = dashRows($pdo, "SELECT
-                a.id agendamento_id, a.vistoriador_id, e.nome embarcacao, e.registro,
-                u.nome vistoriador, v.id vistoria_id, v.numero, v.status, v.finalidade,
-                va.numero relatorio_anterior_numero,
-                (SELECT COUNT(*) FROM vistoria_exigencias ve
-                  WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1
-                    AND ve.conforme='nao' AND ve.status_item<>'cumprida') total_as,
-                (SELECT COUNT(*) FROM vistoria_exigencias ve
-                  WHERE ve.vistoria_id=v.id AND ve.conforme='nao'
-                    AND ve.status_item<>'cumprida') total_pendentes
-            FROM agendamentos a
-            JOIN embarcacoes e ON e.id=a.embarcacao_id
-            LEFT JOIN usuarios u ON u.id=a.vistoriador_id
-            JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2
-                WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1)
-            LEFT JOIN vistorias va ON va.id=v.relatorio_anterior_id
-            WHERE a.vistoriador_id=:uid
-              AND (
-                (v.status='RETORNO_AS' AND EXISTS (
-                    SELECT 1 FROM vistoria_exigencias ve
-                     WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1
-                       AND ve.conforme='nao' AND ve.status_item<>'cumprida'
-                ))
-                OR (v.finalidade='CUMPRIMENTO_EXIGENCIAS' AND v.status IN ('PENDENTE','AGUARDANDO_APROVACAO'))
-              )
-            ORDER BY (v.status='PENDENTE') DESC, (v.status='AGUARDANDO_APROVACAO') ASC, v.atualizado_em ASC", $params);
         $base['kpis'] = [
             'atrasadas'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM agendamentos a LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1) WHERE a.vistoriador_id=:uid AND a.status IN ('pendente','confirmado','em_andamento') AND a.data_vistoria<CURDATE() AND (v.id IS NULL OR v.status='PENDENTE')",$params),
             'hoje'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM agendamentos a LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1) WHERE a.vistoriador_id=:uid AND a.status IN ('pendente','confirmado','em_andamento') AND a.data_vistoria=CURDATE() AND (v.id IS NULL OR v.status='PENDENTE')",$params),
@@ -106,16 +80,20 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
         $base['agenda_prioritaria'] = dashRows($pdo,"SELECT
                 a.id,a.data_vistoria,a.hora_vistoria,a.local,a.tipo_vistoria,a.status,
                 e.nome embarcacao,COALESCE(NULLIF(e.registro,''),e.numero_inscricao) registro,
-                c.nome cliente,v.id vistoria_id,v.status vistoria_status
+                c.nome cliente,v.id vistoria_id,v.status vistoria_status,
+                vr.tipo retorno_tipo,vo.numero relatorio_origem_numero
             FROM agendamentos a
             JOIN embarcacoes e ON e.id=a.embarcacao_id
             JOIN clientes c ON c.id=a.cliente_id
             LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2
                 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1)
+            LEFT JOIN vistoria_retornos vr ON vr.agendamento_id=a.id
+            LEFT JOIN vistorias vo ON vo.id=vr.relatorio_origem_id
             WHERE a.vistoriador_id=:uid
               AND a.status IN ('pendente','confirmado','em_andamento')
-              AND (v.id IS NULL OR (v.status='PENDENTE' AND COALESCE(v.finalidade,'VISTORIA')<>'CUMPRIMENTO_EXIGENCIAS'))
-            ORDER BY a.data_vistoria IS NULL,a.data_vistoria,a.hora_vistoria,a.created_at
+              AND (v.id IS NULL OR v.status='PENDENTE')
+            ORDER BY CASE vr.tipo WHEN 'AS' THEN 0 WHEN 'EXIGENCIAS' THEN 1 ELSE 2 END,
+                     a.data_vistoria IS NULL,a.data_vistoria,a.hora_vistoria,a.created_at
             LIMIT 8",$params);
         $base['fila'] = dashRows($pdo,"SELECT a.id,a.data_vistoria,a.hora_vistoria,a.local,a.tipo_vistoria,a.status,e.nome embarcacao,v.id vistoria_id,v.numero,v.status vistoria_status,v.finalidade FROM agendamentos a JOIN embarcacoes e ON e.id=a.embarcacao_id LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1) WHERE a.vistoriador_id=:uid AND ((a.status IN ('pendente','confirmado','em_andamento') AND (v.id IS NULL OR v.status='PENDENTE')) OR (v.finalidade='CUMPRIMENTO_EXIGENCIAS' AND v.status='PENDENTE')) ORDER BY (v.finalidade='CUMPRIMENTO_EXIGENCIAS') DESC,(a.data_vistoria<CURDATE()) DESC,a.data_vistoria,a.hora_vistoria LIMIT 8",$params);
         $base['atribuicoes'] = dashRows($pdo,"SELECT a.id,a.data_vistoria,a.hora_vistoria,a.local,a.tipo_vistoria,a.created_at,e.nome embarcacao,e.registro,c.nome cliente FROM agendamentos a JOIN embarcacoes e ON e.id=a.embarcacao_id JOIN clientes c ON c.id=a.cliente_id LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1) WHERE a.vistoriador_id=:uid AND a.status IN ('pendente','confirmado') AND v.id IS NULL ORDER BY a.data_vistoria IS NULL,a.data_vistoria,a.hora_vistoria,a.created_at DESC LIMIT 4",$params);
@@ -171,7 +149,7 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
     $base['acoes']=['assinadas'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM propostas p WHERE p.assinado=1 AND NOT EXISTS (SELECT 1 FROM agendamentos a WHERE a.proposta_id=p.id AND a.status<>'cancelado' AND a.data_vistoria IS NOT NULL AND a.vistoriador_id IS NOT NULL)"),'vencidas'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM agendamentos WHERE status IN ('pendente','confirmado','em_andamento') AND data_vistoria<CURDATE()"),'aprovacao'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistorias v WHERE v.status='AGUARDANDO_APROVACAO' AND NOT EXISTS (SELECT 1 FROM vistorias vf WHERE vf.relatorio_anterior_id=v.id AND vf.status<>'CANCELADA')"),'retornos_as'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistoria_retornos WHERE status='PENDENTE_AGENDAMENTO'"),'emitir'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistorias v WHERE v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS') AND v.assinatura_status='ASSINADO' AND NOT EXISTS (SELECT 1 FROM vistoria_exigencias ve WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1 AND ve.conforme='nao' AND ve.status_item<>'cumprida')")];
     $base['fluxo_assinadas'] = dashRows($pdo,"SELECT p.id proposta_id,p.numero,p.assinatura_em,c.nome cliente,a.id agendamento_id,a.data_vistoria,a.vistoriador_id,COALESCE(e.nome,(SELECT GROUP_CONCAT(DISTINCT ep.nome ORDER BY ep.nome SEPARATOR ', ') FROM propostas_embarcacoes pe JOIN embarcacoes ep ON ep.id=pe.embarcacao_id WHERE pe.proposta_id=p.id),'Embarcação da proposta') embarcacao FROM propostas p JOIN clientes c ON c.id=p.cliente_id LEFT JOIN agendamentos a ON a.id=(SELECT a2.id FROM agendamentos a2 WHERE a2.proposta_id=p.id AND a2.status<>'cancelado' ORDER BY a2.created_at DESC LIMIT 1) LEFT JOIN embarcacoes e ON e.id=a.embarcacao_id WHERE p.assinado=1 AND NOT EXISTS (SELECT 1 FROM agendamentos ac WHERE ac.proposta_id=p.id AND ac.status<>'cancelado' AND ac.data_vistoria IS NOT NULL AND ac.vistoriador_id IS NOT NULL) ORDER BY COALESCE(p.assinatura_em,p.updated_at,p.created_at) ASC LIMIT 4");
     $base['fluxo_aprovacoes'] = dashRows($pdo,"SELECT v.id,v.numero,v.agendamento_id,v.atualizado_em,e.nome embarcacao,COALESCE(u.nome,'Sem vistoriador') vistoriador,TIMESTAMPDIFF(HOUR,v.atualizado_em,NOW()) horas,(SELECT COUNT(*) FROM vistoria_exigencias ve WHERE ve.vistoria_id=v.id AND ve.conforme='nao') nao_conformes,(SELECT COUNT(*) FROM vistoria_anexos va WHERE va.vistoria_id=v.id) fotos FROM vistorias v JOIN embarcacoes e ON e.id=v.embarcacao_id LEFT JOIN agendamentos a ON a.id=v.agendamento_id LEFT JOIN usuarios u ON u.id=a.vistoriador_id WHERE v.status='AGUARDANDO_APROVACAO' AND NOT EXISTS (SELECT 1 FROM vistorias vf WHERE vf.relatorio_anterior_id=v.id AND vf.status<>'CANCELADA') ORDER BY v.atualizado_em ASC LIMIT 4");
-    $base['fluxo_retornos_as'] = dashRows($pdo,"SELECT vr.relatorio_origem_id,v.numero,e.nome embarcacao,vr.criado_em FROM vistoria_retornos vr JOIN vistorias v ON v.id=vr.relatorio_origem_id JOIN embarcacoes e ON e.id=v.embarcacao_id WHERE vr.status='PENDENTE_AGENDAMENTO' ORDER BY vr.criado_em LIMIT 4");
+    $base['fluxo_retornos_as'] = dashRows($pdo,"SELECT vr.relatorio_origem_id,vr.tipo,v.numero,e.nome embarcacao,vr.criado_em FROM vistoria_retornos vr JOIN vistorias v ON v.id=vr.relatorio_origem_id JOIN embarcacoes e ON e.id=v.embarcacao_id WHERE vr.status='PENDENTE_AGENDAMENTO' ORDER BY CASE vr.tipo WHEN 'AS' THEN 0 ELSE 1 END,vr.criado_em LIMIT 4");
     $aprovadas=(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistorias WHERE status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')"); $analisadas=(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistorias WHERE status IN ('APROVADA','APROVADA_COM_EXIGENCIAS','RETORNO_AS','REPROVADA')");
     $base['kpis']=['agenda_hoje'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM agendamentos WHERE data_vistoria=CURDATE() AND status<>'cancelado'"),'execucao'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM agendamentos WHERE status='em_andamento'"),'exigencias_vencidas'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistoria_exigencias WHERE status_item='pendente' AND vencimento<CURDATE()"),'aprovacao'=>$analisadas?round(($aprovadas/$analisadas)*100):0];
     $base['agenda']=dashRows($pdo,"SELECT a.id,a.hora_vistoria,a.tipo_vistoria,e.nome embarcacao,u.nome vistoriador FROM agendamentos a JOIN embarcacoes e ON e.id=a.embarcacao_id LEFT JOIN usuarios u ON u.id=a.vistoriador_id WHERE a.data_vistoria=CURDATE() AND a.status<>'cancelado' ORDER BY a.hora_vistoria LIMIT 6");

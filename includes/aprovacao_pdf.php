@@ -9,7 +9,7 @@ function aprovacaoPdfTextoSeguro($valor): string
     return trim((string)$valor);
 }
 
-function aprovacaoPdfUrlValidacao(string $token): string
+function aprovacaoPdfUrlValidacao(string $token, string $tipoDocumento): string
 {
     $base = rtrim((string)APP_URL, '/');
     $host = strtolower((string)parse_url($base, PHP_URL_HOST));
@@ -18,7 +18,10 @@ function aprovacaoPdfUrlValidacao(string $token): string
     if (!$developmentHost && $scheme !== 'https') {
         throw new RuntimeException('Configure APP_URL com HTTPS antes de aprovar documentos em producao.');
     }
-    return $base . '/validar/' . rawurlencode($token);
+    $rota = strtoupper(trim($tipoDocumento)) === 'RELATORIO_ASSINADO'
+        ? '/validar-assinatura/'
+        : '/validar/';
+    return $base . $rota . rawurlencode($token);
 }
 
 function aprovacaoPdfCriarComBloco(string $origem, string $destino, array $a): void
@@ -70,7 +73,7 @@ function aprovacaoPdfCriarComBloco(string $origem, string $destino, array $a): v
             ? (float)($a['bloco_y'] ?? 222.0)
             : $yPorDocumento[$tipoDocumento];
         $w = 180.0;
-        $h = 39.0;
+        $h = $tipoDocumento === 'RELATORIO' ? 49.0 : 39.0;
         $signatureColumn = 42.0;
         $qrColumn = 29.0;
         $padding = 3.0;
@@ -124,7 +127,8 @@ function aprovacaoPdfCriarComBloco(string $origem, string $destino, array $a): v
         $pdf->SetFont('courier', '', 4.8);
         $pdf->MultiCell($rw, 2.4, aprovacaoPdfTextoSeguro($a['hash_pdf_original'] ?? ''), 0, 'L');
 
-        $validationUrl = aprovacaoPdfUrlValidacao((string)$a['token_validacao']);
+        $tipoValidacao = (string)($a['tipo_validacao'] ?? $tipoDocumento);
+        $validationUrl = aprovacaoPdfUrlValidacao((string)$a['token_validacao'], $tipoValidacao);
         $qrStyle = ['border' => 0, 'padding' => 0, 'fgcolor' => [0, 0, 0], 'bgcolor' => false];
         $qrX = $x + $w - $qrColumn + (($qrColumn - 20.0) / 2);
         $pdf->write2DBarcode($validationUrl, 'QRCODE,M', $qrX, $y + 5, 20, 20, $qrStyle, 'N');
@@ -132,6 +136,17 @@ function aprovacaoPdfCriarComBloco(string $origem, string $destino, array $a): v
         $pdf->SetTextColor(65, 70, 68);
         $pdf->SetXY($x + $w - $qrColumn + 1, $y + 27);
         $pdf->MultiCell($qrColumn - 2, 3, 'Escaneie para validar', 0, 'C');
+
+        if ($tipoDocumento === 'RELATORIO') {
+            $pdf->SetTextColor(20, 35, 31);
+            $pdf->SetXY($rx, $y + 36.0);
+            $pdf->SetFont('helvetica', '', 5.0);
+            $urlHtml = '<span>A autenticidade deste documento pode ser conferida em:</span><br>'
+                . '<a href="' . htmlspecialchars($validationUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">'
+                . htmlspecialchars($validationUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                . '</a>';
+            $pdf->writeHTMLCell($rw, 11.0, $rx, $y + 36.0, $urlHtml, 0, 0, false, true, 'L', true);
+        }
 
         $pdf->Output($destino, 'F');
         return;
@@ -149,7 +164,8 @@ function aprovacaoPdfCriarComBloco(string $origem, string $destino, array $a): v
     $pdf->Rect($x, $y, $w, $h);
     $pdf->Line($x + $left, $y, $x + $left, $y + $h);
 
-    $validationUrl = aprovacaoPdfUrlValidacao((string)$a['token_validacao']);
+    $tipoValidacao = (string)($a['tipo_validacao'] ?? $tipoDocumento);
+    $validationUrl = aprovacaoPdfUrlValidacao((string)$a['token_validacao'], $tipoValidacao);
     $qrStyle = ['border' => 0, 'padding' => 0, 'fgcolor' => [0, 0, 0], 'bgcolor' => false];
     $pdf->write2DBarcode($validationUrl, 'QRCODE,M', $x + 14, $y + 4, 24, 24, $qrStyle, 'N');
     $pdf->SetFont('helvetica', '', 6.3);

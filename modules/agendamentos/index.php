@@ -49,7 +49,8 @@ try {
     $sql = "
         SELECT a.*, c.nome AS cliente_nome, e.nome AS embarcacao_nome,
                u.nome AS vistoriador_nome, os.id AS os_id, os.numero AS os_numero,
-               os.status AS os_status, v.status AS vistoria_status
+               os.status AS os_status, v.id AS vistoria_id, v.status AS vistoria_status,
+               vr.tipo AS retorno_tipo, vo.numero AS relatorio_origem_numero
         FROM agendamentos a
         LEFT JOIN vistorias v ON v.id = (
             SELECT v2.id FROM vistorias v2
@@ -60,9 +61,13 @@ try {
         INNER JOIN embarcacoes e ON a.embarcacao_id = e.id
         LEFT JOIN usuarios u ON a.vistoriador_id = u.id
         LEFT JOIN ordens_servico os ON os.agendamento_id = a.id
+        LEFT JOIN vistoria_retornos vr ON vr.agendamento_id = a.id
+        LEFT JOIN vistorias vo ON vo.id = vr.relatorio_origem_id
     ";
     if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
-    $sql .= ' ORDER BY COALESCE(a.data_vistoria, DATE(a.created_at)) DESC, a.hora_vistoria DESC, COALESCE(a.updated_at, a.created_at) DESC';
+    $sql .= " ORDER BY CASE vr.tipo WHEN 'AS' THEN 0 WHEN 'EXIGENCIAS' THEN 1 ELSE 2 END,
+        COALESCE(a.data_vistoria, DATE(a.created_at)) DESC, a.hora_vistoria DESC,
+        COALESCE(a.updated_at, a.created_at) DESC";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -78,6 +83,10 @@ $status_labels = [
     'em_andamento' => ['label' => 'Em andamento', 'class' => 'progress'],
     'concluido' => ['label' => 'Concluído', 'class' => 'success'],
     'cancelado' => ['label' => 'Cancelado', 'class' => 'danger'],
+];
+$retorno_labels = [
+    'AS' => ['label' => 'RETORNO A/S', 'class' => 'as'],
+    'EXIGENCIAS' => ['label' => 'RETORNO - EXIGÊNCIAS', 'class' => 'requirements'],
 ];
 
 $total_agendamentos = count($agendamentos);
@@ -128,15 +137,18 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <table id="tabelaAgendamentos" class="schedule-table" data-responsive="off">
                     <thead><tr><th>Data e local</th><th>Cliente / embarcação</th><th>Tipo de vistoria</th><th>Vistoriador</th><th>Status</th><th>OS</th><th>Ações</th></tr></thead>
                     <tbody>
-                    <?php foreach ($agendamentos as $a): $st = $status_labels[$a['status']] ?? ['label' => ucfirst($a['status']), 'class' => 'neutral']; ?>
-                        <tr>
+                    <?php foreach ($agendamentos as $a):
+                        $st = $status_labels[$a['status']] ?? ['label' => ucfirst($a['status']), 'class' => 'neutral'];
+                        $retorno = $retorno_labels[$a['retorno_tipo'] ?? ''] ?? null;
+                    ?>
+                        <tr class="<?= $retorno ? 'schedule-return-row is-' . h($retorno['class']) : '' ?>">
                             <td><strong><?= !empty($a['data_vistoria']) ? formatarData($a['data_vistoria']) : 'Sem data' ?></strong><small><?= !empty($a['hora_vistoria']) ? h(substr($a['hora_vistoria'], 0, 5)) : 'Horário não definido' ?><?= !empty($a['local']) ? ' · ' . h(agendaTexto($a['local'])) : '' ?></small></td>
                             <td><strong><?= h(agendaTexto($a['embarcacao_nome'])) ?></strong><small><?= h(agendaTexto($a['cliente_nome'])) ?></small></td>
-                            <td><?= h(agendaTexto($a['tipo_vistoria'] ?: 'Não informado')) ?></td>
+                            <td><?php if ($retorno): ?><span class="schedule-return-badge is-<?= h($retorno['class']) ?>"><?= h($retorno['label']) ?></span><?php endif; ?><?= h(agendaTexto($a['tipo_vistoria'] ?: 'Não informado')) ?><?php if (!empty($a['relatorio_origem_numero'])): ?><small>Origem: <?= h($a['relatorio_origem_numero']) ?></small><?php endif; ?></td>
                             <td><?= h(agendaTexto($a['vistoriador_nome'] ?: 'Não definido')) ?></td>
                             <td><span class="schedule-status schedule-status--<?= h($st['class']) ?>"><?= h($st['label']) ?></span></td>
                             <td><?= !empty($a['os_id']) ? '<a class="schedule-os" href="' . APP_URL . 'agendamentos/os?id=' . urlencode($a['os_id']) . '">' . h($a['os_numero']) . '</a>' : '<span class="schedule-muted">–</span>' ?></td>
-                            <td><div class="schedule-table-actions"><a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($a['id']) ?>" title="Abrir relatório"><i class="fa-solid fa-clipboard-list"></i></a><?php if ($cargo !== 'VISTORIADOR'): ?><a href="<?= APP_URL ?>agendamentos/form?id=<?= urlencode($a['id']) ?>" title="Editar"><i class="fa-solid fa-pen"></i></a><?php endif; ?></div></td>
+                            <td><div class="schedule-table-actions"><a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($a['id']) ?><?= !empty($a['vistoria_id']) ? '&amp;vistoria_id=' . urlencode($a['vistoria_id']) : '' ?>" title="Abrir relatório"><i class="fa-solid fa-clipboard-list"></i></a><?php if ($cargo !== 'VISTORIADOR'): ?><a href="<?= APP_URL ?>agendamentos/form?id=<?= urlencode($a['id']) ?>" title="Editar"><i class="fa-solid fa-pen"></i></a><?php endif; ?></div></td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -147,23 +159,25 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <section class="schedule-mobile-list" aria-label="Lista de agendamentos">
             <?php foreach ($agendamentos as $a):
                 $st = $status_labels[$a['status']] ?? ['label' => ucfirst($a['status']), 'class' => 'neutral'];
+                $retorno = $retorno_labels[$a['retorno_tipo'] ?? ''] ?? null;
                 $data_iso = $a['data_vistoria'] ?? '';
                 $dia = $data_iso ? date('d', strtotime($data_iso)) : '–';
                 $meses = ['01'=>'JAN','02'=>'FEV','03'=>'MAR','04'=>'ABR','05'=>'MAI','06'=>'JUN','07'=>'JUL','08'=>'AGO','09'=>'SET','10'=>'OUT','11'=>'NOV','12'=>'DEZ'];
                 $mes = $data_iso ? ($meses[date('m', strtotime($data_iso))] ?? '') : 'DATA';
             ?>
-                <article class="schedule-card">
+                <article class="schedule-card<?= $retorno ? ' schedule-return-card is-' . h($retorno['class']) : '' ?>">
                     <div class="schedule-card-top">
                         <time datetime="<?= h($data_iso) ?>"><strong><?= $dia ?></strong><span><?= $mes ?></span></time>
                         <div class="schedule-card-heading"><span><?= !empty($a['hora_vistoria']) ? h(substr($a['hora_vistoria'], 0, 5)) : 'Sem horário' ?></span><h2><?= h(agendaTexto($a['embarcacao_nome'])) ?></h2><p><?= h(agendaTexto($a['cliente_nome'])) ?></p></div>
                         <span class="schedule-status schedule-status--<?= h($st['class']) ?>"><?= h($st['label']) ?></span>
                     </div>
+                    <?php if ($retorno): ?><span class="schedule-return-badge is-<?= h($retorno['class']) ?>"><?= h($retorno['label']) ?></span><?php endif; ?>
                     <div class="schedule-card-meta">
                         <span><i class="fa-solid fa-location-dot"></i><?= h(agendaTexto($a['local'] ?: 'Local não informado')) ?></span>
                         <span><i class="fa-solid fa-clipboard-check"></i><?= h(agendaTexto($a['tipo_vistoria'] ?: 'Tipo não informado')) ?></span>
                         <span><i class="fa-solid fa-user-check"></i><?= h(agendaTexto($a['vistoriador_nome'] ?: 'Vistoriador não definido')) ?></span>
                     </div>
-                    <a class="schedule-card-primary" href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($a['id']) ?>"><i class="fa-solid fa-clipboard-list"></i> Abrir relatório da vistoria</a>
+                    <a class="schedule-card-primary" href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($a['id']) ?><?= !empty($a['vistoria_id']) ? '&amp;vistoria_id=' . urlencode($a['vistoria_id']) : '' ?>"><i class="fa-solid fa-clipboard-list"></i> Abrir relatório da vistoria</a>
                     <details class="schedule-card-more">
                         <summary>Detalhes e ações <i class="fa-solid fa-chevron-down"></i></summary>
                         <div class="schedule-card-actions">

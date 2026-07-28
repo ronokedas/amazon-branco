@@ -13,16 +13,20 @@
 /storage/sessions/
 /storage/documentos_assinados/
 /storage/documentos_aprovados/
+/storage/backups/
+/storage/protocolos/
 /uploads/
 /tmp/
 /temp_pdf/
 /test-results/
 **/test-results/
+/docs/marcadagua/
 
 # Artefatos temporarios
 *.log
 *.tmp
 *.bak
+*.bak-*
 
 # Arquivos do sistema/editor
 .DS_Store

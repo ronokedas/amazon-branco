@@ -157,7 +157,11 @@ try {
     assertCadeiaIntegridade(str_contains($fila, 'vf.relatorio_anterior_id=v.id'), 'A fila ainda inclui relatorios substituidos.');
     assertCadeiaIntegridade(str_contains($acoes, "SET status='CANCELADO'"), 'O cancelamento nao atualiza o retorno A/S.');
     assertCadeiaIntegridade(str_contains($acoes, "\$status_vistoria !== 'CANCELADA'"), 'O cancelamento pode ser sobrescrito como concluido.');
-    assertCadeiaIntegridade(str_contains($acoes, 'criarPendenciaRetornoAS($pdo, $origemReabrir'), 'O cancelamento nao reabre o retorno para novo agendamento.');
+    assertCadeiaIntegridade(
+        str_contains($acoes, 'criarPendenciaRetorno(')
+        && str_contains($acoes, '$origemReabrir,'),
+        'O cancelamento nao reabre o retorno para novo agendamento.'
+    );
 
     $pdo->rollBack();
     echo "relatorios_cadeia_integridade_test: OK\n";

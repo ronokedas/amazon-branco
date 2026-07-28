@@ -22,6 +22,8 @@ try {
 
 function dashboardStatusAgenda(array $agendamento, string $hoje): array
 {
+    if (($agendamento['retorno_tipo'] ?? '') === 'AS') return ['RETORNO A/S', 'return-as'];
+    if (($agendamento['retorno_tipo'] ?? '') === 'EXIGENCIAS') return ['RETORNO - EXIGÊNCIAS', 'return-requirements'];
     if (empty($agendamento['data_vistoria'])) return ['Data a definir', 'neutral'];
     if ($agendamento['data_vistoria'] < $hoje) return ['Atrasada', 'late'];
     if ($agendamento['data_vistoria'] === $hoje) return ['Hoje', 'today'];
@@ -89,7 +91,10 @@ function dashboardStatusHistorico(string $status): array
                             <strong><?= h($a['embarcacao']) ?></strong>
                             <small><?= h($a['registro'] ?: $a['cliente'] ?: 'Sem inscrição informada') ?></small>
                         </span>
-                        <span class="inspector-schedule__type"><?= h($a['tipo_vistoria'] ?: 'Vistoria técnica') ?></span>
+                        <span class="inspector-schedule__type">
+                            <?= h($a['tipo_vistoria'] ?: 'Vistoria técnica') ?>
+                            <?php if (!empty($a['relatorio_origem_numero'])): ?><small>Origem: <?= h($a['relatorio_origem_numero']) ?></small><?php endif; ?>
+                        </span>
                         <span class="inspector-schedule__location"><i class="fa-solid fa-location-dot"></i><?= h($a['local'] ?: 'Local a definir') ?></span>
                         <span><em class="inspector-status is-<?= $statusClass ?>"><?= h($statusLabel) ?></em></span>
                         <i class="fa-solid fa-chevron-right inspector-schedule__open"></i>

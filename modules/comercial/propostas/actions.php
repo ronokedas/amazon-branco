@@ -89,6 +89,28 @@ function normalizarTextoLog(?string $texto, int $limite = 2000): ?string
     return mb_substr($texto, 0, $limite, 'UTF-8');
 }
 
+function normalizarDecimalProposta(mixed $valor): float
+{
+    if (is_string($valor)) {
+        $valor = trim($valor);
+        if (str_contains($valor, ',')) {
+            $valor = str_replace('.', '', $valor);
+            $valor = str_replace(',', '.', $valor);
+        }
+    }
+    return round(max(0, (float)$valor), 2);
+}
+
+function validarDescontoProposta(string $tipo, float $valor): void
+{
+    if (!in_array($tipo, ['perc', 'valor'], true)) {
+        throw new RuntimeException('Tipo de desconto inválido.');
+    }
+    if ($tipo === 'perc' && $valor >= 100) {
+        throw new RuntimeException('O desconto percentual deve ser menor que 100%. O maior valor permitido é 99,99%.');
+    }
+}
+
 function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por, bool $manual = false): void
 {
     $descricaoFinanceiro = 'Referente à Proposta Comercial nº ' . $prop['numero'];
@@ -205,10 +227,11 @@ switch ($action) {
             $dadosServicos       = json_decode($dados_servicos_json, true);
             if (!is_array($dadosServicos)) $dadosServicos = [];
 
-            $tipo_desconto       = $_POST['tipo_desconto'] ?? 'perc';
-            $desconto_input      = (float)($_POST['desconto_global'] ?? 0);
+            $tipo_desconto       = (string)($_POST['tipo_desconto'] ?? 'perc');
+            $desconto_input      = normalizarDecimalProposta($_POST['desconto_global'] ?? 0);
             $parcelas            = max(1, min(12, (int)($_POST['parcelas'] ?? 3)));
-            $valor_entrada_input = (float)($_POST['valor_entrada'] ?? 0);
+            $valor_entrada_input = normalizarDecimalProposta($_POST['valor_entrada'] ?? 0);
+            validarDescontoProposta($tipo_desconto, $desconto_input);
 
             if (empty($cliente_id)) {
                 setMensagem('error', 'Cliente não selecionado.');
@@ -267,7 +290,7 @@ switch ($action) {
                 $desconto_valor = max(0, min($subtotal_geral, round($desconto_input, 2)));
                 $desconto_percentual = ($subtotal_geral > 0) ? round(($desconto_valor / $subtotal_geral) * 100, 2) : 0;
             } else {
-                $desconto_percentual = max(0, min(100, $desconto_input));
+                $desconto_percentual = $desconto_input;
                 $desconto_valor = round($subtotal_geral * ($desconto_percentual / 100), 2);
             }
             $valor_total = round($subtotal_geral - $desconto_valor, 2);
@@ -351,6 +374,252 @@ switch ($action) {
                 : $e->getMessage();
             setMensagem('error', 'Erro ao criar proposta: ' . $mensagem);
             redirecionar(APP_URL . 'comercial/nova');
+        }
+        break;
+
+    case 'atualizar':
+        $propostaId = (string)($_POST['id'] ?? '');
+        try {
+            if ($propostaId === '') {
+                throw new RuntimeException('ID da proposta não informado.');
+            }
+
+            $cargoAtual = getCargo();
+            $usuarioAtual = (string)($_SESSION['usuario_id'] ?? '');
+            if (!in_array($cargoAtual, ['ADMIN', 'VENDEDOR'], true)) {
+                throw new RuntimeException('Seu perfil não pode editar propostas.');
+            }
+
+            $escritorioId = financeiroResolverEscritorio($pdo, $_POST['escritorio_id'] ?? null);
+            if ($escritorioId === 'todos') {
+                throw new RuntimeException('Selecione o escritório da proposta.');
+            }
+
+            $clienteData = json_decode((string)($_POST['dados_cliente'] ?? '{}'), true);
+            $clienteId = (string)($clienteData['id'] ?? '');
+            $dadosServicos = json_decode((string)($_POST['dados_servicos_json'] ?? '[]'), true);
+            if ($clienteId === '' || !is_array($dadosServicos) || empty($dadosServicos)) {
+                throw new RuntimeException('Selecione o proprietário e pelo menos um serviço.');
+            }
+
+            $tipoDesconto = (string)($_POST['tipo_desconto'] ?? 'perc');
+            $descontoInput = normalizarDecimalProposta($_POST['desconto_global'] ?? 0);
+            $valorEntradaInput = normalizarDecimalProposta($_POST['valor_entrada'] ?? 0);
+            $parcelas = max(1, min(12, (int)($_POST['parcelas'] ?? 3)));
+            validarDescontoProposta($tipoDesconto, $descontoInput);
+
+            $formaPagamento = (string)($_POST['forma_pagamento'] ?? 'parcelado');
+            if (!in_array($formaPagamento, ['a_vista', 'parcelado', 'boleto', 'pix'], true)) {
+                $formaPagamento = 'parcelado';
+            }
+            $responsavelNome = trim(sanitizar($_POST['responsavel_fechamento_nome'] ?? ''));
+            $responsavelTelefone = trim(sanitizar($_POST['responsavel_fechamento_telefone'] ?? ''));
+            $observacoes = trim(sanitizar($_POST['observacoes'] ?? '')) ?: null;
+
+            $pdo->beginTransaction();
+
+            $stmtProposta = $pdo->prepare("
+                SELECT p.*, c.nome AS cliente_nome
+                FROM propostas p
+                INNER JOIN clientes c ON c.id = p.cliente_id
+                WHERE p.id = :id
+                FOR UPDATE
+            ");
+            $stmtProposta->execute([':id' => $propostaId]);
+            $proposta = $stmtProposta->fetch(PDO::FETCH_ASSOC);
+            if (!$proposta) {
+                throw new RuntimeException('Proposta não encontrada.');
+            }
+            if (($proposta['status'] ?? '') !== 'rascunho' || !empty($proposta['assinado'])) {
+                throw new RuntimeException('Somente propostas em rascunho e não assinadas podem ser editadas.');
+            }
+            if ($cargoAtual === 'VENDEDOR' && (string)$proposta['criado_por'] !== $usuarioAtual) {
+                throw new RuntimeException('O vendedor só pode editar propostas criadas por ele.');
+            }
+            if (!financeiroPodeAcessarEscritorio($pdo, (string)$proposta['escritorio_id'])) {
+                throw new RuntimeException('Sem acesso ao escritório responsável pela proposta.');
+            }
+
+            $stmtCliente = $pdo->prepare("
+                SELECT id, nome
+                FROM clientes
+                WHERE id = :id AND status = 'ATIVO' AND perfil = 'proprietario'
+                LIMIT 1
+            ");
+            $stmtCliente->execute([':id' => $clienteId]);
+            $cliente = $stmtCliente->fetch(PDO::FETCH_ASSOC);
+            if (!$cliente) {
+                throw new RuntimeException('O proprietário selecionado não está disponível.');
+            }
+
+            $stmtPrecosAntigos = $pdo->prepare("
+                SELECT embarcacao_id, servico_id, preco_aplicado
+                FROM propostas_servicos
+                WHERE proposta_id = :id
+            ");
+            $stmtPrecosAntigos->execute([':id' => $propostaId]);
+            $precosAntigos = [];
+            foreach ($stmtPrecosAntigos->fetchAll(PDO::FETCH_ASSOC) as $precoAntigo) {
+                $chave = (string)$precoAntigo['embarcacao_id'] . '|' . (string)$precoAntigo['servico_id'];
+                $precosAntigos[$chave] = round((float)$precoAntigo['preco_aplicado'], 2);
+            }
+
+            $stmtEmbarcacao = $pdo->prepare("
+                SELECT e.id
+                FROM embarcacoes e
+                INNER JOIN clientes_embarcacoes ce
+                    ON ce.embarcacao_id = e.id
+                   AND ce.cliente_id = :cliente
+                   AND ce.status = 'ATIVO'
+                WHERE e.id = :embarcacao AND e.ativo = 1
+                LIMIT 1
+            ");
+            $stmtServico = $pdo->prepare("
+                SELECT id, preco_padrao, ativo
+                FROM servicos
+                WHERE id = :id
+                LIMIT 1
+            ");
+
+            $subtotalGeral = 0.0;
+            $embarcacoesIds = [];
+            $servicosInserir = [];
+            $itensRecebidos = [];
+
+            foreach ($dadosServicos as $embarcacaoData) {
+                $embarcacaoId = (string)($embarcacaoData['embarcacao_id'] ?? '');
+                if ($embarcacaoId === '') {
+                    continue;
+                }
+                $stmtEmbarcacao->execute([':cliente' => $clienteId, ':embarcacao' => $embarcacaoId]);
+                if (!$stmtEmbarcacao->fetchColumn()) {
+                    throw new RuntimeException('Uma das embarcações não pertence ao proprietário selecionado.');
+                }
+
+                foreach (($embarcacaoData['servicos'] ?? []) as $servicoData) {
+                    $servicoId = (string)($servicoData['servico_id'] ?? '');
+                    $chave = $embarcacaoId . '|' . $servicoId;
+                    if ($servicoId === '' || isset($itensRecebidos[$chave])) {
+                        continue;
+                    }
+                    $itensRecebidos[$chave] = true;
+
+                    $stmtServico->execute([':id' => $servicoId]);
+                    $servico = $stmtServico->fetch(PDO::FETCH_ASSOC);
+                    if (!$servico || (empty($servico['ativo']) && !array_key_exists($chave, $precosAntigos))) {
+                        throw new RuntimeException('Um dos serviços selecionados não está disponível.');
+                    }
+
+                    $quantidade = max(1, min(99, (int)($servicoData['quantidade'] ?? 1)));
+                    $preco = array_key_exists($chave, $precosAntigos)
+                        ? $precosAntigos[$chave]
+                        : round((float)$servico['preco_padrao'], 2);
+                    $subtotalGeral += round($preco * $quantidade, 2);
+                    $embarcacoesIds[$embarcacaoId] = true;
+                    $servicosInserir[] = [
+                        'embarcacao_id' => $embarcacaoId,
+                        'servico_id' => $servicoId,
+                        'quantidade' => $quantidade,
+                        'preco_aplicado' => $preco,
+                    ];
+                }
+            }
+
+            if ($subtotalGeral <= 0 || empty($servicosInserir)) {
+                throw new RuntimeException('Nenhum serviço com preço válido foi selecionado.');
+            }
+
+            if ($tipoDesconto === 'valor') {
+                $descontoValor = min($subtotalGeral, $descontoInput);
+                $descontoPercentual = round(($descontoValor / $subtotalGeral) * 100, 2);
+            } else {
+                $descontoPercentual = $descontoInput;
+                $descontoValor = round($subtotalGeral * ($descontoPercentual / 100), 2);
+            }
+            $valorTotal = round($subtotalGeral - $descontoValor, 2);
+            $valorEntrada = round(min($valorTotal, $valorEntradaInput), 2);
+
+            $stmtAtualizar = $pdo->prepare("
+                UPDATE propostas
+                SET cliente_id = :cliente,
+                    responsavel_fechamento_nome = :responsavel_nome,
+                    responsavel_fechamento_telefone = :responsavel_telefone,
+                    parcelas = :parcelas,
+                    forma_pagamento = :forma_pagamento,
+                    valor_total = :valor_total,
+                    valor_entrada = :valor_entrada,
+                    desconto_percentual = :desconto_percentual,
+                    desconto_valor = :desconto_valor,
+                    observacoes = :observacoes,
+                    escritorio_id = :escritorio,
+                    updated_at = NOW()
+                WHERE id = :id AND status = 'rascunho' AND assinado = 0
+            ");
+            $stmtAtualizar->execute([
+                ':cliente' => $clienteId,
+                ':responsavel_nome' => $responsavelNome ?: null,
+                ':responsavel_telefone' => $responsavelTelefone ?: null,
+                ':parcelas' => $parcelas,
+                ':forma_pagamento' => $formaPagamento,
+                ':valor_total' => $valorTotal,
+                ':valor_entrada' => $valorEntrada,
+                ':desconto_percentual' => $descontoPercentual,
+                ':desconto_valor' => $descontoValor,
+                ':observacoes' => $observacoes,
+                ':escritorio' => $escritorioId,
+                ':id' => $propostaId,
+            ]);
+
+            $pdo->prepare("DELETE FROM propostas_servicos WHERE proposta_id = :id")
+                ->execute([':id' => $propostaId]);
+            $pdo->prepare("DELETE FROM propostas_embarcacoes WHERE proposta_id = :id")
+                ->execute([':id' => $propostaId]);
+
+            $stmtInserirEmbarcacao = $pdo->prepare("
+                INSERT INTO propostas_embarcacoes (id, proposta_id, embarcacao_id)
+                VALUES (UUID(), :proposta, :embarcacao)
+            ");
+            foreach (array_keys($embarcacoesIds) as $embarcacaoId) {
+                $stmtInserirEmbarcacao->execute([
+                    ':proposta' => $propostaId,
+                    ':embarcacao' => $embarcacaoId,
+                ]);
+            }
+
+            $stmtInserirServico = $pdo->prepare("
+                INSERT INTO propostas_servicos
+                    (id, proposta_id, servico_id, embarcacao_id, preco_aplicado, quantidade)
+                VALUES
+                    (UUID(), :proposta, :servico, :embarcacao, :preco, :quantidade)
+            ");
+            foreach ($servicosInserir as $servico) {
+                $stmtInserirServico->execute([
+                    ':proposta' => $propostaId,
+                    ':servico' => $servico['servico_id'],
+                    ':embarcacao' => $servico['embarcacao_id'],
+                    ':preco' => $servico['preco_aplicado'],
+                    ':quantidade' => $servico['quantidade'],
+                ]);
+            }
+
+            $pdo->commit();
+            log_atividade(
+                'proposta_editada',
+                "Proposta {$proposta['numero']} editada. Total atualizado: R$ "
+                . number_format($valorTotal, 2, ',', '.')
+            );
+            setMensagem('success', "Proposta {$proposta['numero']} atualizada com sucesso!");
+            redirecionar(APP_URL . 'comercial?proposta=' . urlencode($propostaId));
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Erro ao editar proposta ' . $propostaId . ': ' . $e->getMessage());
+            $mensagem = $e instanceof PDOException
+                ? 'Não foi possível salvar as alterações da proposta.'
+                : $e->getMessage();
+            setMensagem('error', $mensagem);
+            redirecionar(APP_URL . 'comercial/nova?id=' . urlencode($propostaId));
         }
         break;
 

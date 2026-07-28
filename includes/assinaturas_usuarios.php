@@ -243,6 +243,7 @@ function assinaturaAssinarRelatorio(PDO $pdo,array $input): array
     $sigAbs=__DIR__.'/../'.ltrim($resp['assinatura_arquivo'],'/\\');
     $ctx=[
         'documento_tipo'=>'RELATORIO',
+        'tipo_validacao'=>'RELATORIO_ASSINADO',
         'token_validacao'=>$token,
         'responsavel_nome'=>$resp['nome_completo'],
         'responsavel_cpf_cnpj'=>$resp['cpf_cnpj'],
@@ -319,10 +320,14 @@ function assinaturaAssinarRelatorio(PDO $pdo,array $input): array
         $cargo==='ADMIN'?'relatorio_assinatura_substituta':'relatorio_assinado_vistoriador',
         "Relatorio ID {$id}; responsavel tecnico {$resp['usuario_id']}; executor {$usuario}."
     );
-    $proximaUrl=!empty($v['agendamento_id'])
-        ? APP_URL.'documentacao/novo_certificado?agendamento_id='.urlencode((string)$v['agendamento_id'])
-            .'&vistoria_id='.urlencode($id)
-        : APP_URL.'vistorias/relatorio?vistoria_id='.urlencode($id);
+    if (($v['status'] ?? '') === 'APROVADA_COM_EXIGENCIAS') {
+        $proximaUrl = APP_URL . 'dashboard#retornos-as';
+    } else {
+        $proximaUrl=!empty($v['agendamento_id'])
+            ? APP_URL.'documentacao/novo_certificado?agendamento_id='.urlencode((string)$v['agendamento_id'])
+                .'&vistoria_id='.urlencode($id)
+            : APP_URL.'vistorias/relatorio?vistoria_id='.urlencode($id);
+    }
     return [
         'token'=>$token,
         'validation_url'=>APP_URL.'validar-assinatura/'.$token,

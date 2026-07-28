@@ -973,7 +973,7 @@ function obterRelatorioVigenteAgendamento(PDO $pdo, string $agendamentoId): ?arr
     $stmt = $pdo->prepare("SELECT * FROM vistorias WHERE agendamento_id = :agendamento_id ORDER BY criado_em DESC, id DESC LIMIT 1");
     $stmt->execute([':agendamento_id' => $agendamentoId]);
     $relatorio = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-    return $relatorio ? obterRelatorioVigenteCadeia($pdo, (string)$relatorio['id']) : null;
+    return $relatorio ? obterRelatorioCertificavelCadeia($pdo, (string)$relatorio['id']) : null;
 }
 
 /** Retorna a raiz imutavel da cadeia de relatorios. */
@@ -1012,6 +1012,24 @@ function obterRelatorioVigenteCadeia(PDO $pdo, string $vistoriaId): ?array
     return $atual;
 }
 
+/**
+ * Um retorno comum em elaboracao nao substitui antecipadamente o ultimo
+ * relatorio aprovado e assinado. Retorno A/S continua impeditivo.
+ */
+function obterRelatorioCertificavelCadeia(PDO $pdo, string $vistoriaId): ?array
+{
+    $cadeia = obterCadeiaRelatorios($pdo, $vistoriaId);
+    if (!$cadeia) return null;
+    $ultimoCertificavel = null;
+    foreach ($cadeia as $relatorio) {
+        if (in_array((string)($relatorio['status'] ?? ''), ['APROVADA','APROVADA_COM_EXIGENCIAS'], true)
+            && (string)($relatorio['assinatura_status'] ?? '') === 'ASSINADO') {
+            $ultimoCertificavel = $relatorio;
+        }
+    }
+    return $ultimoCertificavel ?: $cadeia[count($cadeia) - 1];
+}
+
 /** Lista a cadeia da raiz ao relatorio vigente. */
 function obterCadeiaRelatorios(PDO $pdo, string $vistoriaId): array
 {
@@ -1038,6 +1056,15 @@ function relatorioNumerosReferenciaCertificado(PDO $pdo, string $vistoriaId): st
 {
     $cadeia = obterCadeiaRelatorios($pdo, $vistoriaId);
     if (!$cadeia) return '';
+    $certificavel = obterRelatorioCertificavelCadeia($pdo, $vistoriaId);
+    if ($certificavel) {
+        foreach ($cadeia as $indice => $relatorio) {
+            if ((string)$relatorio['id'] === (string)$certificavel['id']) {
+                $cadeia = array_slice($cadeia, 0, $indice + 1);
+                break;
+            }
+        }
+    }
     $primeiro = trim((string)($cadeia[0]['numero'] ?? ''));
     $ultimo = trim((string)($cadeia[count($cadeia) - 1]['numero'] ?? ''));
     if ($ultimo === '' || $ultimo === $primeiro) return $primeiro;
@@ -1143,13 +1170,20 @@ function resolverStatusDecisaoRelatorio(int $pendentes, int $pendentesAs): strin
     return $pendentes > 0 ? 'APROVADA_COM_EXIGENCIAS' : 'APROVADA';
 }
 
-function criarPendenciaRetornoAS(PDO $pdo, string $relatorioOrigemId, ?string $usuarioId): string
+function criarPendenciaRetorno(PDO $pdo, string $relatorioOrigemId, ?string $usuarioId, string $tipo = 'AS'): string
 {
+    $tipo = strtoupper(trim($tipo));
+    if (!in_array($tipo, ['AS','EXIGENCIAS'], true)) {
+        throw new InvalidArgumentException('Tipo de retorno invalido.');
+    }
     $sufixoLock = $pdo->inTransaction() ? ' FOR UPDATE' : '';
-    $stmt = $pdo->prepare('SELECT id,status FROM vistoria_retornos WHERE relatorio_origem_id=:id LIMIT 1' . $sufixoLock);
+    $stmt = $pdo->prepare('SELECT id,status,tipo FROM vistoria_retornos WHERE relatorio_origem_id=:id LIMIT 1' . $sufixoLock);
     $stmt->execute([':id' => $relatorioOrigemId]);
     $retorno = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($retorno) {
+        if ((string)$retorno['tipo'] !== $tipo) {
+            throw new RuntimeException('O relatorio ja possui retorno de outro tipo.');
+        }
         if ($retorno['status'] === 'CANCELADO') {
             $reabrir = $pdo->prepare("UPDATE vistoria_retornos SET status='PENDENTE_AGENDAMENTO',
                 agendamento_id=NULL,relatorio_resultado_id=NULL,motivo_cancelamento=NULL,
@@ -1171,15 +1205,297 @@ function criarPendenciaRetornoAS(PDO $pdo, string $relatorioOrigemId, ?string $u
 
     $id = gerarUUID();
     $stmt = $pdo->prepare("INSERT INTO vistoria_retornos
-        (id,relatorio_origem_id,status,criado_por,vistoriador_origem_id)
-        VALUES (:id,:origem,'PENDENTE_AGENDAMENTO',:usuario,:vistoriador)");
+        (id,relatorio_origem_id,tipo,status,criado_por,vistoriador_origem_id)
+        VALUES (:id,:origem,:tipo,'PENDENTE_AGENDAMENTO',:usuario,:vistoriador)");
     $stmt->execute([
         ':id' => $id,
         ':origem' => $relatorioOrigemId,
+        ':tipo' => $tipo,
         ':usuario' => $usuarioId ?: null,
         ':vistoriador' => $vistoriadorOrigemId,
     ]);
     return $id;
+}
+
+function criarPendenciaRetornoAS(PDO $pdo, string $relatorioOrigemId, ?string $usuarioId): string
+{
+    return criarPendenciaRetorno($pdo, $relatorioOrigemId, $usuarioId, 'AS');
+}
+
+function blocoExigenciaNormalizado(?string $bloco): string
+{
+    $bloco = trim((string)$bloco);
+    return $bloco !== '' ? $bloco : 'flutuando';
+}
+
+/**
+ * Calcula a ordem exibida sem alterar o banco. A sequência sempre reinicia
+ * dentro de cada seção e itens herdados precedem os inseridos no relatório.
+ */
+function numerarExigenciasPorSecao(array $exigencias): array
+{
+    $ordemBlocos = ['seco' => 0, 'flutuando' => 1, 'borda_livre' => 2, 'arqueacao' => 3];
+    usort($exigencias, static function (array $a, array $b) use ($ordemBlocos): int {
+        $blocoA = blocoExigenciaNormalizado($a['bloco_vistoria'] ?? null);
+        $blocoB = blocoExigenciaNormalizado($b['bloco_vistoria'] ?? null);
+        $cmp = ($ordemBlocos[$blocoA] ?? 99) <=> ($ordemBlocos[$blocoB] ?? 99);
+        if ($cmp !== 0) return $cmp;
+        $cmp = strcmp($blocoA, $blocoB);
+        if ($cmp !== 0) return $cmp;
+
+        $herdadaA = !empty($a['exigencia_origem_id']) || (int)($a['numero_origem'] ?? 0) > 0;
+        $herdadaB = !empty($b['exigencia_origem_id']) || (int)($b['numero_origem'] ?? 0) > 0;
+        if ($herdadaA !== $herdadaB) return $herdadaA ? -1 : 1;
+        if ($herdadaA) {
+            $cmp = ((int)($a['numero_origem'] ?? PHP_INT_MAX))
+                <=> ((int)($b['numero_origem'] ?? PHP_INT_MAX));
+            if ($cmp !== 0) return $cmp;
+        }
+        $cmp = ((int)($a['ordem'] ?? 0)) <=> ((int)($b['ordem'] ?? 0));
+        return $cmp !== 0 ? $cmp : strcmp((string)($a['id'] ?? ''), (string)($b['id'] ?? ''));
+    });
+
+    $sequencias = [];
+    foreach ($exigencias as &$exigencia) {
+        $bloco = blocoExigenciaNormalizado($exigencia['bloco_vistoria'] ?? null);
+        $sequencias[$bloco] = ($sequencias[$bloco] ?? 0) + 1;
+        $exigencia['numero_sequencial_calculado'] = $sequencias[$bloco];
+    }
+    unset($exigencia);
+    return $exigencias;
+}
+
+function calcularNumerosOrigemExigencias(PDO $pdo, array $exigencias): array
+{
+    $idsOrigem = array_values(array_unique(array_filter(array_column($exigencias, 'exigencia_origem_id'))));
+    if (!$idsOrigem) return $exigencias;
+    $marcadores = implode(',', array_fill(0, count($idsOrigem), '?'));
+    $stmtRelatorios = $pdo->prepare("SELECT DISTINCT vistoria_id
+        FROM vistoria_exigencias WHERE id IN ({$marcadores})");
+    $stmtRelatorios->execute($idsOrigem);
+    $numeroPorOrigem = [];
+    foreach ($stmtRelatorios->fetchAll(PDO::FETCH_COLUMN) as $relatorioOrigemId) {
+        $stmt = $pdo->prepare("SELECT * FROM vistoria_exigencias
+            WHERE vistoria_id=:id AND status_item<>'cumprida'");
+        $stmt->execute([':id' => $relatorioOrigemId]);
+        foreach (numerarExigenciasPorSecao($stmt->fetchAll(PDO::FETCH_ASSOC)) as $origem) {
+            $numeroPorOrigem[(string)$origem['id']] = (int)$origem['numero_sequencial_calculado'];
+        }
+    }
+    foreach ($exigencias as &$exigencia) {
+        $origemId = (string)($exigencia['exigencia_origem_id'] ?? '');
+        if ($origemId !== '' && isset($numeroPorOrigem[$origemId])) {
+            $exigencia['numero_origem'] = $numeroPorOrigem[$origemId];
+        }
+    }
+    unset($exigencia);
+    return $exigencias;
+}
+
+function recalcularSequencialExigenciasRelatorio(PDO $pdo, string $vistoriaId): void
+{
+    $stmtRelatorio = $pdo->prepare("SELECT status FROM vistorias WHERE id=:id LIMIT 1");
+    $stmtRelatorio->execute([':id' => $vistoriaId]);
+    $status = (string)$stmtRelatorio->fetchColumn();
+    if (!in_array($status, ['PENDENTE', 'AGUARDANDO_APROVACAO'], true)) return;
+
+    $stmtAssinado = $pdo->prepare("SELECT 1 FROM documento_assinaturas
+        WHERE documento_tipo='RELATORIO' AND documento_id=:id AND status='ASSINADO' LIMIT 1");
+    $stmtAssinado->execute([':id' => $vistoriaId]);
+    if ($stmtAssinado->fetchColumn()) return;
+
+    $stmt = $pdo->prepare("SELECT * FROM vistoria_exigencias WHERE vistoria_id=:id");
+    $stmt->execute([':id' => $vistoriaId]);
+    $exigencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!$exigencias) return;
+
+    // O número de origem é a posição efetiva no bloco do relatório
+    // imediatamente anterior, independentemente da numeração global legada.
+    $exigenciasComOrigem = calcularNumerosOrigemExigencias($pdo, $exigencias);
+    $atualizarOrigem = $pdo->prepare("UPDATE vistoria_exigencias
+        SET numero_origem=:numero WHERE id=:id AND vistoria_id=:vistoria");
+    foreach ($exigenciasComOrigem as $indice => $exigenciaCalculada) {
+        if (!empty($exigenciaCalculada['exigencia_origem_id'])
+            && (int)($exigenciaCalculada['numero_origem'] ?? 0) > 0) {
+            $exigencias[$indice]['numero_origem'] = (int)$exigenciaCalculada['numero_origem'];
+            $atualizarOrigem->execute([
+                ':numero' => $exigenciaCalculada['numero_origem'],
+                ':id' => $exigenciaCalculada['id'],
+                ':vistoria' => $vistoriaId,
+            ]);
+        }
+    }
+
+    $pdo->prepare("UPDATE vistoria_exigencias SET numero_sequencial=NULL WHERE vistoria_id=:id")
+        ->execute([':id' => $vistoriaId]);
+    $ativas = array_values(array_filter(
+        $exigencias,
+        static fn(array $item): bool => (string)($item['status_item'] ?? '') !== 'cumprida'
+    ));
+    $update = $pdo->prepare("UPDATE vistoria_exigencias
+        SET numero_sequencial=:numero WHERE id=:id AND vistoria_id=:vistoria");
+    foreach (numerarExigenciasPorSecao($ativas) as $exigencia) {
+        $update->execute([
+            ':numero' => $exigencia['numero_sequencial_calculado'],
+            ':id' => $exigencia['id'],
+            ':vistoria' => $vistoriaId,
+        ]);
+    }
+}
+
+function rotuloSecaoExigencia(string $bloco): string
+{
+    return [
+        'seco' => 'VISTORIA EM SECO',
+        'flutuando' => 'VISTORIA FLUTUANDO',
+        'borda_livre' => 'VISTORIA DE BORDA LIVRE',
+        'arqueacao' => 'VISTORIA DE ARQUEAÇÃO',
+    ][blocoExigenciaNormalizado($bloco)] ?? mb_strtoupper(str_replace('_', ' ', $bloco));
+}
+
+function formatarListaNumerosRelatorio(array $numeros): string
+{
+    $numeros = array_values($numeros);
+    if (count($numeros) <= 1) return (string)($numeros[0] ?? '');
+    $ultimo = array_pop($numeros);
+    return implode(', ', $numeros) . ' e ' . $ultimo;
+}
+
+/**
+ * Monta o histórico comparativo completo da cadeia para a tabela de
+ * observações. Não usa texto_observacoes_geradas nem modifica relatórios.
+ */
+function construirHistoricoComparativoRelatorio(PDO $pdo, string $vistoriaId): string
+{
+    $cadeia = obterCadeiaRelatorios($pdo, $vistoriaId);
+    $partes = [];
+    foreach ($cadeia as $indice => $relatorio) {
+        $stmt = $pdo->prepare("SELECT * FROM vistoria_exigencias WHERE vistoria_id=:id");
+        $stmt->execute([':id' => $relatorio['id']]);
+        $itens = numerarExigenciasPorSecao(
+            calcularNumerosOrigemExigencias($pdo, $stmt->fetchAll(PDO::FETCH_ASSOC))
+        );
+        if (!$itens) continue;
+
+        $porBloco = [];
+        foreach ($itens as $item) {
+            $porBloco[blocoExigenciaNormalizado($item['bloco_vistoria'] ?? null)][] = $item;
+        }
+        $cabecalho = ($relatorio['numero'] ?: $relatorio['id'])
+            . (!empty($relatorio['data_vistoria'])
+                ? ' - ' . date('d/m/Y', strtotime($relatorio['data_vistoria']))
+                : '');
+        $linhasRelatorio = [$cabecalho];
+        foreach ($porBloco as $bloco => $itensBloco) {
+            $grupos = ['cumprida' => [], 'transcrita' => [], 'reescrita' => [], 'inserida' => [], 'pendente' => []];
+            $relatorioEmRascunho = (string)($relatorio['status'] ?? '') === 'PENDENTE';
+            foreach ($itensBloco as $item) {
+                $statusItem = (string)($item['status_item'] ?? 'pendente');
+                $numeroOrigem = (int)($item['numero_origem'] ?? 0);
+                $numeroAtivo = (int)($item['numero_sequencial_calculado'] ?? 0);
+                $herdada = !empty($item['exigencia_origem_id']);
+                if ($statusItem === 'cumprida') {
+                    $grupos['cumprida'][] = $numeroOrigem ?: $numeroAtivo;
+                } elseif ($statusItem === 'cumprida_parcial_reescrita') {
+                    $grupos['reescrita'][] = $numeroOrigem ?: $numeroAtivo;
+                } elseif ($statusItem === 'nao_cumprida_transcrita') {
+                    $grupos['transcrita'][] = $numeroOrigem ?: $numeroAtivo;
+                } elseif (!$herdada || $statusItem === 'inserida' || $indice === 0) {
+                    $grupos['inserida'][] = $numeroAtivo;
+                } elseif (!$relatorioEmRascunho) {
+                    $grupos['transcrita'][] = $numeroOrigem ?: $numeroAtivo;
+                } else {
+                    $grupos['pendente'][] = $numeroOrigem ?: $numeroAtivo;
+                }
+            }
+            foreach ($grupos as &$numeros) {
+                $numeros = array_values(array_unique(array_filter(array_map('intval', $numeros))));
+                sort($numeros, SORT_NUMERIC);
+            }
+            unset($numeros);
+            $linhas = [];
+            if ($grupos['cumprida']) {
+                $lista = formatarListaNumerosRelatorio($grupos['cumprida']);
+                $linhas[] = count($grupos['cumprida']) === 1
+                    ? "- A exigência n.º {$lista} foi CUMPRIDA."
+                    : "- As exigências n.º {$lista} foram CUMPRIDAS.";
+            }
+            if ($grupos['transcrita']) {
+                $lista = formatarListaNumerosRelatorio($grupos['transcrita']);
+                $linhas[] = count($grupos['transcrita']) === 1
+                    ? "- A exigência n.º {$lista} não foi cumprida e foi TRANSCRITA neste relatório."
+                    : "- As exigências n.º {$lista} não foram cumpridas e foram TRANSCRITAS neste relatório.";
+            }
+            if ($grupos['reescrita']) {
+                $lista = formatarListaNumerosRelatorio($grupos['reescrita']);
+                $linhas[] = count($grupos['reescrita']) === 1
+                    ? "- A exigência n.º {$lista} foi parcialmente cumprida e REESCRITA neste relatório."
+                    : "- As exigências n.º {$lista} foram parcialmente cumpridas e REESCRITAS neste relatório.";
+            }
+            if ($grupos['inserida']) {
+                $lista = formatarListaNumerosRelatorio($grupos['inserida']);
+                $linhas[] = count($grupos['inserida']) === 1
+                    ? "- A exigência n.º {$lista} foi INSERIDA nesta ocasião."
+                    : "- As exigências n.º {$lista} foram INSERIDAS nesta ocasião.";
+            }
+            if ($grupos['pendente']) {
+                $lista = formatarListaNumerosRelatorio($grupos['pendente']);
+                $linhas[] = count($grupos['pendente']) === 1
+                    ? "- A exigência n.º {$lista} está PENDENTE DE CLASSIFICAÇÃO."
+                    : "- As exigências n.º {$lista} estão PENDENTES DE CLASSIFICAÇÃO.";
+            }
+            if ($linhas) {
+                $linhasRelatorio[] = rotuloSecaoExigencia($bloco);
+                array_push($linhasRelatorio, ...$linhas);
+            }
+        }
+        if (count($linhasRelatorio) > 1) $partes[] = implode("\n", $linhasRelatorio);
+    }
+    return implode("\n\n", $partes);
+}
+
+function avaliarIntegridadeAssinaturaPublica(array $assinatura, string $raizAplicacao): array
+{
+    if ((string)($assinatura['status'] ?? '') === 'CANCELADO') {
+        return [
+            'http' => 410,
+            'estado' => 'cancelado',
+            'titulo' => 'Assinatura cancelada',
+            'mensagem' => 'A assinatura eletrônica deste documento foi cancelada e não deve ser considerada válida.',
+            'hash_calculado' => false,
+        ];
+    }
+
+    $raiz = realpath($raizAplicacao);
+    $relativo = ltrim(str_replace(['../', '..\\'], '', (string)($assinatura['caminho_pdf_assinado'] ?? '')), '/\\');
+    $arquivo = $raiz !== false ? realpath($raiz . DIRECTORY_SEPARATOR . $relativo) : false;
+    $dentroDaRaiz = $arquivo !== false && $raiz !== false
+        && ($arquivo === $raiz || str_starts_with($arquivo, $raiz . DIRECTORY_SEPARATOR));
+    $hashCalculado = $dentroDaRaiz && is_file($arquivo) ? hash_file('sha256', $arquivo) : false;
+    $hashEsperado = strtolower(trim((string)($assinatura['hash_pdf_assinado'] ?? '')));
+    $integro = $hashCalculado !== false
+        && $hashEsperado !== ''
+        && hash_equals($hashEsperado, strtolower((string)$hashCalculado));
+
+    if ((string)($assinatura['status'] ?? '') !== 'ASSINADO' || !$integro) {
+        return [
+            'http' => 409,
+            'estado' => 'falha',
+            'titulo' => 'Falha de integridade',
+            'mensagem' => $arquivo === false || !$dentroDaRaiz || !is_file((string)$arquivo)
+                ? 'O arquivo oficial assinado não está disponível para conferência.'
+                : 'O conteúdo do arquivo oficial não corresponde ao hash registrado na assinatura.',
+            'hash_calculado' => $hashCalculado,
+        ];
+    }
+
+    return [
+        'http' => 200,
+        'estado' => 'valido',
+        'titulo' => 'Documento íntegro e assinado',
+        'mensagem' => 'A assinatura e o conteúdo do arquivo oficial foram verificados com sucesso.',
+        'hash_calculado' => $hashCalculado,
+    ];
 }
 
 function concluirRetornoDoRelatorio(PDO $pdo, string $relatorioId): void
@@ -1240,7 +1556,7 @@ function encaminharRelatorioParaRetornoAS(
     return criarPendenciaRetornoAS($pdo, $id, $usuarioId);
 }
 
-/** Cria, uma unica vez, o relatorio numerado do agendamento de retorno A/S. */
+/** Cria, uma unica vez, o relatorio numerado do agendamento de retorno. */
 function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, string $usuarioId): ?string
 {
     $origemId = trim((string)($agendamento['relatorio_origem_id'] ?? ''));
@@ -1285,15 +1601,27 @@ function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, stri
     $stmt = $pdo->prepare('SELECT * FROM vistorias WHERE id=:id FOR UPDATE');
     $stmt->execute([':id' => $origemId]);
     $origem = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$origem || (string)$origem['status'] !== 'RETORNO_AS') {
-        throw new RuntimeException('O relatorio de origem nao esta encaminhado para retorno A/S.');
+    $tipoRetorno = (string)($retorno['tipo'] ?? 'AS');
+    $statusOrigemValido = $origem && ($tipoRetorno === 'AS'
+        ? (string)$origem['status'] === 'RETORNO_AS'
+        : (string)$origem['status'] === 'APROVADA_COM_EXIGENCIAS');
+    if (!$statusOrigemValido) {
+        throw new RuntimeException('O relatorio de origem nao esta disponivel para este tipo de retorno.');
     }
     $vigente = obterRelatorioVigenteCadeia($pdo, $origemId);
     if (!$vigente || $vigente['id'] !== $origemId) {
         throw new RuntimeException('O relatorio de origem ja possui um retorno mais recente.');
     }
     if (!relatorioPossuiASPendente($pdo, $origemId)) {
-        throw new RuntimeException('O relatorio de origem nao possui A/S pendente.');
+        if ($tipoRetorno === 'AS') {
+            throw new RuntimeException('O relatorio de origem nao possui A/S pendente.');
+        }
+    } elseif ($tipoRetorno === 'EXIGENCIAS') {
+        throw new RuntimeException('Relatorio com A/S deve usar o fluxo impeditivo.');
+    }
+    if ($tipoRetorno === 'EXIGENCIAS'
+        && !relatorioPossuiExigenciaComumPendenteNaRaiz($pdo, $origemId)) {
+        throw new RuntimeException('O relatorio de origem nao possui exigencia comum pendente.');
     }
 
     $novoId = gerarUUID();
@@ -1310,7 +1638,7 @@ function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, stri
         VALUES
         (:id,:numero,:embarcacao,:pessoa,:armador,:operador,:agendamento,
          :anterior,'CUMPRIMENTO_EXIGENCIAS',:data,:prazo,
-         :observacoes,'PENDENTE',:usuario)");
+         NULL,'PENDENTE',:usuario)");
     $stmt->execute([
         ':id' => $novoId,
         ':numero' => $numero,
@@ -1322,16 +1650,16 @@ function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, stri
         ':anterior' => $origemId,
         ':data' => $agendamento['data_vistoria'],
         ':prazo' => $origem['prazo_exigencias_dias'],
-        ':observacoes' => 'Cumprimento das exigencias pendentes do relatorio ' . ($origem['numero'] ?: $origemId)
-            . ' (retorno A/S)',
         ':usuario' => $usuarioId,
     ]);
 
     $stmt = $pdo->prepare("INSERT INTO vistoria_exigencias
-        (id,vistoria_id,catalogo_id,bloco_vistoria,ordem,item,descricao,conforme,
-         observacao,item_normam,vencimento,antes_de_suspender,status_item,exigencia_origem_id)
-        SELECT UUID(),:novo,catalogo_id,bloco_vistoria,ordem,item,descricao,'nao',
-               observacao,item_normam,vencimento,antes_de_suspender,'pendente',id
+        (id,vistoria_id,catalogo_id,bloco_vistoria,ordem,numero_origem,numero_sequencial,
+         item,descricao,descricao_reescrita,conforme,observacao,item_normam,vencimento,
+         antes_de_suspender,status_item,exigencia_origem_id)
+        SELECT UUID(),:novo,catalogo_id,bloco_vistoria,ordem,
+               COALESCE(numero_sequencial,ordem),NULL,item,descricao,descricao_reescrita,'nao',
+               NULL,item_normam,vencimento,antes_de_suspender,'pendente',id
         FROM vistoria_exigencias
         WHERE vistoria_id=:origem
           AND conforme='nao' AND status_item<>'cumprida'");
@@ -1339,6 +1667,7 @@ function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, stri
     if ($stmt->rowCount() === 0) {
         throw new RuntimeException('Nenhuma exigencia pendente foi encontrada para o retorno.');
     }
+    recalcularSequencialExigenciasRelatorio($pdo, $novoId);
     $stmtRetorno = $pdo->prepare("UPDATE vistoria_retornos
         SET status='AGENDADO',agendamento_id=:agendamento,relatorio_resultado_id=:relatorio
         WHERE id=:id
@@ -1406,14 +1735,27 @@ function avaliarLiberacaoCertificacao(PDO $pdo, string $vistoriaId): array
         return ['permitido' => false, 'mensagem' => 'Relatorio invalido ou sem agendamento vinculado.', 'vistoria_id' => null];
     }
 
-    $vigente = obterRelatorioVigenteCadeia($pdo, $vistoriaId);
-    if (!$vigente) {
+    $ultimoCadeia = obterRelatorioVigenteCadeia($pdo, $vistoriaId);
+    if (!$ultimoCadeia) {
         return ['permitido' => false, 'mensagem' => 'Nenhum relatorio vigente foi encontrado.', 'vistoria_id' => null];
+    }
+    if ((string)$ultimoCadeia['status'] === 'RETORNO_AS') {
+        return [
+            'permitido' => false,
+            'mensagem' => 'A certificacao esta bloqueada: o relatorio vigente exige retorno A/S.',
+            'vistoria_id' => $ultimoCadeia['id'],
+            'status' => $ultimoCadeia['status'],
+            'possui_as' => true,
+        ];
+    }
+    $vigente = obterRelatorioCertificavelCadeia($pdo, $vistoriaId);
+    if (!$vigente) {
+        return ['permitido' => false, 'mensagem' => 'Nenhum relatorio certificavel foi encontrado.', 'vistoria_id' => null];
     }
     if ($vigente['id'] !== $vistoriaId) {
         return [
             'permitido' => false,
-            'mensagem' => 'O relatorio selecionado foi substituido. Selecione o relatorio vigente da cadeia.',
+            'mensagem' => 'Selecione o ultimo relatorio aprovado e assinado da cadeia.',
             'vistoria_id' => $vigente['id'],
             'status' => $vigente['status'],
         ];

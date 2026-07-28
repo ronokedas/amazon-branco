@@ -122,14 +122,39 @@ assertAprovacao(str_contains($relatorio, 'Assinar pelo vistoriador'), 'A revisao
 assertAprovacao(str_contains($relatorio, 'id="modalAssinaturaSubstituta"'), 'A assinatura substituta nao abre em modal no relatorio.');
 assertAprovacao(str_contains($relatorio, "document.querySelectorAll('.js-assinar-substituto')"), 'O botao de assinatura substituta nao aciona o modal local.');
 assertAprovacao(!str_contains($relatorio, 'href="<?= APP_URL ?>minhas-assinaturas" class="btn btn-warning"'), 'O botao de assinatura ainda redireciona para Minhas assinaturas.');
+assertAprovacao(str_contains($relatorio, 'Gerar certificados ap&oacute;s assinar'), 'O fluxo aprovado nao destaca a proxima etapa de certificados.');
+assertAprovacao(str_contains($relatorio, 'Reagendar exig&ecirc;ncias no painel'), 'A aprovacao com exigencias nao destaca o reagendamento.');
+assertAprovacao(str_contains($relatorio, "modalAssinaturaSubstituta.style.display = 'none'"), 'O modal nao fecha automaticamente depois da assinatura.');
 assertAprovacao(str_contains($assinaturas, "'proxima_url'=>\$proximaUrl"), 'A assinatura nao devolve o destino da selecao de certificado.');
+assertAprovacao(str_contains($assinaturas, "APP_URL . 'dashboard#retornos-as'"), 'A assinatura de relatorio com exigencias nao retorna ao painel de reagendamento.');
+assertAprovacao(
+    str_contains($actions, "':aguarda_assinatura_status'")
+    && str_contains($actions, "':aguarda_assinatura_em'")
+    && str_contains($actions, "':aguarda_assinatura_responsavel'"),
+    'A aprovacao reutiliza placeholder nativo e pode falhar com HY093.'
+);
+assertAprovacao(
+    str_contains($actions, "\$status_vistoria === 'APROVADA_COM_EXIGENCIAS'")
+    && str_contains($actions, "'EXIGENCIAS'\n                );"),
+    'A aprovacao com exigencias nao cria a pendencia de retorno na mesma transacao.'
+);
 assertAprovacao(str_contains($assinaturas, "'vistoria_id'=>\$id"), 'A assinatura nao preserva o ID do relatorio.');
 assertAprovacao(str_contains($assinaturas, "['APROVADA','APROVADA_COM_EXIGENCIAS']"), 'A assinatura nao exige aprovacao administrativa previa.');
 assertAprovacao(str_contains($assinaturas, "assinaturaResponsavelUsuario(\$pdo,(string)\$v['vistoriador_id'],true)"), 'A assinatura substituta nao usa o perfil do vistoriador atribuido.');
 assertAprovacao(str_contains($assinaturas, "':usuario'=>\$usuario"), 'A assinatura nao registra separadamente o usuario executor.');
 assertAprovacao(str_contains($assinaturas, "UPDATE ordens_servico SET status='executado'") && str_contains($assinaturas, "UPDATE agendamentos SET status='concluido'"), 'A assinatura nao conclui o fluxo operacional aprovado.');
 assertAprovacao(str_contains($pdfAssinatura, 'Aprovação administrativa:') && str_contains($pdfAssinatura, 'Assinatura aplicada por:'), 'O PDF nao separa aprovador administrativo e executor da assinatura.');
-assertAprovacao(str_contains($validacaoAssinatura, 'executor.nome executor_nome') && str_contains($validacaoAssinatura, 'aprovador.nome aprovador_nome'), 'A validacao publica nao identifica aprovador e executor.');
+assertAprovacao(
+    str_contains($validacaoAssinatura, 'executor.nome AS executor_nome')
+    && str_contains($validacaoAssinatura, 'aprovador.nome AS aprovador_nome'),
+    'A validacao publica nao identifica aprovador e executor.'
+);
+assertAprovacao(
+    str_contains($validacaoAssinatura, 'avaliarIntegridadeAssinaturaPublica')
+    && str_contains($funcoes, "hash_file('sha256'"),
+    'A validacao publica nao recalcula a integridade do arquivo.'
+);
+assertAprovacao(!str_contains($validacaoAssinatura, 'embarcacao_nome') && !str_contains($validacaoAssinatura, 'cliente_nome'), 'A validacao publica expoe dados do cliente ou embarcacao.');
 assertAprovacao(str_contains($selecaoCertificado, "\$_GET['vistoria_id']"), 'A selecao de certificado nao recebe o ID do relatorio.');
 assertAprovacao(str_contains($selecaoCertificado, '&vistoria_id=<?= urlencode($vistoria_id) ?>'), 'A escolha do modelo nao encaminha o ID do relatorio ao wizard.');
 assertAprovacao(str_contains($wizard, "\$_GET['vistoria_id']"), 'O wizard nao fixa o relatorio recebido na URL.');

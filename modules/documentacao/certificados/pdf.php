@@ -79,6 +79,7 @@ if (!file_exists($autoload_path)) {
     die("Autoloader do Composer não encontrado.");
 }
 require_once $autoload_path;
+require_once __DIR__ . '/../../../includes/certificado_pdf_marca_dagua.php';
 
 // O modelo visual solicitado é o Anexo 8-C da NORMAM-202/DPC, conforme
 // docs/exemplos/exemplo-pdf-CSN.pdf. O renderizador isolado abaixo preserva
@@ -151,7 +152,7 @@ function csnConverterImagemParaJpeg($dados) {
 }
 
 if (!class_exists('CertificadoCSN')) {
-    class CertificadoCSN extends TCPDF {
+    class CertificadoCSN extends CertificadoPdfComMarcaDagua {
         public function Header() {}
         public function Footer() {}
     }

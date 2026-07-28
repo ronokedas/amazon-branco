@@ -340,6 +340,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     <?php
         $statusFoco = $statusConfig[$propostaFoco['status']] ?? ['label' => $propostaFoco['status'], 'cor' => 'secondary'];
         $embarcacoesFoco = $embarcacoesPorProposta[$propostaFoco['id']] ?? [];
+        $podeEditarFoco = in_array($cargo, ['ADMIN', 'VENDEDOR'], true)
+            && ($cargo === 'ADMIN' || ($propostaFoco['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
+            && ($propostaFoco['status'] ?? '') === 'rascunho'
+            && empty($propostaFoco['assinado']);
     ?>
     <div data-testid="proposta-foco-card" style="margin-bottom: 22px; border: 1px solid rgba(52, 152, 219, 0.45); border-left: 6px solid #3498DB; border-radius: 8px; background: linear-gradient(135deg, rgba(52, 152, 219, 0.16), rgba(46, 204, 113, 0.08)); overflow: hidden;">
         <div style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; align-items: center;">
@@ -369,6 +373,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <i class="fas fa-file-pdf"></i> Abrir PDF da Proposta
                 </a>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <?php if ($podeEditarFoco): ?>
+                    <a href="<?php echo APP_URL; ?>comercial/nova?id=<?php echo urlencode($propostaFoco['id']); ?>"
+                       class="btn btn-primary btn-sm" title="Editar proposta">
+                        <i class="fas fa-pen"></i> Editar
+                    </a>
+                    <?php endif; ?>
                     <a href="<?php echo APP_URL; ?>comercial/propostas?id=<?php echo urlencode($propostaFoco['id']); ?>&visualizar=1"
                        class="btn btn-secondary btn-sm">
                         <i class="fas fa-eye"></i> Detalhes
@@ -468,6 +478,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     $embNomes = !empty($embarcacoesLista) ? implode(', ', $embarcacoesLista) : 'N/I';
                     $statusCfg = $statusConfig[$p['status']] ?? ['label' => $p['status'], 'cor' => 'secondary'];
                     $assinada = !empty($p['assinado']) || ($p['status'] ?? '') === 'assinada';
+                    $podeEditar = in_array($cargo, ['ADMIN', 'VENDEDOR'], true)
+                        && ($cargo === 'ADMIN' || ($p['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
+                        && ($p['status'] ?? '') === 'rascunho'
+                        && !$assinada;
                     $podeAprovarManual = in_array($cargo, ['ADMIN', 'VENDEDOR'], true)
                         && ($cargo === 'ADMIN' || ($p['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
                         && !$assinada
@@ -508,6 +522,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                            class="proposal-action proposal-action-view" title="Detalhes">
                             <i class="fas fa-eye"></i>
                         </a>
+                        <?php if ($podeEditar): ?>
+                            <a href="<?php echo APP_URL; ?>comercial/nova?id=<?php echo urlencode($pid); ?>"
+                               class="proposal-action proposal-action-edit" title="Editar proposta" aria-label="Editar <?php echo h($p['numero']); ?>">
+                                <i class="fas fa-pen"></i>
+                            </a>
+                        <?php endif; ?>
                         <a href="<?php echo APP_URL; ?>comercial/pdf?id=<?php echo urlencode($pid); ?>"
                            class="proposal-action proposal-action-pdf" title="Abrir PDF" target="_blank">
                             <i class="fas fa-file-pdf"></i>
@@ -717,11 +737,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     color: #fff;
 }
 .proposal-action-view { background: rgba(148,163,184,0.18); color: #e2e8f0; border-color: rgba(148,163,184,0.28); }
+.proposal-action-edit { background: rgba(16,185,129,0.22); color: #d1fae5; border-color: rgba(52,211,153,0.45); }
 .proposal-action-pdf { background: linear-gradient(135deg, rgba(239,68,68,0.28), rgba(127,29,29,0.34)); border-color: rgba(248,113,113,0.50); color: #ffe4e4; }
 .proposal-action-email { background: linear-gradient(135deg, rgba(59,130,246,0.28), rgba(30,64,175,0.34)); border-color: rgba(96,165,250,0.50); color: #e0efff; }
 .proposal-action-sign { background: linear-gradient(135deg, rgba(34,197,94,0.24), rgba(14,116,144,0.24)); border-color: rgba(125,211,252,0.48); color: #d7fbff; box-shadow: 0 10px 24px rgba(59,130,246,0.14); }
 .proposal-action-approve { background: linear-gradient(135deg, #22c55e, #56e0ad); border-color: rgba(86,224,173,0.64); color: #042014; box-shadow: 0 10px 24px rgba(34,197,94,0.22); }
 .proposal-action:hover.proposal-action-view,
+.proposal-action:hover.proposal-action-edit,
 .proposal-action:hover.proposal-action-pdf,
 .proposal-action:hover.proposal-action-email,
 .proposal-action:hover.proposal-action-sign,

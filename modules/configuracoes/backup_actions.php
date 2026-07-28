@@ -133,7 +133,8 @@ try {
         $preservadas = [
             'configuracoes', 'usuarios', 'usuario_perfis', 'usuario_permissoes',
             'exigencias_catalogo', 'exigencias_categorias', 'servicos',
-            'tipos_embarcacao', 'responsaveis_assinatura',
+            'tipos_embarcacao', 'responsaveis_assinatura', 'escritorios',
+            'usuario_escritorios',
         ];
 
         $stmt = $pdo->prepare(
@@ -155,7 +156,7 @@ try {
             $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
         }
 
-        setMensagem('success', 'Dados operacionais removidos com sucesso. Usuários, configurações e catálogos básicos foram mantidos.');
+        setMensagem('success', 'Dados operacionais removidos com sucesso. Usuários, cargos, responsáveis e suas assinaturas, escritórios, vínculos, configurações e catálogos básicos foram mantidos.');
         redirecionar(APP_URL . 'configuracoes/backup');
     }
 

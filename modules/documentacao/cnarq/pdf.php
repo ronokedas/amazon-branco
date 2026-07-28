@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../includes/functions.php';
 require_once __DIR__ . '/../../../vendor/autoload.php';
+require_once __DIR__ . '/../../../includes/certificado_pdf_marca_dagua.php';
 
 $token_publico = $_GET['token'] ?? '';
 $id = $_GET['id'] ?? '';
@@ -112,7 +113,7 @@ function cnarqParseLinhas($texto): array
 }
 
 if (!class_exists('CertificadoCNARQ')) {
-    class CertificadoCNARQ extends TCPDF
+    class CertificadoCNARQ extends CertificadoPdfComMarcaDagua
     {
         public function Header() {}
         public function Footer() {}

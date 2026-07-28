@@ -245,14 +245,13 @@ switch ($action) {
 
             if ($relatorio_origem_id !== '') {
                 $stmtOrigem = $pdo->prepare("SELECT v.embarcacao_id,COALESCE(a.cliente_id,v.pessoa_id) cliente_id,
-                        a.vistoriador_id
-                    FROM vistorias v LEFT JOIN agendamentos a ON a.id=v.agendamento_id
-                    WHERE v.id=:id AND v.status='RETORNO_AS'
-                      AND EXISTS (
-                        SELECT 1 FROM vistoria_exigencias ve
-                        WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1
-                          AND ve.conforme='nao' AND ve.status_item<>'cumprida'
-                      )
+                        a.vistoriador_id,vr.tipo retorno_tipo
+                    FROM vistorias v
+                    JOIN vistoria_retornos vr ON vr.relatorio_origem_id=v.id
+                    LEFT JOIN agendamentos a ON a.id=v.agendamento_id
+                    WHERE v.id=:id
+                      AND ((vr.tipo='AS' AND v.status='RETORNO_AS')
+                        OR (vr.tipo='EXIGENCIAS' AND v.status='APROVADA_COM_EXIGENCIAS'))
                       AND NOT EXISTS (
                         SELECT 1 FROM vistorias vf
                         WHERE vf.relatorio_anterior_id=v.id AND vf.status<>'CANCELADA'
@@ -274,7 +273,9 @@ switch ($action) {
                 if ($stmtRetorno->fetchColumn() !== 'PENDENTE_AGENDAMENTO') {
                     throw new RuntimeException('Este retorno A/S já possui agendamento ou foi concluído.');
                 }
-                $tipo_vistoria = 'Cumprimento de A/S';
+                $tipo_vistoria = $origem['retorno_tipo'] === 'AS'
+                    ? 'Cumprimento de A/S'
+                    : 'Retorno de exigencias';
             }
 
             $pdo->beginTransaction();

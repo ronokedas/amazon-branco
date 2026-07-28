@@ -82,7 +82,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     Remove permanentemente clientes, embarcações, propostas, vistorias, certificados, financeiro, contratos, agendamentos e históricos.
                 </p>
                 <p style="color:var(--cor-texto-secundario);font-size:.9rem;margin-bottom:18px;">
-                    Usuários, permissões, configurações e catálogos básicos serão mantidos para que o sistema continue acessível.
+                    Usuários, cargos, permissões, responsáveis e suas assinaturas, escritórios, vínculos entre usuários e escritórios, configurações e catálogos básicos serão mantidos.
                 </p>
                 <div style="padding:12px 14px;background:rgba(220,53,69,.08);border-radius:6px;color:#a71d2a;margin-bottom:18px;">
                     <i class="fas fa-shield-alt"></i> Recomendamos baixar o backup SQL antes de continuar. Esta ação não pode ser desfeita.

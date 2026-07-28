@@ -103,6 +103,7 @@ $statusConfig = [
     'rascunho'  => ['label' => 'Rascunho',  'cor' => 'secondary'],
     'enviada'   => ['label' => 'Enviada',   'cor' => 'info'],
     'aprovada'  => ['label' => 'Aprovada',  'cor' => 'success'],
+    'assinada'  => ['label' => 'Assinada',  'cor' => 'success'],
     'recusada'  => ['label' => 'Recusada',  'cor' => 'danger'],
     'cancelada' => ['label' => 'Cancelada', 'cor' => 'warning'],
 ];
@@ -163,6 +164,17 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
             </p>
         </div>
         <div style="display: flex; gap: 10px;">
+            <?php
+                $podeEditarDetalhe = in_array($cargo, ['ADMIN', 'VENDEDOR'], true)
+                    && ($cargo === 'ADMIN' || ($propostaDetalhe['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
+                    && ($propostaDetalhe['status'] ?? '') === 'rascunho'
+                    && empty($propostaDetalhe['assinado']);
+            ?>
+            <?php if ($podeEditarDetalhe): ?>
+            <a href="<?php echo APP_URL; ?>comercial/nova?id=<?php echo urlencode($idDetalhe); ?>" class="btn btn-primary">
+                <i class="fas fa-pen"></i> Editar
+            </a>
+            <?php endif; ?>
             <a href="<?php echo APP_URL; ?>comercial/pdf?id=<?php echo urlencode($idDetalhe); ?>" class="btn btn-primary" target="_blank">
                 <i class="fas fa-file-pdf"></i> Gerar PDF
             </a>
@@ -416,6 +428,10 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                         $embarcacoesLista = $embarcacoesPorProposta[$pid] ?? [];
                         $embNomes = !empty($embarcacoesLista) ? implode(', ', $embarcacoesLista) : '<em class="text-muted">N/I</em>';
                         $statusCfg = $statusConfig[$p['status']] ?? ['label' => $p['status'], 'cor' => 'secondary'];
+                        $podeEditar = in_array($cargo, ['ADMIN', 'VENDEDOR'], true)
+                            && ($cargo === 'ADMIN' || ($p['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
+                            && ($p['status'] ?? '') === 'rascunho'
+                            && empty($p['assinado']);
                     ?>
                     <tr>
                         <td>
@@ -442,6 +458,12 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                    class="btn btn-secondary btn-sm" title="Visualizar" style="padding: 4px 8px;">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                <?php if ($podeEditar): ?>
+                                <a href="<?php echo APP_URL; ?>comercial/nova?id=<?php echo urlencode($pid); ?>"
+                                   class="btn btn-primary btn-sm" title="Editar proposta" style="padding: 4px 8px;">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                <?php endif; ?>
                                 <a href="<?php echo APP_URL; ?>comercial/pdf?id=<?php echo urlencode($pid); ?>"
                                    class="btn btn-primary btn-sm" title="Gerar PDF" target="_blank" style="padding: 4px 8px;">
                                     <i class="fas fa-file-pdf"></i>

@@ -1644,6 +1644,24 @@ table td strong { color: var(--erp-text) !important; }
 .inspector-schedule__row:hover { z-index:1; background:#f6fbf9; box-shadow:inset 0 0 0 1px #cae4da; }
 .inspector-schedule__row.is-late { background:#fffafa; }.inspector-schedule__row.is-late::before { background:#dc3f43; }
 .inspector-schedule__row.is-today { background:#fffcf5; }.inspector-schedule__row.is-today::before { background:#e89418; }
+.inspector-schedule__row.is-return-as { background:#fff1f1; box-shadow:inset 0 0 0 1px #efb4b7; }
+.inspector-schedule__row.is-return-as::before { width:5px; background:#c92f35; }
+.inspector-schedule__row.is-return-requirements { background:#fff8e8; box-shadow:inset 0 0 0 1px #edcc8c; }
+.inspector-schedule__row.is-return-requirements::before { width:5px; background:#d7860a; }
+.inspector-status.is-return-as { color:#a82026; background:#ffe1e3; }
+.inspector-status.is-return-requirements { color:#925800; background:#ffedc5; }
+.inspector-schedule__type small { display:block; margin-top:3px; color:#71817b; font-size:10px; }
+.schedule-return-row.is-as { background:#fff1f1; box-shadow:inset 5px 0 #c92f35; }
+.schedule-return-row.is-requirements { background:#fff8e8; box-shadow:inset 5px 0 #d7860a; }
+.schedule-table .schedule-return-row.is-as td { background:#fff1f1; }
+.schedule-table .schedule-return-row.is-requirements td { background:#fff8e8; }
+.schedule-table .schedule-return-row.is-as td:first-child { border-left:5px solid #c92f35; }
+.schedule-table .schedule-return-row.is-requirements td:first-child { border-left:5px solid #d7860a; }
+.schedule-return-badge { display:inline-flex; width:max-content; margin:0 7px 4px 0; padding:4px 8px; border-radius:999px; font-size:9px; font-weight:850; letter-spacing:.04em; }
+.schedule-return-badge.is-as { color:#a82026; background:#ffe1e3; }
+.schedule-return-badge.is-requirements { color:#925800; background:#ffedc5; }
+.schedule-return-row .schedule-return-badge { margin:0 7px 4px 0; }
+.schedule-return-row td small { display:block; margin-top:3px; }
 .inspector-schedule__row.is-first:not(.is-late):not(.is-today)::before { background:var(--field-green); }
 .inspector-schedule__date { display:flex; align-items:center; gap:9px; }
 .inspector-schedule__date>i { width:28px; height:28px; display:grid; place-items:center; color:var(--field-green); background:#eaf7f2; border-radius:7px; font-size:13px; }
@@ -2208,6 +2226,8 @@ table td strong { color: var(--erp-text) !important; }
     .schedule-desktop-list { display: none; }
     .schedule-mobile-list { display: grid; gap: 12px; }
     .schedule-card { overflow: hidden; background: #fff; border: 1px solid var(--erp-border); border-radius: 13px; box-shadow: 0 3px 14px rgba(14,52,43,.045); }
+    .schedule-return-card.is-as { border-color:#e5a5a9; background:#fff5f5; }
+    .schedule-return-card.is-requirements { border-color:#e8c276; background:#fffaf0; }
     .schedule-card-top { display: grid; grid-template-columns: 50px minmax(0,1fr) auto; align-items: start; gap: 12px; padding: 15px 14px 12px; }
     .schedule-card-top > time { width: 50px; height: 54px; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #087b5c; background: #eaf8f2; border-radius: 9px; }
     .schedule-card-top > time strong { font-size: 20px; line-height: 1; }
@@ -2217,6 +2237,9 @@ table td strong { color: var(--erp-text) !important; }
     .schedule-card-heading h2 { margin: 2px 0 1px; overflow: hidden; color: #1b332c; font-size: 15px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
     .schedule-card-heading p { margin: 0; overflow: hidden; color: #6f817a; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
     .schedule-card-top > .schedule-status { min-height: 24px; padding-inline: 7px; font-size: 9px; }
+    .schedule-return-badge { display:inline-flex; width:max-content; margin:8px 14px 0; padding:4px 8px; border-radius:999px; font-size:9px; font-weight:850; letter-spacing:.04em; }
+    .schedule-return-badge.is-as { color:#a82026; background:#ffe1e3; }
+    .schedule-return-badge.is-requirements { color:#925800; background:#ffedc5; }
     .schedule-card-meta { display: grid; gap: 8px; padding: 12px 14px; background: #f8fbfa; border-top: 1px solid #edf2f0; border-bottom: 1px solid #edf2f0; }
     .schedule-card-meta span { min-width: 0; display: grid; grid-template-columns: 18px minmax(0,1fr); align-items: start; color: #536861; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
     .schedule-card-meta i { margin-top: 2px; color: #0b9b70; }

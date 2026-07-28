@@ -37,6 +37,7 @@ if (!isset($salvar_pdf_caminho) && !empty($c['assinado']) && !empty($c['caminho_
 }
 
 require_once __DIR__ . '/../../../vendor/autoload.php';
+require_once __DIR__ . '/../../../includes/certificado_pdf_marca_dagua.php';
 
 if (!function_exists('chtDataExtenso')) {
     function chtDataExtenso(?string $data): string
@@ -56,7 +57,7 @@ if (!function_exists('chtImagemValida')) {
 }
 
 if (!class_exists('CHTDocumentoPDF')) {
-    class CHTDocumentoPDF extends TCPDF
+    class CHTDocumentoPDF extends CertificadoPdfComMarcaDagua
     {
         public function Header() {}
         public function Footer() {}

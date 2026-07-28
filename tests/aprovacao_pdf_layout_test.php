@@ -60,11 +60,20 @@ try {
     $reportDestination = $workDir . DIRECTORY_SEPARATOR . 'relatorio.pdf';
     aprovacaoPdfCriarComBloco($original, $reportDestination, $context + [
         'documento_tipo' => 'RELATORIO',
+        'tipo_validacao' => 'RELATORIO_ASSINADO',
         'bloco_pagina' => 1,
         'bloco_y' => 150.0,
     ]);
     $reader = new Fpdi();
     assertAprovacaoPdfLayout($reader->setSourceFile($reportDestination) === 2, 'O relatorio ganhou uma pagina exclusiva para a assinatura.');
+    assertAprovacaoPdfLayout(
+        aprovacaoPdfUrlValidacao('token-de-teste', 'RELATORIO_ASSINADO') === 'https://example.test/validar-assinatura/token-de-teste',
+        'A assinatura de relatorio nao usa a rota publica correta.'
+    );
+    assertAprovacaoPdfLayout(
+        aprovacaoPdfUrlValidacao('token-de-teste', 'RELATORIO') === 'https://example.test/validar/token-de-teste',
+        'O fluxo geral de aprovacao deixou de usar a rota existente.'
+    );
 
     $otherDestination = $workDir . DIRECTORY_SEPARATOR . 'outro.pdf';
     aprovacaoPdfCriarComBloco($original, $otherDestination, $context + ['documento_tipo' => 'LP']);

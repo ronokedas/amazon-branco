@@ -30,4 +30,14 @@ assertRelatorioLayout(str_contains($arquivo, 'O PDF estará disponível após sa
 $posSalvar = strpos($arquivo, 'id="btnSalvar"');
 assertRelatorioLayout($posSalvar !== false && strpos($arquivo, 'report-footer-pdf', $posSalvar) > $posSalvar, 'PDF não aparece imediatamente depois da ação principal.');
 
+assertRelatorioLayout(!str_contains($arquivo, '<iframe class="admin-review-pdf"'), 'A pre-visualizacao embutida do PDF ainda esta presente.');
+assertRelatorioLayout(str_contains($arquivo, 'class="admin-review-document-link"'), 'O acesso ao PDF completo foi removido da revisao.');
+assertRelatorioLayout(str_contains($arquivo, 'id="adminRequirementsSearch"'), 'A busca de exigencias da revisao nao foi implementada.');
+assertRelatorioLayout(str_contains($arquivo, 'data-requirement-group'), 'Os grupos compactos de exigencias nao foram implementados.');
+assertRelatorioLayout(str_contains($arquivo, "'itens' => \$exigencias_as_relatorio"), 'O grupo de exigencias A/S nao foi criado.');
+assertRelatorioLayout(str_contains($arquivo, "'itens' => \$exigencias_comuns_relatorio"), 'O grupo de exigencias comuns nao foi criado.');
+assertRelatorioLayout(str_contains($arquivo, 'function definirExpansaoReview'), 'Os acordeoes da revisao nao possuem comportamento acessivel.');
+assertRelatorioLayout(str_contains($arquivo, 'adminRequirementsNoResults'), 'A busca da revisao nao possui estado sem resultados.');
+assertRelatorioLayout(str_contains($arquivo, 'Revise as exigências') && str_contains($arquivo, 'Registre a decisão'), 'A orientacao do fluxo de decisao nao foi adicionada.');
+
 echo "relatorio_vistoria_layout_test: OK\n";

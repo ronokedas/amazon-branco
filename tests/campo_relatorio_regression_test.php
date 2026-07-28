@@ -56,7 +56,8 @@ assertCampoRelatorio(
 );
 assertCampoRelatorio(
     str_contains($pdf, 'blocosComExigenciasRelatorioPdf(')
-        && str_contains($pdf, "\$descricao = trim")
+        && str_contains($pdf, "\$descricao = (\$item['status_item'] ?? '') === 'cumprida_parcial_reescrita'")
+        && str_contains($pdf, "\$item['descricao_reescrita']")
         && str_contains($pdf, "\$normam = trim")
         && str_contains($pdf, 'formatarDataBR($item[\'vencimento\'])'),
     'A tabela do PDF nao preserva descricao, NORMAM e vencimento das exigencias.'

@@ -374,7 +374,7 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input, array $autentic
         $pdo->commit();
 
         if (function_exists('log_atividade')) log_atividade('documento_aprovado_eletronicamente', "{$mapa['label']} {$id} aprovado. Hash final: {$hashFinal}");
-        return ['id'=>$approvalId, 'token'=>$token, 'validation_url'=>aprovacaoPdfUrlValidacao($token), 'hash_final'=>$hashFinal, 'status_relatorio'=>$statusRelatorio];
+        return ['id'=>$approvalId, 'token'=>$token, 'validation_url'=>aprovacaoPdfUrlValidacao($token, $tipo), 'hash_final'=>$hashFinal, 'status_relatorio'=>$statusRelatorio];
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         @unlink($originalTmp); @unlink($visualTmp); @unlink($finalTmp); @unlink($originalAbsolute); @unlink($finalAbsolute);

@@ -402,3 +402,15 @@ O hash precisa ser igual ao campo `hash_arquivo_pdf` do documento.
 - O GitHub rejeita arquivos individuais maiores que 100 MB.
 - Antes de cada publicação, revise `git status` e a lista de arquivos grandes.
 - `db.sql` é a única fonte automática do banco em instalações novas.
+
+
+
+
+
+
+
+
+====================
+
+git pull origin main
+docker compose up -d --build

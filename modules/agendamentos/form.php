@@ -36,6 +36,7 @@ $agendamento = [
     'relatorio_origem_id' => '',
     'vistoriador_origem_id' => '',
     'motivo_reatribuicao' => '',
+    'retorno_tipo' => '',
 ];
 
 if (!$editando && $relatorioOrigemId !== '') {
@@ -44,15 +45,14 @@ if (!$editando && $relatorioOrigemId !== '') {
         redirecionar(APP_URL . 'vistorias');
     }
     $stmtRetorno = $pdo->prepare("SELECT v.id,v.numero,v.agendamento_id,v.embarcacao_id,v.pessoa_id,v.armador_id,
-            v.operador_nome,a.proposta_id,a.cliente_id,a.local,a.contato_nome,a.contato_telefone,a.vistoriador_id
+            v.operador_nome,a.proposta_id,a.cliente_id,a.local,a.contato_nome,a.contato_telefone,a.vistoriador_id,
+            vr.tipo retorno_tipo
         FROM vistorias v
+        JOIN vistoria_retornos vr ON vr.relatorio_origem_id=v.id
         LEFT JOIN agendamentos a ON a.id=v.agendamento_id
-        WHERE v.id=:id AND v.status='RETORNO_AS'
-          AND EXISTS (
-            SELECT 1 FROM vistoria_exigencias ve
-            WHERE ve.vistoria_id=v.id AND ve.antes_de_suspender=1
-              AND ve.conforme='nao' AND ve.status_item<>'cumprida'
-          )
+        WHERE v.id=:id
+          AND ((vr.tipo='AS' AND v.status='RETORNO_AS')
+            OR (vr.tipo='EXIGENCIAS' AND v.status='APROVADA_COM_EXIGENCIAS'))
         LIMIT 1");
     $stmtRetorno->execute([':id' => $relatorioOrigemId]);
     $origemRetorno = $stmtRetorno->fetch(PDO::FETCH_ASSOC);
@@ -72,14 +72,19 @@ if (!$editando && $relatorioOrigemId !== '') {
         'cliente_id' => $origemRetorno['cliente_id'] ?: $origemRetorno['pessoa_id'],
         'armador_id' => $origemRetorno['armador_id'] ?? '',
         'operador_nome' => $origemRetorno['operador_nome'] ?? '',
-        'tipo_vistoria' => 'Cumprimento de A/S — relatório ' . ($origemRetorno['numero'] ?: $relatorioOrigemId),
+        'tipo_vistoria' => ($origemRetorno['retorno_tipo'] === 'AS'
+            ? 'Cumprimento de A/S'
+            : 'Retorno de exigências') . ' — relatório ' . ($origemRetorno['numero'] ?: $relatorioOrigemId),
         'local' => $origemRetorno['local'] ?? '',
         'contato_nome' => $origemRetorno['contato_nome'] ?? '',
         'contato_telefone' => $origemRetorno['contato_telefone'] ?? '',
-        'observacoes' => 'Retorno obrigatório para verificar o cumprimento das exigências A/S.',
+        'observacoes' => $origemRetorno['retorno_tipo'] === 'AS'
+            ? 'Retorno obrigatório para verificar o cumprimento das exigências A/S.'
+            : 'Retorno para verificar o cumprimento das exigências pendentes.',
         'relatorio_origem_id' => $relatorioOrigemId,
         'vistoriador_id' => $origemRetorno['vistoriador_id'] ?? '',
         'vistoriador_origem_id' => $origemRetorno['vistoriador_id'] ?? '',
+        'retorno_tipo' => $origemRetorno['retorno_tipo'],
     ]);
 }
 
@@ -208,7 +213,9 @@ $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['
             <input type="hidden" name="fluxo_proposta" value="<?php echo $fluxoProposta ? '1' : '0'; ?>">
             <?php if (!empty($agendamento['relatorio_origem_id'])): ?>
                 <div class="alert alert-warning">
-                    <strong>Retorno obrigatório A/S.</strong>
+                    <strong><?php echo ($agendamento['retorno_tipo'] ?? '') === 'AS'
+                        ? 'Retorno obrigatório A/S.'
+                        : 'Retorno de exigências.'; ?></strong>
                     Este agendamento gerará uma nova OS e um novo relatório numerado, vinculado ao relatório de origem.
                 </div>
             <?php endif; ?>

@@ -35,7 +35,7 @@ $decisoesPendentes = (int)$dashboard['acoes']['assinadas'] + (int)$dashboard['ac
             <div class="admin-flow-items">
                 <?php if (!$dashboard['fluxo_aprovacoes']): ?><p class="admin-flow-empty"><i class="fa-solid fa-circle-check"></i>Nenhum relatório aguardando análise.</p><?php endif; ?>
                 <?php foreach ($dashboard['fluxo_aprovacoes'] as $item): ?>
-                <a class="admin-flow-item" href="<?= $item['agendamento_id'] ? APP_URL.'vistorias/relatorio?agendamento_id='.urlencode($item['agendamento_id']) : APP_URL.'vistorias/detalhe?id='.urlencode($item['id']) ?>">
+                <a class="admin-flow-item" href="<?= $item['agendamento_id'] ? APP_URL.'vistorias/relatorio?agendamento_id='.urlencode($item['agendamento_id']).'&vistoria_id='.urlencode($item['id']) : APP_URL.'vistorias/detalhe?id='.urlencode($item['id']) ?>">
                     <span><strong><?= h($item['embarcacao']) ?></strong><small><?= h($item['numero'] ?: 'Relatório técnico') ?> · <?= h($item['vistoriador']) ?></small></span>
                     <em><?= (int)$item['horas'] < 1 ? 'Enviado agora' : 'Aguardando há '.(int)$item['horas'].'h' ?> · <?= (int)$item['nao_conformes'] ?> exigência<?= (int)$item['nao_conformes'] === 1 ? '' : 's' ?></em>
                     <b>Analisar relatório <i class="fa-solid fa-arrow-right"></i></b>
@@ -44,12 +44,12 @@ $decisoesPendentes = (int)$dashboard['acoes']['assinadas'] + (int)$dashboard['ac
             </div>
         </article>
         <article class="admin-flow-lane is-commercial" id="retornos-as">
-            <div class="admin-flow-lane__heading"><i class="fa-solid fa-calendar-plus"></i><span><strong>Retornos A/S</strong><small>Próxima ação: agendar nova visita</small></span><b><?= (int)$dashboard['acoes']['retornos_as'] ?></b></div>
+            <div class="admin-flow-lane__heading"><i class="fa-solid fa-calendar-plus"></i><span><strong>Retornos de exigências</strong><small>Próxima ação: agendar nova visita</small></span><b><?= (int)$dashboard['acoes']['retornos_as'] ?></b></div>
             <div class="admin-flow-items">
-                <?php if (!$dashboard['fluxo_retornos_as']): ?><p class="admin-flow-empty"><i class="fa-solid fa-circle-check"></i>Nenhum retorno A/S aguardando agendamento.</p><?php endif; ?>
+                <?php if (!$dashboard['fluxo_retornos_as']): ?><p class="admin-flow-empty"><i class="fa-solid fa-circle-check"></i>Nenhum retorno aguardando agendamento.</p><?php endif; ?>
                 <?php foreach ($dashboard['fluxo_retornos_as'] as $item): ?>
                 <a class="admin-flow-item" href="<?= APP_URL ?>agendamentos/form?relatorio_origem_id=<?= urlencode($item['relatorio_origem_id']) ?>">
-                    <span><strong><?= h($item['embarcacao']) ?></strong><small><?= h($item['numero']) ?> · certificação bloqueada</small></span>
+                    <span><strong><?= h($item['embarcacao']) ?></strong><small><?= h($item['numero']) ?> · <?= $item['tipo'] === 'AS' ? 'RETORNO A/S - certificação bloqueada' : 'RETORNO - EXIGÊNCIAS' ?></small></span>
                     <em>Pendente desde <?= date('d/m/Y', strtotime($item['criado_em'])) ?></em>
                     <b>Agendar retorno <i class="fa-solid fa-arrow-right"></i></b>
                 </a>
@@ -105,7 +105,7 @@ $decisoesPendentes = (int)$dashboard['acoes']['assinadas'] + (int)$dashboard['ac
                 ['Propostas assinadas sem agendamento',$dashboard['acoes']['assinadas'],'agendamentos','fa-file','amber','Ver propostas'],
                 ['Vistorias vencidas',$dashboard['acoes']['vencidas'],'agendamentos','fa-calendar-xmark','red','Ver vistorias'],
                 ['Aguardando aprovação',$dashboard['acoes']['aprovacao'],'documentacao/aprovacao_relatorios','fa-users','amber','Ver aprovações'],
-                ['Retornos A/S sem agendamento',$dashboard['acoes']['retornos_as'],'dashboard','fa-calendar-plus','red','Ver pendências'],
+                ['Retornos pendentes de agendamento',$dashboard['acoes']['retornos_as'],'dashboard','fa-calendar-plus','amber','Ver pendências'],
                 ['Documentos para emitir',$dashboard['acoes']['emitir'],'documentacao','fa-file-lines','green','Ver documentos'],
             ] as [$label,$value,$url,$icon,$color,$cta]): ?>
                 <a class="admin-action-card is-<?= $color ?>" href="<?= APP_URL . $url ?>">

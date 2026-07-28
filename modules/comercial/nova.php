@@ -15,10 +15,60 @@ require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
 verificar_sessao();
 exigirAcesso('comercial');
 
+$modoEdicao = !empty($_GET['id']);
+$propostaEdicao = null;
+$servicosEdicaoIniciais = [];
+
+if ($modoEdicao) {
+    $propostaIdEdicao = (string)$_GET['id'];
+    $stmtEdicao = $pdo->prepare("
+        SELECT p.*, c.nome AS cliente_nome, c.perfil AS cliente_perfil, c.cpf_cnpj AS cliente_cpfcnpj
+        FROM propostas p
+        INNER JOIN clientes c ON c.id = p.cliente_id
+        WHERE p.id = :id
+        LIMIT 1
+    ");
+    $stmtEdicao->execute([':id' => $propostaIdEdicao]);
+    $propostaEdicao = $stmtEdicao->fetch(PDO::FETCH_ASSOC);
+
+    $cargoEdicao = getCargo();
+    $usuarioEdicao = (string)($_SESSION['usuario_id'] ?? '');
+    $podeEditar = $propostaEdicao
+        && in_array($cargoEdicao, ['ADMIN', 'VENDEDOR'], true)
+        && ($cargoEdicao === 'ADMIN' || (string)$propostaEdicao['criado_por'] === $usuarioEdicao)
+        && ($propostaEdicao['status'] ?? '') === 'rascunho'
+        && empty($propostaEdicao['assinado'])
+        && financeiroPodeAcessarEscritorio($pdo, (string)($propostaEdicao['escritorio_id'] ?? ''));
+
+    if (!$podeEditar) {
+        setMensagem('error', 'A proposta não foi encontrada ou não está disponível para edição.');
+        redirecionar(APP_URL . 'comercial');
+    }
+
+    $stmtServicosEdicao = $pdo->prepare("
+        SELECT ps.embarcacao_id, ps.servico_id, ps.quantidade, ps.preco_aplicado
+        FROM propostas_servicos ps
+        WHERE ps.proposta_id = :id
+    ");
+    $stmtServicosEdicao->execute([':id' => $propostaIdEdicao]);
+    foreach ($stmtServicosEdicao->fetchAll(PDO::FETCH_ASSOC) as $servicoEdicao) {
+        $embarcacaoId = (string)$servicoEdicao['embarcacao_id'];
+        $servicoId = (string)$servicoEdicao['servico_id'];
+        if (!isset($servicosEdicaoIniciais[$embarcacaoId])) {
+            $servicosEdicaoIniciais[$embarcacaoId] = [];
+        }
+        $servicosEdicaoIniciais[$embarcacaoId][$servicoId] = [
+            'qtd' => max(1, (int)$servicoEdicao['quantidade']),
+            'preco' => round((float)$servicoEdicao['preco_aplicado'], 2),
+        ];
+    }
+}
+
 $escritoriosProposta = financeiroEscritoriosPermitidos($pdo);
 $escritorioProposta = '';
 try {
-    $escritorioProposta = financeiroResolverEscritorio($pdo, $_GET['escritorio_id'] ?? null);
+    $escritorioSolicitado = $modoEdicao ? ($propostaEdicao['escritorio_id'] ?? null) : ($_GET['escritorio_id'] ?? null);
+    $escritorioProposta = financeiroResolverEscritorio($pdo, $escritorioSolicitado);
 } catch (RuntimeException $e) {
     // A tela deve orientar o usuário em vez de responder HTTP 500 quando falta vínculo.
     error_log('Nova proposta sem escritorio disponivel: ' . $e->getMessage());
@@ -37,7 +87,7 @@ try {
     $clientes = [];
 }
 
-$clientePreSelecionadoId = $_GET['cliente_id'] ?? '';
+$clientePreSelecionadoId = $modoEdicao ? (string)$propostaEdicao['cliente_id'] : ($_GET['cliente_id'] ?? '');
 $clientePreSelecionadoEncontrado = false;
 
 if (!empty($clientes)) {
@@ -56,13 +106,24 @@ if (!empty($clientes)) {
 
 // Buscar todos os serviços ativos
 try {
-    $stmtServicos = $pdo->query("SELECT id, nome, descricao, preco_padrao FROM servicos WHERE ativo = 1 ORDER BY nome ASC");
+    if ($modoEdicao) {
+        $stmtServicos = $pdo->prepare("
+            SELECT DISTINCT s.id, s.nome, s.descricao, s.preco_padrao
+            FROM servicos s
+            LEFT JOIN propostas_servicos ps ON ps.servico_id = s.id AND ps.proposta_id = :proposta
+            WHERE s.ativo = 1 OR ps.id IS NOT NULL
+            ORDER BY s.nome ASC
+        ");
+        $stmtServicos->execute([':proposta' => $propostaEdicao['id']]);
+    } else {
+        $stmtServicos = $pdo->query("SELECT id, nome, descricao, preco_padrao FROM servicos WHERE ativo = 1 ORDER BY nome ASC");
+    }
     $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $servicos = [];
 }
 
-$titulo_page = 'Nova Proposta - ERP Sistema';
+$titulo_page = ($modoEdicao ? 'Editar Proposta' : 'Nova Proposta') . ' - ERP Sistema';
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 ?>
@@ -73,8 +134,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     <div class="flow-hero">
         <div>
             <span class="flow-eyebrow"><i class="fas fa-route"></i> Etapa 1 do fluxo</span>
-            <h1><i class="fas fa-file-invoice"></i> Nova Proposta</h1>
-            <p>Escolha o proprietário, adicione o contato do fechamento se desejar e revise os valores antes de enviar para assinatura.</p>
+            <h1><i class="fas fa-file-invoice"></i> <?php echo $modoEdicao ? 'Editar Proposta ' . h($propostaEdicao['numero']) : 'Nova Proposta'; ?></h1>
+            <p><?php echo $modoEdicao ? 'Atualize os dados do rascunho e revise os valores antes de salvar.' : 'Escolha o proprietário, adicione o contato do fechamento se desejar e revise os valores antes de enviar para assinatura.'; ?></p>
         </div>
         <div class="flow-actions">
             <a href="<?php echo APP_URL; ?>comercial/propostas" class="btn btn-secondary btn-sm">
@@ -110,7 +171,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     <!-- Formulário principal -->
     <form id="wizardForm" action="<?php echo APP_URL; ?>comercial/propostas/actions" method="POST">
         <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
-        <input type="hidden" name="action" value="criar">
+        <input type="hidden" name="action" value="<?php echo $modoEdicao ? 'atualizar' : 'criar'; ?>">
+        <?php if ($modoEdicao): ?>
+        <input type="hidden" name="id" value="<?php echo h($propostaEdicao['id']); ?>">
+        <?php endif; ?>
         <input type="hidden" id="dadosCliente" name="dados_cliente" value="">
         <input type="hidden" id="dadosServicosJson" name="dados_servicos_json" value="">
 
@@ -181,6 +245,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <small>Campo opcional. Quando informado, ficará visível para o vistoriador durante a vistoria.</small>
                             </div>
                             <input type="text" id="responsavel_fechamento_nome" name="responsavel_fechamento_nome" maxlength="255"
+                                   value="<?php echo h($propostaEdicao['responsavel_fechamento_nome'] ?? ''); ?>"
                                    placeholder="Ex.: João da Silva" autocomplete="name" oninput="atualizarPasso1()">
                         </div>
                         <div class="armador-box responsavel-box">
@@ -189,6 +254,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <small>Campo opcional para facilitar o contato do vistoriador.</small>
                             </div>
                             <input type="tel" id="responsavel_fechamento_telefone" name="responsavel_fechamento_telefone" maxlength="15"
+                                   value="<?php echo h($propostaEdicao['responsavel_fechamento_telefone'] ?? ''); ?>"
                                    placeholder="Ex.: (91) 99999-9999" inputmode="numeric" autocomplete="tel"
                                    oninput="formatarTelefoneResponsavel(this); atualizarPasso1()">
                         </div>
@@ -242,20 +308,29 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <button type="button" class="discount-mode-btn is-active" data-discount-type="perc" onclick="setTipoDesconto('perc')" title="Desconto em porcentagem" aria-pressed="true">%</button>
                                 <button type="button" class="discount-mode-btn" data-discount-type="valor" onclick="setTipoDesconto('valor')" title="Desconto em reais" aria-pressed="false">R$</button>
                             </div>
-                            <label class="discount-input-wrap" for="descontoGlobal">
+                            <label class="discount-input-wrap" for="descontoGlobalDisplay">
                                 <span id="descontoPrefixo">%</span>
-                                <input type="number" id="descontoGlobal" name="desconto_global" value="0" min="0" step="0.01"
-                                       oninput="atualizarTotais()" title="Valor do desconto" inputmode="decimal">
+                                <input type="text" id="descontoGlobalDisplay"
+                                       value="<?php echo number_format((float)($propostaEdicao['desconto_percentual'] ?? 0), 2, ',', '.'); ?>"
+                                       oninput="mascararDesconto(this)" onfocus="this.select()" title="Valor do desconto"
+                                       inputmode="decimal" autocomplete="off" aria-describedby="descontoErro descontoValor">
+                                <input type="hidden" id="descontoGlobal" name="desconto_global"
+                                       value="<?php echo number_format((float)($propostaEdicao['desconto_percentual'] ?? 0), 2, '.', ''); ?>">
                             </label>
                         </div>
+                        <small id="descontoErro" class="discount-error" role="alert" hidden>O desconto percentual deve ser menor que 100%.</small>
                         <small id="descontoValor" class="discount-feedback">- R$ 0,00</small>
                     </div>
                     <div class="entry-card">
                         <small class="text-muted">Entrada</small>
-                        <label class="discount-input-wrap" for="valorEntrada" style="margin: 0 auto;">
+                        <label class="discount-input-wrap" for="valorEntradaDisplay" style="margin: 0 auto;">
                             <span>R$</span>
-                            <input type="number" id="valorEntrada" name="valor_entrada" value="0" min="0" step="0.01"
-                                   oninput="atualizarTotais()" title="Valor de entrada" inputmode="decimal">
+                            <input type="text" id="valorEntradaDisplay"
+                                   value="<?php echo number_format((float)($propostaEdicao['valor_entrada'] ?? 0), 2, ',', '.'); ?>"
+                                   oninput="mascararMoeda(this, 'valorEntrada')" onfocus="this.select()"
+                                   title="Valor de entrada" inputmode="numeric" autocomplete="off">
+                            <input type="hidden" id="valorEntrada" name="valor_entrada"
+                                   value="<?php echo number_format((float)($propostaEdicao['valor_entrada'] ?? 0), 2, '.', ''); ?>">
                         </label>
                         <small id="entradaResumo" class="discount-feedback">Sem entrada informada</small>
                     </div>
@@ -269,13 +344,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <div class="form-group" style="margin-bottom: 10px;">
                         <label for="parcelas">Número de Parcelas</label>
                         <select id="parcelas" name="parcelas" style="width: auto; min-width: 150px;" onchange="atualizarTotais()">
-                            <option value="1">1x (à vista)</option>
-                            <option value="2">2x</option>
-                            <option value="3" selected>3x</option>
-                            <option value="4">4x</option>
-                            <option value="5">5x</option>
-                            <option value="6">6x</option>
-                            <option value="12">12x</option>
+                            <?php $parcelasSelecionadas = (int)($propostaEdicao['parcelas'] ?? 3); ?>
+                            <option value="1" <?php echo $parcelasSelecionadas === 1 ? 'selected' : ''; ?>>1x (à vista)</option>
+                            <option value="2" <?php echo $parcelasSelecionadas === 2 ? 'selected' : ''; ?>>2x</option>
+                            <option value="3" <?php echo $parcelasSelecionadas === 3 ? 'selected' : ''; ?>>3x</option>
+                            <option value="4" <?php echo $parcelasSelecionadas === 4 ? 'selected' : ''; ?>>4x</option>
+                            <option value="5" <?php echo $parcelasSelecionadas === 5 ? 'selected' : ''; ?>>5x</option>
+                            <option value="6" <?php echo $parcelasSelecionadas === 6 ? 'selected' : ''; ?>>6x</option>
+                            <option value="12" <?php echo $parcelasSelecionadas === 12 ? 'selected' : ''; ?>>12x</option>
                         </select>
                     </div>
                     <div id="parcelasInfo" style="padding: 12px 16px; background: var(--cor-fundo); border-radius: 8px; border: 1px solid var(--cor-borda); color: var(--cor-texto-secundario); font-size: 0.9rem;">
@@ -353,10 +429,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <div class="form-group">
                                 <label for="forma_pagamento"><i class="fas fa-credit-card"></i> Forma de Pagamento</label>
                                 <select id="forma_pagamento" name="forma_pagamento" style="width: auto; min-width: 200px;">
-                                    <option value="parcelado" selected>Parcelado (cartão / boleto parcelado)</option>
-                                    <option value="a_vista">À Vista</option>
-                                    <option value="boleto">Boleto Bancário</option>
-                                    <option value="pix">PIX</option>
+                                    <?php $formaPagamentoSelecionada = (string)($propostaEdicao['forma_pagamento'] ?? 'parcelado'); ?>
+                                    <option value="parcelado" <?php echo $formaPagamentoSelecionada === 'parcelado' ? 'selected' : ''; ?>>Parcelado (cartão / boleto parcelado)</option>
+                                    <option value="a_vista" <?php echo $formaPagamentoSelecionada === 'a_vista' ? 'selected' : ''; ?>>À Vista</option>
+                                    <option value="boleto" <?php echo $formaPagamentoSelecionada === 'boleto' ? 'selected' : ''; ?>>Boleto Bancário</option>
+                                    <option value="pix" <?php echo $formaPagamentoSelecionada === 'pix' ? 'selected' : ''; ?>>PIX</option>
                                 </select>
                             </div>
                         </div>
@@ -366,7 +443,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <div class="form-group">
                                 <label for="observacoes"><i class="fas fa-sticky-note"></i> Observações</label>
                                 <textarea id="observacoes" name="observacoes" rows="3" style="width: 100%;"
-                                          placeholder="Condições especiais, validade da proposta, informações adicionais..."></textarea>
+                                          placeholder="Condições especiais, validade da proposta, informações adicionais..."><?php echo h($propostaEdicao['observacoes'] ?? ''); ?></textarea>
                             </div>
                         </div>
                     </div>
@@ -375,8 +452,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <button type="button" class="btn btn-secondary" onclick="irParaPasso(2)">
                         <i class="fas fa-arrow-left"></i> Voltar
                     </button>
-                    <button type="submit" class="btn btn-success btn-lg">
-                        <i class="fas fa-check-circle"></i> Gerar Proposta
+                    <button type="submit" class="btn btn-success btn-lg" id="btnSalvarProposta">
+                        <i class="fas fa-check-circle"></i> <?php echo $modoEdicao ? 'Salvar Alterações' : 'Gerar Proposta'; ?>
                     </button>
                 </div>
             </div>
@@ -436,6 +513,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 <script>
 // ============ DADOS GLOBAIS ============
 const ALL_SERVICOS = <?php echo json_encode($servicos, JSON_UNESCAPED_UNICODE); ?>;
+const MODO_EDICAO = <?php echo $modoEdicao ? 'true' : 'false'; ?>;
+const SERVICOS_EDICAO_INICIAIS = <?php echo json_encode($servicosEdicaoIniciais, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 let clienteSelecionadoData = null;
 let responsavelFechamentoNomeData = '';
 let responsavelFechamentoTelefoneData = '';
@@ -451,11 +530,14 @@ function temServicoSelecionado() {
 
 function atualizarEstadoAvancoServicos() {
     const possuiServico = temServicoSelecionado();
+    const financeiroValido = validarDescontoPercentual();
     const botao = document.getElementById('btnPasso2');
     const aviso = document.getElementById('avisoServicosObrigatorios');
     if (botao) {
-        botao.disabled = !possuiServico;
-        botao.title = possuiServico ? '' : 'Selecione pelo menos um serviço para continuar';
+        botao.disabled = !possuiServico || !financeiroValido;
+        botao.title = !possuiServico
+            ? 'Selecione pelo menos um serviço para continuar'
+            : (!financeiroValido ? 'Corrija o desconto percentual para continuar' : '');
     }
     if (aviso) aviso.style.display = possuiServico ? 'none' : 'block';
 }
@@ -463,6 +545,11 @@ function atualizarEstadoAvancoServicos() {
 function irParaPasso(numero) {
     if (numero === 3 && !temServicoSelecionado()) {
         atualizarEstadoAvancoServicos();
+        return;
+    }
+    if (numero === 3 && !validarDescontoPercentual(true)) {
+        atualizarEstadoAvancoServicos();
+        document.getElementById('descontoGlobalDisplay')?.focus();
         return;
     }
 
@@ -565,6 +652,12 @@ function formatarTelefoneResponsavel(input) {
 document.addEventListener('DOMContentLoaded', () => {
     const clienteMarcado = document.querySelector('input[name="cliente_id"]:checked');
     if (clienteMarcado) clienteSelecionado(clienteMarcado);
+    if (MODO_EDICAO) {
+        servicosSelecionadosPorEmbarcacao = JSON.parse(JSON.stringify(SERVICOS_EDICAO_INICIAIS));
+        atualizarEstadoAvancoServicos();
+    }
+    setTipoDesconto(document.getElementById('tipoDesconto')?.value || 'perc');
+    formatarCampoMoedaPorValor('valorEntradaDisplay', parseFloat(document.getElementById('valorEntrada')?.value) || 0);
     atualizarPasso1();
 });
 
@@ -596,7 +689,10 @@ function carregarPasso2() {
             }
 
             embarcacoesCarregadas = data.embarcacoes;
-            embarcacaoSelecionadaId = null;
+            const primeiraComServico = data.embarcacoes.find(emb => {
+                return Object.keys(servicosSelecionadosPorEmbarcacao[emb.id] || {}).length > 0;
+            });
+            embarcacaoSelecionadaId = primeiraComServico?.id || null;
             clientePasso2CarregadoId = clienteSelecionadoData.id;
             construirGradeServicos(data.embarcacoes);
         })
@@ -760,17 +856,79 @@ function atualizarSubtotalServico(embId, servId) {
 }
 
 // ============ TOTAIS ============
+function formatarNumeroPtBr(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function formatarCampoMoedaPorValor(inputId, valor) {
+    const input = document.getElementById(inputId);
+    if (input) input.value = formatarNumeroPtBr(valor);
+}
+
+function mascararMoeda(input, hiddenId) {
+    const digitos = input.value.replace(/\D/g, '').slice(0, 14);
+    const valor = digitos ? Number(digitos) / 100 : 0;
+    input.value = formatarNumeroPtBr(valor);
+    const hidden = document.getElementById(hiddenId);
+    if (hidden) hidden.value = valor.toFixed(2);
+    atualizarTotais();
+}
+
+function normalizarPercentualVisivel(valor) {
+    let texto = String(valor ?? '').replace(/\./g, ',').replace(/[^\d,]/g, '');
+    const partes = texto.split(',');
+    const inteiro = (partes.shift() || '0').replace(/^0+(?=\d)/, '').slice(0, 3) || '0';
+    const decimal = partes.join('').slice(0, 2);
+    return decimal.length ? inteiro + ',' + decimal : inteiro;
+}
+
+function mascararDesconto(input) {
+    const tipo = document.getElementById('tipoDesconto')?.value || 'perc';
+    if (tipo === 'valor') {
+        mascararMoeda(input, 'descontoGlobal');
+        return;
+    }
+
+    input.value = normalizarPercentualVisivel(input.value);
+    const valor = parseFloat(input.value.replace(',', '.')) || 0;
+    document.getElementById('descontoGlobal').value = valor.toFixed(2);
+    atualizarTotais();
+}
+
+function validarDescontoPercentual(anunciar = false) {
+    const tipo = document.getElementById('tipoDesconto')?.value || 'perc';
+    const valor = parseFloat(document.getElementById('descontoGlobal')?.value) || 0;
+    const invalido = tipo === 'perc' && valor >= 100;
+    const visivel = document.getElementById('descontoGlobalDisplay');
+    const wrapper = visivel?.closest('.discount-input-wrap');
+    const erro = document.getElementById('descontoErro');
+
+    visivel?.setAttribute('aria-invalid', invalido ? 'true' : 'false');
+    wrapper?.classList.toggle('is-invalid', invalido);
+    if (erro) erro.hidden = !invalido;
+
+    if (anunciar && invalido && erro) {
+        erro.textContent = 'O desconto percentual deve ser menor que 100%. O maior valor permitido é 99,99%.';
+    }
+    return !invalido;
+}
+
 function setTipoDesconto(tipo) {
     const tipoSeguro = tipo === 'valor' ? 'valor' : 'perc';
     const select = document.getElementById('tipoDesconto');
     const prefixo = document.getElementById('descontoPrefixo');
-    const input = document.getElementById('descontoGlobal');
+    const input = document.getElementById('descontoGlobalDisplay');
+    const hidden = document.getElementById('descontoGlobal');
 
     if (select) select.value = tipoSeguro;
     if (prefixo) prefixo.textContent = tipoSeguro === 'valor' ? 'R$' : '%';
     if (input) {
-        input.placeholder = tipoSeguro === 'valor' ? '0,00' : '0';
-        input.max = tipoSeguro === 'perc' ? '100' : '';
+        input.placeholder = '0,00';
+        input.inputMode = tipoSeguro === 'valor' ? 'numeric' : 'decimal';
+        input.value = formatarNumeroPtBr(parseFloat(hidden?.value) || 0);
     }
 
     document.querySelectorAll('.discount-mode-btn').forEach(btn => {
@@ -791,6 +949,7 @@ function obterValorEntrada(totalGeral) {
     if (valorEntrada > totalGeral) {
         valorEntrada = totalGeral;
         entradaInput.value = totalGeral.toFixed(2);
+        formatarCampoMoedaPorValor('valorEntradaDisplay', totalGeral);
     }
 
     return valorEntrada;
@@ -828,13 +987,13 @@ function atualizarTotais() {
 
     if (tipoDesconto === 'perc') {
         descontoPerc = parseFloat(descInput.value) || 0;
-        if (descontoPerc > 100) { descontoPerc = 100; descInput.value = 100; }
-        descontoValor = subtotalGeral * (descontoPerc / 100);
+        descontoValor = descontoPerc < 100 ? subtotalGeral * (descontoPerc / 100) : 0;
     } else {
         descontoValor = parseFloat(descInput.value) || 0;
         if (descontoValor > subtotalGeral && subtotalGeral > 0) {
             descontoValor = subtotalGeral;
             descInput.value = subtotalGeral.toFixed(2);
+            formatarCampoMoedaPorValor('descontoGlobalDisplay', subtotalGeral);
         }
         descontoPerc = subtotalGeral > 0 ? (descontoValor / subtotalGeral) * 100 : 0;
     }
@@ -870,6 +1029,7 @@ function atualizarTotais() {
         ph += `<div style="padding: 3px 0;">Parcela ${i}/<strong>${parcelas}: ${formatarMoeda(valorParcela)}</strong></div>`;
     }
     document.getElementById('parcelasInfo').innerHTML = ph;
+    atualizarEstadoAvancoServicos();
 }
 
 // ============ PASSO 3: REVISÃO ============
@@ -922,7 +1082,7 @@ function montarRevisao() {
     let descontoPerc = 0;
 
     if (tipoDesconto === 'perc') {
-        descontoPerc = Math.min(100, descInput);
+        descontoPerc = descInput;
         descontoValor = subtotalGeral * (descontoPerc / 100);
     } else {
         descontoValor = Math.min(subtotalGeral, descInput);
@@ -1073,7 +1233,9 @@ function renderizarServicosEmbarcacaoAtual() {
         const estado = servicosSelecionadosPorEmbarcacao[emb.id]?.[s.id] || null;
         const checked = !!estado;
         const qtd = estado?.qtd || 1;
-        const preco = parseFloat(s.preco_padrao) || 0;
+        const preco = checked && Number.isFinite(Number(estado?.preco))
+            ? Number(estado.preco)
+            : (parseFloat(s.preco_padrao) || 0);
         const subtotal = checked ? preco * qtd : 0;
         html += `
             <tr class="servico-linha" style="border-bottom: 1px solid var(--cor-borda); ${checked ? 'background: rgba(46,204,113,0.05);' : ''}">
@@ -1094,7 +1256,7 @@ function renderizarServicosEmbarcacaoAtual() {
                     <span style="font-weight: 500;">${formatarMoeda(preco)}</span>
                 </td>
                 <td style="padding: 8px 12px; text-align: right;">
-                    <span id="sub_${escAttr(emb.id)}_${escAttr(s.id)}" data-preco="${s.preco_padrao}" style="font-weight: 600; color: var(--cor-destaque);">${formatarMoeda(subtotal)}</span>
+                    <span id="sub_${escAttr(emb.id)}_${escAttr(s.id)}" data-preco="${preco}" style="font-weight: 600; color: var(--cor-destaque);">${formatarMoeda(subtotal)}</span>
                 </td>
             </tr>`;
     });
@@ -1141,8 +1303,13 @@ function salvarServicoSelecionado(embId, servId, qtdValor) {
     if (!servicosSelecionadosPorEmbarcacao[embId]) {
         servicosSelecionadosPorEmbarcacao[embId] = {};
     }
+    const estadoAtual = servicosSelecionadosPorEmbarcacao[embId][servId] || {};
+    const servicoCatalogo = ALL_SERVICOS.find(s => String(s.id) === String(servId));
     servicosSelecionadosPorEmbarcacao[embId][servId] = {
-        qtd: Math.max(1, parseInt(qtdValor) || 1)
+        qtd: Math.max(1, parseInt(qtdValor) || 1),
+        preco: Number.isFinite(Number(estadoAtual.preco))
+            ? Number(estadoAtual.preco)
+            : (parseFloat(servicoCatalogo?.preco_padrao) || 0)
     };
     atualizarEstadoAvancoServicos();
 }
@@ -1165,7 +1332,10 @@ function obterResumoEmbarcacao(embId) {
         const servico = ALL_SERVICOS.find(s => String(s.id) === String(servId));
         if (!servico) return;
         const quantidade = Math.max(1, parseInt(estado.qtd) || 1);
-        total += (parseFloat(servico.preco_padrao) || 0) * quantidade;
+        const preco = Number.isFinite(Number(estado.preco))
+            ? Number(estado.preco)
+            : (parseFloat(servico.preco_padrao) || 0);
+        total += preco * quantidade;
         qtd++;
     });
 
@@ -1192,13 +1362,13 @@ function atualizarTotais() {
 
     if (tipoDesconto === 'perc') {
         descontoPerc = parseFloat(descInput.value) || 0;
-        if (descontoPerc > 100) { descontoPerc = 100; descInput.value = 100; }
-        descontoValor = subtotalGeral * (descontoPerc / 100);
+        descontoValor = descontoPerc < 100 ? subtotalGeral * (descontoPerc / 100) : 0;
     } else {
         descontoValor = parseFloat(descInput.value) || 0;
         if (descontoValor > subtotalGeral && subtotalGeral > 0) {
             descontoValor = subtotalGeral;
             descInput.value = subtotalGeral.toFixed(2);
+            formatarCampoMoedaPorValor('descontoGlobalDisplay', subtotalGeral);
         }
         descontoPerc = subtotalGeral > 0 ? (descontoValor / subtotalGeral) * 100 : 0;
     }
@@ -1229,6 +1399,7 @@ function atualizarTotais() {
         ph += `<div style="padding: 3px 0;">Parcela ${i}/<strong>${parcelas}: ${formatarMoeda(valorParcela)}</strong></div>`;
     }
     document.getElementById('parcelasInfo').innerHTML = ph;
+    atualizarEstadoAvancoServicos();
 }
 
 function montarRevisao() {
@@ -1243,7 +1414,9 @@ function montarRevisao() {
         Object.entries(selecionados).forEach(([servId, estado]) => {
             const servico = ALL_SERVICOS.find(s => String(s.id) === String(servId));
             if (!servico) return;
-            const preco = parseFloat(servico.preco_padrao) || 0;
+            const preco = Number.isFinite(Number(estado.preco))
+                ? Number(estado.preco)
+                : (parseFloat(servico.preco_padrao) || 0);
             const qtd = Math.max(1, parseInt(estado.qtd) || 1);
             const subtotal = preco * qtd;
             embTotal += subtotal;
@@ -1270,7 +1443,7 @@ function montarRevisao() {
     let descontoPerc = 0;
 
     if (tipoDesconto === 'perc') {
-        descontoPerc = Math.min(100, descInput);
+        descontoPerc = descInput;
         descontoValor = subtotalGeral * (descontoPerc / 100);
     } else {
         descontoValor = Math.min(subtotalGeral, descInput);
@@ -1395,6 +1568,12 @@ function avancarWizardComEnter(event) {
 }
 
 document.addEventListener('keydown', avancarWizardComEnter);
+document.getElementById('wizardForm')?.addEventListener('submit', event => {
+    if (validarDescontoPercentual(true)) return;
+    event.preventDefault();
+    irParaPasso(2);
+    document.getElementById('descontoGlobalDisplay')?.focus();
+});
 </script>
 
 <style>
@@ -1500,7 +1679,7 @@ document.addEventListener('keydown', avancarWizardComEnter);
 }
 .discount-control {
     display: grid;
-    grid-template-columns: minmax(86px, 0.75fr) minmax(0, 1.25fr);
+    grid-template-columns: 1fr;
     align-items: stretch;
     justify-content: center;
     gap: 8px;
@@ -1554,14 +1733,9 @@ document.addEventListener('keydown', avancarWizardComEnter);
 .entry-card {
     min-width: 0;
 }
-@media (max-width: 520px) {
-    .discount-control {
-        grid-template-columns: 1fr;
-    }
-    .discount-mode {
-        width: 100%;
-        grid-template-columns: 1fr 1fr;
-    }
+.discount-mode {
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
 }
 .discount-input-wrap span {
     min-width: 44px;
@@ -1588,6 +1762,23 @@ document.addEventListener('keydown', avancarWizardComEnter);
     display: block;
     margin-top: 8px;
     color: var(--cor-texto-secundario);
+}
+.discount-input-wrap.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12);
+}
+.discount-input-wrap input[aria-invalid="true"] {
+    color: #b4232d !important;
+}
+.discount-error {
+    display: block;
+    margin-top: 7px;
+    color: #b4232d;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.discount-error[hidden] {
+    display: none;
 }
 .servico-linha:hover { background: rgba(46,204,113,0.03) !important; }
 .emb-body table { font-size: 0.9rem; }

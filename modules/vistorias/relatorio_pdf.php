@@ -52,12 +52,16 @@ if (!$v) {
     exit("Relatório não encontrado.");
 }
 
-$cadeiaPdf = obterCadeiaRelatorios($pdo, (string)$v['id']);
-$relatorioRaizNumero = '';
-$etapaRetorno = 0;
-foreach ($cadeiaPdf as $indicePdf => $itemPdf) {
-    if ($indicePdf === 0) $relatorioRaizNumero = (string)($itemPdf['numero'] ?? '');
-    if ((string)$itemPdf['id'] === (string)$v['id']) $etapaRetorno = $indicePdf;
+$retornoTipoPdf = null;
+if (($v['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS') {
+    $stmtRetornoTipo = $pdo->prepare("SELECT tipo FROM vistoria_retornos
+        WHERE relatorio_resultado_id=:relatorio OR agendamento_id=:agendamento
+        LIMIT 1");
+    $stmtRetornoTipo->execute([
+        ':relatorio' => $v['id'],
+        ':agendamento' => $v['agendamento_id'],
+    ]);
+    $retornoTipoPdf = (string)($stmtRetornoTipo->fetchColumn() ?: 'AS');
 }
 
 if ($requisicaoExterna && getCargo() === 'VISTORIADOR'
@@ -105,7 +109,7 @@ $stmtE = $pdo->prepare("
     ORDER BY ex.ordem ASC
 ");
 $stmtE->execute([':id' => $id]);
-$exigencias = $stmtE->fetchAll(PDO::FETCH_ASSOC);
+$exigencias = calcularNumerosOrigemExigencias($pdo, $stmtE->fetchAll(PDO::FETCH_ASSOC));
 
 // Carregar autoloader do Composer (inclui TCPDF automaticamente)
 $autoload_path = __DIR__ . '/../../vendor/autoload.php';
@@ -132,6 +136,24 @@ function dataPorExtenso($data) {
 function formatarDataBR($data) {
     if (empty($data)) return '';
     return date('d/m/Y', strtotime($data));
+}
+
+function dividirTextoObservacaoPdf(string $texto, int $limite = 1800): array {
+    $texto = trim($texto);
+    if ($texto === '') return [''];
+    $partes = [];
+    while (mb_strlen($texto, 'UTF-8') > $limite) {
+        $trecho = mb_substr($texto, 0, $limite, 'UTF-8');
+        $posQuebra = max(
+            (int)mb_strrpos($trecho, "\n", 0, 'UTF-8'),
+            (int)mb_strrpos($trecho, ' ', 0, 'UTF-8')
+        );
+        if ($posQuebra < (int)($limite * 0.65)) $posQuebra = $limite;
+        $partes[] = trim(mb_substr($texto, 0, $posQuebra, 'UTF-8'));
+        $texto = ltrim(mb_substr($texto, $posQuebra, null, 'UTF-8'));
+    }
+    if ($texto !== '') $partes[] = $texto;
+    return $partes;
 }
 
 // Buscar assinante responsável técnico ativo do banco de dados
@@ -220,6 +242,7 @@ foreach (array_keys($blocos) as $b_id) {
 if (!class_exists('RelatorioVistoriaPDF')) {
     class RelatorioVistoriaPDF extends TCPDF {
         protected $numero;
+        protected $paginaInicioObservacoes = 0;
         public function __construct($numero) {
             parent::__construct('P', 'mm', 'A4', true, 'UTF-8', false);
             $this->numero = $numero;
@@ -253,7 +276,19 @@ if (!class_exists('RelatorioVistoriaPDF')) {
                 
                 // Garante que o Y fique posicionado abaixo do Header para não vazar texto
                 $this->SetY(35);
+            } elseif ($this->paginaInicioObservacoes > 0 && $this->PageNo() > $this->paginaInicioObservacoes) {
+                $this->SetY(13);
+                $this->SetFont('helvetica', 'B', 10);
+                $this->SetTextColor(0, 0, 0);
+                $this->Cell(0, 6, 'OBSERVAÇÕES (continuação)', 0, 1, 'C');
+                $this->SetY(28);
             }
+        }
+        public function iniciarObservacoes(): void {
+            $this->paginaInicioObservacoes = $this->PageNo();
+        }
+        public function encerrarObservacoes(): void {
+            $this->paginaInicioObservacoes = 0;
         }
         public function Footer() {
             // Vazio para não imprimir rodapé
@@ -270,7 +305,9 @@ $pdf = new RelatorioVistoriaPDF(h($v['numero']));
 $pdf->SetCreator(APP_NAME);
 $pdf->SetAuthor('Amazon Naval Ltda');
 $tituloDocumento = (($v['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS')
-    ? 'Relatório de Cumprimento de Exigências A/S'
+    ? ($retornoTipoPdf === 'AS'
+        ? 'Relatório de Cumprimento de Exigências A/S'
+        : 'Relatório de Verificação de Exigências')
     : 'Relatório de Vistoria';
 $pdf->SetTitle($tituloDocumento . ' - ' . $v['numero']);
 $pdf->SetMargins(15, 28, 15);
@@ -278,17 +315,6 @@ $pdf->SetAutoPageBreak(true, 18);
 
 $pdf->AddPage();
 $pdf->SetTextColor(0, 0, 0);
-
-if (($v['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS') {
-    $pdf->SetFont('helvetica', 'B', 11);
-    $pdf->SetTextColor(153, 83, 0);
-    $pdf->Cell(0, 7, mb_strtoupper('Relatório de cumprimento de exigências A/S'), 0, 1, 'C');
-    $pdf->SetFont('helvetica', '', 9);
-    $pdf->Cell(0, 5, 'Relatório anterior: ' . ($v['relatorio_anterior_numero'] ?: $v['relatorio_anterior_id']), 0, 1, 'C');
-    $pdf->Cell(0, 5, 'Relatório raiz: ' . ($relatorioRaizNumero ?: '-') . ' | Etapa do retorno: ' . $etapaRetorno, 0, 1, 'C');
-    $pdf->SetTextColor(0, 0, 0);
-    $pdf->Ln(2);
-}
 
 // Informações básicas (Embarcação, Armador, etc) formatadas em duas colunas (rótulo e valor)
 $pdf->Ln(5);
@@ -328,8 +354,84 @@ $pdf->Cell($value_w, 5, ' ' . h($v['local_vistoria'] ?? 'BELÉM - PA'), 0, 1, 'L
 
 $pdf->Ln(6);
 
-// Tabela de Exigências
+// Tabelas de resultado e exigências vigentes
 $col_w = [15, 100, 35, 30];
+$ehRelatorioCumprimentoPdf = (($v['finalidade'] ?? 'VISTORIA') === 'CUMPRIMENTO_EXIGENCIAS');
+$exigenciasCumpridasPdf = $ehRelatorioCumprimentoPdf
+    ? array_values(array_filter($exigencias, fn($item) => ($item['status_item'] ?? '') === 'cumprida'))
+    : [];
+$exigenciasTabelaPdf = $ehRelatorioCumprimentoPdf
+    ? array_values(array_filter($exigencias, fn($item) => ($item['status_item'] ?? '') !== 'cumprida'))
+    : $exigencias;
+$exigenciasTabelaPdf = numerarExigenciasPorSecao($exigenciasTabelaPdf);
+$possuiSemVencimentoPdf = count(array_filter(
+    $exigenciasTabelaPdf,
+    static fn($item) => empty($item['antes_de_suspender']) && empty($item['vencimento'])
+)) > 0;
+$possuiAsVigentePdf = count(array_filter(
+    $exigenciasTabelaPdf,
+    static fn($item) => !empty($item['antes_de_suspender'])
+)) > 0;
+$numeroObservacaoAsPdf = $possuiAsVigentePdf ? ($possuiSemVencimentoPdf ? 3 : 2) : null;
+
+if ($ehRelatorioCumprimentoPdf) {
+    $pdf->SetFont('helvetica', 'B', 10);
+    $pdf->Cell(0, 6, 'RESULTADO DA VERIFICAÇÃO', 0, 1, 'C');
+}
+
+if ($exigenciasCumpridasPdf) {
+    usort($exigenciasCumpridasPdf, static function (array $a, array $b): int {
+        $ordemBlocosResultado = ['seco' => 0, 'flutuando' => 1, 'borda_livre' => 2, 'arqueacao' => 3];
+        $blocoA = blocoExigenciaNormalizado($a['bloco_vistoria'] ?? null);
+        $blocoB = blocoExigenciaNormalizado($b['bloco_vistoria'] ?? null);
+        $cmp = ($ordemBlocosResultado[$blocoA] ?? 99) <=> ($ordemBlocosResultado[$blocoB] ?? 99);
+        if ($cmp !== 0) return $cmp;
+        return ((int)($a['numero_origem'] ?? $a['ordem'] ?? 0))
+            <=> ((int)($b['numero_origem'] ?? $b['ordem'] ?? 0));
+    });
+    $pdf->SetFont('helvetica', 'B', 8);
+    $pdf->Cell($col_w[0], 6, 'ITEM ANT.', 1, 0, 'C');
+    $pdf->Cell($col_w[1], 6, 'Descrição verificada', 1, 0, 'L');
+    $pdf->Cell($col_w[2], 6, 'Item da NORMAM', 1, 0, 'C');
+    $pdf->Cell($col_w[3], 6, 'Resultado', 1, 1, 'C');
+    $blocoResultadoAnterior = null;
+    foreach ($exigenciasCumpridasPdf as $itemCumprido) {
+        $blocoResultado = blocoExigenciaNormalizado($itemCumprido['bloco_vistoria'] ?? null);
+        if ($blocoResultado !== $blocoResultadoAnterior) {
+            $pdf->SetFont('helvetica', 'B', 8);
+            $pdf->SetFillColor(255, 255, 255);
+            $pdf->SetTextColor(0, 0, 0);
+            $pdf->Cell(array_sum($col_w), 6, rotuloSecaoExigencia($blocoResultado), 1, 1, 'L', true);
+            $blocoResultadoAnterior = $blocoResultado;
+        }
+        $descricaoCumprida = trim((string)($itemCumprido['descricao'] ?? '')) ?: ($itemCumprido['item'] ?? '');
+        $normamCumprida = trim((string)($itemCumprido['item_normam'] ?? '')) ?: ($itemCumprido['item'] ?? '');
+        $numeroAnterior = (int)($itemCumprido['numero_origem'] ?: $itemCumprido['ordem']);
+        $resultadoCumprida = 'Exigência cumprida';
+        $pdf->SetFont('helvetica', '', 8);
+        $h = max(
+            $pdf->getNumLines($descricaoCumprida, $col_w[1]),
+            $pdf->getNumLines($normamCumprida, $col_w[2]),
+            $pdf->getNumLines($resultadoCumprida, $col_w[3])
+        ) * 4;
+        if ($h < 6) $h = 6;
+        if ($pdf->GetY() + $h > $pdf->getPageHeight() - $pdf->getBreakMargin() - 10) $pdf->AddPage();
+        $pdf->MultiCell($col_w[0], $h, (string)$numeroAnterior, 1, 'C', false, 0);
+        $pdf->MultiCell($col_w[1], $h, $descricaoCumprida, 1, 'L', false, 0);
+        $pdf->MultiCell($col_w[2], $h, $normamCumprida, 1, 'C', false, 0);
+        $pdf->MultiCell($col_w[3], $h, $resultadoCumprida, 1, 'C', false, 1);
+    }
+    $pdf->Ln(6);
+} elseif ($ehRelatorioCumprimentoPdf) {
+    $pdf->SetFont('helvetica', 'I', 8);
+    $pdf->Cell(array_sum($col_w), 6, 'Nenhuma exigência foi classificada como cumprida.', 1, 1, 'C');
+    $pdf->Ln(6);
+}
+
+if ($ehRelatorioCumprimentoPdf) {
+    $pdf->SetFont('helvetica', 'B', 10);
+    $pdf->Cell(0, 6, 'EXIGÊNCIAS VIGENTES', 0, 1, 'C');
+}
 
 // Função para desenhar cabeçalho da tabela
 function printTableHeader($pdf, $col_w) {
@@ -345,7 +447,6 @@ function printTableHeader($pdf, $col_w) {
 
 printTableHeader($pdf, $col_w);
 
-$numero_item_pdf = 1;
 foreach ($blocos as $bloco_id => $bloco_nome) {
     $pdf->SetFont('helvetica', 'B', 8);
     $pdf->SetFillColor(255, 255, 255);
@@ -353,7 +454,7 @@ foreach ($blocos as $bloco_id => $bloco_nome) {
     $data_v = formatarDataBR($datas_blocos[$bloco_id]);
     $pdf->Cell(array_sum($col_w), 6, $bloco_nome . ' - ' . $data_v, 1, 1, 'L', true);
     
-    $itens_bloco = array_filter($exigencias, function($e) use ($bloco_id) {
+    $itens_bloco = array_filter($exigenciasTabelaPdf, function($e) use ($bloco_id) {
         $b = $e['bloco_vistoria'] ?? 'flutuando';
         return $b === $bloco_id;
     });
@@ -364,9 +465,14 @@ foreach ($blocos as $bloco_id => $bloco_nome) {
     } else {
         foreach ($itens_bloco as $item) {
             $vencimento = !empty($item['antes_de_suspender'])
-                ? "A/S\nVer Obs. 2"
+                ? "A/S\nVer Obs. " . $numeroObservacaoAsPdf
                 : (empty($item['vencimento']) ? '-' : formatarDataBR($item['vencimento']));
-            $descricao = trim((string)($item['descricao'] ?? '')) ?: ($item['item'] ?? '');
+            $descricao = ($item['status_item'] ?? '') === 'cumprida_parcial_reescrita'
+                ? trim((string)($item['descricao_reescrita'] ?? ''))
+                : '';
+            $descricao = $descricao !== ''
+                ? $descricao
+                : (trim((string)($item['descricao'] ?? '')) ?: ($item['item'] ?? ''));
             $normam = trim((string)($item['item_normam'] ?? '')) ?: ($item['item'] ?? '');
             
             $pdf->SetFont('helvetica', '', 8);
@@ -387,7 +493,8 @@ foreach ($blocos as $bloco_id => $bloco_nome) {
             $startY = $pdf->GetY();
             
             // Desenhar linhas com borda completa
-            $pdf->MultiCell($col_w[0], $h, $numero_item_pdf++, 1, 'C', false, 0);
+            $numeroExigenciaPdf = (int)($item['numero_sequencial_calculado'] ?? 0);
+            $pdf->MultiCell($col_w[0], $h, $numeroExigenciaPdf, 1, 'C', false, 0);
             $pdf->MultiCell($col_w[1], $h, $descricao, 1, 'L', false, 0);
             $pdf->MultiCell($col_w[2], $h, $normam, 1, 'C', false, 0);
             $pdf->MultiCell($col_w[3], $h, $vencimento, 1, 'C', false, 1);
@@ -397,80 +504,61 @@ foreach ($blocos as $bloco_id => $bloco_nome) {
 
 $pdf->Ln(6);
 
-// Observações
+// Observações em tabela numerada, calculadas da cadeia auditável.
+$observacoesPdf = [];
+$tipoObjetivo = $ehRelatorioCumprimentoPdf
+    ? ($retornoTipoPdf === 'AS' ? 'verificação de cumprimento de exigências A/S' : 'verificação de cumprimento de exigências')
+    : 'vistoria técnica';
+$objetivo = 'Este relatório tem o objetivo de registrar a ' . $tipoObjetivo
+    . ' realizada em ' . formatarDataBR($v['data_vistoria']) . '.';
+if (!empty($v['relatorio_anterior_numero'])) {
+    $objetivo .= ' É vinculado ao relatório anterior ' . $v['relatorio_anterior_numero'] . '.';
+}
+$observacoesPdf[] = $objetivo;
+
+if ($possuiSemVencimentoPdf) {
+    $observacoesPdf[] = 'As exigências sem data de vencimento não possuem prazo designado neste relatório e devem ser regularizadas conforme as condições da certificação aplicável.';
+}
+if ($possuiAsVigentePdf) {
+    $observacoesPdf[] = 'As exigências identificadas como A/S (Antes de suspender) devem ser cumpridas antes da continuidade da certificação e bloqueiam a emissão ou convalidação dos respectivos Certificados Estatutários enquanto permanecerem pendentes.';
+}
+$observacaoTecnica = trim((string)($v['observacoes_tecnicas'] ?? ''));
+if ($observacaoTecnica !== ''
+    && stripos($observacaoTecnica, 'Cumprimento das exigencias pendentes do relatorio') !== 0) {
+    $observacoesPdf[] = $observacaoTecnica;
+}
+$historicoPdf = construirHistoricoComparativoRelatorio($pdo, (string)$v['id']);
+if ($historicoPdf !== '') {
+    $observacoesPdf[] = "Em relação à cadeia de relatórios de vistorias, evidencia-se:\n" . $historicoPdf;
+}
+
+if ($pdf->GetY() + 42 > $pdf->getPageHeight() - $pdf->getBreakMargin()) {
+    $pdf->AddPage();
+}
+$pdf->iniciarObservacoes();
 $pdf->SetFont('helvetica', 'B', 10);
-$pdf->Cell(0, 6, 'OBSERVAÇÕES', 0, 1, 'C');
-$pdf->Ln(2);
-
-$pdf->SetFont('helvetica', '', 9);
-
-// Lógica de Observações Comparativas (Baseado no histórico real)
-$obs_counter = 1;
-
-if (!empty($v['relatorio_anterior_id'])) {
-    // Obter agrupamentos da vistoria ATUAL
-    $transcritas = [];
-    $reescritas = [];
-    $inseridas = [];
-    $cumpridas = [];
-    
-    foreach ($exigencias as $ex) {
-        if ($ex['status_item'] === 'cumprida') {
-            $cumpridas[] = $ex['ordem'];
-        } elseif ($ex['status_item'] === 'nao_cumprida_transcrita' || $ex['status_item'] === 'pendente') {
-            $transcritas[] = $ex['ordem'];
-        } elseif ($ex['status_item'] === 'cumprida_parcial_reescrita') {
-            $reescritas[] = $ex['ordem'];
-        } elseif ($ex['status_item'] === 'inserida') {
-            $inseridas[] = $ex['ordem'];
-        }
+$pdf->Cell(0, 7, 'OBSERVAÇÕES', 1, 1, 'C');
+$linhasHtml = '';
+foreach ($observacoesPdf as $indiceObservacao => $textoObservacao) {
+    foreach (dividirTextoObservacaoPdf($textoObservacao) as $parteObservacao) {
+        $textoHtml = nl2br(htmlspecialchars($parteObservacao, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+        $linhasHtml .= '<tr nobr="true">'
+            . '<td width="8%" align="center">' . ($indiceObservacao + 1) . '</td>'
+            . '<td width="92%" align="left">' . $textoHtml . '</td>'
+            . '</tr>';
     }
-    
-    // Simplificando a exibição para bater com o layout. Se tiver dados comparativos, os exibimos
-    $pdf->Ln(2); // Espaço antes para evitar colar
-    $pdf->Cell(0, 5, "{$obs_counter}. Em relação ao relatório de vistorias anterior, evidencia-se:", 0, 1, 'L');
-    $obs_counter++;
-    $pdf->Ln(1); // Espaço explícito para não vazar texto
-    
-    // Separamos por bloco para ser mais fiel (opcional), mas vamos listar num fluxo simples e limpo
-    if (count($cumpridas) > 0) {
-        $pdf->MultiCell(0, 5, "- As exigências n.º " . implode(', ', $cumpridas) . " foram CUMPRIDAS.", 0, 'L');
-    }
-    if (count($transcritas) > 0) {
-        $pdf->MultiCell(0, 5, "- As exigências n.º " . implode(', ', $transcritas) . " não foram cumpridas e, portanto, foram TRANSCRITAS neste relatório, e receberam novo sequencial.", 0, 'L');
-    }
-    if (count($reescritas) > 0) {
-        $pdf->MultiCell(0, 5, "- As exigências n.º " . implode(', ', $reescritas) . " foram cumpridas parcialmente e, portanto, foram REESCRITAS neste relatório, e receberam novo sequencial.", 0, 'L');
-    }
-    if (count($inseridas) > 0) {
-        $pdf->MultiCell(0, 5, "- As exigências n.º " . implode(', ', $inseridas) . " foram INSERIDAS neste relatório.", 0, 'L');
-    }
-    
-    $pdf->Ln(2);
 }
-
-// Observações Técnicas (livre)
-if (!empty($v['observacoes_tecnicas'])) {
-    $pdf->MultiCell(0, 4.5, "{$obs_counter}. " . $v['observacoes_tecnicas'], 0, 'L');
-    $obs_counter++;
-    $pdf->Ln(2);
-}
-
-if (!empty($v['texto_observacoes_geradas'])) {
-    $pdf->MultiCell(0, 4.5, "{$obs_counter}. " . $v['texto_observacoes_geradas'], 0, 'L');
-    $obs_counter++;
-    $pdf->Ln(2);
-}
-
-// Observação fixa (Obs. 2)
-$obs_2 = "As exigências identificadas como A/S (Antes de suspender) devem ser cumpridas antes da continuidade da certificação e bloqueiam a emissão ou convalidação dos respectivos Certificados Estatutários enquanto permanecerem pendentes.";
-$pdf->MultiCell(0, 4.5, "Obs. 2: " . $obs_2, 0, 'L');
-$pdf->Ln(8);
+$tabelaObservacoes = '<table border="1" cellpadding="4" cellspacing="0">'
+    . '<tbody>' . $linhasHtml . '</tbody></table>';
+$pdf->SetFont('helvetica', '', 8.5);
+$pdf->writeHTML($tabelaObservacoes, true, false, true, false, '');
+$pdf->encerrarObservacoes();
+$pdf->Ln(4);
 
 // Rodapé de emissão e termo de responsabilidade
 $reservarBlocoAssinatura = isset($GLOBALS['APROVACAO_RESPONSAVEL_PDF']);
-$alturaBlocoAssinatura = 39.0;
-$alturaRodapeAssinado = 76.0;
+$alturaBlocoAssinatura = 49.0;
+$alturaRodapeAssinado = 88.0;
 if ($reservarBlocoAssinatura
     && $pdf->GetY() + $alturaRodapeAssinado > $pdf->getPageHeight() - $pdf->getBreakMargin()) {
     $pdf->AddPage();
@@ -486,7 +574,9 @@ if ($reservarBlocoAssinatura) {
     ];
     $pdf->SetY($aprovacao_pdf_layout['bloco_y'] + $alturaBlocoAssinatura + 3.0);
 } else {
-    $pdf->Ln(4);
+    $pdf->SetFont('helvetica', 'I', 8);
+    $pdf->MultiCell(0, 4, 'Validação disponível após a assinatura eletrônica.', 0, 'L');
+    $pdf->Ln(3);
 }
 
 $texto_responsabilidade = "A aprovação das vistorias realizadas para a emissão ou validação de um Certificado serão válidas apenas para o momento em que forem efetuadas. A partir de então, e durante todo o período de validade do Certificado, os proprietários, armadores, comandantes ou mestres segundo as circunstâncias do caso, serão os responsáveis pela manutenção das condições de segurança, de maneira a garantirem que a embarcação e seus equipamentos não constituam um perigo para sua própria segurança, para a de terceiros ou do meio ambiente.";

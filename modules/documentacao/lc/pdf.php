@@ -32,6 +32,7 @@ if (!isset($salvar_pdf_caminho) && !empty($c['assinado']) && !empty($c['caminho_
 }
 
 require_once __DIR__ . '/../../../vendor/autoload.php';
+require_once __DIR__ . '/../../../includes/certificado_pdf_marca_dagua.php';
 
 if (!function_exists('lcDataExtenso')) {
     function lcDataExtenso(?string $data): string
@@ -61,7 +62,7 @@ if (!function_exists('lcImagemValida')) {
     }
 }
 if (!class_exists('LicencaConstrucaoPDF')) {
-    class LicencaConstrucaoPDF extends TCPDF
+    class LicencaConstrucaoPDF extends CertificadoPdfComMarcaDagua
     {
         public function Header() {}
         public function Footer() {}

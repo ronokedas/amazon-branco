@@ -17,8 +17,9 @@ $certificados = file_get_contents(__DIR__ . '/../modules/certificados/wizard_ste
 $dashboard = file_get_contents(__DIR__ . '/../modules/dashboard/data.php');
 $dashboardView = file_get_contents(__DIR__ . '/../modules/dashboard/views/admin.php');
 $assinaturasActions = file_get_contents(__DIR__ . '/../modules/minhas_assinaturas/actions.php');
+$assinaturasUsuarios = file_get_contents(__DIR__ . '/../includes/assinaturas_usuarios.php');
 
-foreach ([$migration,$migration095,$migration096,$functions,$vistorias,$agendamentos,$formAgendamento,$relatorio,$certificados,$dashboard,$dashboardView,$assinaturasActions] as $arquivo) {
+foreach ([$migration,$migration095,$migration096,$functions,$vistorias,$agendamentos,$formAgendamento,$relatorio,$certificados,$dashboard,$dashboardView,$assinaturasActions,$assinaturasUsuarios] as $arquivo) {
     assertRetornoAS($arquivo !== false, 'Nao foi possivel ler um arquivo do fluxo de retornos A/S.');
 }
 
@@ -51,7 +52,7 @@ assertRetornoAS(str_contains($functions, 'gerarNumeroDocumento'), 'O retorno nao
 
 assertRetornoAS(str_contains($vistorias, 'encaminharRelatorioParaRetornoAS'), 'A decisao administrativa nao cria atomicamente o retorno para A/S.');
 assertRetornoAS(str_contains($vistorias, "decisao === 'retorno_as'"), 'O endpoint nao reconhece a decisao retorno_as.');
-assertRetornoAS(str_contains($vistorias, 'concluirRetornoDoRelatorio'), 'A aprovacao do cumprimento nao conclui a etapa anterior.');
+assertRetornoAS(str_contains($assinaturasUsuarios, 'concluirRetornoDoRelatorio'), 'A assinatura do cumprimento nao conclui a etapa anterior.');
 assertRetornoAS(str_contains($vistorias, "dashboard#retornos-as"), 'O encaminhamento A/S nao leva o administrador para o novo agendamento.');
 assertRetornoAS(str_contains($vistorias, 'sem_prazo = :sem_prazo_upd'), 'O formulario web nao persiste o marcador A/S na resposta do checklist.');
 assertRetornoAS(str_contains($vistorias, '$checklist_sem_prazo_por_id[$cat_id]'), 'O salvamento A/S ainda depende somente do JavaScript e da posicao do item.');
@@ -61,6 +62,11 @@ assertRetornoAS(substr_count($agendamentos, "relatorio_origem_id']) && \$cargo !
 assertRetornoAS(str_contains($formAgendamento, 'Retorno obrigatório A/S'), 'O formulario nao identifica o retorno obrigatorio.');
 
 assertRetornoAS(str_contains($relatorio, 'Linha do tempo dos relatórios A/S'), 'A cadeia nao aparece na tela do relatorio.');
+assertRetornoAS(
+    str_contains($relatorio, 'criarRelatorioCumprimentoAgendamento')
+    && str_contains($relatorio, "'&vistoria_id='"),
+    'A abertura do retorno nao recupera o relatorio-filho nem redireciona para a tela de cumprimento.'
+);
 assertRetornoAS(str_contains($relatorio, 'Encaminhar para Retorno A/S'), 'O admin nao recebe a decisao impeditiva de A/S.');
 assertRetornoAS(str_contains($relatorio, 'N&atilde;o aprovar e enviar para Retornos A/S'), 'A decisao impeditiva A/S nao esta explicita perto das outras decisoes.');
 assertRetornoAS(str_contains($relatorio, 'checklist_sem_prazo_por_id['), 'O checkbox A/S nao e enviado diretamente pelo formulario.');
@@ -68,6 +74,9 @@ assertRetornoAS(str_contains($relatorio, 'COALESCE(r.sem_prazo, 0)'), 'A reabert
 assertRetornoAS(str_contains($certificados, 'relatorioNumerosReferenciaCertificado'), 'O wizard nao persiste original e cumprimento.');
 assertRetornoAS(str_contains($dashboard, 'fluxo_retornos_as'), 'O dashboard nao exibe retornos aguardando agendamento.');
 assertRetornoAS(str_contains($dashboardView, 'id="retornos-as"'), 'O dashboard nao possui destino direto para o retorno A/S.');
-assertRetornoAS(str_contains($assinaturasActions, 'ele não foi aprovado'), 'A assinatura administrativa ainda informa aprovacao indevida quando ha A/S.');
+assertRetornoAS(
+    str_contains($assinaturasUsuarios, "['APROVADA','APROVADA_COM_EXIGENCIAS']"),
+    'A assinatura de relatorio nao restringe o fluxo aos estados aprovados.'
+);
 
 echo "fluxo_retornos_as_test: OK\n";

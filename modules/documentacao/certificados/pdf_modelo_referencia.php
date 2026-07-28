@@ -1,7 +1,7 @@
 <?php
 
 if (!class_exists('CsnModeloReferenciaPdf')) {
-    class CsnModeloReferenciaPdf extends TCPDF
+    class CsnModeloReferenciaPdf extends CertificadoPdfComMarcaDagua
     {
         public function Header() {}
         public function Footer() {}
