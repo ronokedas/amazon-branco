@@ -117,6 +117,7 @@ if (!file_exists($autoload_path)) {
     die("Autoloader do Composer não encontrado.");
 }
 require_once $autoload_path;
+require_once __DIR__ . '/../../includes/certificado_pdf_marca_dagua.php';
 
 // ============================================
 // FUNÇÕES AUXILIARES
@@ -240,7 +241,7 @@ foreach (array_keys($blocos) as $b_id) {
 // ============================================
 
 if (!class_exists('RelatorioVistoriaPDF')) {
-    class RelatorioVistoriaPDF extends TCPDF {
+    class RelatorioVistoriaPDF extends CertificadoPdfComMarcaDagua {
         protected $numero;
         protected $paginaInicioObservacoes = 0;
         public function __construct($numero) {

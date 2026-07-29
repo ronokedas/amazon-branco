@@ -407,3 +407,5 @@ Stack trace:
 [28-Jul-2026 19:57:25 America/Sao_Paulo] Erro no upload para S3/MinIO: Error executing "PutObject" on "http://minio:9000/erp-storage/assinaturas/propostas/6a6933d2f2960_1785279442.png"; AWS HTTP error:
 SlowDownRead (server): Resource requested is unreadable, please reduce your request rate
 [28-Jul-2026 19:57:28 America/Sao_Paulo] PHP Warning:  Undefined array key 14 in /var/www/html/modules/comercial/pdf.php on line 134
+[29-Jul-2026 00:47:09 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "/" in Command line code on line 1
+[29-Jul-2026 00:47:16 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "/" in Command line code on line 1

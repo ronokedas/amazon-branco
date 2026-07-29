@@ -40,4 +40,15 @@ assertRelatorioLayout(str_contains($arquivo, 'function definirExpansaoReview'), 
 assertRelatorioLayout(str_contains($arquivo, 'adminRequirementsNoResults'), 'A busca da revisao nao possui estado sem resultados.');
 assertRelatorioLayout(str_contains($arquivo, 'Revise as exigências') && str_contains($arquivo, 'Registre a decisão'), 'A orientacao do fluxo de decisao nao foi adicionada.');
 
+$pdfArquivo = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio_pdf.php');
+assertRelatorioLayout($pdfArquivo !== false, 'Não foi possível ler o gerador PDF da vistoria.');
+assertRelatorioLayout(
+    str_contains($pdfArquivo, "require_once __DIR__ . '/../../includes/certificado_pdf_marca_dagua.php';"),
+    'O relatório de vistoria não carrega a marca-dágua compartilhada.'
+);
+assertRelatorioLayout(
+    str_contains($pdfArquivo, 'class RelatorioVistoriaPDF extends CertificadoPdfComMarcaDagua'),
+    'A marca-dágua não está aplicada a todas as páginas do relatório de vistoria.'
+);
+
 echo "relatorio_vistoria_layout_test: OK\n";
