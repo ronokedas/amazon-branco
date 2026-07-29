@@ -409,3 +409,7 @@ SlowDownRead (server): Resource requested is unreadable, please reduce your requ
 [28-Jul-2026 19:57:28 America/Sao_Paulo] PHP Warning:  Undefined array key 14 in /var/www/html/modules/comercial/pdf.php on line 134
 [29-Jul-2026 00:47:09 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "/" in Command line code on line 1
 [29-Jul-2026 00:47:16 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "/" in Command line code on line 1
+[29-Jul-2026 00:48:19 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[29-Jul-2026 00:48:19 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[29-Jul-2026 00:48:42 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[29-Jul-2026 00:48:42 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
