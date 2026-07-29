@@ -392,25 +392,105 @@ sha256sum storage/documentos_aprovados/2026/csn/ARQUIVO.pdf
 
 O hash precisa ser igual ao campo `hash_arquivo_pdf` do documento.
 
-## 12. Observações sobre a publicação integral
+## 12. Observações sobre o backup integral
 
-- O projeto foi configurado deliberadamente para não ignorar nenhum arquivo.
-- Credenciais do `.env` são publicadas conforme a política deste projeto.
+- O projeto versiona todos os arquivos operacionais e documentos do sistema.
+- Somente `.env`, suas variações locais e `db.sql` ficam fora do GitHub.
 - Dependências de `vendor/` e `node_modules/` também são versionadas.
 - Objetos e metadados do MinIO são versionados em `minio-data/`.
 - Logs, sessões e backups podem aumentar rapidamente o tamanho do repositório.
 - O GitHub rejeita arquivos individuais maiores que 100 MB.
 - Antes de cada publicação, revise `git status` e a lista de arquivos grandes.
-- `db.sql` é a única fonte automática do banco em instalações novas.
+- Exporte o banco para `storage/backups/` com outro nome para incluí-lo no
+  backup sem publicar o arquivo principal `db.sql`.
 
+# GUIA RÁPIDO — AS 3 ETAPAS DE BACKUP E DEPLOY
 
+## ETAPA 1 — ENVIAR O SISTEMA COMPLETO DO PC PARA O GITHUB
 
+No PowerShell do computador:
 
+```powershell
+cd C:\sistema
+git status
+git add -A
+git status
+git commit -m "Backup completo do sistema pelo PC"
+git pull --rebase origin main
+git push origin main
+```
 
+Confirme o envio:
 
+```powershell
+git status
+git rev-parse HEAD
+git ls-remote origin refs/heads/main
+```
 
+O `git status` deve ficar limpo, exceto por `db.sql`, caso ele já tenha sido
+versionado no passado. `.env` e `db.sql` nunca devem ser adicionados.
 
-====================
+## ETAPA 2 — ENVIAR O SISTEMA COMPLETO DO GITHUB PARA A VPS
 
-git pull origin main
+Se a VPS possuir alterações ou novos arquivos, execute primeiro a **ETAPA 3**
+para não perder nada. Depois:
+
+```bash
+cd /opt/sistema-amazon
+git status
+git pull --rebase origin main
+docker compose config --quiet
 docker compose up -d --build
+docker compose ps
+```
+
+Se o build apresentar erro de permissão em uma pasta operacional:
+
+```bash
+cd /opt/sistema-amazon
+sudo chown -R "$USER:$USER" tmp storage uploads logs
+docker compose up -d --build
+docker compose ps
+```
+
+Todos os containers necessários devem aparecer como `Up` ou `healthy`.
+
+## ETAPA 3 — ENVIAR O SISTEMA COMPLETO DA VPS PARA O GITHUB
+
+Primeiro gere um backup consistente do banco dentro de `storage/backups/`.
+O nome não pode ser `db.sql`:
+
+```bash
+cd /opt/sistema-amazon
+mkdir -p storage/backups
+ARQUIVO_BANCO="storage/backups/vps-banco-$(date +%Y%m%d-%H%M%S).sql"
+docker compose exec -T db sh -c \
+  'mysqldump --single-transaction --routines --triggers \
+  -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' > "$ARQUIVO_BANCO"
+test -s "$ARQUIVO_BANCO" && echo "Banco salvo em $ARQUIVO_BANCO"
+```
+
+Depois envie código, PDFs, protocolos, uploads, dependências e o backup:
+
+```bash
+cd /opt/sistema-amazon
+git status
+git add -A
+git status
+git commit -m "Backup completo da VPS $(date +%Y-%m-%d_%H-%M)"
+git pull --rebase origin main
+git push origin main
+```
+
+Confirme que a VPS e o GitHub apontam para o mesmo commit:
+
+```bash
+git rev-parse HEAD
+git ls-remote origin refs/heads/main
+git status
+```
+
+Os dois hashes devem ser iguais. Para migrar para outra VPS, clone o
+repositório, crie o novo `.env`, suba os containers e restaure o arquivo SQL
+mais recente de `storage/backups/`.

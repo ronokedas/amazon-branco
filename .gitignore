@@ -1,35 +1,5 @@
-# Segredos e configuracoes locais
+# Somente credenciais locais e o dump principal ficam fora do GitHub.
 .env
 .env.*
 !.env.example
-
-# Dependencias
-/vendor/
-**/node_modules/
-
-# Dados e arquivos gerados em runtime
-/logs/
-/minio-data/
-/storage/sessions/
-/storage/documentos_assinados/
-/storage/documentos_aprovados/
-/storage/backups/
-/storage/protocolos/
-/uploads/
-/tmp/
-/temp_pdf/
-/test-results/
-**/test-results/
-/docs/marcadagua/
-
-# Artefatos temporarios
-*.log
-*.tmp
-*.bak
-*.bak-*
-
-# Arquivos do sistema/editor
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
+/db.sql

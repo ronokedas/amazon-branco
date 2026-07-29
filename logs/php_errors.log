@@ -1,0 +1,409 @@
+[28-Jul-2026 02:39:59 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 02:39:59 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 02:40:20 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 02:40:20 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 02:41:46 America/Sao_Paulo] Falha ao importar backup SQL: --------------
+INSERT INTO `feedback_regras_comunicacao` VALUES
+('018eb4f5-d14c-4e58-9019-7c3996ce0a64','VISTORIADOR','TODOS_USUARIOS',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('0e5e0160-310d-4bbd-aea6-86f5bae6ca6f','ANALISTA','GESTOR_DIRETO',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('0e845ac5-2ea0-4fe4-95e7-c595dfeb0547','VENDEDOR','ADMIN',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('190c898e-b702-4ac4-90a8-55fb17bea8a4','ANALISTA','ADMIN',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('1f5bbb74-d3a9-4652-9b16-807341550e19','VENDEDOR','CARGO','VISTORIADOR','VISTORIADOR',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('27246751-ad4a-460c-b1c7-612db9bf3cae','VISTORIADOR','OUTROS_GESTORES',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('287991b1-be6a-42d9-8eb2-370c7aab9633','VISTORIADOR','CARGO','VISTORIADOR','VISTORIADOR',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('3127893a-5a2b-4a93-bca1-ede90e577600','VENDEDOR','CARGO','VENDEDOR','VENDEDOR',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('343a5089-c449-49ba-8095-82503a423183','ANALISTA','SUBORDINADOS',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('4cf77a3d-2784-45e7-8901-6a69aea5f297','VISTORIADOR','SUBORDINADOS',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('4e63f882-c47c-4c08-b658-f9fd55fe3c79','VENDEDOR','CARGO','ANALISTA','ANALISTA',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('4f2dc25f-1d00-4153-b65f-bff67b40ee26','VENDEDOR','OUTROS_GESTORES',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('5a7b6e51-b296-4965-81d8-15f2a55171ff','VISTORIADOR','ADMIN',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('5ad0d3ec-6383-4aae-9952-42547a00b1d5','ANALISTA','CARGO','VENDEDOR','VENDEDOR',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('63cd5274-c125-4732-b759-17bc064b7b4e','VENDEDOR','TODOS_USUARIOS',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('83634dc0-054a-4ef9-b7f3-ae003e8c54bc','VISTORIADOR','GESTOR_DIRETO',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('8c2d0d21-60bf-4009-8eb2-18e32a4fca1d','VENDEDOR','GESTOR_DIRETO',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('a47d026e-e66d-40fa-b207-2b580ca17894','ANALISTA','TODOS_USUARIOS',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('a918465f-a502-4a7d-88a1-cffd17545573','ANALISTA','CARGO','ANALISTA','ANALISTA',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('b455f633-fd12-41c2-a74f-491ff155ce76','VISTORIADOR','CARGO','VENDEDOR','VENDEDOR',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('d4401d21-a6c7-4011-a9ff-15e41e96e9d0','VISTORIADOR','CARGO','ANALISTA','ANALISTA',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('dca46c82-8c0d-407e-9a91-3fa221141689','VENDEDOR','SUBORDINADOS',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('f0604b64-4c2d-4b94-9265-77c349dbf0ee','ANALISTA','CARGO','VISTORIADOR','VISTORIADOR',1,'2026-07-23 06:11:41','2026-07-23 06:11:41'),
+('f41114f5-1ed5-40d9-a568-270fc759684c','ANALISTA','OUTROS_GESTORES',NULL,'',1,'2026-07-23 06:11:41','2026-07-23 06:11:41')
+--------------
+
+ERROR 3105 (HY000) at line 2530: The value specified for generated column 'chave_destino' in table 'feedback_regras_comunicacao' is not allowed.
+[28-Jul-2026 02:41:46 America/Sao_Paulo] Configuracoes de backup: A importação falhou. O banco anterior foi preservado no backup de segurança backup_erp_sistema_2026-07-28_02-41-43.sql.
+[28-Jul-2026 02:54:07 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "/" in Command line code on line 1
+[28-Jul-2026 02:54:11 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Undefined constant "PHP_OK\n" in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[28-Jul-2026 03:09:27 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 03:09:27 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 03:23:57 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 03:23:57 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 03:24:59 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 03:24:59 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 03:45:34 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 03:54:57 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "/" in Command line code on line 1
+[28-Jul-2026 03:55:05 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "/" in Command line code on line 1
+[28-Jul-2026 03:55:10 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Undefined constant "hello\n" in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[28-Jul-2026 03:55:19 America/Sao_Paulo] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'criado_em' in 'field list' in Command line code:1
+Stack trace:
+#0 Command line code(1): PDO->query('SELECT id,numer...')
+#1 {main}
+  thrown in Command line code on line 1
+[28-Jul-2026 03:55:24 America/Sao_Paulo] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'criado_em' in 'field list' in Command line code:1
+Stack trace:
+#0 Command line code(1): PDO->query('SELECT id,numer...')
+#1 {main}
+  thrown in Command line code on line 1
+[28-Jul-2026 03:55:27 America/Sao_Paulo] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'criado_em' in 'field list' in Command line code:1
+Stack trace:
+#0 Command line code(1): PDO->query('SELECT id,numer...')
+#1 {main}
+  thrown in Command line code on line 1
+[28-Jul-2026 03:55:42 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 03:57:33 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 03:58:45 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 03:58:45 America/Sao_Paulo] PHP Fatal error:  Allowed memory size of 268435456 bytes exhausted (tried to allocate 262144 bytes) in /var/www/html/vendor/tecnickcom/tcpdf/tcpdf.php on line 4541
+[28-Jul-2026 03:58:59 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 03:59:00 America/Sao_Paulo] PHP Fatal error:  Allowed memory size of 268435456 bytes exhausted (tried to allocate 262144 bytes) in /var/www/html/vendor/tecnickcom/tcpdf/tcpdf.php on line 4541
+[28-Jul-2026 03:59:16 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 03:59:45 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 04:01:06 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 04:02:05 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 04:02:38 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 04:03:15 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 04:09:23 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 04:10:17 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 04:11:26 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 04:12:12 America/Sao_Paulo] Erro no upload para S3/MinIO: Error executing "PutObject" on "http://minio:9000/erp-storage/assinaturas/propostas/6a68564a31411_1785222730.png"; AWS HTTP error:
+SlowDownRead (server): Resource requested is unreadable, please reduce your request rate
+[28-Jul-2026 04:12:15 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 04:12:21 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 04:12:44 America/Sao_Paulo] PHP Warning:  Undefined array key 10 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 04:20:52 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem usuarios ativos sem vinculo de escritorio. in /var/www/html/tests/financeiro_escritorios_test.php:16
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 16
+[28-Jul-2026 04:20:59 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem usuarios ativos sem vinculo de escritorio. in /var/www/html/tests/financeiro_escritorios_test.php:16
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 16
+[28-Jul-2026 04:21:00 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: A criacao do retorno nao copia todas as exigencias ainda pendentes. in /var/www/html/tests/fluxo_retornos_as_test.php:5
+Stack trace:
+#0 /var/www/html/tests/fluxo_retornos_as_test.php(41): assertRetornoAS(false, 'A criacao do re...')
+#1 {main}
+  thrown in /var/www/html/tests/fluxo_retornos_as_test.php on line 5
+[28-Jul-2026 04:21:07 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem usuarios ativos sem vinculo de escritorio. in /var/www/html/tests/financeiro_escritorios_test.php:16
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 16
+[28-Jul-2026 04:21:07 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: A criacao do retorno nao copia todas as exigencias ainda pendentes. in /var/www/html/tests/fluxo_retornos_as_test.php:5
+Stack trace:
+#0 /var/www/html/tests/fluxo_retornos_as_test.php(41): assertRetornoAS(false, 'A criacao do re...')
+#1 {main}
+  thrown in /var/www/html/tests/fluxo_retornos_as_test.php on line 5
+[28-Jul-2026 04:24:23 America/Sao_Paulo] Erro ao aprovar proposta como assinada: Esta proposta já está assinada.
+[28-Jul-2026 04:27:13 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 04:27:13 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 04:28:06 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 04:28:06 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 04:51:17 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: A criacao do retorno nao copia todas as exigencias ainda pendentes. in /var/www/html/tests/fluxo_retornos_as_test.php:5
+Stack trace:
+#0 /var/www/html/tests/fluxo_retornos_as_test.php(41): assertRetornoAS(false, 'A criacao do re...')
+#1 {main}
+  thrown in /var/www/html/tests/fluxo_retornos_as_test.php on line 5
+[28-Jul-2026 05:13:20 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: A criacao do retorno nao copia todas as exigencias ainda pendentes. in /var/www/html/tests/fluxo_retornos_as_test.php:5
+Stack trace:
+#0 /var/www/html/tests/fluxo_retornos_as_test.php(41): assertRetornoAS(false, 'A criacao do re...')
+#1 {main}
+  thrown in /var/www/html/tests/fluxo_retornos_as_test.php on line 5
+[28-Jul-2026 05:13:29 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: A criacao do retorno nao copia todas as exigencias ainda pendentes. in /var/www/html/tests/fluxo_retornos_as_test.php:5
+Stack trace:
+#0 /var/www/html/tests/fluxo_retornos_as_test.php(41): assertRetornoAS(false, 'A criacao do re...')
+#1 {main}
+  thrown in /var/www/html/tests/fluxo_retornos_as_test.php on line 5
+[28-Jul-2026 05:14:28 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "\" in Command line code on line 1
+[28-Jul-2026 05:16:21 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 05:16:21 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 05:17:50 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 05:17:50 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 12:42:16 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 12:42:16 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 13:19:28 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 13:19:28 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 13:19:45 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 13:19:45 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 13:20:52 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 13:20:52 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 13:23:03 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 13:23:03 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 13:32:42 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Um relatorio aprovado sem assinatura liberou a certificacao. in /var/www/html/tests/fluxo_retornos_as_integracao_test.php:8
+Stack trace:
+#0 /var/www/html/tests/fluxo_retornos_as_integracao_test.php(84): assertRetornoIntegracao(false, 'Um relatorio ap...')
+#1 {main}
+  thrown in /var/www/html/tests/fluxo_retornos_as_integracao_test.php on line 8
+[28-Jul-2026 13:32:42 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: O cancelamento nao reabre o retorno para novo agendamento. in /var/www/html/tests/relatorios_cadeia_integridade_test.php:8
+Stack trace:
+#0 /var/www/html/tests/relatorios_cadeia_integridade_test.php(160): assertCadeiaIntegridade(false, 'O cancelamento ...')
+#1 {main}
+  thrown in /var/www/html/tests/relatorios_cadeia_integridade_test.php on line 8
+[28-Jul-2026 13:32:50 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Um relatorio aprovado sem assinatura liberou a certificacao. in /var/www/html/tests/fluxo_retornos_as_integracao_test.php:8
+Stack trace:
+#0 /var/www/html/tests/fluxo_retornos_as_integracao_test.php(84): assertRetornoIntegracao(false, 'Um relatorio ap...')
+#1 {main}
+  thrown in /var/www/html/tests/fluxo_retornos_as_integracao_test.php on line 8
+[28-Jul-2026 13:32:56 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Undefined constant "config" in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[28-Jul-2026 13:33:03 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Undefined constant "config" in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[28-Jul-2026 13:33:13 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Um relatorio aprovado sem assinatura liberou a certificacao. in /var/www/html/tests/fluxo_retornos_as_integracao_test.php:8
+Stack trace:
+#0 /var/www/html/tests/fluxo_retornos_as_integracao_test.php(84): assertRetornoIntegracao(false, 'Um relatorio ap...')
+#1 {main}
+  thrown in /var/www/html/tests/fluxo_retornos_as_integracao_test.php on line 8
+[28-Jul-2026 14:05:52 America/Sao_Paulo] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'erp_sistema.exportacoes_documentos' doesn't exist in /var/www/html/scripts/processar_exportacoes.php:3
+Stack trace:
+#0 /var/www/html/scripts/processar_exportacoes.php(3): PDO->prepare('UPDATE exportac...')
+#1 {main}
+  thrown in /var/www/html/scripts/processar_exportacoes.php on line 3
+[28-Jul-2026 14:06:53 America/Sao_Paulo] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'erp_sistema.exportacoes_documentos' doesn't exist in /var/www/html/scripts/processar_exportacoes.php:3
+Stack trace:
+#0 /var/www/html/scripts/processar_exportacoes.php(3): PDO->prepare('UPDATE exportac...')
+#1 {main}
+  thrown in /var/www/html/scripts/processar_exportacoes.php on line 3
+[28-Jul-2026 14:08:24 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:08:24 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:09:07 America/Sao_Paulo] Erro ao buscar vistoria: O relatorio solicitado nao pertence a este agendamento.
+[28-Jul-2026 14:10:18 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:10:18 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:25:04 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:25:04 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:35:17 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem registros sem escritorio em usuarios. in /var/www/html/tests/financeiro_escritorios_test.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 12
+[28-Jul-2026 14:35:25 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem registros sem escritorio em usuarios. in /var/www/html/tests/financeiro_escritorios_test.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 12
+[28-Jul-2026 14:35:30 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem registros sem escritorio em usuarios. in /var/www/html/tests/financeiro_escritorios_test.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 12
+[28-Jul-2026 14:36:16 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:36:16 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:42:04 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:42:05 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:42:20 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:42:20 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:58:24 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:58:24 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 14:58:56 America/Sao_Paulo] Erro ao salvar decisao admin da vistoria: SQLSTATE[HY093]: Invalid parameter number
+[28-Jul-2026 14:59:10 America/Sao_Paulo] Erro ao salvar decisao admin da vistoria: SQLSTATE[HY093]: Invalid parameter number
+[28-Jul-2026 14:59:24 America/Sao_Paulo] Erro ao salvar decisao admin da vistoria: SQLSTATE[HY093]: Invalid parameter number
+[28-Jul-2026 15:00:02 America/Sao_Paulo] Erro ao salvar decisao admin da vistoria: SQLSTATE[HY093]: Invalid parameter number
+[28-Jul-2026 15:31:46 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem registros sem escritorio em usuarios. in /var/www/html/tests/financeiro_escritorios_test.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 12
+[28-Jul-2026 15:31:52 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem registros sem escritorio em usuarios. in /var/www/html/tests/financeiro_escritorios_test.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 12
+[28-Jul-2026 15:31:57 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token ":" in Command line code on line 1
+[28-Jul-2026 15:32:12 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem registros sem escritorio em usuarios. in /var/www/html/tests/financeiro_escritorios_test.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 12
+[28-Jul-2026 15:42:34 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: O cancelamento nao reabre o retorno para novo agendamento. in /var/www/html/tests/relatorios_cadeia_integridade_test.php:8
+Stack trace:
+#0 /var/www/html/tests/relatorios_cadeia_integridade_test.php(160): assertCadeiaIntegridade(false, 'O cancelamento ...')
+#1 {main}
+  thrown in /var/www/html/tests/relatorios_cadeia_integridade_test.php on line 8
+[28-Jul-2026 15:42:37 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: O cancelamento nao reabre o retorno para novo agendamento. in /var/www/html/tests/relatorios_cadeia_integridade_test.php:8
+Stack trace:
+#0 /var/www/html/tests/relatorios_cadeia_integridade_test.php(160): assertCadeiaIntegridade(false, 'O cancelamento ...')
+#1 {main}
+  thrown in /var/www/html/tests/relatorios_cadeia_integridade_test.php on line 8
+[28-Jul-2026 15:42:40 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: O cancelamento nao reabre o retorno para novo agendamento. in /var/www/html/tests/relatorios_cadeia_integridade_test.php:8
+Stack trace:
+#0 /var/www/html/tests/relatorios_cadeia_integridade_test.php(160): assertCadeiaIntegridade(false, 'O cancelamento ...')
+#1 {main}
+  thrown in /var/www/html/tests/relatorios_cadeia_integridade_test.php on line 8
+[28-Jul-2026 15:42:53 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: O cancelamento nao reabre o retorno para novo agendamento. in /var/www/html/tests/relatorios_cadeia_integridade_test.php:8
+Stack trace:
+#0 /var/www/html/tests/relatorios_cadeia_integridade_test.php(160): assertCadeiaIntegridade(false, 'O cancelamento ...')
+#1 {main}
+  thrown in /var/www/html/tests/relatorios_cadeia_integridade_test.php on line 8
+[28-Jul-2026 15:42:57 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token ":" in Command line code on line 1
+[28-Jul-2026 15:43:01 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: O cancelamento nao reabre o retorno para novo agendamento. in /var/www/html/tests/relatorios_cadeia_integridade_test.php:8
+Stack trace:
+#0 /var/www/html/tests/relatorios_cadeia_integridade_test.php(160): assertCadeiaIntegridade(false, 'O cancelamento ...')
+#1 Command line code(1): include('/var/www/html/t...')
+#2 {main}
+  thrown in /var/www/html/tests/relatorios_cadeia_integridade_test.php on line 8
+[28-Jul-2026 15:43:29 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: A validacao publica nao identifica aprovador e executor. in /var/www/html/tests/aprovacao_relatorios_test.php:9
+Stack trace:
+#0 /var/www/html/tests/aprovacao_relatorios_test.php(132): assertAprovacao(false, 'A validacao pub...')
+#1 {main}
+  thrown in /var/www/html/tests/aprovacao_relatorios_test.php on line 9
+[28-Jul-2026 15:48:35 America/Sao_Paulo] Erro ao validar sessao do usuario: falha temporaria simulada
+[28-Jul-2026 15:48:36 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: A tabela do PDF nao preserva descricao, NORMAM e vencimento das exigencias. in /var/www/html/tests/campo_relatorio_regression_test.php:8
+Stack trace:
+#0 /var/www/html/tests/campo_relatorio_regression_test.php(57): assertCampoRelatorio(false, 'A tabela do PDF...')
+#1 {main}
+  thrown in /var/www/html/tests/campo_relatorio_regression_test.php on line 8
+[28-Jul-2026 15:48:48 America/Sao_Paulo] Erro ao validar sessao do usuario: falha temporaria simulada
+[28-Jul-2026 15:48:48 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: A tabela do PDF nao preserva descricao, NORMAM e vencimento das exigencias. in /var/www/html/tests/campo_relatorio_regression_test.php:8
+Stack trace:
+#0 /var/www/html/tests/campo_relatorio_regression_test.php(57): assertCampoRelatorio(false, 'A tabela do PDF...')
+#1 {main}
+  thrown in /var/www/html/tests/campo_relatorio_regression_test.php on line 8
+[28-Jul-2026 15:48:50 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Usuário comum não recebeu a caixa Admin configurada. in /var/www/html/tests/feedback_test.php:13
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/feedback_test.php on line 13
+[28-Jul-2026 15:48:50 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem registros sem escritorio em usuarios. in /var/www/html/tests/financeiro_escritorios_test.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 12
+[28-Jul-2026 15:48:55 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Catálogo UTF-8 foi corrompido. in /var/www/html/tests/protocolos_documentais_test.php:3
+Stack trace:
+#0 /var/www/html/tests/protocolos_documentais_test.php(37): assertProtocolo(false, 'Cat\xC3\xA1logo UTF-8...')
+#1 {main}
+  thrown in /var/www/html/tests/protocolos_documentais_test.php on line 3
+[28-Jul-2026 15:57:17 America/Sao_Paulo] Erro ao salvar decisao admin da vistoria: SQLSTATE[HY093]: Invalid parameter number
+[28-Jul-2026 16:11:19 America/Sao_Paulo] PHP Warning:  ini_set(): Session ini settings cannot be changed after headers have already been sent in /var/www/html/config.php on line 27
+[28-Jul-2026 16:11:19 America/Sao_Paulo] PHP Warning:  ini_set(): Session ini settings cannot be changed after headers have already been sent in /var/www/html/config.php on line 28
+[28-Jul-2026 16:11:19 America/Sao_Paulo] PHP Warning:  session_set_cookie_params(): Session cookie parameters cannot be changed after headers have already been sent in /var/www/html/config.php on line 32
+[28-Jul-2026 16:11:19 America/Sao_Paulo] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in /var/www/html/config.php on line 39
+[28-Jul-2026 16:17:52 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 16:17:52 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 16:50:20 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "\" in Command line code on line 1
+[28-Jul-2026 16:52:28 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 16:52:28 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 16:55:30 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 16:55:30 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 16:57:45 America/Sao_Paulo] PHP Warning:  Undefined variable $feedbackGlobal in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 16:57:45 America/Sao_Paulo] PHP Warning:  Trying to access array offset on value of type null in /var/www/html/includes/header.php on line 271
+[28-Jul-2026 16:58:24 America/Sao_Paulo] PHP Warning:  ini_set(): Session ini settings cannot be changed after headers have already been sent in /var/www/html/config.php on line 27
+[28-Jul-2026 16:58:24 America/Sao_Paulo] PHP Warning:  ini_set(): Session ini settings cannot be changed after headers have already been sent in /var/www/html/config.php on line 28
+[28-Jul-2026 16:58:24 America/Sao_Paulo] PHP Warning:  session_set_cookie_params(): Session cookie parameters cannot be changed after headers have already been sent in /var/www/html/config.php on line 32
+[28-Jul-2026 16:58:24 America/Sao_Paulo] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in /var/www/html/config.php on line 39
+[28-Jul-2026 16:59:47 America/Sao_Paulo] PHP Warning:  ini_set(): Session ini settings cannot be changed after headers have already been sent in /var/www/html/config.php on line 27
+[28-Jul-2026 16:59:47 America/Sao_Paulo] PHP Warning:  ini_set(): Session ini settings cannot be changed after headers have already been sent in /var/www/html/config.php on line 28
+[28-Jul-2026 16:59:48 America/Sao_Paulo] PHP Warning:  session_set_cookie_params(): Session cookie parameters cannot be changed after headers have already been sent in /var/www/html/config.php on line 32
+[28-Jul-2026 16:59:48 America/Sao_Paulo] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in /var/www/html/config.php on line 39
+[28-Jul-2026 17:02:18 America/Sao_Paulo] Erro ao validar sessao do usuario: falha temporaria simulada
+[28-Jul-2026 17:02:20 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Usuário comum não recebeu a caixa Admin configurada. in /var/www/html/tests/feedback_test.php:13
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/feedback_test.php on line 13
+[28-Jul-2026 17:02:20 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem registros sem escritorio em usuarios. in /var/www/html/tests/financeiro_escritorios_test.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 12
+[28-Jul-2026 17:02:24 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Catálogo UTF-8 foi corrompido. in /var/www/html/tests/protocolos_documentais_test.php:3
+Stack trace:
+#0 /var/www/html/tests/protocolos_documentais_test.php(37): assertProtocolo(false, 'Cat\xC3\xA1logo UTF-8...')
+#1 {main}
+  thrown in /var/www/html/tests/protocolos_documentais_test.php on line 3
+[28-Jul-2026 17:02:24 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: É necessário ao menos um dossiê para testar o PDF consolidado. in /var/www/html/tests/protocolos_pdf_dossie_test.php:6
+Stack trace:
+#0 /var/www/html/tests/protocolos_pdf_dossie_test.php(10): assertPdfDossie(false, '\xC3\x89 necess\xC3\xA1rio ...')
+#1 {main}
+  thrown in /var/www/html/tests/protocolos_pdf_dossie_test.php on line 6
+[28-Jul-2026 17:02:30 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem registros sem escritorio em usuarios. in /var/www/html/tests/financeiro_escritorios_test.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 12
+[28-Jul-2026 17:02:30 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Usuário comum não recebeu a caixa Admin configurada. in /var/www/html/tests/feedback_test.php:13
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/feedback_test.php on line 13
+[28-Jul-2026 17:02:30 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: É necessário ao menos um dossiê para testar o PDF consolidado. in /var/www/html/tests/protocolos_pdf_dossie_test.php:6
+Stack trace:
+#0 /var/www/html/tests/protocolos_pdf_dossie_test.php(10): assertPdfDossie(false, '\xC3\x89 necess\xC3\xA1rio ...')
+#1 {main}
+  thrown in /var/www/html/tests/protocolos_pdf_dossie_test.php on line 6
+[28-Jul-2026 17:02:30 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Catálogo UTF-8 foi corrompido. in /var/www/html/tests/protocolos_documentais_test.php:3
+Stack trace:
+#0 /var/www/html/tests/protocolos_documentais_test.php(37): assertProtocolo(false, 'Cat\xC3\xA1logo UTF-8...')
+#1 {main}
+  thrown in /var/www/html/tests/protocolos_documentais_test.php on line 3
+[28-Jul-2026 17:02:32 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Usuário comum não recebeu a caixa Admin configurada. in /var/www/html/tests/feedback_test.php:13
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/feedback_test.php on line 13
+[28-Jul-2026 17:02:43 America/Sao_Paulo] Erro ao carregar agendamento relatorio: Este retorno A/S nao esta disponivel para gerar outro relatorio.
+[28-Jul-2026 17:02:47 America/Sao_Paulo] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in /var/www/html/modules/vistorias/relatorio.php:330
+Stack trace:
+#0 /var/www/html/modules/vistorias/relatorio.php(330): PDOStatement->execute(Array)
+#1 /var/www/html/index.php(245): require_once('/var/www/html/m...')
+#2 {main}
+  thrown in /var/www/html/modules/vistorias/relatorio.php on line 330
+[28-Jul-2026 17:03:01 America/Sao_Paulo] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in /var/www/html/modules/vistorias/relatorio.php:330
+Stack trace:
+#0 /var/www/html/modules/vistorias/relatorio.php(330): PDOStatement->execute(Array)
+#1 /var/www/html/index.php(245): require_once('/var/www/html/m...')
+#2 {main}
+  thrown in /var/www/html/modules/vistorias/relatorio.php on line 330
+[28-Jul-2026 17:05:19 America/Sao_Paulo] Erro ao carregar agendamento relatorio: Este retorno A/S nao esta disponivel para gerar outro relatorio.
+[28-Jul-2026 17:05:36 America/Sao_Paulo] Erro ao carregar agendamento relatorio: Este retorno A/S nao esta disponivel para gerar outro relatorio.
+[28-Jul-2026 17:07:15 America/Sao_Paulo] Erro ao carregar agendamento relatorio: Este retorno A/S nao esta disponivel para gerar outro relatorio.
+[28-Jul-2026 17:07:50 America/Sao_Paulo] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in /var/www/html/modules/vistorias/relatorio.php:339
+Stack trace:
+#0 /var/www/html/modules/vistorias/relatorio.php(339): PDOStatement->execute(Array)
+#1 /var/www/html/index.php(245): require_once('/var/www/html/m...')
+#2 {main}
+  thrown in /var/www/html/modules/vistorias/relatorio.php on line 339
+[28-Jul-2026 17:37:22 America/Sao_Paulo] Erro ao validar sessao do usuario: falha temporaria simulada
+[28-Jul-2026 17:37:24 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Usuário comum não recebeu a caixa Admin configurada. in /var/www/html/tests/feedback_test.php:13
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/feedback_test.php on line 13
+[28-Jul-2026 17:37:24 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem registros sem escritorio em usuarios. in /var/www/html/tests/financeiro_escritorios_test.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 12
+[28-Jul-2026 17:37:27 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Catálogo UTF-8 foi corrompido. in /var/www/html/tests/protocolos_documentais_test.php:3
+Stack trace:
+#0 /var/www/html/tests/protocolos_documentais_test.php(37): assertProtocolo(false, 'Cat\xC3\xA1logo UTF-8...')
+#1 {main}
+  thrown in /var/www/html/tests/protocolos_documentais_test.php on line 3
+[28-Jul-2026 17:37:27 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: É necessário ao menos um dossiê para testar o PDF consolidado. in /var/www/html/tests/protocolos_pdf_dossie_test.php:6
+Stack trace:
+#0 /var/www/html/tests/protocolos_pdf_dossie_test.php(10): assertPdfDossie(false, '\xC3\x89 necess\xC3\xA1rio ...')
+#1 {main}
+  thrown in /var/www/html/tests/protocolos_pdf_dossie_test.php on line 6
+[28-Jul-2026 17:37:31 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Usuário comum não recebeu a caixa Admin configurada. in /var/www/html/tests/feedback_test.php:13
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/feedback_test.php on line 13
+[28-Jul-2026 17:37:32 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Existem registros sem escritorio em usuarios. in /var/www/html/tests/financeiro_escritorios_test.php:12
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/tests/financeiro_escritorios_test.php on line 12
+[28-Jul-2026 17:37:32 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: Catálogo UTF-8 foi corrompido. in /var/www/html/tests/protocolos_documentais_test.php:3
+Stack trace:
+#0 /var/www/html/tests/protocolos_documentais_test.php(37): assertProtocolo(false, 'Cat\xC3\xA1logo UTF-8...')
+#1 {main}
+  thrown in /var/www/html/tests/protocolos_documentais_test.php on line 3
+[28-Jul-2026 17:37:32 America/Sao_Paulo] PHP Fatal error:  Uncaught RuntimeException: É necessário ao menos um dossiê para testar o PDF consolidado. in /var/www/html/tests/protocolos_pdf_dossie_test.php:6
+Stack trace:
+#0 /var/www/html/tests/protocolos_pdf_dossie_test.php(10): assertPdfDossie(false, '\xC3\x89 necess\xC3\xA1rio ...')
+#1 {main}
+  thrown in /var/www/html/tests/protocolos_pdf_dossie_test.php on line 6
+[28-Jul-2026 19:56:21 America/Sao_Paulo] PHP Warning:  Undefined array key 14 in /var/www/html/modules/comercial/pdf.php on line 134
+[28-Jul-2026 19:57:25 America/Sao_Paulo] Erro no upload para S3/MinIO: Error executing "PutObject" on "http://minio:9000/erp-storage/assinaturas/propostas/6a6933d2f2960_1785279442.png"; AWS HTTP error:
+SlowDownRead (server): Resource requested is unreadable, please reduce your request rate
+[28-Jul-2026 19:57:28 America/Sao_Paulo] PHP Warning:  Undefined array key 14 in /var/www/html/modules/comercial/pdf.php on line 134
