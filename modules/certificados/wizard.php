@@ -55,7 +55,10 @@ if ($vistoria_id !== '') {
 }
 
 if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true)) {
-    if ($agendamento_id === '' || !certificadoModeloPermitidoPorAgendamento($pdo, (string)$agendamento_id, $modelo)) {
+    $modeloPermitido = $vistoria_id !== ''
+        ? certificadoModeloPermitidoPorVistoria($pdo, $vistoria_id, $modelo)
+        : ($agendamento_id !== '' && certificadoModeloPermitidoPorAgendamento($pdo, (string)$agendamento_id, $modelo));
+    if (!$modeloPermitido) {
         setMensagem('error', certificadoMensagemServicoObrigatorio($modelo));
         redirecionar($agendamento_id !== ''
             ? APP_URL . 'documentacao/novo_certificado?agendamento_id=' . urlencode((string)$agendamento_id)

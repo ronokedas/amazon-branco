@@ -33,6 +33,11 @@ assertRetornoExigencias(str_contains($vistoriasActions, '$descricoesReescritas')
 assertRetornoExigencias(!str_contains($vistoriasActions, 'Descreva as evidencias verificadas para cada exigencia herdada'), 'Observacao herdada continua obrigatoria.');
 assertRetornoExigencias(str_contains($relatorio, 'Reagendar retorno de exigências'), 'Admin nao recebeu a acao de reagendamento comum.');
 assertRetornoExigencias(str_contains($relatorio, 'cumprimento_descricao_reescrita'), 'Formulario nao possui descricao reescrita.');
+assertRetornoExigencias(
+    str_contains($relatorio, 'Resultado da verificação — exigências cumpridas')
+        && str_contains($relatorio, '$exigencias_cumpridas_relatorio'),
+    'A consulta final do relatorio nao exibe separadamente as exigencias cumpridas.'
+);
 assertRetornoExigencias(str_contains($relatorio, "getElementById('buscaChecklist')?.addEventListener"), 'Checklist ausente ainda interrompe o JavaScript da reescrita.');
 assertRetornoExigencias(str_contains($relatorio, "getElementById('avulsaEmpty')?.classList"), 'Tabela avulsa ausente ainda interrompe o JavaScript do relatorio de retorno.');
 assertRetornoExigencias(str_contains($relatorio, "select.addEventListener('change', atualizarCamposReescrita)"), 'Mudanca do resultado nao aciona o campo de reescrita.');

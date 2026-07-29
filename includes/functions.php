@@ -1841,11 +1841,72 @@ function certificadoModeloPermitidoPorAgendamento(PDO $pdo, string $agendamentoI
 
 function certificadoModeloPermitidoPorVistoria(PDO $pdo, string $vistoriaId, string $modelo): bool
 {
-    if ($vistoriaId === '') return false;
-    $stmt = $pdo->prepare('SELECT agendamento_id FROM vistorias WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $vistoriaId]);
-    $agendamentoId = (string)$stmt->fetchColumn();
-    return $agendamentoId !== '' && certificadoModeloPermitidoPorAgendamento($pdo, $agendamentoId, $modelo);
+    $modelo = strtoupper(trim($modelo));
+    $permitidos = certificadoModelosPermitidosPorVistoria($pdo, $vistoriaId);
+    return ($permitidos[$modelo] ?? false) === true;
+}
+
+/**
+ * Cruza os servicos da proposta vinculada com os blocos tecnicos da cadeia.
+ *
+ * O agendamento da raiz define o escopo contratado. Os blocos persistidos em
+ * qualquer relatorio da cadeia complementam a classificacao sem permitir que
+ * outra proposta da mesma embarcacao habilite certificados neste processo.
+ */
+function certificadoModelosPermitidosPorVistoria(PDO $pdo, string $vistoriaId): array
+{
+    $resultado = ['CSN' => false, 'CNBL' => false, 'CNARQ' => false];
+    if ($vistoriaId === '') return $resultado;
+
+    $raiz = obterRelatorioRaizCadeia($pdo, $vistoriaId);
+    if (!$raiz || empty($raiz['agendamento_id'])) return $resultado;
+
+    $agendamentoId = (string)$raiz['agendamento_id'];
+    $contratados = certificadoModelosPermitidosPorAgendamento($pdo, $agendamentoId);
+
+    $stmtAgendamento = $pdo->prepare('SELECT tipo_vistoria FROM agendamentos WHERE id = :id LIMIT 1');
+    $stmtAgendamento->execute([':id' => $agendamentoId]);
+    $tipoNormalizado = normalizarTipoVistoriaPdf((string)$stmtAgendamento->fetchColumn());
+    $blocos = [];
+
+    if (strpos($tipoNormalizado, 'seco') !== false) $blocos['seco'] = true;
+    if (strpos($tipoNormalizado, 'flutu') !== false
+        || strpos($tipoNormalizado, 'agua') !== false
+        || strpos($tipoNormalizado, 'licenca provisoria') !== false) {
+        $blocos['flutuando'] = true;
+    }
+    if (strpos($tipoNormalizado, 'borda') !== false || strpos($tipoNormalizado, 'cnbl') !== false) {
+        $blocos['borda_livre'] = true;
+    }
+    if (strpos($tipoNormalizado, 'arquea') !== false || strpos($tipoNormalizado, 'cnarq') !== false) {
+        $blocos['arqueacao'] = true;
+    }
+
+    $cadeia = obterCadeiaRelatorios($pdo, $vistoriaId);
+    $ids = array_values(array_filter(array_map(
+        static fn(array $relatorio): string => (string)($relatorio['id'] ?? ''),
+        $cadeia
+    )));
+    if ($ids) {
+        $marcadores = implode(',', array_fill(0, count($ids), '?'));
+        $stmtBlocos = $pdo->prepare("SELECT DISTINCT bloco_vistoria
+            FROM vistoria_exigencias
+            WHERE vistoria_id IN ({$marcadores})
+              AND bloco_vistoria IS NOT NULL");
+        $stmtBlocos->execute($ids);
+        foreach ($stmtBlocos->fetchAll(PDO::FETCH_COLUMN) as $bloco) {
+            $bloco = blocoExigenciaNormalizado((string)$bloco);
+            if (in_array($bloco, ['seco', 'flutuando', 'borda_livre', 'arqueacao'], true)) {
+                $blocos[$bloco] = true;
+            }
+        }
+    }
+
+    $resultado['CSN'] = !empty($contratados['CSN'])
+        && (isset($blocos['seco']) || isset($blocos['flutuando']));
+    $resultado['CNBL'] = !empty($contratados['CNBL']) && isset($blocos['borda_livre']);
+    $resultado['CNARQ'] = !empty($contratados['CNARQ']) && isset($blocos['arqueacao']);
+    return $resultado;
 }
 
 function certificadoMensagemServicoObrigatorio(string $modelo): string
@@ -1856,7 +1917,9 @@ function certificadoMensagemServicoObrigatorio(string $modelo): string
         'CNARQ' => 'Vistoria Inicial de Arqueação',
     ];
     $modelo = strtoupper(trim($modelo));
-    return 'O certificado ' . $modelo . ' só pode ser emitido quando a proposta da embarcação inclui o serviço ' . ($servicos[$modelo] ?? 'correspondente') . '.';
+    return 'O certificado ' . $modelo . ' só pode ser emitido quando a proposta vinculada inclui o serviço '
+        . ($servicos[$modelo] ?? 'correspondente')
+        . ' e a cadeia do relatório possui o bloco técnico aplicável.';
 }
 
 function normalizarTipoVistoriaPdf(string $texto): string

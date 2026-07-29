@@ -237,6 +237,7 @@ $admin_review_mode = $editando && !$pode_editar_relatorio;
 $exigencias_relatorio = [];
 $exigencias_as_relatorio = [];
 $exigencias_comuns_relatorio = [];
+$exigencias_cumpridas_relatorio = [];
 $total_exigencias_relatorio = 0;
 $total_nao_conformes_relatorio = 0;
 $armador_relatorio_nome = '';
@@ -266,7 +267,11 @@ if ($admin_review_mode) {
         $stmtReviewEx->execute([':vistoria_id' => $vistoria['id']]);
         $exigencias_relatorio = $stmtReviewEx->fetchAll(PDO::FETCH_ASSOC);
         foreach ($exigencias_relatorio as $exReview) {
-            if ((int)($exReview['antes_de_suspender'] ?? 0) === 1) {
+            $cumpridaReview = (string)($exReview['status_item'] ?? '') === 'cumprida'
+                && (string)($exReview['conforme'] ?? '') === 'sim';
+            if ($cumpridaReview) {
+                $exigencias_cumpridas_relatorio[] = $exReview;
+            } elseif ((int)($exReview['antes_de_suspender'] ?? 0) === 1) {
                 $exigencias_as_relatorio[] = $exReview;
             } else {
                 $exigencias_comuns_relatorio[] = $exReview;
@@ -945,6 +950,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <strong><?= (int)$resumo_aprovacao_relatorio['pendentes_comuns'] ?></strong>
                                     <span>comuns</span>
                                 </div>
+                                <div class="admin-requirements-stat is-common">
+                                    <strong><?= count($exigencias_cumpridas_relatorio) ?></strong>
+                                    <span>cumpridas</span>
+                                </div>
                             </div>
 
                             <?php if (empty($exigencias_relatorio)): ?>
@@ -976,6 +985,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                             'classe' => 'is-common',
                                             'itens' => $exigencias_comuns_relatorio,
                                             'aberto' => empty($exigencias_as_relatorio) && !empty($exigencias_comuns_relatorio),
+                                        ],
+                                        [
+                                            'id' => 'cumpridas',
+                                            'titulo' => 'Resultado da verificação — exigências cumpridas',
+                                            'icone' => 'fa-circle-check',
+                                            'classe' => 'is-common',
+                                            'itens' => $exigencias_cumpridas_relatorio,
+                                            'aberto' => empty($exigencias_as_relatorio) && empty($exigencias_comuns_relatorio),
                                         ],
                                     ];
                                     ?>
@@ -1009,7 +1026,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                                                 <span class="admin-requirement-description" title="<?= h($descricaoReview) ?>"><?= h($descricaoReview) ?></span>
                                                                 <span class="admin-requirement-reference"><?= h($referenciaReview) ?></span>
                                                                 <span class="admin-requirement-badge <?= $grupoReview['id'] === 'as' ? 'is-as' : '' ?>">
-                                                                    <?= $grupoReview['id'] === 'as' ? 'A/S' : 'Comum' ?>
+                                                                    <?= $grupoReview['id'] === 'as'
+                                                                        ? 'A/S'
+                                                                        : ($grupoReview['id'] === 'cumpridas' ? 'Cumprida' : 'Comum') ?>
                                                                 </span>
                                                                 <i class="fas fa-chevron-down" aria-hidden="true"></i>
                                                             </button>

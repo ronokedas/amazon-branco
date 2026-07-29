@@ -9,20 +9,58 @@ function assertCertificadoServico(bool $condition, string $message): void
 
 $pdo = new PDO('sqlite::memory:');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-$pdo->exec('CREATE TABLE agendamentos (id TEXT PRIMARY KEY, proposta_id TEXT, embarcacao_id TEXT NOT NULL)');
+$pdo->exec('CREATE TABLE agendamentos (id TEXT PRIMARY KEY, proposta_id TEXT, embarcacao_id TEXT NOT NULL, tipo_vistoria TEXT)');
 $pdo->exec('CREATE TABLE propostas_servicos (proposta_id TEXT NOT NULL, embarcacao_id TEXT, servico_id TEXT NOT NULL)');
 $pdo->exec('CREATE TABLE servicos (id TEXT PRIMARY KEY, certificado_modelo TEXT, ativo INTEGER NOT NULL DEFAULT 1)');
-$pdo->exec('CREATE TABLE vistorias (id TEXT PRIMARY KEY, agendamento_id TEXT)');
+$pdo->exec("CREATE TABLE vistorias (
+    id TEXT PRIMARY KEY,
+    agendamento_id TEXT,
+    relatorio_anterior_id TEXT,
+    status TEXT DEFAULT 'APROVADA',
+    criado_em TEXT DEFAULT CURRENT_TIMESTAMP
+)");
+$pdo->exec('CREATE TABLE vistoria_exigencias (id TEXT PRIMARY KEY, vistoria_id TEXT, bloco_vistoria TEXT)');
 
-$pdo->exec("INSERT INTO agendamentos VALUES ('a1','p1','e1'),('a2','p1','e2'),('a3',NULL,'e3')");
-$pdo->exec("INSERT INTO servicos VALUES ('seco','CSN',0),('arqueacao','CNARQ',1),('borda','CNBL',1),('comum',NULL,1)");
-$pdo->exec("INSERT INTO propostas_servicos VALUES ('p1','e1','seco'),('p1','e2','arqueacao'),('p1',NULL,'borda'),('p1','e1','comum')");
-$pdo->exec("INSERT INTO vistorias VALUES ('v1','a1'),('v2','a2')");
+$pdo->exec("INSERT INTO agendamentos VALUES
+    ('a1','p1','e1','Vistoria Inicial Flutuando, Vistoria Inicial de Borda Livre'),
+    ('a2','p1','e2','Vistoria Inicial de Arqueacao'),
+    ('a3',NULL,'e3','Vistoria Inicial Seco'),
+    ('a4','p1','e1','Retorno de exigencias')");
+$pdo->exec("INSERT INTO servicos VALUES
+    ('seco','CSN',0),('arqueacao','CNARQ',1),('borda','CNBL',1),('comum',NULL,1)");
+$pdo->exec("INSERT INTO propostas_servicos VALUES
+    ('p1','e1','seco'),('p1','e2','arqueacao'),('p1',NULL,'borda'),('p1','e1','comum'),
+    ('p2','e1','arqueacao')");
+$pdo->exec("INSERT INTO vistorias (id,agendamento_id,relatorio_anterior_id,status,criado_em) VALUES
+    ('v1','a1',NULL,'APROVADA','2026-01-01'),
+    ('v2','a2',NULL,'APROVADA','2026-01-01'),
+    ('v1r','a4','v1','APROVADA','2026-01-02')");
+$pdo->exec("INSERT INTO vistoria_exigencias VALUES
+    ('ex1','v1','flutuando'),('ex2','v1','borda_livre'),('ex3','v1r','borda_livre')");
 
 $a1 = certificadoModelosPermitidosPorAgendamento($pdo, 'a1');
 assertCertificadoServico($a1 === ['CSN' => true, 'CNBL' => true, 'CNARQ' => false], 'Servicos de outra embarcacao vazaram para a primeira.');
 assertCertificadoServico(certificadoModeloPermitidoPorVistoria($pdo, 'v1', 'CSN'), 'Servico contratado e desativado no catalogo deixou de valer.');
 assertCertificadoServico(!certificadoModeloPermitidoPorVistoria($pdo, 'v1', 'CNARQ'), 'CNARQ foi permitido sem arqueacao para a embarcacao.');
+assertCertificadoServico(
+    certificadoModelosPermitidosPorVistoria($pdo, 'v1')
+        === ['CSN' => true, 'CNBL' => true, 'CNARQ' => false],
+    'O relatorio raiz nao cruzou servicos e blocos corretamente.'
+);
+assertCertificadoServico(
+    certificadoModelosPermitidosPorVistoria($pdo, 'v2')
+        === ['CSN' => false, 'CNBL' => false, 'CNARQ' => true],
+    'Um servico global sem bloco correspondente habilitou certificado.'
+);
+assertCertificadoServico(
+    certificadoModelosPermitidosPorVistoria($pdo, 'v1r')
+        === ['CSN' => true, 'CNBL' => true, 'CNARQ' => false],
+    'O retorno nao herdou a aplicabilidade tecnica do relatorio raiz.'
+);
+assertCertificadoServico(
+    !certificadoModeloPermitidoPorVistoria($pdo, 'v1r', 'CNARQ'),
+    'Servico de outra proposta da mesma embarcacao vazou para a cadeia.'
+);
 
 $a2 = certificadoModelosPermitidosPorAgendamento($pdo, 'a2');
 assertCertificadoServico($a2 === ['CSN' => false, 'CNBL' => true, 'CNARQ' => true], 'Servico global ou especifico nao foi aplicado corretamente.');
@@ -37,10 +75,10 @@ $legacyActions = [
     'CNARQ' => file_get_contents(__DIR__ . '/../modules/documentacao/cnarq/actions.php'),
 ];
 $migration = file_get_contents(__DIR__ . '/../migrations/085_servicos_habilitam_certificados.sql');
-assertCertificadoServico(str_contains($selection, 'certificadoModelosPermitidosPorAgendamento'), 'A selecao de modelos nao usa a regra central.');
+assertCertificadoServico(str_contains($selection, 'certificadoModelosPermitidosPorVistoria'), 'A selecao de modelos nao cruza proposta e relatorio.');
 assertCertificadoServico(str_contains($selection, "\$_GET['vistoria_id']"), 'A selecao de modelos nao aceita um relatorio pre-selecionado.');
 assertCertificadoServico(str_contains($selection, '&vistoria_id=<?= urlencode($vistoria_id) ?>'), 'A selecao de modelos perde o relatorio ao abrir o wizard.');
-assertCertificadoServico(str_contains($wizard, 'certificadoModeloPermitidoPorAgendamento'), 'A URL direta do wizard nao esta protegida.');
+assertCertificadoServico(str_contains($wizard, 'certificadoModeloPermitidoPorVistoria'), 'A URL direta do wizard nao cruza proposta e relatorio.');
 assertCertificadoServico(str_contains($wizard, "\$_GET['vistoria_id']"), 'O wizard nao preserva o ID do relatorio escolhido.');
 assertCertificadoServico(str_contains($step2, 'certificadoModeloPermitidoPorVistoria'), 'O POST final nao repete a validacao do servico.');
 foreach ($legacyActions as $modelo => $source) {

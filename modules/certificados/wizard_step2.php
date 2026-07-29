@@ -29,8 +29,11 @@ if (empty($modelo) || empty($tipo)) {
     exit;
 }
 
-if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true)
-    && ($agendamento_id === '' || !certificadoModeloPermitidoPorAgendamento($pdo, (string)$agendamento_id, $modelo))) {
+$vistoria_id_sessao = trim((string)($sessao_wizard['vistoria_id'] ?? ''));
+$modelo_permitido_sessao = $vistoria_id_sessao !== ''
+    ? certificadoModeloPermitidoPorVistoria($pdo, $vistoria_id_sessao, $modelo)
+    : ($agendamento_id !== '' && certificadoModeloPermitidoPorAgendamento($pdo, (string)$agendamento_id, $modelo));
+if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true) && !$modelo_permitido_sessao) {
     unset($_SESSION['wizard_certificado']);
     setMensagem('error', certificadoMensagemServicoObrigatorio($modelo));
     redirecionar($agendamento_id !== ''

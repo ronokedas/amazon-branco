@@ -74,7 +74,7 @@ if (empty($liberacao['permitido'])) {
     redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamento_id) . '&vistoria_id=' . urlencode((string)$liberacao['vistoria_id']));
 }
 
-$modelos_permitidos = certificadoModelosPermitidosPorAgendamento($pdo, (string)$agendamento_id);
+$modelos_permitidos = certificadoModelosPermitidosPorVistoria($pdo, (string)$vistoria_id);
 
 $tipos = [
     'CSN'   => ['label' => 'Certificado de Segurança da Navegação', 'icone' => 'fa-ship', 'url' => APP_URL . 'documentacao/certificados/form?agendamento_id=' . urlencode($agendamento_id)],

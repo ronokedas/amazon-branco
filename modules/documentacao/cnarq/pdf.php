@@ -261,7 +261,7 @@ $pdf->Cell(190, 6, 'Expedido em ' . cnarqPdfText(cnarqText($c['local_emissao'] ?
 $pdf->AddPage();
 $pdf->SetLineWidth(0.45);
 
-$boxX = 10; $boxY = 18; $boxW = 190; $boxH = 196;
+$boxX = 10; $boxY = 18; $boxW = 190; $boxH = 246;
 $pdf->Rect($boxX, $boxY, $boxW, $boxH);
 $pdf->Line($boxX, $boxY + 12, $boxX + $boxW, $boxY + 12);
 $pdf->SetFont('helvetica', 'B', 11);
@@ -374,11 +374,12 @@ if (trim((string)($c['observacoes_verso'] ?? '')) !== '') {
 }
 
 $pdf->SetFont('helvetica', 'B', 8);
-$pdf->Rect(10, 215, 73, 6);
-$pdf->SetXY(10, 215.5);
+$footerY = $boxY + $boxH + 1;
+$pdf->Rect(10, $footerY, 73, 6);
+$pdf->SetXY(10, $footerY + 0.5);
 $pdf->Cell(73, 5, 'ANEXO 7-A - NORMAM 202/DPC', 0, 0, 'C');
-$pdf->Rect(85, 215, 115, 6);
-$pdf->SetXY(85, 215.5);
+$pdf->Rect(85, $footerY, 115, 6);
+$pdf->SetXY(85, $footerY + 0.5);
 $pdf->Cell(115, 5, 'VÁLIDO ATÉ: ' . cnarqDataExtenso($c['data_validade']), 0, 1, 'C');
 
 $nome_arquivo = 'CNARQ_' . str_replace('/', '-', $c['numero']) . '.pdf';
