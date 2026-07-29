@@ -937,34 +937,35 @@ function bloquearEdicaoDocumentoAssinado(PDO $pdo, string $tabela, ?string $id, 
 {
     $permitidas=['certificados_csn','certificados_cnbl','certificados_cnarq','certificados_lp','certificados_lc','certificados_cht'];
     if(empty($id)||!in_array($tabela,$permitidas,true))return;
-    $stmt=$pdo->prepare("SELECT assinado,status FROM {$tabela} WHERE id=:id");$stmt->execute([':id'=>$id]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
-    $tipos=['certificados_csn'=>'CSN','certificados_cnbl'=>'CNBL','certificados_cnarq'=>'CNARQ','certificados_lp'=>'LP','certificados_lc'=>'LC','certificados_cht'=>'CHT'];
-    $aprovado=false;
-    try {
-        $audit=$pdo->prepare("SELECT 1 FROM documento_aprovacoes WHERE documento_tipo=:tipo AND documento_id=:id AND status='APROVADO' LIMIT 1");
-        $audit->execute([':tipo'=>$tipos[$tabela],':id'=>$id]);
-        $aprovado=(bool)$audit->fetchColumn();
-    } catch (PDOException $e) {
-        $aprovado=false;
+    if (documentoEstaAssinado($pdo, $tabela, $id)) {
+        setMensagem('error', 'Documento assinado é imutável. Cancele e reemita para fazer correções.');
+        redirecionar($destino);
     }
-    if($row&&(!empty($row['assinado'])||($row['status']??'')==='assinado'||$aprovado)){setMensagem('error','Documento aprovado ou assinado é imutável. Cancele e reemita para fazer correções.');redirecionar($destino);}
 }
 
-function documentoEstaAprovadoOuAssinado(PDO $pdo, string $tabela, string $tipo, ?string $id): bool
+function documentoEstaAssinado(PDO $pdo, string $tabela, ?string $id): bool
 {
     if (empty($id)) return false;
-    $stmt=$pdo->prepare("SELECT assinado,status FROM {$tabela} WHERE id=:id");
+    $permitidas=['certificados_csn','certificados_cnbl','certificados_cnarq','certificados_lp','certificados_lc','certificados_cht'];
+    if (!in_array($tabela, $permitidas, true)) return false;
+    $stmt=$pdo->prepare("SELECT assinado FROM {$tabela} WHERE id=:id");
     $stmt->execute([':id'=>$id]);
     $row=$stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$row) return false;
-    if (!empty($row['assinado']) || ($row['status'] ?? '') === 'assinado') return true;
-    try {
-        $audit=$pdo->prepare("SELECT 1 FROM documento_aprovacoes WHERE documento_tipo=:tipo AND documento_id=:id AND status='APROVADO' LIMIT 1");
-        $audit->execute([':tipo'=>$tipo,':id'=>$id]);
-        return (bool)$audit->fetchColumn();
-    } catch (PDOException $e) {
-        return false;
-    }
+    return $row && (int)($row['assinado'] ?? 0) === 1;
+}
+
+function normalizarDecimalFormulario(mixed $valor): ?string
+{
+    $normalizado = trim((string)$valor);
+    if ($normalizado === '') return null;
+    return str_replace(',', '.', $normalizado);
+}
+
+function certificadoResolverVistoriaParaSalvar(?string $certificadoId, ?string $vistoriaPersistida, ?string $vistoriaInformada): ?string
+{
+    $vistoria = empty($certificadoId) ? $vistoriaInformada : $vistoriaPersistida;
+    $vistoria = trim((string)$vistoria);
+    return $vistoria === '' ? null : $vistoria;
 }
 
 /** Retorna o ultimo relatorio do agendamento, que e o unico vigente para certificacao. */

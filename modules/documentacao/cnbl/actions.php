@@ -24,8 +24,8 @@ if ($action === 'atualizar_convalidacoes') {
         redirecionar(APP_URL . 'documentacao/cnbl');
     }
     $id = trim((string)($_POST['id'] ?? ''));
-    if (!documentoEstaAprovadoOuAssinado($pdo, 'certificados_cnbl', 'CNBL', $id)) {
-        setMensagem('error', 'Esta exceção de edição existe apenas para certificado aprovado ou assinado.');
+    if (!documentoEstaAssinado($pdo, 'certificados_cnbl', $id)) {
+        setMensagem('error', 'Esta exceção de edição existe apenas para certificado assinado.');
         redirecionar(APP_URL . 'documentacao/cnbl/form?id=' . urlencode($id));
     }
     $ids = $_POST['conv_id'] ?? [];
@@ -88,7 +88,7 @@ if ($action === 'salvar') {
     $comprimento_casco    = $_POST['comprimento_casco'] !== '' ? $_POST['comprimento_casco'] : null;
     $boca_moldada         = $_POST['boca_moldada'] !== '' ? $_POST['boca_moldada'] : null;
     $pontal_moldado       = $_POST['pontal_moldado'] !== '' ? $_POST['pontal_moldado'] : null;
-    $arqueacao_bruta      = trim($_POST['arqueacao_bruta'] ?? '');
+    $arqueacao_bruta      = normalizarDecimalFormulario($_POST['arqueacao_bruta'] ?? null);
     $material_casco       = trim($_POST['material_casco'] ?? '');
 
     // Checkboxes (arrays)
@@ -397,9 +397,10 @@ if ($action === 'salvar') {
         setMensagem('success', 'Certificado CNBL ' . ($editando ? 'atualizado' : 'criado') . ' com sucesso.');
         redirecionar(APP_URL . 'documentacao/cnbl');
 
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        setMensagem('error', 'Erro ao salvar certificado: ' . $e->getMessage());
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Falha ao salvar certificado CNBL: ' . $e->getMessage());
+        setMensagem('error', 'Não foi possível salvar o certificado. Tente novamente ou contate o suporte.');
         redirecionar(APP_URL . 'documentacao/cnbl/form' . ($editando ? "?id={$id}" : ''));
     }
 }

@@ -139,7 +139,7 @@ $stmt_desp = $pdo->prepare("SELECT id, nome FROM clientes WHERE perfil = 'despac
 $stmt_desp->execute();
 $despachantes_list = $stmt_desp->fetchAll(PDO::FETCH_ASSOC);
 
-$documento_bloqueado = documentoEstaAprovadoOuAssinado($pdo, 'certificados_cnbl', 'CNBL', $certificado['id'] ?? null);
+$documento_bloqueado = documentoEstaAssinado($pdo, 'certificados_cnbl', $certificado['id'] ?? null);
 $vistoriadores_convalidacao = certificadoVistoriadoresAtivos($pdo);
 $locais_convalidacao = certificadoLocaisVistoria($pdo);
 $convalidacoes = certificadoAplicarUltimaVistoria(
@@ -435,7 +435,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                         </div>
                         <div class="form-group">
                             <label for="arqueacao_bruta">Arqueação Bruta <span style="color: #dc2626;">*</span></label>
-                            <input type="number" name="arqueacao_bruta" id="arqueacao_bruta" class="form-control" required min="0"
+                            <input type="number" name="arqueacao_bruta" id="arqueacao_bruta" class="form-control" required min="0" step="0.01"
                                    value="<?php echo $editando ? h($certificado['arqueacao_bruta']) : h($preenchimento['arqueacao_bruta']); ?>">
                         </div>
                     </div>
@@ -464,11 +464,6 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     </div>
 
                     <div class="grid-3">
-                        <div class="form-group">
-                            <label for="arqueacao_bruta">Arqueação Bruta</label>
-                            <input type="text" name="arqueacao_bruta" id="arqueacao_bruta" class="form-control"
-                                   value="<?php echo $editando ? h($certificado['arqueacao_bruta']) : h($preenchimento['arqueacao_bruta']); ?>">
-                        </div>
                         <div class="form-group">
                             <label for="material_casco">Material do Casco</label>
                             <input type="text" name="material_casco" id="material_casco" class="form-control"

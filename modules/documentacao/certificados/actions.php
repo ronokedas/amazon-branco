@@ -23,8 +23,8 @@ if ($action === 'atualizar_convalidacoes') {
         redirecionar(APP_URL . 'documentacao/certificados');
     }
     $id = trim((string)($_POST['id'] ?? ''));
-    if (!documentoEstaAprovadoOuAssinado($pdo, 'certificados_csn', 'CSN', $id)) {
-        setMensagem('error', 'Esta exceção de edição existe apenas para certificado aprovado ou assinado.');
+    if (!documentoEstaAssinado($pdo, 'certificados_csn', $id)) {
+        setMensagem('error', 'Esta exceção de edição existe apenas para certificado assinado.');
         redirecionar(APP_URL . 'documentacao/certificados/form?id=' . urlencode($id));
     }
     $ids = $_POST['conv_id'] ?? [];
@@ -492,9 +492,10 @@ if ($action === 'salvar') {
         setMensagem('success', 'Certificado CSN ' . ($editando ? 'atualizado' : 'criado') . ' com sucesso.');
         redirecionar(APP_URL . 'documentacao/certificados');
 
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        setMensagem('error', 'Erro ao salvar certificado: ' . $e->getMessage());
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Falha ao salvar certificado CSN: ' . $e->getMessage());
+        setMensagem('error', 'Não foi possível salvar o certificado. Tente novamente ou contate o suporte.');
         redirecionar(APP_URL . 'documentacao/certificados/form' . ($editando ? "?id={$id}" : ''));
     }
 }

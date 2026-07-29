@@ -124,7 +124,7 @@ $stmt_desp = $pdo->prepare("SELECT id, nome FROM clientes WHERE perfil = 'despac
 $stmt_desp->execute();
 $despachantes_list = $stmt_desp->fetchAll(PDO::FETCH_ASSOC);
 
-$documento_bloqueado = documentoEstaAprovadoOuAssinado($pdo, 'certificados_csn', 'CSN', $certificado['id'] ?? null);
+$documento_bloqueado = documentoEstaAssinado($pdo, 'certificados_csn', $certificado['id'] ?? null);
 $vistoriadores_convalidacao = certificadoVistoriadoresAtivos($pdo);
 $locais_convalidacao = certificadoLocaisVistoria($pdo);
 $convalidacoes = certificadoAplicarUltimaVistoria(
@@ -164,7 +164,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
         </div>
     <?php endif; ?>
 
-    <?php if ($_SESSION['usuario_cargo'] ?? '' !== 'ADMIN'): ?>
+    <?php if (($_SESSION['usuario_cargo'] ?? '') !== 'ADMIN'): ?>
         <div class="alert alert-info" style="margin-bottom: 20px;">
             <i class="fas fa-eye"></i> <strong>Modo de visualização</strong> — Você não tem permissão para editar este certificado.
         </div>

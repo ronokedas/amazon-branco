@@ -31,6 +31,16 @@ if ($action === 'salvar') {
     $id = $_POST['id'] ?? null;
     $editando = !empty($id);
     bloquearEdicaoDocumentoAssinado($pdo,'certificados_cnarq',$id,APP_URL.'documentacao/cnarq');
+    $certificadoExistente = null;
+    if ($editando) {
+        $stmtCertificado = $pdo->prepare('SELECT id, vistoria_id FROM certificados_cnarq WHERE id = :id AND ativo = 1');
+        $stmtCertificado->execute([':id' => $id]);
+        $certificadoExistente = $stmtCertificado->fetch(PDO::FETCH_ASSOC);
+        if (!$certificadoExistente) {
+            setMensagem('error', 'Certificado não encontrado.');
+            redirecionar(APP_URL . 'documentacao/cnarq');
+        }
+    }
 
     // Dados principais
     $nome_embarcacao     = trim($_POST['nome_embarcacao'] ?? '');
@@ -45,30 +55,30 @@ if ($action === 'salvar') {
     $data_quilha         = trim($_POST['data_quilha'] ?? '');
 
     // Dimensões
-    $comprimento_total   = $_POST['comprimento_total'] !== '' ? $_POST['comprimento_total'] : null;
-    $comprimento_casco   = $_POST['comprimento_casco'] !== '' ? $_POST['comprimento_casco'] : null;
-    $comprimento_lpp     = $_POST['comprimento_lpp'] !== '' ? $_POST['comprimento_lpp'] : null;
-    $boca_moldada        = $_POST['boca_moldada'] !== '' ? $_POST['boca_moldada'] : null;
-    $boca_maxima         = $_POST['boca_maxima'] !== '' ? $_POST['boca_maxima'] : null;
-    $pontal_moldado      = $_POST['pontal_moldado'] !== '' ? $_POST['pontal_moldado'] : null;
+    $comprimento_total   = ($_POST['comprimento_total'] ?? '') !== '' ? $_POST['comprimento_total'] : null;
+    $comprimento_casco   = ($_POST['comprimento_casco'] ?? '') !== '' ? $_POST['comprimento_casco'] : null;
+    $comprimento_lpp     = ($_POST['comprimento_lpp'] ?? '') !== '' ? $_POST['comprimento_lpp'] : null;
+    $boca_moldada        = ($_POST['boca_moldada'] ?? '') !== '' ? $_POST['boca_moldada'] : null;
+    $boca_maxima         = ($_POST['boca_maxima'] ?? '') !== '' ? $_POST['boca_maxima'] : null;
+    $pontal_moldado      = ($_POST['pontal_moldado'] ?? '') !== '' ? $_POST['pontal_moldado'] : null;
 
     // Arqueação
-    $arqueacao_bruta     = $_POST['arqueacao_bruta'] !== '' ? $_POST['arqueacao_bruta'] : null;
-    $arqueacao_liquida   = $_POST['arqueacao_liquida'] !== '' ? $_POST['arqueacao_liquida'] : null;
+    $arqueacao_bruta     = ($_POST['arqueacao_bruta'] ?? '') !== '' ? $_POST['arqueacao_bruta'] : null;
+    $arqueacao_liquida   = ($_POST['arqueacao_liquida'] ?? '') !== '' ? $_POST['arqueacao_liquida'] : null;
     $metodo_arqueacao    = trim($_POST['metodo_arqueacao'] ?? '');
-    $calado_moldado_m    = $_POST['calado_moldado_m'] !== '' ? $_POST['calado_moldado_m'] : null;
-    $passageiros_camarotes = $_POST['passageiros_camarotes'] !== '' ? (int)$_POST['passageiros_camarotes'] : 0;
-    $passageiros_outros  = $_POST['passageiros_outros'] !== '' ? (int)$_POST['passageiros_outros'] : 0;
+    $calado_moldado_m    = ($_POST['calado_moldado_m'] ?? '') !== '' ? $_POST['calado_moldado_m'] : null;
+    $passageiros_camarotes = ($_POST['passageiros_camarotes'] ?? '') !== '' ? (int)$_POST['passageiros_camarotes'] : 0;
+    $passageiros_outros  = ($_POST['passageiros_outros'] ?? '') !== '' ? (int)$_POST['passageiros_outros'] : 0;
     $espacos_incluidos_ab = trim($_POST['espacos_incluidos_ab'] ?? '');
     $espacos_incluidos_al = trim($_POST['espacos_incluidos_al'] ?? '');
-    $espacos_excluidos_m3 = $_POST['espacos_excluidos_m3'] !== '' ? $_POST['espacos_excluidos_m3'] : 0;
+    $espacos_excluidos_m3 = ($_POST['espacos_excluidos_m3'] ?? '') !== '' ? $_POST['espacos_excluidos_m3'] : 0;
     $data_local_arqueacao_original = trim($_POST['data_local_arqueacao_original'] ?? '');
     $data_local_ultima_rearqueacao = trim($_POST['data_local_ultima_rearqueacao'] ?? '');
 
     // Vistoria
-    $relatorio_numero    = trim($_POST['relatorio_numero'] ?? '');
+    $relatorio_numero    = '';
     $local_vistoria      = trim($_POST['local_vistoria'] ?? '');
-    $data_vistoria       = $_POST['data_vistoria'] ?: null;
+    $data_vistoria       = ($_POST['data_vistoria'] ?? '') ?: null;
 
     // Datas e local
     $data_emissao  = $_POST['data_emissao'] ?? date('Y-m-d');
@@ -90,7 +100,11 @@ if ($action === 'salvar') {
     }
 
     // Validações
-    $vistoria_id = $_POST['vistoria_id'] ?? null;
+    $vistoria_id = certificadoResolverVistoriaParaSalvar(
+        $id,
+        $certificadoExistente['vistoria_id'] ?? null,
+        $_POST['vistoria_id'] ?? null
+    );
     if (!$editando && $vistoria_id && !certificadoModeloPermitidoPorVistoria($pdo, (string)$vistoria_id, 'CNARQ')) {
         setMensagem('error', certificadoMensagemServicoObrigatorio('CNARQ'));
         redirecionar(APP_URL . 'certificados');
@@ -202,6 +216,7 @@ if ($action === 'salvar') {
                 ':assinante_titulo'   => $assinante_titulo,
                 ':assinante_registro' => $assinante_registro,
                 ':status'             => $status,
+                ':vistoria_id'        => $vistoria_id,
                 ':despachante_id'     => $despachante_id,
                 ':id'                 => $id,
             ]);
@@ -276,8 +291,8 @@ if ($action === 'salvar') {
                 ':assinante_registro' => $assinante_registro,
                 ':status'             => $status,
                 ':despachante_id'     => $despachante_id,
-                ':despachante_id'     => $despachante_id,
                 ':criado_por'         => $_SESSION['usuario_id'] ?? null,
+                ':vistoria_id'        => $vistoria_id,
             ]);
         }
 
@@ -291,9 +306,10 @@ if ($action === 'salvar') {
         setMensagem('success', 'Certificado CNARQ ' . ($editando ? 'atualizado' : 'criado') . ' com sucesso.');
         redirecionar(APP_URL . 'documentacao/cnarq');
 
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        setMensagem('error', 'Erro ao salvar certificado: ' . $e->getMessage());
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Falha ao salvar certificado CNARQ: ' . $e->getMessage());
+        setMensagem('error', 'Não foi possível salvar o certificado. Tente novamente ou contate o suporte.');
         redirecionar(APP_URL . 'documentacao/cnarq/form' . ($editando ? "?id={$id}" : ''));
     }
 }

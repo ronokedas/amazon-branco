@@ -40,6 +40,8 @@ if (!$editando) {
     exit;
 }
 
+$documento_bloqueado = documentoEstaAssinado($pdo, 'certificados_cnarq', $certificado['id'] ?? null);
+
 // Gerar próximo número (se não estiver editando)
 $proximo_numero = '';
 if (!$editando) {
@@ -132,7 +134,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
     </div>
 
     <!-- Se já estiver assinado, mostrar aviso -->
-    <?php if ($editando && $certificado['assinado']): ?>
+    <?php if ($documento_bloqueado): ?>
         <div class="card mb-3" style="border-left: 4px solid var(--cor-destaque);">
             <div class="card-body">
                 <p style="margin:0;">
@@ -151,6 +153,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
         <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
         <?php if ($editando): ?>
             <input type="hidden" name="id" value="<?php echo h($certificado['id']); ?>">
+            <input type="hidden" name="vistoria_id" value="<?php echo h($certificado['vistoria_id'] ?? ''); ?>">
         <?php endif; ?>
 
         <!-- SEÇÃO 1: Identificação do Certificado -->
@@ -365,7 +368,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                 <div class="grid-2">
                     <div class="form-group">
                         <label for="relatorio_numero">N° Relatório de Vistorias</label>
-                        <input type="text" name="relatorio_numero" id="relatorio_numero" class="form-control"
+                        <input type="text" id="relatorio_numero" class="form-control" readonly
                                placeholder="Ex: AM-REL-AP:100/26"
                                value="<?php echo $editando ? h($certificado['relatorio_numero'] ?? '') : h($preenchimento['relatorio_numero']); ?>">
                     </div>
@@ -449,6 +452,13 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
 </div>
 
 <script>
+<?php if ($documento_bloqueado): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('#formCertificado input, #formCertificado select, #formCertificado textarea, #formCertificado button')
+        .forEach(function(campo) { campo.disabled = true; });
+});
+<?php endif; ?>
+
 function carregarDadosEmbarcacao(embarcacaoId) {
     if (!embarcacaoId) return;
     
