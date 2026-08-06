@@ -341,7 +341,7 @@ try {
                 ':ua'=>hash('sha256', (string)($_SERVER['HTTP_USER_AGENT'] ?? ''))]);
         campoRegistrarAuditoria('campo_login', 'Login no aplicativo de campo.');
         campoJson(['ok'=>true, 'dados'=>[
-            'usuario'=>['id'=>$usuario['id'], 'nome'=>$usuario['nome'], 'perfis'=>['VISTORIADOR']],
+            'usuario'=>['id'=>$usuario['id'], 'nome'=>$usuario['nome'], 'email'=>$usuario['email'], 'cargo'=>$usuario['cargo'], 'usuario'=>$usuario['email'], 'perfis'=>['VISTORIADOR']],
             'csrf_token'=>gerarCSRF(),
             'expira_em'=>date(DATE_ATOM, time() + 60 * 60 * 24 * 365),
         ]]);
@@ -411,7 +411,7 @@ try {
     if ($method === 'GET' && $rota === 'sessao') {
         $perfis = getPerfisUsuario($usuarioId);
         campoJson(['ok' => true, 'dados' => [
-            'usuario' => ['id' => $usuarioId, 'nome' => $_SESSION['usuario_nome'] ?? 'Usuário', 'perfis' => $perfis],
+            'usuario' => ['id' => $usuarioId, 'nome' => $_SESSION['usuario_nome'] ?? 'Usuário', 'email' => $_SESSION['usuario_email'] ?? '', 'cargo' => getCargo(), 'usuario' => $_SESSION['usuario_email'] ?? '', 'perfis' => $perfis],
             'csrf_token' => gerarCSRF(),
             'app_url' => APP_URL,
             'expira_em' => date(DATE_ATOM, (int)$_SESSION['campo_login_em'] + 60 * 60 * 24 * 30),
@@ -420,8 +420,8 @@ try {
 
     if ($method === 'GET' && $rota === 'agenda') {
         $sql = "SELECT a.id, a.data_vistoria, a.hora_vistoria, a.local, a.status, a.tipo_vistoria,
-                       e.id AS embarcacao_id, e.nome AS embarcacao, e.registro, e.foto_url, e.foto_atualizada_em,
-                       c.nome AS cliente,
+                       e.id AS embarcacao_id, e.nome AS embarcacao, e.nome AS embarcacao_nome, e.registro, e.registro AS embarcacao_registro, e.foto_url, e.foto_atualizada_em,
+                       c.nome AS cliente, c.nome AS cliente_nome,
                        v.id AS vistoria_id, v.status AS vistoria_status, v.finalidade, v.mobile_versao,
                        (v.status='RETORNO_AS' AND EXISTS (
                            SELECT 1 FROM vistoria_exigencias ve
@@ -461,7 +461,7 @@ try {
                     v.id AS vistoria_id, v.numero, v.status, v.data_vistoria,
                     v.mobile_finalizada_em, v.mobile_versao,
                     a.id AS agendamento_id, a.tipo_vistoria, a.local,
-                    e.nome AS embarcacao, e.registro, c.nome AS cliente,
+                    e.nome AS embarcacao, e.nome AS embarcacao_nome, e.registro, e.registro AS embarcacao_registro, c.nome AS cliente, c.nome AS cliente_nome,
                     (SELECT COUNT(*) FROM vistoria_checklist_respostas r WHERE r.vistoria_id = v.id) AS respondidos,
                     (SELECT COUNT(*) FROM vistoria_checklist_respostas r WHERE r.vistoria_id = v.id AND r.status = 'NAO_CONFORME') AS nao_conformes,
                     (SELECT COUNT(*) FROM vistoria_anexos va WHERE va.vistoria_id = v.id AND va.excluido_em IS NULL) AS fotos
@@ -478,6 +478,7 @@ try {
         $relatorios = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($relatorios as &$relatorio) {
             $relatorio['relatorio_url'] = APP_URL . 'vistorias/relatorio?agendamento_id=' . rawurlencode($relatorio['agendamento_id']);
+            $relatorio['relatorio_pdf_url'] = $relatorio['relatorio_url'];
         }
         unset($relatorio);
         campoJson(['ok' => true, 'dados' => ['relatorios' => $relatorios]]);
