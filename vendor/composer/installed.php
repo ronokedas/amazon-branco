@@ -3,7 +3,7 @@
         'name' => 'amazonnaval/erp',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '91d2341ff23743f29ff402c69e4dc7c2cbe72128',
+        'reference' => 'e702b2dbc0b20416cd5a85a812f4dacd8480f8ba',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'amazonnaval/erp' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '91d2341ff23743f29ff402c69e4dc7c2cbe72128',
+            'reference' => 'e702b2dbc0b20416cd5a85a812f4dacd8480f8ba',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

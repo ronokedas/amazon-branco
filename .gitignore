@@ -1,5 +1,19 @@
-# Somente credenciais locais e o dump principal ficam fora do GitHub.
+# Credenciais, dados de execucao e copias temporarias nunca entram no Git.
 .env
 .env.*
 !.env.example
 /db.sql
+
+# O conteudo recuperavel e publicado somente no pacote criptografado em
+# recovery/. Nunca versione arquivos soltos de clientes ou do Docker.
+/storage/
+/uploads/
+/minio-data/
+/logs/
+/tmp/
+/temp_pdf/
+/recovery/.work/
+/recovery/*.zip
+/recovery/*.enc
+/recovery/*.manifest.json
+/pwa-campo/node_modules/

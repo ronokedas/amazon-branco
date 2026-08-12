@@ -102,7 +102,7 @@ services:
       - MYSQL_PASSWORD=${DB_PASS:-erp_pass_2026}
     volumes:
       - db_data:/var/lib/mysql
-      # Em uma instalacao nova, o MySQL carrega exclusivamente o dump completo.
+      # O db.sql e restaurado pelo pacote criptografado antes da primeira subida.
       - ./db.sql:/docker-entrypoint-initdb.d/01-db.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -149,7 +149,7 @@ services:
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-erp_minio_pass_2026}
     command: server /data --console-address ":9001"
     volumes:
-      # Bind mount versionado: os objetos do MinIO acompanham o GitHub/VPS.
+      # Os objetos acompanham o pacote criptografado de recuperacao, nao o Git.
       - ./minio-data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]

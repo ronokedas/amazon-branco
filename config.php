@@ -23,7 +23,7 @@ if (session_status() === PHP_SESSION_NONE) {
     // Nao expirar a autenticacao por inatividade durante o uso normal.
     // O prazo longo abaixo existe apenas para a manutencao tecnica dos arquivos
     // de sessao e do cookie; a saida continua sendo feita pelo logout explicito.
-    $sessionLifetime = 60 * 60 * 24 * 365;
+$sessionLifetime = 60 * 60 * 24 * 14;
     ini_set('session.gc_maxlifetime', (string)$sessionLifetime);
     ini_set('session.cookie_lifetime', (string)$sessionLifetime);
 

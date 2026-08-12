@@ -31,17 +31,6 @@ for relative_dir in $RUNTIME_DIRS; do
     install -d -o www-data -g www-data -m 0770 "$absolute_dir"
 done
 
-# Corrige tambem arquivos e subpastas persistidos por uma versao anterior ou
-# criados pelo usuario do host antes de o container iniciar.
-for runtime_root in uploads logs storage tmp temp_pdf; do
-    absolute_root="${APP_ROOT}/${runtime_root}"
-    chown -R www-data:www-data "$absolute_root"
-    # Executar em lotes evita criar um processo chmod por arquivo. Em backups
-    # grandes isso atrasava a inicialização do Apache por muitos minutos.
-    find "$absolute_root" -type d -exec chmod 0770 {} +
-    find "$absolute_root" -type f -exec chmod 0660 {} +
-done
-
 # Testar como o mesmo usuario dos processos PHP/worker. Um deploy com volume
 # somente leitura ou filesystem incompatível deve falhar aqui, com erro claro.
 if command -v su >/dev/null 2>&1; then

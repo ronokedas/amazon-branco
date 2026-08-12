@@ -1,11 +1,9 @@
 # Deploy completo do Sistema Amazon no Ubuntu 24.04 com Docker
 
-Este manual considera o repositório GitHub como a cópia completa e oficial do
-sistema. O repositório inclui código, `.env`, dependências, banco de dados,
-uploads, PDFs, assinaturas, backups, logs e demais arquivos de runtime.
-Os objetos do MinIO ficam em `minio-data/` e também fazem parte do repositório.
-
-O banco inicial de uma VPS nova é carregado exclusivamente de `db.sql`.
+O repositório GitHub contém código e o pacote de recuperação criptografado.
+Credenciais, banco, PDFs, uploads e objetos MinIO não são versionados soltos.
+Siga [o manual de publicação e recuperação segura](RECUPERACAO_E_PUBLICACAO_SEGURA.md)
+para criar ou migrar uma VPS.
 
 ## 1. Preparar o Ubuntu
 
@@ -61,32 +59,23 @@ Portas padrão:
 - `9002`: API do MinIO;
 - `9003`: console do MinIO.
 
-## 3. Publicar absolutamente tudo do computador local
+## 3. Publicar com backup recuperável criptografado
 
 No PowerShell do Windows:
 
 ```powershell
 cd C:\sistema
+$env:RECOVERY_BACKUP_PASSWORD = Read-Host 'Senha do backup' -AsSecureString |
+  ConvertFrom-SecureString -AsPlainText
 powershell -ExecutionPolicy Bypass -File .\scripts\publicar_tudo_github.ps1 `
   -Mensagem "Atualiza sistema, banco e arquivos completos"
 ```
 
-O script executa cinco ações:
+O script executa estas ações:
 
-1. exporta o MySQL local completo e substitui `db.sql`;
-2. sincroniza os objetos do MinIO para `minio-data/`;
-3. pausa os containers para congelar os arquivos de runtime;
-4. executa `git add --all`;
-5. cria o commit e envia para `origin/main`;
-6. religa os containers locais, inclusive quando ocorrer uma falha.
-
-Se o Docker local estiver parado e o `db.sql` já estiver atualizado:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\publicar_tudo_github.ps1 `
-  -SemExportarBanco `
-  -Mensagem "Publica todos os arquivos"
-```
+1. cria, criptografa e valida o backup de banco, configuração, documentos e MinIO;
+2. adiciona apenas código, documentação e pacote criptografado;
+3. cria o commit e envia para `origin/main`.
 
 Verifique o resultado:
 
@@ -108,12 +97,8 @@ sudo chown -R "$USER":"$USER" /opt/sistema-amazon
 cd /opt/sistema-amazon
 ```
 
-Como o `.env` é versionado por decisão deste projeto, não é necessário
-copiá-lo de `.env.example`. Confira apenas os valores:
-
-```bash
-nano .env
-```
+Restaure o pacote criptografado antes de subir os containers, conforme o
+manual seguro. Ele cria o `.env` e o `db.sql` necessários.
 
 Confirme principalmente:
 

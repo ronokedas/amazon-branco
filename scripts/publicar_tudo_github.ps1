@@ -9,40 +9,13 @@ $ErrorActionPreference = "Stop"
 $raiz = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $raiz
 
-if (-not $SemExportarBanco) {
-    $container = docker compose ps -q db
-    if (-not $container) {
-        throw "O container do MySQL nao esta em execucao. Suba o Docker ou use -SemExportarBanco."
-    }
-
-    Write-Host "Exportando o banco completo para db.sql..."
-    docker exec $container sh -c 'exec mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --single-transaction --quick --routines --triggers --events --default-character-set=utf8mb4 --no-tablespaces "$MYSQL_DATABASE" > /tmp/erp_db_completo.sql'
-    if ($LASTEXITCODE -ne 0) {
-        throw "Falha ao exportar o banco de dados."
-    }
-
-    docker cp "${container}:/tmp/erp_db_completo.sql" "$raiz\db.sql"
-    if ($LASTEXITCODE -ne 0) {
-        throw "Falha ao copiar o dump para db.sql."
-    }
-
-    docker exec $container rm -f /tmp/erp_db_completo.sql
+if ($SemExportarBanco) {
+    Write-Warning '-SemExportarBanco foi descontinuado: toda publicacao exige um backup recuperavel atual.'
 }
 
-if (-not (Test-Path -LiteralPath "$raiz\minio-data")) {
-    New-Item -ItemType Directory -Path "$raiz\minio-data" | Out-Null
-}
-
-$minioContainer = docker compose ps -q minio
-if ($minioContainer) {
-    Write-Host "Sincronizando os objetos do MinIO para minio-data..."
-    docker cp "${minioContainer}:/data/." "$raiz\minio-data"
-    if ($LASTEXITCODE -ne 0) {
-        throw "Falha ao copiar os objetos do MinIO."
-    }
-} else {
-    Write-Warning "MinIO parado: publicando o conteudo atual de minio-data."
-}
+Write-Host "Criando e validando o pacote criptografado de recuperacao..."
+& "$PSScriptRoot\criar_backup_recuperacao.ps1"
+if ($LASTEXITCODE -ne 0) { throw "Falha ao criar backup recuperavel; nada foi publicado." }
 
 $servicosAtivos = @(docker compose ps --services --filter status=running)
 $containersParados = $false
@@ -57,10 +30,34 @@ try {
         $containersParados = $true
     }
 
-    Write-Host "Adicionando todos os arquivos, sem excecao..."
-    git add --all
+    Write-Host "Adicionando codigo e pacote criptografado, sem dados de runtime..."
+    # Nao use a raiz como pathspec: o Git retorna erro ao encontrar os
+    # diretorios de dados propositalmente ignorados. A lista explicita tambem
+    # evita enviar vendor/node_modules por acidente.
+    git add -u -- .
+    if ($LASTEXITCODE -ne 0) {
+        throw "Falha ao atualizar arquivos ja versionados."
+    }
+    $fontes = @(
+        '.gitignore', '.htaccess', '.dockerignore', '.env.example',
+        'ajax', 'assets', 'campo', 'docker', 'docs', 'includes', 'migrations',
+        'modules', 'scripts', 'templates', 'tests',
+        'composer.json', 'composer.lock', 'config.php', 'docker-compose.yml',
+        'Dockerfile', 'index.php', 'php.ini',
+        'pwa-campo/src', 'pwa-campo/package.json', 'pwa-campo/package-lock.json',
+        'pwa-campo/vite.config.js', 'pwa-campo/vite.config.ts', 'pwa-campo/index.html'
+    ) | Where-Object { Test-Path -LiteralPath $_ }
+    if ($fontes.Count -gt 0) { git add -- $fontes }
     if ($LASTEXITCODE -ne 0) {
         throw "Falha no git add --all."
+    }
+
+    # Arquivos de recuperacao sao ignorados por seguranca para que um pacote
+    # de teste nunca seja publicado por engano. Somente o pacote validado
+    # nesta execucao e explicitamente liberado para o commit.
+    git add -f recovery/amazon-recovery-latest.enc recovery/amazon-recovery-latest.manifest.json
+    if ($LASTEXITCODE -ne 0) {
+        throw "Falha ao adicionar o pacote criptografado de recuperacao."
     }
 
     $alteracoes = git diff --cached --name-only
