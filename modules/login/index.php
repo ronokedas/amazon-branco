@@ -26,6 +26,12 @@ if (estaLogado()) {
 $erro_msg = '';
 $email = '';
 
+// O modo de campo é a única origem externa aceita para retorno pós-login.
+// Nunca reutilizar uma URL arbitrária aqui, para não abrir redirecionamentos externos.
+if (($_GET['return_to'] ?? '') === 'campo') {
+    $_SESSION['login_return_to'] = 'campo';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = sanitize($_POST['email'] ?? '');
     $senha    = $_POST['senha'] ?? '';
@@ -48,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 $retorno = (string)($_SESSION['login_return_to'] ?? '');
                 unset($_SESSION['login_return_to']);
-                $destino = str_starts_with($retorno, 'minhas-assinaturas') ? $retorno : 'dashboard';
+                $destino = $retorno === 'campo' || str_starts_with($retorno, 'minhas-assinaturas') ? $retorno : 'dashboard';
                 header('Location: ' . APP_URL . $destino);
                 exit;
             } else {

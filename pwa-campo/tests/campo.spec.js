@@ -5,10 +5,11 @@ async function entrar(page) {
   const email = process.env.CAMPO_TEST_EMAIL
   const senha = process.env.CAMPO_TEST_PASSWORD
   if (!email || !senha) throw new Error('Defina CAMPO_TEST_EMAIL e CAMPO_TEST_PASSWORD para executar os testes.')
-  await page.goto('/campo/')
-  await page.getByLabel('E-mail').fill(email)
-  await page.locator('#campo-senha').fill(senha)
-  await page.getByRole('button', { name: 'Entrar no aplicativo' }).click()
+  await page.goto('/login?return_to=campo')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Senha').fill(senha)
+  await page.getByRole('button', { name: 'Entrar' }).click()
+  await expect(page).toHaveURL(/campo/)
   await expect(page.getByRole('heading', { name: 'Minhas vistorias' })).toBeVisible()
 }
 
@@ -192,7 +193,7 @@ test('navegação principal abre áreas funcionais sem controles inertes', async
   await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
   await expect(page.locator('.tab-heading h1')).toBeVisible()
   await expect(page.getByText('Dados neste aparelho')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Sair do aplicativo' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Sair do ERP neste navegador' })).toBeEnabled()
   await page.screenshot({ path: 'test-results/ajustes-campo-android.png', fullPage: true })
 
   await page.getByRole('button', { name: 'Agenda' }).click()
@@ -204,7 +205,7 @@ test('navegação principal abre áreas funcionais sem controles inertes', async
   await expect(page.getByRole('button', { name: 'Atualizar' })).toBeDisabled()
 })
 
-test('logout revoga a sessão e remove IndexedDB e caches locais', async ({ page }) => {
+test('logout do ERP remove os dados locais do Campo após confirmação', async ({ page }) => {
   await entrar(page)
   await page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {
@@ -216,25 +217,26 @@ test('logout revoga a sessão e remove IndexedDB e caches locais', async ({ page
     tx.objectStore('meta').put({ chave: 'teste-logout', valor: true })
     await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error) })
     db.close()
-    await caches.open('teste-logout')
+    await caches.open('amazon-campo-teste-logout')
   })
 
   await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
-  await page.getByRole('button', { name: 'Sair do aplicativo' }).click()
-  await expect(page.getByRole('heading', { name: 'Amazon Campo' })).toBeVisible()
+  page.on('dialog', dialog => dialog.accept())
+  await page.getByRole('button', { name: 'Sair do ERP neste navegador' }).click()
+  await expect(page).toHaveURL(/login/)
   const estadoLocal = await page.evaluate(async () => {
     const existe = (await indexedDB.databases()).some(item => item.name === 'amazon-campo')
-    if (!existe) return { registros: 0, cacheTeste: (await caches.keys()).includes('teste-logout') }
+    if (!existe) return { registros: 0, cacheTeste: (await caches.keys()).includes('amazon-campo-teste-logout') }
     const request = indexedDB.open('amazon-campo', 3)
     const db = await new Promise((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const lojas = ['meta', 'pacotes', 'fila'].filter(store => db.objectStoreNames.contains(store))
-    if (!lojas.length) { db.close(); return { registros: 0, cacheTeste: (await caches.keys()).includes('teste-logout') } }
+    if (!lojas.length) { db.close(); return { registros: 0, cacheTeste: (await caches.keys()).includes('amazon-campo-teste-logout') } }
     const tx = db.transaction(lojas, 'readonly')
     const counts = await Promise.all(lojas.map(store => new Promise((resolve, reject) => {
       const count = tx.objectStore(store).count(); count.onsuccess = () => resolve(count.result); count.onerror = () => reject(count.error)
     })))
     db.close()
-    return { registros: counts.reduce((total, value) => total + value, 0), cacheTeste: (await caches.keys()).includes('teste-logout') }
+    return { registros: counts.reduce((total, value) => total + value, 0), cacheTeste: (await caches.keys()).includes('amazon-campo-teste-logout') }
   })
   expect(estadoLocal).toEqual({ registros: 0, cacheTeste: false })
 })

@@ -211,7 +211,6 @@ function requireCargo($cargoRequerido) {
 // Inicializar sessao para o usuario
 function login($usuario) {
     session_regenerate_id(true);
-    unset($_SESSION['campo_login_em']);
     $_SESSION['usuario_id'] = $usuario['id'];
     $_SESSION['usuario_nome'] = $usuario['nome'];
     $_SESSION['usuario_email'] = $usuario['email'];

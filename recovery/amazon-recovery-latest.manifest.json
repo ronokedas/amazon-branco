@@ -1,6 +1,6 @@
 {
   "formato": "amazon-recovery-v1",
-  "gerado_em_utc": "2026-08-12T16:23:23.3837331Z",
+  "gerado_em_utc": "2026-08-12T17:48:13.4268045Z",
   "criptografia": {
     "algoritmo": "AES-256-CBC",
     "kdf": "PBKDF2",
@@ -10,7 +10,7 @@
   "arquivo": {
     "nome": "amazon-recovery-latest.enc",
     "bytes": 21858144,
-    "sha256": "16e6b39586d3f22e0b8a452b301a2e9f13e782b6a33ce8e25d61d1a7fe6f9b59"
+    "sha256": "f339b39bcc930c6522fa84c85b65551066795dc89a4717c2777585932435b12d"
   },
   "componentes": [
     ".env",
@@ -28,7 +28,7 @@
     {
       "path": "db.sql",
       "bytes": 390726,
-      "sha256": "3c953cf6eed49673bfbd47ccb440e087a12ecddf3925644645048d819d0f9b77"
+      "sha256": "45e4a982cd1435ea44baac585cca179dc2be0f093766bc2c167957249887964f"
     },
     {
       "path": "minio-data/.minio.sys/format.json",
@@ -38,7 +38,7 @@
     {
       "path": "minio-data/.minio.sys/buckets/.bloomcycle.bin/xl.meta",
       "bytes": 743,
-      "sha256": "55332f9deadae315bd9dc4c79fecf1135f40a092f46d5507139d56a514a5e96a"
+      "sha256": "b3716fd767c354346c54efa89acac2b97a12c8bb7e5190f83160b3ec6c9057f8"
     },
     {
       "path": "minio-data/.minio.sys/buckets/.heal/mrf/list.bin",
@@ -47,18 +47,18 @@
     },
     {
       "path": "minio-data/.minio.sys/buckets/.usage-cache.bin/xl.meta",
-      "bytes": 601,
-      "sha256": "c3528be72c4d01d5ac0f3e2b012d95e214f67bb278ae99b9f6bcd745439e9dd8"
+      "bytes": 610,
+      "sha256": "364d669f6830c3acb6b1d74a04c9e018bc2e15e369c4d5c77df5b6ea038311ca"
     },
     {
       "path": "minio-data/.minio.sys/buckets/.usage-cache.bin.bkp/xl.meta",
-      "bytes": 601,
-      "sha256": "5d31605853014a76a67e482b6335da76713abb4570e902116209144e0fe88558"
+      "bytes": 610,
+      "sha256": "5562175bdedeb96b38394498101e40e846fc66d704a17f0f60767fdbb50e8f03"
     },
     {
       "path": "minio-data/.minio.sys/buckets/.usage.json/xl.meta",
       "bytes": 1499,
-      "sha256": "cf2201754307e4a86c319944264b1bf72bb9903f73d7f48650e5b835f2079356"
+      "sha256": "52260209179ffe1a7d5dfd80d08f113ab3aea8ff414f4b7261a947afdf65e4d0"
     },
     {
       "path": "minio-data/.minio.sys/buckets/erp-campo-private/.metadata.bin/xl.meta",
@@ -68,12 +68,12 @@
     {
       "path": "minio-data/.minio.sys/buckets/erp-campo-private/.usage-cache.bin/xl.meta",
       "bytes": 586,
-      "sha256": "8c42ef5437ebd23ca7512b0a3ef3764c22f77474f6e897b01dd7319613c6b375"
+      "sha256": "fb6912c740dfd32a1e443571ae315271bcef21ce698e7b63d2316eef010df6cb"
     },
     {
       "path": "minio-data/.minio.sys/buckets/erp-campo-private/.usage-cache.bin.bkp/xl.meta",
       "bytes": 586,
-      "sha256": "1c9c61514213ee34e54932b62dcf063365473cad148758602887d5569c80aed2"
+      "sha256": "11403735adb62d4650a80e2e4525d9bc156aea7119ccf9918b57c98ffe0c224c"
     },
     {
       "path": "minio-data/.minio.sys/config/config.json/xl.meta",
@@ -91,7 +91,7 @@
       "sha256": "ca7a30335e0c5cb770282b08401fdbccc7d89e277c851abcc27a142411a12b52"
     },
     {
-      "path": "minio-data/.minio.sys/tmp/cff591b0-ea2d-470d-b295-1c64a7b55109",
+      "path": "minio-data/.minio.sys/tmp/c0c02385-59b0-41ec-8674-4e295204b583",
       "bytes": 2049,
       "sha256": "2344ffae04a826129dd552f134c853ddb1bd74b568faa33c8168e4842db3a6c4"
     },

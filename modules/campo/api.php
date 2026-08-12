@@ -29,14 +29,6 @@ function campoInput(): array {
     return $dados;
 }
 
-function campoIpHash(): string {
-    return hash('sha256', obterIpCliente());
-}
-
-function campoSessaoId(): string {
-    return hash('sha256', session_id());
-}
-
 function campoRegistrarAuditoria(string $evento, string $detalhe = ''): void {
     if (function_exists('log_atividade')) {
         try { log_atividade($evento, $detalhe); } catch (Throwable $ignored) {}
@@ -46,28 +38,16 @@ function campoRegistrarAuditoria(string $evento, string $detalhe = ''): void {
 function campoUsuarioId(): string {
     global $pdo;
     if (!estaLogado() || empty($_SESSION['usuario_id'])) {
-        campoErro('NAO_AUTENTICADO', 'Sua sessão expirou. Entre novamente.', 401);
+        campoErro('NAO_AUTENTICADO', 'Entre no ERP para acessar o modo de campo.', 401);
     }
-    if ((time() - (int)($_SESSION['campo_login_em'] ?? 0)) > 60 * 60 * 24 * 365) {
-        session_unset();
-        session_destroy();
-        campoErro('SESSAO_EXPIRADA', 'Sua sessão expirou. Entre novamente.', 401);
+    $usuarioId = (string)$_SESSION['usuario_id'];
+    $stmt = $pdo->prepare('SELECT id FROM usuarios WHERE id=:usuario AND ativo=1 AND excluido_em IS NULL LIMIT 1');
+    $stmt->execute([':usuario' => $usuarioId]);
+    if (!$stmt->fetchColumn()) campoErro('NAO_AUTENTICADO', 'Sua sessão do ERP não está mais ativa.', 401);
+    if (!temPerfil('VISTORIADOR', $usuarioId)) {
+        campoErro('NAO_AUTORIZADO', 'Seu usuário não possui o perfil de vistoriador para acessar o modo de campo.', 403);
     }
-    $stmt = $pdo->prepare("SELECT u.id FROM usuarios u
-        INNER JOIN campo_sessoes cs ON cs.usuario_id=u.id
-        WHERE u.id=:usuario AND u.ativo=1 AND u.cargo='VISTORIADOR'
-          AND cs.id=:sessao AND cs.revogado_em IS NULL AND cs.expira_em>NOW() LIMIT 1");
-    $stmt->execute([':usuario'=>$_SESSION['usuario_id'], ':sessao'=>campoSessaoId()]);
-    if (!$stmt->fetchColumn()) {
-        session_unset();
-        session_destroy();
-        campoErro('NAO_AUTORIZADO', 'Entre com uma conta ativa de vistoriador.', 403);
-    }
-    $pdo->prepare("UPDATE campo_sessoes SET ultimo_acesso_em=NOW(),expira_em=DATE_ADD(NOW(),INTERVAL 365 DAY) WHERE id=:id")
-        ->execute([':id'=>campoSessaoId()]);
-    $_SESSION['campo_login_em'] = time();
-    $_SESSION['login_time'] = time();
-    return (string)$_SESSION['usuario_id'];
+    return $usuarioId;
 }
 
 function campoExigirCsrf(): void {
@@ -76,7 +56,7 @@ function campoExigirCsrf(): void {
 }
 
 function campoErpPodeVisualizarAnexo(PDO $pdo, array $anexo): bool {
-    if (!estaLogado() || empty($_SESSION['usuario_id']) || !podeAcessar('vistorias')) return false;
+    if (!estaLogado() || empty($_SESSION['usuario_id'])) return false;
 
     $usuarioId = (string)$_SESSION['usuario_id'];
     $stmt = $pdo->prepare("SELECT ativo, excluido_em FROM usuarios WHERE id=:id LIMIT 1");
@@ -84,8 +64,9 @@ function campoErpPodeVisualizarAnexo(PDO $pdo, array $anexo): bool {
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$usuario || (int)$usuario['ativo'] !== 1 || $usuario['excluido_em'] !== null) return false;
 
+    if (temPerfil('VISTORIADOR', $usuarioId) && (string)$anexo['vistoriador_id'] === $usuarioId) return true;
+    if (!podeAcessar('vistorias')) return false;
     $cargo = getCargo();
-    if ($cargo === 'VISTORIADOR') return (string)$anexo['vistoriador_id'] === $usuarioId;
     if ($cargo === 'ANALISTA') return (string)$anexo['vistoria_status'] === 'AGUARDANDO_APROVACAO';
     return true;
 }
@@ -304,47 +285,8 @@ $prefix = 'api/campo/v1';
 $rota = trim(substr($requestPath, strpos($requestPath, $prefix) + strlen($prefix)), '/');
 
 try {
-    if ($method === 'POST' && $rota === 'login') {
-        $payload = campoInput();
-        $email = mb_strtolower(trim((string)($payload['email'] ?? '')));
-        $senha = (string)($payload['senha'] ?? '');
-        $emailHash = hash('sha256', $email);
-        $ipHash = campoIpHash();
-        $tentativas = $pdo->prepare("SELECT COUNT(*) FROM campo_login_tentativas
-            WHERE (email_hash=:email OR ip_hash=:ip) AND sucesso=0
-              AND criado_em>=DATE_SUB(NOW(), INTERVAL 15 MINUTE)");
-        $tentativas->execute([':email'=>$emailHash, ':ip'=>$ipHash]);
-        if ((int)$tentativas->fetchColumn() >= 5) {
-            campoErro('MUITAS_TENTATIVAS', 'Muitas tentativas. Aguarde 15 minutos e tente novamente.', 429);
-        }
-        $usuario = null;
-        if (filter_var($email, FILTER_VALIDATE_EMAIL) && $senha !== '') {
-            $stmt = $pdo->prepare("SELECT id,nome,email,cargo,senha_hash FROM usuarios
-                WHERE email=:email AND ativo=1 AND cargo='VISTORIADOR' LIMIT 1");
-            $stmt->execute([':email'=>$email]);
-            $candidato = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($candidato && password_verify($senha, (string)$candidato['senha_hash'])) $usuario = $candidato;
-        }
-        $pdo->prepare("INSERT INTO campo_login_tentativas (email_hash,ip_hash,sucesso)
-            VALUES (:email,:ip,:sucesso)")
-            ->execute([':email'=>$emailHash, ':ip'=>$ipHash, ':sucesso'=>$usuario ? 1 : 0]);
-        if (!$usuario) campoErro('CREDENCIAIS_INVALIDAS', 'E-mail ou senha incorretos para o aplicativo de campo.', 401);
-
-        login($usuario);
-        $_SESSION['campo_login_em'] = time();
-        $sessaoId = campoSessaoId();
-        $pdo->prepare("INSERT INTO campo_sessoes
-            (id,usuario_id,expira_em,ip_hash,user_agent_hash)
-            VALUES (:id,:usuario,DATE_ADD(NOW(),INTERVAL 365 DAY),:ip,:ua)
-            ON DUPLICATE KEY UPDATE revogado_em=NULL,ultimo_acesso_em=NOW(),expira_em=VALUES(expira_em)")
-            ->execute([':id'=>$sessaoId, ':usuario'=>$usuario['id'], ':ip'=>$ipHash,
-                ':ua'=>hash('sha256', (string)($_SERVER['HTTP_USER_AGENT'] ?? ''))]);
-        campoRegistrarAuditoria('campo_login', 'Login no aplicativo de campo.');
-        campoJson(['ok'=>true, 'dados'=>[
-            'usuario'=>['id'=>$usuario['id'], 'nome'=>$usuario['nome'], 'email'=>$usuario['email'], 'cargo'=>$usuario['cargo'], 'usuario'=>$usuario['email'], 'perfis'=>['VISTORIADOR']],
-            'csrf_token'=>gerarCSRF(),
-            'expira_em'=>date(DATE_ATOM, time() + 60 * 60 * 24 * 365),
-        ]]);
+    if (in_array($rota, ['login', 'logout'], true)) {
+        campoErro('ROTA_DESCONTINUADA', 'O modo de campo usa a sessão do ERP. Entre ou saia pelo ERP.', 410);
     }
 
     if ($method === 'GET' && preg_match('#^anexos/([^/]+)$#', $rota, $m)) {
@@ -357,17 +299,8 @@ try {
         $anexo = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$anexo) campoErro('ANEXO_NAO_ENCONTRADO', 'Evidencia nao encontrada.', 404);
 
-        $sessaoErp = estaLogado() && empty($_SESSION['campo_login_em']);
-        if ($sessaoErp) {
-            if (!campoErpPodeVisualizarAnexo($pdo, $anexo)) {
-                campoErro('ANEXO_NAO_ENCONTRADO', 'Evidencia nao encontrada.', 404);
-            }
-        } else {
-            // No aplicativo de campo, manter a autorizacao pelo vinculo da agenda.
-            $usuarioCampoId = campoUsuarioId();
-            if (!temPerfil('ADMIN', $usuarioCampoId) && (string)$anexo['vistoriador_id'] !== $usuarioCampoId) {
-                campoErro('ANEXO_NAO_ENCONTRADO', 'Evidencia nao encontrada.', 404);
-            }
+        if (!campoErpPodeVisualizarAnexo($pdo, $anexo)) {
+            campoErro('ANEXO_NAO_ENCONTRADO', 'Evidencia nao encontrada.', 404);
         }
 
         campoRegistrarAuditoria('campo_foto_visualizada', 'Foto visualizada na vistoria ' . $anexo['vistoria_id']);
@@ -380,16 +313,6 @@ try {
     }
 
     $usuarioId = campoUsuarioId();
-
-    if ($method === 'POST' && $rota === 'logout') {
-        campoExigirCsrf();
-        $pdo->prepare("UPDATE campo_sessoes SET revogado_em=NOW() WHERE id=:id")
-            ->execute([':id'=>campoSessaoId()]);
-        campoRegistrarAuditoria('campo_logout', 'Logout do aplicativo de campo.');
-        session_unset();
-        session_destroy();
-        campoJson(['ok'=>true, 'dados'=>['logout'=>true]]);
-    }
 
     if ($method === 'DELETE' && preg_match('#^anexos/([^/]+)$#', $rota, $m)) {
         campoExigirCsrf();
@@ -414,7 +337,8 @@ try {
             'usuario' => ['id' => $usuarioId, 'nome' => $_SESSION['usuario_nome'] ?? 'Usuário', 'email' => $_SESSION['usuario_email'] ?? '', 'cargo' => getCargo(), 'usuario' => $_SESSION['usuario_email'] ?? '', 'perfis' => $perfis],
             'csrf_token' => gerarCSRF(),
             'app_url' => APP_URL,
-            'expira_em' => date(DATE_ATOM, (int)$_SESSION['campo_login_em'] + 60 * 60 * 24 * 30),
+            // O cache local só pode abrir os pacotes já baixados por 30 dias.
+            'offline_expira_em' => date(DATE_ATOM, time() + 60 * 60 * 24 * 30),
         ]]);
     }
 

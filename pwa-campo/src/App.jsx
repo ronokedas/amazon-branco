@@ -132,24 +132,10 @@ export default function App() {
 
   const carregarPacotes = useCallback(async () => setPacotes(await listarPacotes(usuarioId)), [usuarioId])
 
-  const autenticar = useCallback(async credenciais => {
-    setLoading(true)
-    setLoginError('')
-    try {
-      const sessao = await api('login', { method: 'POST', body: JSON.stringify(credenciais) })
-      setSession(sessao)
-      setCsrfToken(sessao.csrf_token)
-      await salvarMeta('sessao', sessao)
-      setPending(await contarFila(sessao.usuario.id))
-      setPacotes(await listarPacotes(sessao.usuario.id))
-      setAuthRequired(false)
-      await carregarAgenda()
-    } catch (error) {
-      setLoginError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [carregarAgenda])
+  const entrarNoErp = useCallback(() => {
+    const destino = new URL('../login?return_to=campo', window.location.href)
+    window.location.assign(destino.toString())
+  }, [])
 
   const carregarRelatorios = useCallback(async () => {
     setTabLoading(true)
@@ -191,7 +177,8 @@ export default function App() {
         if (!active) return
         if (!navigator.onLine) {
           const [sessaoLocal, agendaLocal] = await Promise.all([obterMeta('sessao'), obterMeta('agenda')])
-          if (sessaoLocal && (!sessaoLocal.expira_em || new Date(sessaoLocal.expira_em).getTime() > Date.now())) {
+          const expiraEm = sessaoLocal?.offline_expira_em
+          if (sessaoLocal && expiraEm && new Date(expiraEm).getTime() > Date.now()) {
             const count = await contarFila(sessaoLocal.usuario.id)
             setSession(sessaoLocal)
             setCsrfToken(sessaoLocal.csrf_token)
@@ -200,7 +187,10 @@ export default function App() {
             return
           }
         }
-        if (error.status === 401 || error.status === 403) setAuthRequired(true)
+        if (error.status === 401 || error.status === 403) {
+          setLoginError(error.message)
+          setAuthRequired(true)
+        }
         else setFatalError(error.message)
       })
       .finally(() => active && setLoading(false))
@@ -663,28 +653,24 @@ export default function App() {
   }, [carregarRelatorios, detalhes, online, pacote, refreshPending, respostas, salvarRascunho, sincronizar, usuarioId])
 
   const sairAplicativo = useCallback(async () => {
-    if (pending && !window.confirm(`Existem dados de vistoria ainda não enviados. Sair apagará esses dados deste aparelho. Deseja continuar?`)) return
+    const avisoPendente = pending ? ' Existem dados de vistoria ainda não enviados e eles serão apagados deste aparelho.' : ''
+    if (!window.confirm(`Sair do ERP neste navegador e apagar os dados locais do Amazon Campo?${avisoPendente}`)) return
     setLoading(true)
-    try { await api('logout', { method: 'POST', body: JSON.stringify({}) }) }
-    catch (error) { if (online) setLoginError(error.message) }
-    try { await limparDadosLocais() }
-    catch (error) { setLoginError(error.message) }
-    setCsrfToken('')
-    setSession(null)
-    setAgenda([])
-    setPacote(null)
-    setPending(0)
-    setAuthRequired(true)
-    setScreen('agenda')
-    setLoading(false)
-  }, [online, pending])
+    try {
+      await limparDadosLocais()
+      window.location.assign(new URL('../login?action=logout', window.location.href).toString())
+    } catch (error) {
+      setLoginError(error.message)
+      setLoading(false)
+    }
+  }, [pending])
 
   const agendaComEstado = useMemo(() => {
     const ids = new Set(pacotes.map(item => item.agendamento_id || item.agendamento?.id))
     return agenda.map(item => ({ ...item, baixada: ids.has(item.id) }))
   }, [agenda, pacotes])
 
-  if (authRequired) return <LoginScreen loading={loading} error={loginError} onLogin={autenticar} />
+  if (authRequired) return <LoginScreen error={loginError} onLogin={entrarNoErp} />
   if (loading && !session) return <div className="app-state"><LoaderCircle className="spin" /><strong>Preparando o modo de campo…</strong></div>
   if (fatalError) return <div className="app-state"><AlertTriangle /><strong>{fatalError}</strong><button className="primary-button" onClick={() => window.location.reload()}>Tentar novamente</button></div>
   if (loading) return <div className="loading-overlay"><LoaderCircle className="spin" /></div>
