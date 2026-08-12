@@ -17,3 +17,4 @@
 /recovery/*.enc
 /recovery/*.manifest.json
 /pwa-campo/node_modules/
+/vendor/
