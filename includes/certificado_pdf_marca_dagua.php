@@ -3,9 +3,9 @@
 /**
  * Base comum dos PDFs de certificados.
  *
- * A marca-d'agua e desenhada logo depois da criacao de cada pagina, antes de
- * qualquer texto ou tabela do certificado. Dessa forma ela permanece ao fundo
- * e tambem cobre paginas adicionais criadas pelo TCPDF.
+ * A marca-d'agua e desenhada logo apos a criacao de cada pagina. O marcador
+ * nativo do TCPDF e reposicionado em seguida para que textos, preenchimentos
+ * e bordas de tabelas sejam inseridos por cima dela.
  */
 if (!class_exists('CertificadoPdfComMarcaDagua')) {
     class CertificadoPdfComMarcaDagua extends TCPDF
@@ -23,6 +23,10 @@ if (!class_exists('CertificadoPdfComMarcaDagua')) {
             $this->desenharMarcaDaguaCertificado();
             $this->InHeader = false;
             $this->setGraphicVars($estadoGrafico);
+
+            // TCPDF insere bordas e preenchimentos a partir deste marcador.
+            // Reposiciona-lo apos a imagem evita que a marca cubra tabelas.
+            $this->setPageMark();
         }
 
         protected function desenharMarcaDaguaCertificado(): void
