@@ -1,4 +1,6 @@
-const CACHE = 'amazon-campo-v11'
+// Bump this name whenever the deployed application shell changes. It makes
+// installed PWAs discard the legacy bundle before serving the new workflow.
+const CACHE = 'amazon-campo-v12'
 const SHELL = ['/campo/', '/campo/manifest.webmanifest', '/campo/icon.svg']
 
 async function cacheAppShell() {

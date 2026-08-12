@@ -800,6 +800,7 @@ try {
                 'relatorio_url'=>APP_URL . 'vistorias/relatorio?agendamento_id=' . rawurlencode($m[1]) . '&vistoria_id=' . rawurlencode($vistoria['id'])]];
             campoRegistrarOperacao($pdo, $operacaoId, $vistoria['id'], $usuarioId, 'FINALIZACAO', $payload, $resposta);
             $pdo->commit();
+            campoRegistrarAuditoria('campo_vistoria_enviada', 'Vistoria enviada para aprovação: ' . $vistoria['id']);
             campoJson($resposta);
         }
         $escopo = campoListaChecklist($pdo, $vistoria['id']);

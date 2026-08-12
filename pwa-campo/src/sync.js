@@ -27,6 +27,11 @@ export async function processarFila(onProgress, usuarioId = null, agendamentoId 
         dados = await api(`anexos/${operacao.payload.anexo_id}`, { method: 'DELETE' })
       } else if (operacao.tipo === 'finalizacao') {
         dados = await api(`vistorias/${operacao.agendamento_id}/finalizar`, { method: 'POST', body: JSON.stringify(operacao.payload) })
+        if (dados?.status !== 'AGUARDANDO_APROVACAO') {
+          const error = new Error('O servidor não confirmou o envio da vistoria para aprovação.')
+          error.code = 'FINALIZACAO_NAO_CONFIRMADA'
+          throw error
+        }
       }
       await removerDaFila(operacao.operacao_id)
       processadas += 1
