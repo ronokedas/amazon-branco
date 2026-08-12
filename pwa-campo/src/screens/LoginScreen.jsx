@@ -10,7 +10,7 @@ export function LoginScreen({ loading, error, onLogin }) {
   return <main className="campo-login">
     <section className="campo-login-card">
       <header className="campo-login-header">
-        <img src="/img/logo-amazon-certificadora.svg" alt="Amazon Certificadora" />
+        <img src="/campo/brand-horizontal.svg" alt="Amazon Certificadora" />
         <h1>Amazon Campo</h1>
         <p>Acesso exclusivo para vistoriadores</p>
       </header>

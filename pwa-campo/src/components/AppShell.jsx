@@ -5,7 +5,7 @@ export function AppShell({ title, children, online, onBack, onMenu, footer = tru
     <main className="device-shell">
       {header ? <header className="topbar">
         {onBack ? <button className="icon-button" onClick={onBack} aria-label="Voltar"><ArrowLeft size={22} /></button> : <span aria-hidden="true" />}
-        <strong>{title}</strong>
+        <span className="topbar-title"><img src="/campo/brand-mark.svg" alt="" /><strong>{title}</strong></span>
         {onMenu ? <button className="icon-button" onClick={onMenu} aria-label="Abrir ajustes"><Menu size={22} /></button> : <span aria-hidden="true" />}
       </header> : null}
       {footer ? (

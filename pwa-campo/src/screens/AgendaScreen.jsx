@@ -75,7 +75,7 @@ export function AgendaScreen({ session, agenda, online, onOpen, onVesselPhoto, o
     <AppShell title="Amazon Campo" online={online} footer={false} header={false}>
       <section className="brand-header">
         <button className="brand-menu" type="button" onClick={() => onNavigate('settings')} aria-label="Abrir menu"><Menu size={24} /></button>
-        <img className="brand-logo" src="/img/logo-amazon-sidebar.svg" alt="Amazon Certificadora" />
+        <img className="brand-logo" src="/campo/brand-horizontal.svg" alt="Amazon Certificadora" />
         <button className="profile-initial" type="button" onClick={() => onNavigate('settings')} aria-label="Abrir perfil e ajustes">{session?.usuario?.nome?.slice(0, 1)?.toUpperCase() || 'A'}</button>
       </section>
       <section className="agenda-heading">
