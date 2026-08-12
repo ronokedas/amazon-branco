@@ -5,6 +5,11 @@ O GitHub guarda o código e um único pacote de recuperação criptografado em
 banco MySQL, documentos em `storage/` (exceto sessões e backups operacionais),
 uploads e os objetos do MinIO. A senha **não** fica no GitHub.
 
+> **VPS existente:** antes de atualizar para esta versão, não execute `git
+> reset --hard`, `git clean` ou `git pull` diretamente. Esses comandos podem
+> remover os documentos antigos que deixaram de ser versionados. Primeiro gere
+> e valide uma cópia recuperável da VPS atual; só então atualize e restaure.
+
 ## Publicar do Windows
 
 Guarde uma senha longa em um gerenciador de senhas e, no PowerShell aberto
