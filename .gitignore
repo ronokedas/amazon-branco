@@ -18,3 +18,4 @@
 /recovery/*.manifest.json
 /pwa-campo/node_modules/
 /vendor/
+/test-results/
