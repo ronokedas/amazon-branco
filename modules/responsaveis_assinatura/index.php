@@ -58,8 +58,11 @@ $responsaveis = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <a href="<?= APP_URL ?>responsaveis_assinatura/form?id=<?= $resp['id'] ?>" class="btn btn-sm btn-info" title="Editar">
-                                        <i class="fas fa-edit"></i>
+                                    <a href="<?= APP_URL ?>responsaveis_assinatura/form?id=<?= $resp['id'] ?>"
+                                       class="btn btn-sm btn-info btn-icon-action"
+                                       title="Editar responsável"
+                                       aria-label="Editar responsável <?= htmlspecialchars($resp['nome_completo']) ?>">
+                                        <i class="fas fa-edit" aria-hidden="true"></i>
                                     </a>
                                 </td>
                             </tr>

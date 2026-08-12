@@ -614,6 +614,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 <style>
 .commercial-list {
     display: grid;
+    container-type: inline-size;
     gap: 10px;
     padding: 14px 16px 6px;
 }
@@ -714,6 +715,26 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     align-items: center;
     gap: 7px;
     min-width: 210px;
+}
+.commercial-list .proposal-row {
+    grid-template-columns: minmax(0, 1fr) max-content max-content max-content;
+}
+.commercial-list .proposal-main {
+    grid-template-columns: minmax(110px, .55fr) minmax(140px, 1fr) minmax(170px, 1.15fr);
+}
+.commercial-list .proposal-main > div,
+.commercial-list .proposal-finance,
+.commercial-list .proposal-state {
+    min-width: 0;
+}
+.commercial-list .proposal-finance strong,
+.commercial-list .proposal-state,
+.commercial-list .proposal-actions {
+    white-space: nowrap;
+}
+@container (max-width: 1050px) {
+    .commercial-list .proposal-row { grid-template-columns: minmax(0, 1fr) max-content max-content; }
+    .commercial-list .proposal-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
 .proposal-actions form {
     margin: 0;

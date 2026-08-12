@@ -97,10 +97,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <td>
                                 <?php $urlRevisao = !empty($rel['agendamento_id']) ? APP_URL.'vistorias/relatorio?agendamento_id='.urlencode($rel['agendamento_id']).'&vistoria_id='.urlencode($rel['id']) : APP_URL.'vistorias/detalhe?id='.urlencode($rel['id']); ?>
                                 <a href="<?= h($urlRevisao) ?>"
-                                   class="btn btn-primary btn-sm approval-action-btn"
+                                   class="btn btn-primary btn-sm btn-icon-action approval-action-btn"
                                    title="Revisar e aprovar"
                                    aria-label="Revisar e aprovar">
-                                    <i class="fas fa-eye"></i>
+                                    <i class="fas fa-eye" aria-hidden="true"></i>
                                 </a>
                             </td>
                         </tr>
@@ -144,7 +144,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <td><?= h($h['aprovado_por_nome'] ?? '—') ?></td>
                             <td><?= h(mb_strimwidth($h['observacao_admin'] ?? '', 0, 40, '...')) ?></td>
                             <?php $urlHistorico = !empty($h['agendamento_id']) ? APP_URL.'vistorias/relatorio?agendamento_id='.urlencode($h['agendamento_id']).'&vistoria_id='.urlencode($h['id']) : APP_URL.'vistorias/detalhe?id='.urlencode($h['id']); ?>
-                            <td><a href="<?= h($urlHistorico) ?>" class="btn btn-sm btn-secondary">Ver</a></td>
+                            <td><a href="<?= h($urlHistorico) ?>"
+                                   class="btn btn-sm btn-secondary btn-icon-action"
+                                   title="Visualizar relatório"
+                                   aria-label="Visualizar relatório <?= h($h['numero'] ?? 'S/N') ?>">
+                                    <i class="fas fa-eye" aria-hidden="true"></i>
+                                </a></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

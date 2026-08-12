@@ -139,7 +139,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 ?>
 
 <div class="conteudo-principal">
-    <div class="tabela-container">
+    <div class="tabela-container finance-page">
         <div class="tabela-header">
             <h3><i class="fas fa-dollar-sign"></i> Financeiro</h3>
             <a href="<?php echo APP_URL; ?>financeiro/form?escritorio_id=<?= urlencode($filtro_escritorio) ?>" class="btn btn-primary btn-sm">
@@ -148,91 +148,87 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </div>
 
         <!-- Cards de resumo -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 15px; margin: 15px 20px;">
+        <section class="finance-summary-grid" aria-label="Resumo financeiro">
             <!-- Total Receitas -->
-            <div style="background: linear-gradient(135deg, var(--cor-painel), var(--cor-sidebar)); border: 1px solid var(--cor-borda); border-radius: 12px; padding: 18px; border-left: 4px solid var(--cor-sucesso);">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="width: 45px; height: 45px; border-radius: 10px; background: rgba(46, 204, 113, 0.15); display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-arrow-up" style="color: var(--cor-sucesso); font-size: 1.2rem;"></i>
+            <article class="finance-summary-card is-income">
+                <div class="finance-summary-content">
+                    <div class="finance-summary-icon"><i class="fas fa-arrow-up"></i>
                     </div>
                     <div>
-                        <div style="color: var(--cor-texto-secundario); font-size: 0.8rem; font-weight: 500; text-transform: uppercase;">Receitas</div>
-                        <div style="color: var(--cor-sucesso); font-size: 1.4rem; font-weight: 700;"><?php echo formatarMoeda($totalReceitas); ?></div>
+                        <div class="finance-summary-label">Receitas</div>
+                        <div class="finance-summary-value"><?php echo formatarMoeda($totalReceitas); ?></div>
                     </div>
                 </div>
-            </div>
+            </article>
 
             <!-- A Receber -->
-            <div style="background: linear-gradient(135deg, var(--cor-painel), var(--cor-sidebar)); border: 1px solid var(--cor-borda); border-radius: 12px; padding: 18px; border-left: 4px solid var(--status-pending, #d29922);">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="width: 45px; height: 45px; border-radius: 10px; background: rgba(241, 196, 15, 0.15); display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-hourglass-half" style="color: var(--status-pending, #d29922); font-size: 1.2rem;"></i>
+            <article class="finance-summary-card is-receivable">
+                <div class="finance-summary-content">
+                    <div class="finance-summary-icon"><i class="fas fa-hourglass-half"></i>
                     </div>
                     <div>
-                        <div style="color: var(--cor-texto-secundario); font-size: 0.8rem; font-weight: 500; text-transform: uppercase;">A receber</div>
-                        <div style="color: var(--status-pending, #d29922); font-size: 1.4rem; font-weight: 700;"><?php echo formatarMoeda($totalAReceber); ?></div>
+                        <div class="finance-summary-label">A receber</div>
+                        <div class="finance-summary-value"><?php echo formatarMoeda($totalAReceber); ?></div>
                     </div>
                 </div>
-            </div>
+            </article>
 
             <!-- Total Despesas -->
-            <div style="background: linear-gradient(135deg, var(--cor-painel), var(--cor-sidebar)); border: 1px solid var(--cor-borda); border-radius: 12px; padding: 18px; border-left: 4px solid var(--cor-erro);">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="width: 45px; height: 45px; border-radius: 10px; background: rgba(231, 76, 60, 0.15); display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-arrow-down" style="color: var(--cor-erro); font-size: 1.2rem;"></i>
+            <article class="finance-summary-card is-expense">
+                <div class="finance-summary-content">
+                    <div class="finance-summary-icon"><i class="fas fa-arrow-down"></i>
                     </div>
                     <div>
-                        <div style="color: var(--cor-texto-secundario); font-size: 0.8rem; font-weight: 500; text-transform: uppercase;">Despesas</div>
-                        <div style="color: var(--cor-erro); font-size: 1.4rem; font-weight: 700;"><?php echo formatarMoeda($totalDespesas); ?></div>
+                        <div class="finance-summary-label">Despesas</div>
+                        <div class="finance-summary-value"><?php echo formatarMoeda($totalDespesas); ?></div>
                     </div>
                 </div>
-            </div>
+            </article>
 
             <!-- Saldo -->
-            <div style="background: linear-gradient(135deg, var(--cor-painel), var(--cor-sidebar)); border: 1px solid var(--cor-borda); border-radius: 12px; padding: 18px; border-left: 4px solid <?php echo $saldo >= 0 ? 'var(--cor-sucesso)' : 'var(--cor-erro)'; ?>;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="width: 45px; height: 45px; border-radius: 10px; background: <?php echo $saldo >= 0 ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)'; ?>; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-balance-scale" style="color: <?php echo $saldo >= 0 ? 'var(--cor-sucesso)' : 'var(--cor-erro)'; ?>; font-size: 1.2rem;"></i>
+            <article class="finance-summary-card is-balance <?= $saldo >= 0 ? 'is-positive' : 'is-negative' ?>">
+                <div class="finance-summary-content">
+                    <div class="finance-summary-icon"><i class="fas fa-balance-scale"></i>
                     </div>
                     <div>
-                        <div style="color: var(--cor-texto-secundario); font-size: 0.8rem; font-weight: 500; text-transform: uppercase;">Saldo</div>
-                        <div style="color: <?php echo $saldo >= 0 ? 'var(--cor-sucesso)' : 'var(--cor-erro)'; ?>; font-size: 1.4rem; font-weight: 700;"><?php echo formatarMoeda($saldo); ?></div>
+                        <div class="finance-summary-label">Saldo</div>
+                        <div class="finance-summary-value"><?php echo formatarMoeda($saldo); ?></div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </article>
+        </section>
 
         <!-- Filtros -->
-        <form method="GET" action="<?php echo APP_URL; ?>financeiro" style="margin: 0 20px 15px;">
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
-                <div class="form-group" style="margin-bottom:0;flex:1;min-width:190px"><label style="font-size:.8rem"><i class="fas fa-building"></i> Escritório</label><select name="escritorio_id" style="width:100%;padding:8px 10px" <?= $podeSelecionarEscritorio?'':'disabled' ?>><?php if(financeiroEhAdmin()): ?><option value="todos" <?= $filtro_escritorio==='todos'?'selected':'' ?>>Todos os escritórios</option><?php endif ?><?php foreach($escritorios as $e): ?><option value="<?= h($e['id']) ?>" <?= $filtro_escritorio===$e['id']?'selected':'' ?>><?= h($e['nome'].' · '.$e['cidade'].'/'.$e['uf']) ?></option><?php endforeach ?></select><?php if(!$podeSelecionarEscritorio): ?><input type="hidden" name="escritorio_id" value="<?= h($filtro_escritorio) ?>"><?php endif ?></div>
-                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 120px;">
-                    <label style="font-size: 0.8rem;"><i class="fas fa-tag"></i> Tipo</label>
-                    <select name="tipo" style="width: 100%; padding: 8px 10px;">
+        <form method="GET" action="<?php echo APP_URL; ?>financeiro" class="finance-filter-form">
+            <div class="finance-filter-fields">
+                <div class="form-group finance-filter-office"><label><i class="fas fa-building"></i> Escritório</label><select name="escritorio_id" <?= $podeSelecionarEscritorio?'':'disabled' ?>><?php if(financeiroEhAdmin()): ?><option value="todos" <?= $filtro_escritorio==='todos'?'selected':'' ?>>Todos os escritórios</option><?php endif ?><?php foreach($escritorios as $e): ?><option value="<?= h($e['id']) ?>" <?= $filtro_escritorio===$e['id']?'selected':'' ?>><?= h($e['nome'].' · '.$e['cidade'].'/'.$e['uf']) ?></option><?php endforeach ?></select><?php if(!$podeSelecionarEscritorio): ?><input type="hidden" name="escritorio_id" value="<?= h($filtro_escritorio) ?>"><?php endif ?></div>
+                <div class="form-group">
+                    <label><i class="fas fa-tag"></i> Tipo</label>
+                    <select name="tipo">
                         <option value="">Todos</option>
                         <option value="RECEITA" <?php echo $filtro_tipo === 'RECEITA' ? 'selected' : ''; ?>>Receita</option>
                         <option value="DESPESA" <?php echo $filtro_tipo === 'DESPESA' ? 'selected' : ''; ?>>Despesa</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 120px;">
-                    <label style="font-size: 0.8rem;"><i class="fas fa-calendar"></i> Data Inicio</label>
-                    <input type="date" name="data_ini" value="<?php echo h($filtro_data_ini); ?>" style="width: 100%; padding: 8px 10px;">
+                <div class="form-group">
+                    <label><i class="fas fa-calendar"></i> Data Início</label>
+                    <input type="date" name="data_ini" value="<?php echo h($filtro_data_ini); ?>">
                 </div>
-                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 120px;">
-                    <label style="font-size: 0.8rem;"><i class="fas fa-calendar"></i> Data Fim</label>
-                    <input type="date" name="data_fim" value="<?php echo h($filtro_data_fim); ?>" style="width: 100%; padding: 8px 10px;">
+                <div class="form-group">
+                    <label><i class="fas fa-calendar"></i> Data Fim</label>
+                    <input type="date" name="data_fim" value="<?php echo h($filtro_data_fim); ?>">
                 </div>
-                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 120px;">
-                    <label style="font-size: 0.8rem;"><i class="fas fa-folder"></i> Categoria</label>
-                    <input type="text" name="categoria" value="<?php echo h($filtro_categoria); ?>" placeholder="Buscar..." style="width: 100%; padding: 8px 10px;">
+                <div class="form-group">
+                    <label><i class="fas fa-folder"></i> Categoria</label>
+                    <input type="text" name="categoria" value="<?php echo h($filtro_categoria); ?>" placeholder="Buscar...">
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
+                <div class="form-group finance-filter-actions">
                     <button type="submit" class="btn btn-primary btn-sm">
                         <i class="fas fa-search"></i> Filtrar
                     </button>
                 </div>
                 <?php if (!empty($filtro_tipo) || !empty($filtro_data_ini) || !empty($filtro_data_fim) || !empty($filtro_categoria) || $filtro_escritorio!=='todos'): ?>
-                <div class="form-group" style="margin-bottom: 0;">
+                <div class="form-group finance-filter-actions">
                     <a href="<?php echo financeiroUrl(['escritorio_id'=>financeiroEhAdmin()?'todos':$filtro_escritorio]); ?>" class="btn btn-secondary btn-sm">
                         <i class="fas fa-times"></i> Limpar
                     </a>
@@ -248,7 +244,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <p>Clique em "Novo Lancamento" para cadastrar o primeiro.</p>
             </div>
         <?php else: ?>
-            <table>
+            <div class="finance-table-scroll" tabindex="0" aria-label="Tabela de lançamentos financeiros. Deslize horizontalmente para ver todas as colunas.">
+            <table class="finance-transactions-table">
                 <thead>
                     <tr>
                         <?php if($filtro_escritorio==='todos'): ?><th>Escritório</th><?php endif ?>
@@ -266,7 +263,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <tr>
                         <?php if($filtro_escritorio==='todos'): ?><td><strong><?= h($escritoriosPorId[$l['escritorio_id']]['nome']??'Escritório') ?></strong></td><?php endif ?>
                         <td><?php echo formatarData($l['data']); ?></td>
-                        <td>
+                        <td class="finance-transaction-description">
                             <?php if ($l['tipo'] === 'RECEITA'): ?>
                                 <span class="badge badge-success"><i class="fas fa-arrow-up"></i> Receita</span>
                             <?php else: ?>
@@ -297,15 +294,15 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <span class="text-muted">—</span>
                             <?php endif; ?>
                         </td>
-                        <td style="color: <?php echo $l['tipo'] === 'RECEITA' ? 'var(--cor-sucesso)' : 'var(--cor-erro)'; ?>;">
+                        <td class="finance-transaction-value <?= $l['tipo'] === 'RECEITA' ? 'is-income' : 'is-expense' ?>">
                             <?php $valorExibido = $l['status'] === 'PAGO' ? $l['valor_original'] : $l['saldo_devedor']; ?>
-                            <strong style="font-size:1rem;"><?php echo $l['tipo'] === 'RECEITA' ? '+' : '-'; ?> <?php echo formatarMoeda($valorExibido); ?></strong>
+                            <strong><?php echo $l['tipo'] === 'RECEITA' ? '+' : '-'; ?> <?php echo formatarMoeda($valorExibido); ?></strong>
                             <?php if ($l['status'] === 'PARCIAL'): ?>
                                 <br><small class="text-muted">de <?php echo formatarMoeda($l['valor_original']); ?></small>
                             <?php endif; ?>
                         </td>
-                        <td>
-                            <div class="d-flex gap-1">
+                        <td class="finance-transaction-actions">
+                            <div class="d-flex gap-1 finance-action-buttons">
                                 <?php if (in_array($l['status'], ['PENDENTE', 'PARCIAL'], true)): ?>
                                 <button type="button"
                                         class="btn btn-success btn-sm js-abrir-baixa"
@@ -333,10 +330,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
+            <p class="finance-scroll-hint"><i class="fas fa-arrows-left-right"></i> Arraste a tabela para o lado para ver todas as colunas e ações.</p>
         <?php endif; ?>
 
         <!-- Resumo -->
-        <div class="card-footer" style="padding: 12px 20px;">
+        <div class="card-footer finance-page-footer">
             <small class="text-muted">
                 <i class="fas fa-info-circle"></i> 
                 Total: <?php echo count($lancamentos); ?> lancamento(s) | 
@@ -414,10 +413,43 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 </div>
 
 <style>
+.finance-page { overflow: visible !important; }
+.finance-summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:15px; margin:15px 20px; }
+.finance-summary-card { min-width:0; padding:18px; border:1px solid var(--cor-borda); border-left:4px solid currentColor; border-radius:12px; background:linear-gradient(135deg,var(--cor-painel),var(--cor-sidebar)); }
+.finance-summary-card.is-income,.finance-summary-card.is-balance.is-positive { color:var(--cor-sucesso); }
+.finance-summary-card.is-receivable { color:var(--status-pending,#d29922); }
+.finance-summary-card.is-expense,.finance-summary-card.is-balance.is-negative { color:var(--cor-erro); }
+.finance-summary-content { display:flex; align-items:center; gap:12px; min-width:0; }
+.finance-summary-icon { width:45px; height:45px; flex:0 0 45px; display:grid; place-items:center; border-radius:10px; color:currentColor; background:color-mix(in srgb,currentColor 15%,transparent); font-size:1.2rem; }
+.finance-summary-label { color:var(--cor-texto-secundario); font-size:.8rem; font-weight:600; text-transform:uppercase; }
+.finance-summary-value { margin-top:3px; color:currentColor; font-size:clamp(1.2rem,2vw,1.4rem); font-weight:700; white-space:nowrap; }
+.finance-filter-form { margin:0 20px 15px; }
+.finance-filter-fields { display:grid; grid-template-columns:minmax(190px,1.6fr) repeat(4,minmax(120px,1fr)) auto auto; gap:10px; align-items:end; }
+.finance-filter-fields .form-group { min-width:0; margin:0; }
+.finance-filter-fields label { display:block; margin-bottom:5px; font-size:.8rem; }
+.finance-filter-fields select,.finance-filter-fields input { width:100%; min-height:42px; padding:8px 10px; box-sizing:border-box; }
+.finance-filter-actions .btn { min-height:42px; white-space:nowrap; }
+.finance-table-scroll { width:100%; overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; scrollbar-gutter:stable; }
+.finance-scroll-hint { display:none; margin:8px 20px 0; color:var(--cor-texto-secundario); font-size:.78rem; }
+.finance-transactions-table { width:100% !important; min-width:1380px !important; table-layout:auto !important; }
+.finance-transactions-table th,.finance-transactions-table td { min-width:0 !important; overflow-wrap:normal !important; word-break:normal !important; }
+.finance-transactions-table th { white-space:nowrap !important; }
+.finance-transactions-table th:nth-child(1),.finance-transactions-table td:nth-child(1) { width:12%; min-width:105px !important; white-space:nowrap !important; }
+.finance-transactions-table th:nth-child(2),.finance-transactions-table td:nth-child(2) { width:10%; min-width:92px !important; white-space:nowrap !important; }
+.finance-transactions-table th:nth-child(3),.finance-transactions-table td:nth-child(3) { width:11%; min-width:105px !important; white-space:nowrap !important; }
+.finance-transaction-description { width:28%; min-width:210px !important; overflow-wrap:anywhere !important; }
+.finance-transaction-value { min-width:128px !important; white-space:nowrap !important; }
+.finance-transaction-value strong { font-size:1rem; }.finance-transaction-value.is-income{color:var(--cor-sucesso)}.finance-transaction-value.is-expense{color:var(--cor-erro)}
+.finance-transaction-actions { min-width:132px !important; white-space:nowrap !important; }.finance-action-buttons { flex-wrap:wrap; }
+.finance-page-footer { padding:12px 20px; }
+@media (max-width:1180px) { .finance-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.finance-filter-fields{grid-template-columns:repeat(3,minmax(0,1fr))}.finance-filter-office{grid-column:span 2}.finance-filter-actions{width:100%}.finance-filter-actions .btn{width:100%;justify-content:center} }
+@media (min-width:769px) and (max-width:1400px) { .finance-scroll-hint{display:block} }
+@media (max-width:768px) { .finance-page{overflow:visible!important}.finance-summary-grid{grid-template-columns:1fr;margin:12px}.finance-summary-card{padding:15px}.finance-filter-form{margin:0 12px 14px}.finance-filter-fields{grid-template-columns:1fr}.finance-filter-office{grid-column:auto}.finance-filter-actions .btn{width:100%}.finance-table-scroll{overflow:visible}.finance-transactions-table,.finance-transactions-table tbody,.finance-transactions-table tr,.finance-transactions-table td{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important}.finance-transactions-table thead{display:none!important}.finance-transactions-table{background:transparent!important}.finance-transactions-table tbody{background:transparent!important}.finance-transactions-table tbody tr{margin:0 12px 12px;padding:12px 14px;overflow:hidden;border:1px solid var(--cor-borda)!important;border-radius:12px;background:var(--cor-painel);box-shadow:0 2px 10px rgba(14,52,43,.035)}.finance-transactions-table td{min-height:38px;padding:8px 0!important;display:grid!important;grid-template-columns:minmax(96px,38%) minmax(0,1fr);align-items:start;gap:12px;border:0!important;border-bottom:1px solid var(--cor-borda)!important;background:transparent!important;text-align:left!important;white-space:normal!important;overflow-wrap:anywhere!important}.finance-transactions-table td:last-child{border-bottom:0!important}.finance-transactions-table td::before{content:attr(data-label);color:var(--cor-texto-secundario);font-size:10px;font-weight:800;letter-spacing:.045em;text-transform:uppercase}.finance-transactions-table td[data-label="Acoes"],.finance-transactions-table td[data-label="Ações"]{grid-template-columns:1fr}.finance-action-buttons{display:flex;gap:8px}.finance-action-buttons .btn{min-width:42px;min-height:42px}.finance-page-footer{padding:12px}.finance-page-footer small{display:block;line-height:1.65} }
+@media (max-width:390px) { .finance-transactions-table td{grid-template-columns:1fr;gap:4px}.finance-transactions-table td::before{margin-bottom:2px} }
 .baixa-saldo-restante{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid rgba(88,166,255,.35);border-radius:9px;background:rgba(88,166,255,.08)}.baixa-saldo-restante strong{font-size:1.15rem;color:var(--cor-destaque)}.baixa-saldo-restante.is-error{border-color:var(--cor-erro);background:rgba(231,76,60,.08)}.baixa-saldo-restante.is-error strong{color:var(--cor-erro)}.baixa-arquivos{margin-top:8px;padding:10px 12px;border:1px solid var(--cor-borda);border-radius:8px;color:var(--cor-texto-secundario);font-size:.85rem}.baixa-arquivos div+div{margin-top:4px}
 .financeiro-modal__header{position:sticky;top:0;z-index:2;background:var(--cor-painel,#161b22)}.financeiro-modal__footer{position:sticky;bottom:0;z-index:2;background:var(--cor-painel,#161b22)}
-.tabela-container table td:first-child,.tabela-container table th:first-child{min-width:105px!important;white-space:nowrap!important;word-break:normal!important;overflow-wrap:normal!important}
-.tabela-container table td:first-child,.tabela-container table th:first-child,.tabela-container table td:nth-child(6),.tabela-container table th:nth-child(6){white-space:nowrap}.tabela-container table td:nth-child(4){min-width:180px}.tabela-container table td:nth-child(6){min-width:145px}.tabela-container table td:nth-child(6) small{display:block}.financeiro-modal{display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;padding:18px}.financeiro-modal.is-open{display:flex}.financeiro-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(2px)}.financeiro-modal__dialog{position:relative;width:min(560px,100%);max-height:calc(100vh - 36px);overflow:auto;background:var(--cor-painel,#161b22);border:1px solid var(--cor-borda,#30363d);border-radius:14px;box-shadow:0 20px 55px rgba(0,0,0,.45)}.financeiro-modal__header,.financeiro-modal__footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--cor-borda,#30363d)}.financeiro-modal__footer{justify-content:flex-end;border-top:1px solid var(--cor-borda,#30363d);border-bottom:0}.financeiro-modal__body{padding:20px}.financeiro-modal__close{border:0;background:transparent;color:var(--cor-texto-secundario,#8b949e);cursor:pointer;font-size:1.1rem;padding:8px}.baixa-resumo{display:flex;flex-direction:column;padding:15px;margin-bottom:18px;border:1px solid var(--cor-borda,#30363d);border-radius:10px;background:rgba(88,166,255,.06)}
+.financeiro-modal{display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;padding:18px}.financeiro-modal.is-open{display:flex}.financeiro-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(2px)}.financeiro-modal__dialog{position:relative;width:min(560px,100%);max-height:calc(100vh - 36px);overflow:auto;background:var(--cor-painel,#161b22);border:1px solid var(--cor-borda,#30363d);border-radius:14px;box-shadow:0 20px 55px rgba(0,0,0,.45)}.financeiro-modal__header,.financeiro-modal__footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--cor-borda,#30363d)}.financeiro-modal__footer{justify-content:flex-end;border-top:1px solid var(--cor-borda,#30363d);border-bottom:0}.financeiro-modal__body{padding:20px}.financeiro-modal__close{border:0;background:transparent;color:var(--cor-texto-secundario,#8b949e);cursor:pointer;font-size:1.1rem;padding:8px}.baixa-resumo{display:flex;flex-direction:column;padding:15px;margin-bottom:18px;border:1px solid var(--cor-borda,#30363d);border-radius:10px;background:rgba(88,166,255,.06)}
+@media(max-width:520px){.financeiro-modal{padding:12px}.financeiro-modal__header,.financeiro-modal__footer{padding:14px}.financeiro-modal__footer{align-items:stretch;flex-direction:column-reverse}.financeiro-modal__footer .btn{width:100%;justify-content:center}.financeiro-modal__body{padding:14px}.baixa-saldo-restante{align-items:flex-start;flex-direction:column}}
 </style>
 
 <script>

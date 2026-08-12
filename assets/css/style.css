@@ -6722,3 +6722,32 @@ body:not(:has(.portal-topbar)) .portal-page {
         min-width: 0 !important;
     }
 }
+
+/* Mantém o padrão de ações por ícone após todas as variações de tema. */
+.btn.btn-icon-action,
+button.btn.btn-icon-action {
+    box-sizing: border-box !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    border-radius: 9px !important;
+    background: var(--accent) !important;
+    color: #fff !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+}
+
+.btn.btn-icon-action i,
+button.btn.btn-icon-action i {
+    color: inherit !important;
+    margin: 0 !important;
+}
+
+.btn.btn-icon-action.btn-secondary {
+    border: 1px solid rgba(16, 185, 129, 0.22) !important;
+    background: #fff !important;
+    color: var(--accent) !important;
+}

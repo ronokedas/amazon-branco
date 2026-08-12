@@ -19,13 +19,9 @@ try {
          FROM usuario_escritorios ue JOIN escritorios e ON e.id=ue.escritorio_id WHERE ue.usuario_id=u.id) escritorios
         FROM usuarios u WHERE u.excluido_em IS NULL ORDER BY u.nome ASC");
     $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $totalAdministradores = (int)$pdo->query(
-        "SELECT COUNT(*) FROM usuarios WHERE cargo = 'ADMIN' AND excluido_em IS NULL"
-    )->fetchColumn();
 } catch (Exception $e) {
     error_log('Erro ao listar usuarios: ' . $e->getMessage());
     $usuarios = [];
-    $totalAdministradores = 0;
 }
 
 // Verificar se veio mensagem de erro de permissao
@@ -128,32 +124,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         <i class="fas <?php echo $u['ativo'] ? 'fa-ban' : 'fa-check'; ?>"></i>
                                     </a>
                                 <?php endif; ?>
-                                <?php
-                                    $unicoAdminTentandoAutoExcluir = $u['id'] === $_SESSION['usuario_id']
-                                        && $u['cargo'] === 'ADMIN'
-                                        && !podeExcluirProprioAdministrador($totalAdministradores);
-                                ?>
-                                <form method="POST"
-                                      action="<?php echo APP_URL; ?>usuarios/actions"
-                                      style="display:inline"
-                                      <?php if (!$unicoAdminTentandoAutoExcluir): ?>
-                                      onsubmit="return confirm('Excluir permanentemente o acesso de <?php echo h(addslashes($u['nome'])); ?>? O histórico operacional será preservado.')"
-                                      <?php endif; ?>>
-                                    <input type="hidden" name="csrf_token" value="<?php echo h(gerarCSRF()); ?>">
-                                    <input type="hidden" name="action" value="excluir">
-                                    <input type="hidden" name="id" value="<?php echo h($u['id']); ?>">
-                                    <button type="submit"
-                                            class="btn btn-danger btn-sm"
-                                            title="<?php echo $unicoAdminTentandoAutoExcluir
-                                                ? 'O único administrador do sistema não pode excluir a própria conta.'
-                                                : 'Excluir usuário'; ?>"
-                                            aria-label="<?php echo $unicoAdminTentandoAutoExcluir
-                                                ? 'Exclusão indisponível: único administrador'
-                                                : 'Excluir ' . h($u['nome']); ?>"
-                                            <?php echo $unicoAdminTentandoAutoExcluir ? 'disabled' : ''; ?>>
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
                             </div>
                         </td>
                     </tr>

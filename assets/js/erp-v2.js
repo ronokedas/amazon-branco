@@ -121,6 +121,34 @@
         });
     }
 
+    function enhanceTableScrolling(root) {
+        root.querySelectorAll('table').forEach(table => {
+            if (table.closest('.documento-papel, .pdf-preview, [data-static-document]')) return;
+            if (!table.querySelector('thead th')) return;
+            if (table.closest('.finance-table-scroll, .erp-table-scroll, .portal-admin-table-container')) return;
+
+            const existingContainer = table.closest('.tabela-container, .table-responsive, .table-container, .data-table-wrapper, .portal-table-wrap, .report-table-wrap');
+            const scrollContainer = existingContainer || (() => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'erp-table-scroll';
+                table.parentNode.insertBefore(wrapper, table);
+                wrapper.appendChild(table);
+                return wrapper;
+            })();
+
+            scrollContainer.classList.add('erp-table-scroll');
+            if (scrollContainer.dataset.erpScrollEnhanced) return;
+            scrollContainer.dataset.erpScrollEnhanced = 'true';
+            scrollContainer.tabIndex ||= 0;
+            scrollContainer.setAttribute('aria-label', 'Tabela. Deslize horizontalmente para ver todas as colunas.');
+
+            const hint = document.createElement('p');
+            hint.className = 'erp-table-scroll-hint';
+            hint.innerHTML = '<i class="fa-solid fa-arrows-left-right" aria-hidden="true"></i> Arraste a tabela para o lado para ver todas as colunas.';
+            scrollContainer.insertAdjacentElement('afterend', hint);
+        });
+    }
+
     function enhanceActionLabels(root) {
         root.querySelectorAll('.erp-cell-actions .btn, table.erp-responsive-table td:last-child .btn').forEach(action => {
             if (action.querySelector('.erp-action-label')) return;
@@ -198,6 +226,7 @@
 
     function enhance(root = document) {
         enhanceTables(root);
+        enhanceTableScrolling(root);
         enhanceActionLabels(root);
         enhanceFilters(root);
         enhanceForms(root);

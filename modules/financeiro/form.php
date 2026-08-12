@@ -74,15 +74,15 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 ?>
 
 <div class="conteudo-principal">
-    <div class="card" style="max-width: 700px;">
+    <div class="card finance-form-card">
         <div class="card-header">
-            <h3 style="color: var(--cor-destaque); margin: 0;">
+            <h3 class="finance-form-title">
                 <i class="fas <?php echo $isEdicao ? 'fa-edit' : 'fa-plus-circle'; ?>"></i>
                 <?php echo $isEdicao ? 'Editar Lancamento' : 'Novo Lancamento'; ?>
             </h3>
         </div>
         <div class="card-body">
-            <form method="POST" 
+            <form method="POST" class="finance-form"
                   action="<?php echo APP_URL; ?>financeiro/actions?action=salvar" 
                   enctype="multipart/form-data"
                   id="formFinanceiro"
@@ -349,7 +349,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <?php endif; ?>
 
                 <!-- Botoes -->
-                <div class="d-flex gap-2" style="margin-top: 20px;">
+                <div class="d-flex gap-2 finance-form-actions">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i> <?php echo $isEdicao ? 'Atualizar' : 'Salvar Lancamento'; ?>
                     </button>
@@ -361,6 +361,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </div>
     </div>
 </div>
+
+<style>
+.finance-form-card{max-width:700px}.finance-form-title{margin:0;color:var(--cor-destaque)}.finance-form-actions{margin-top:20px}@media(max-width:768px){.finance-form-card{max-width:none}.finance-form .grid-2{grid-template-columns:1fr}.finance-form-actions{display:grid!important;grid-template-columns:1fr;gap:10px!important}.finance-form-actions .btn{width:100%;min-height:44px;justify-content:center}.finance-form input,.finance-form select,.finance-form textarea{min-height:44px;box-sizing:border-box}.finance-form [style*="display: flex"]{flex-wrap:wrap}.finance-form [style*="margin-left: auto"]{margin-left:0!important}}
+</style>
 
 <script>
 // Formatar valor monetario em tempo real (formato brasileiro)
