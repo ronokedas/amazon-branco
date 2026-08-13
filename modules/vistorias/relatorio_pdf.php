@@ -250,8 +250,8 @@ if (!class_exists('RelatorioVistoriaPDF')) {
         }
         public function Header() {
             if ($this->PageNo() == 1) {
-                // Logo no cabeçalho (igual ao original: x=13, y=10, w=34)
-                $logo_path = __DIR__ . '/../../assets/img/logo.png';
+                // Logo oficial, centralizada na área reservada do cabeçalho.
+                $logo_path = __DIR__ . '/../../img/logo.png';
                 if (file_exists($logo_path) && filesize($logo_path) > 100) {
                     $this->Image($logo_path, 13, 10, 34, 0, 'PNG', '', '', true, 150);
                 }

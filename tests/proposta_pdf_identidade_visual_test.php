@@ -68,12 +68,16 @@ assertPropostaPdfIdentidade(
     'A margem superior nao reserva o espaco do cabecalho.'
 );
 assertPropostaPdfIdentidade(
+    str_contains($pdfSource, '$this->Line(15, $this->GetY() + 1, 195, $this->GetY() + 1);'),
+    'A linha inferior do cabecalho deve atravessar toda a largura abaixo da logo.'
+);
+assertPropostaPdfIdentidade(
     substr_count($pdfSource, "__DIR__ . '/../../img/logo.png'") === 2,
     'Todos os usos da logo na proposta devem apontar para a fonte oficial.'
 );
 assertPropostaPdfIdentidade(
-    str_contains($pdfSource, '$this->Image($logo_path, 17, 14.5, 18, 0,') &&
-    str_contains($pdfSource, '$pdf->Image($logo_path2, 142, $assinaturaY + 14, 18, 0,'),
+    str_contains($pdfSource, '$this->Image($logo_path, 15, 12.5, 21, 0, \'PNG\', \'\', \'\', false, 150)') &&
+    str_contains($pdfSource, '$pdf->Image($logo_path2, 140, $assinaturaY + 16, 22, 0, \'PNG\', \'\', \'\', false, 150)'),
     'As logos do cabecalho e do proponente nao estao centralizadas nas areas reservadas.'
 );
 assertPropostaPdfIdentidade(

@@ -234,36 +234,38 @@ class PropostaPDF extends \setasign\Fpdi\Tcpdf\Fpdi {
      * Desenha o cabeçalho padrão que se repete em todas as páginas
      */
     public function desenharCabecalho() {
-        // Linha superior decorativa azul escuro
-        $this->SetFillColor(0, 51, 102);
+        // Linha superior decorativa no verde institucional da marca.
+        $this->SetFillColor(0, 61, 52);
         $this->Rect(15, 10, 180, 3, 'F');
 
         // Logo oficial Amazon Naval (esquerda)
         $logo_path = __DIR__ . '/../../img/logo.png';
         if (file_exists($logo_path) && filesize($logo_path) > 100) {
-            // Mantem a logo inteira entre a faixa superior e a linha inferior.
-            $this->Image($logo_path, 17, 14.5, 18, 0, 'PNG', '', '', true, 150);
+            // A marca circular precisa de um pouco mais de área para permanecer legível no PDF.
+            // Nao redimensionar via GD: o TCPDF preserva diretamente o canal alpha do PNG.
+            $this->Image($logo_path, 15, 12.5, 21, 0, 'PNG', '', '', false, 150);
         }
 
         // Título central
         $this->SetY(16);
         $this->SetFont('helvetica', 'B', 16);
-        $this->SetTextColor(0, 51, 102);
+        $this->SetTextColor(0, 61, 52);
         $this->Cell(0, 7, 'PROPOSTA DE SERVIÇO', 0, 1, 'C');
 
         // Nome da empresa
         $this->SetFont('helvetica', 'B', 11);
-        $this->SetTextColor(20, 80, 140);
+        $this->SetTextColor(0, 96, 78);
         $this->Cell(0, 5, 'AMAZON NAVAL LTDA', 0, 1, 'C');
 
         // Número da proposta
         $this->SetFont('helvetica', 'B', 9);
-        $this->SetTextColor(0, 51, 102);
+        $this->SetTextColor(0, 61, 52);
         $this->Cell(0, 5, $this->numero, 0, 1, 'R');
 
         // Linha separadora
-        $this->SetDrawColor(0, 51, 102);
+        $this->SetDrawColor(0, 61, 52);
         $this->SetLineWidth(0.5);
+        // Linha contínua em toda a largura, posicionada abaixo da logo.
         $this->Line(15, $this->GetY() + 1, 195, $this->GetY() + 1);
         $this->Ln(4);
     }
@@ -274,7 +276,7 @@ class PropostaPDF extends \setasign\Fpdi\Tcpdf\Fpdi {
     public function desenharRodape() {
         $this->SetY(-18);
         // Linha separadora
-        $this->SetDrawColor(0, 51, 102);
+        $this->SetDrawColor(0, 61, 52);
         $this->SetLineWidth(0.3);
         $this->Line(15, $this->GetY(), 195, $this->GetY());
         $this->Ln(2);
@@ -320,7 +322,7 @@ $pdf->SetTextColor(0, 0, 0);
 
 // --- BLOCO: NOME DA EMBARCAÇÃO ---
 $pdf->SetFont('helvetica', 'B', 9);
-$pdf->SetTextColor(0, 51, 102);
+$pdf->SetTextColor(0, 61, 52);
 $pdf->Cell(0, 5, 'NOME DA EMBARCAÇÃO', 0, 1, 'L');
 $pdf->SetTextColor(0, 0, 0);
 
@@ -353,7 +355,7 @@ $colDir = 90;
 // CONTRATANTE
 $yInicio = $pdf->GetY();
 $pdf->SetFont('helvetica', 'B', 8);
-$pdf->SetFillColor(230, 235, 245);
+$pdf->SetFillColor(231, 243, 238);
 $pdf->Cell($colEsq, 6, 'CONTRATANTE:', 1, 0, 'L', true);
 $pdf->Cell($colDir, 6, 'CONTRATADA:', 1, 1, 'L', true);
 
@@ -390,7 +392,7 @@ $pdf->Ln(5);
 // --- BLOCO: DADOS TÉCNICOS DA EMBARCAÇÃO ---
 if (!empty($embarcacoes)) {
     $pdf->SetFont('helvetica', 'B', 9);
-    $pdf->SetTextColor(0, 51, 102);
+    $pdf->SetTextColor(0, 61, 52);
     $pdf->Cell(0, 5, 'DADOS TÉCNICOS DA EMBARCAÇÃO', 0, 1, 'L');
     $pdf->SetTextColor(0, 0, 0);
     $pdf->Ln(1);
@@ -398,7 +400,7 @@ if (!empty($embarcacoes)) {
     // Tabela de dados técnicos para cada embarcação
     foreach ($embarcacoes as $emb) {
         $pdf->SetFont('helvetica', 'B', 8);
-        $pdf->SetFillColor(230, 235, 245);
+        $pdf->SetFillColor(231, 243, 238);
         $pdf->Cell(180, 5, mb_strtoupper($emb['nome']), 1, 1, 'L', true);
 
         $pdf->SetFont('helvetica', '', 8);
@@ -425,8 +427,8 @@ if (!empty($embarcacoes)) {
 
 // --- BLOCO: OBJETO DA PROPOSTA E SERVIÇOS ---
 $pdf->SetFont('helvetica', 'B', 10);
-$pdf->SetTextColor(0, 51, 102);
-$pdf->SetFillColor(230, 235, 245);
+$pdf->SetTextColor(0, 61, 52);
+$pdf->SetFillColor(231, 243, 238);
 $pdf->Cell(0, 7, 'OBJETO DA PROPOSTA E SERVIÇOS', 0, 1, 'L', true);
 $pdf->SetTextColor(0, 0, 0);
 $pdf->Ln(2);
@@ -437,7 +439,7 @@ $pdf->Ln(2);
 
 // --- TABELA DE SERVIÇOS ---
 $pdf->SetFont('helvetica', 'B', 8);
-$pdf->SetFillColor(0, 51, 102);
+$pdf->SetFillColor(0, 61, 52);
 $pdf->SetTextColor(255, 255, 255);
 
 $wServ = [10, 100, 20, 30, 30];
@@ -471,8 +473,8 @@ if (empty($servicos_todos)) {
 
         if (!empty($nomeEmbServ) && count($servicos_por_embarcacao) > 1) {
             $pdf->SetFont('helvetica', 'B', 8);
-            $pdf->SetFillColor(240, 243, 250);
-            $pdf->SetTextColor(0, 51, 102);
+            $pdf->SetFillColor(242, 248, 245);
+            $pdf->SetTextColor(0, 61, 52);
             $pdf->Cell(array_sum($wServ), 5, mb_strtoupper($nomeEmbServ), 1, 1, 'L', true);
             $pdf->SetTextColor(0, 0, 0);
             $pdf->SetFont('helvetica', '', 8);
@@ -511,7 +513,7 @@ $pdf->SetFont('helvetica', 'B', 9);
 $colTotalLabel = $wServ[0] + $wServ[1] + $wServ[2]; // 130
 $colTotalValor = $wServ[3] + $wServ[4]; // 60
 
-$pdf->SetFillColor(245, 245, 250);
+$pdf->SetFillColor(240, 247, 243);
 $pdf->Cell($colTotalLabel, 6, 'TOTAL DOS SERVIÇOS', 1, 0, 'R', true);
 $pdf->SetFont('helvetica', 'B', 9);
 $pdf->Cell($colTotalValor, 6, 'R$ ' . formatarMoedaPDF($subtotalGeral), 1, 1, 'R', true);
@@ -526,7 +528,7 @@ if ($descontoValor > 0) {
 }
 
 // Linha Total Geral
-$pdf->SetFillColor(0, 51, 102);
+$pdf->SetFillColor(0, 61, 52);
 $pdf->SetTextColor(255, 255, 255);
 $pdf->SetFont('helvetica', 'B', 10);
 $pdf->Cell($colTotalLabel, 7, 'TOTAL GERAL', 1, 0, 'R', true);
@@ -540,15 +542,15 @@ $pdf->Cell(array_sum($wServ), 5, '(' . mb_strtoupper(valorPorExtenso($totalGeral
 // Validado até
 $pdf->Ln(3);
 $pdf->SetFont('helvetica', 'B', 8);
-$pdf->SetFillColor(230, 235, 245);
+$pdf->SetFillColor(231, 243, 238);
 $pdf->Cell(0, 5, 'VALIDADE DA PROPOSTA: ' . dataBR($proposta['data_validade'] ?? ''), 0, 1, 'L', true);
 
 $pdf->Ln(10);
 
 // --- BLOCO: PARCELAS E FORMA DE PAGAMENTO ---
 $pdf->SetFont('helvetica', 'B', 10);
-$pdf->SetTextColor(0, 51, 102);
-$pdf->SetFillColor(230, 235, 245);
+$pdf->SetTextColor(0, 61, 52);
+$pdf->SetFillColor(231, 243, 238);
 $pdf->Cell(0, 7, 'FORMA DE PAGAMENTO', 0, 1, 'L', true);
 $pdf->SetTextColor(0, 0, 0);
 $pdf->Ln(2);
@@ -589,7 +591,7 @@ $pdf->Ln(2);
 // Tabela de parcelas
 $colParc = [30, 50, 60, 40];
 $pdf->SetFont('helvetica', 'B', 8);
-$pdf->SetFillColor(0, 51, 102);
+$pdf->SetFillColor(0, 61, 52);
 $pdf->SetTextColor(255, 255, 255);
 $pdf->Cell($colParc[0], 6, 'PARCELA', 1, 0, 'C', true);
 $pdf->Cell($colParc[1], 6, 'CONDIÇÕES DAS PARCELAS', 1, 0, 'C', true);
@@ -622,7 +624,7 @@ for ($i = 1; $i <= $parcelas; $i++) {
 
 // Total parcelado
 $pdf->SetFont('helvetica', 'B', 8);
-$pdf->SetFillColor(245, 245, 250);
+$pdf->SetFillColor(240, 247, 243);
 $pdf->Cell($colParc[0] + $colParc[1] + $colParc[2], 6, 'TOTAL', 1, 0, 'R', true);
 $pdf->Cell($colParc[3], 6, 'R$ ' . formatarMoedaPDF($totalGeral), 1, 1, 'R', true);
 
@@ -630,8 +632,8 @@ $pdf->Ln(3);
 
 // --- DADOS BANCÁRIOS ---
 $pdf->SetFont('helvetica', 'B', 9);
-$pdf->SetTextColor(0, 51, 102);
-$pdf->SetFillColor(230, 235, 245);
+$pdf->SetTextColor(0, 61, 52);
+$pdf->SetFillColor(231, 243, 238);
 $pdf->Cell(0, 6, 'DADOS BANCÁRIOS', 0, 1, 'L', true);
 $pdf->SetTextColor(0, 0, 0);
 $pdf->SetFont('helvetica', '', 8);
@@ -641,8 +643,8 @@ $pdf->Ln(2);
 
 // --- DESPESAS EVENTUAIS ---
 $pdf->SetFont('helvetica', 'B', 9);
-$pdf->SetTextColor(0, 51, 102);
-$pdf->SetFillColor(230, 235, 245);
+$pdf->SetTextColor(0, 61, 52);
+$pdf->SetFillColor(231, 243, 238);
 $pdf->Cell(0, 6, 'DESPESAS EVENTUAIS', 0, 1, 'L', true);
 $pdf->SetTextColor(0, 0, 0);
 $pdf->SetFont('helvetica', '', 8);
@@ -656,7 +658,7 @@ $pdf->Ln(4);
 
 // --- PRAZO DE VALIDADE DA PROPOSTA ---
 $pdf->SetFont('helvetica', 'B', 9);
-$pdf->SetTextColor(0, 51, 102);
+$pdf->SetTextColor(0, 61, 52);
 $pdf->Cell(0, 6, '5.0 - PRAZO DE VALIDADE DA PROPOSTA DE SERVIÇOS', 0, 1, 'L');
 $pdf->SetTextColor(0, 0, 0);
 $pdf->SetFont('helvetica', '', 8);
@@ -665,7 +667,7 @@ $pdf->Ln(3);
 
 // --- SERVIÇOS A REALIZAR ---
 $pdf->SetFont('helvetica', 'B', 9);
-$pdf->SetTextColor(0, 51, 102);
+$pdf->SetTextColor(0, 61, 52);
 $pdf->Cell(0, 6, '6.0 - SERVIÇOS A REALIZAR', 0, 1, 'L');
 $pdf->SetTextColor(0, 0, 0);
 $pdf->SetFont('helvetica', '', 8);
@@ -681,7 +683,7 @@ $pdf->Ln(10);
 
 // --- DO FORO ---
 $pdf->SetFont('helvetica', 'B', 9);
-$pdf->SetTextColor(0, 51, 102);
+$pdf->SetTextColor(0, 61, 52);
 $pdf->Cell(0, 6, '7.0 - DO FORO', 0, 1, 'L');
 $pdf->SetTextColor(0, 0, 0);
 $pdf->SetFont('helvetica', '', 8);
@@ -690,8 +692,8 @@ $pdf->Ln(5);
 
 // --- ACEITE FORMAL ---
 $pdf->SetFont('helvetica', 'B', 10);
-$pdf->SetTextColor(0, 51, 102);
-$pdf->SetFillColor(230, 235, 245);
+$pdf->SetTextColor(0, 61, 52);
+$pdf->SetFillColor(231, 243, 238);
 $pdf->Cell(0, 7, '8.0 - ACEITE FORMAL', 0, 1, 'L', true);
 $pdf->SetTextColor(0, 0, 0);
 $pdf->Ln(2);
@@ -710,25 +712,25 @@ if ($pdf->GetY() > 200) {
 $assinaturaY = $pdf->GetY();
 
 // Quadro da assinatura CONTRATANTE (esquerda)
-$pdf->SetDrawColor(0, 51, 102);
+$pdf->SetDrawColor(0, 61, 52);
 $pdf->SetLineWidth(0.5);
 $pdf->Rect(15, $assinaturaY, 88, 60);
-$pdf->SetDrawColor(180, 190, 210);
+$pdf->SetDrawColor(173, 204, 194);
 $pdf->SetLineWidth(0.2);
 $pdf->Rect(17, $assinaturaY + 2, 84, 56);
 
 // Quadro da assinatura CONTRATADA (direita)
-$pdf->SetDrawColor(0, 51, 102);
+$pdf->SetDrawColor(0, 61, 52);
 $pdf->SetLineWidth(0.5);
 $pdf->Rect(107, $assinaturaY, 88, 60);
-$pdf->SetDrawColor(180, 190, 210);
+$pdf->SetDrawColor(173, 204, 194);
 $pdf->SetLineWidth(0.2);
 $pdf->Rect(109, $assinaturaY + 2, 84, 56);
 
 // Título ACEITANTE (esquerda)
 $pdf->SetXY(17, $assinaturaY + 4);
 $pdf->SetFont('helvetica', 'B', 9);
-$pdf->SetTextColor(0, 51, 102);
+$pdf->SetTextColor(0, 61, 52);
 $pdf->Cell(84, 5, 'ACEITANTE', 0, 1, 'C');
 $pdf->SetTextColor(0, 0, 0);
 $pdf->SetXY(17, $assinaturaY + 9);
@@ -738,7 +740,7 @@ $pdf->Cell(84, 5, $clienteNome, 0, 1, 'C');
 // Título PROPONENTE (direita)
 $pdf->SetXY(109, $assinaturaY + 4);
 $pdf->SetFont('helvetica', 'B', 9);
-$pdf->SetTextColor(0, 51, 102);
+$pdf->SetTextColor(0, 61, 52);
 $pdf->Cell(84, 5, 'PROPONENTE', 0, 1, 'C');
 $pdf->SetTextColor(0, 0, 0);
 $pdf->SetXY(109, $assinaturaY + 9);
@@ -776,7 +778,8 @@ $pdf->Cell(72, 4, 'CPF/CNPJ: 60.360.061/0001-91', 0, 0, 'C');
 $logo_path2 = __DIR__ . '/../../img/logo.png';
 if (file_exists($logo_path2) && filesize($logo_path2) > 100) {
     // Centro horizontal do quadro interno do PROPONENTE: 151 mm.
-    $pdf->Image($logo_path2, 142, $assinaturaY + 14, 18, 0, 'PNG', '', '', true, 150);
+    // Fica abaixo do nome da empresa e acima da linha de assinatura.
+    $pdf->Image($logo_path2, 140, $assinaturaY + 16, 22, 0, 'PNG', '', '', false, 150);
 }
 
 // Imagem da Assinatura do Cliente
@@ -904,8 +907,8 @@ $pdf->Cell(84, 4, 'BELÉM/PA, ' . dataBR($proposta['data_emissao']), 0, 0, 'C');
 if (!empty($proposta['observacoes'])) {
     $pdf->Ln(65);
     $pdf->SetFont('helvetica', 'B', 9);
-    $pdf->SetTextColor(0, 51, 102);
-    $pdf->SetFillColor(230, 235, 245);
+    $pdf->SetTextColor(0, 61, 52);
+    $pdf->SetFillColor(231, 243, 238);
     $pdf->Cell(0, 6, 'OBSERVAÇÕES', 0, 1, 'L', true);
     $pdf->SetTextColor(0, 0, 0);
     $pdf->SetFont('helvetica', '', 8);
