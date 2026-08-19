@@ -111,6 +111,47 @@ $stmtE = $pdo->prepare("
 $stmtE->execute([':id' => $id]);
 $exigencias = calcularNumerosOrigemExigencias($pdo, $stmtE->fetchAll(PDO::FETCH_ASSOC));
 
+// Compatibilidade com registros salvos pelo checklist: a exigência deve aparecer
+// no relatório mesmo quando a linha espelho em vistoria_exigencias não foi criada.
+$catalogosJaExibidos = [];
+foreach ($exigencias as $exigenciaExistente) {
+    $catalogoId = trim((string)($exigenciaExistente['catalogo_id'] ?? ''));
+    if ($catalogoId !== '') $catalogosJaExibidos[$catalogoId] = true;
+}
+$stmtChecklistPdf = $pdo->prepare("
+    SELECT r.catalogo_id, r.observacao, r.vencimento, r.sem_prazo,
+           c.descricao AS catalogo_descricao, c.item_normam AS catalogo_item_normam,
+           c.bloco_vistoria
+      FROM vistoria_checklist_respostas r
+      LEFT JOIN exigencias_catalogo c ON c.id = r.catalogo_id
+     WHERE r.vistoria_id = :id AND r.status = 'NAO_CONFORME'
+     ORDER BY r.id
+");
+$stmtChecklistPdf->execute([':id' => $id]);
+$ordemFallback = count($exigencias) + 1;
+foreach ($stmtChecklistPdf->fetchAll(PDO::FETCH_ASSOC) as $checklistExigencia) {
+    $catalogoId = trim((string)($checklistExigencia['catalogo_id'] ?? ''));
+    if ($catalogoId === '' || isset($catalogosJaExibidos[$catalogoId])) continue;
+    $itemNormam = trim((string)($checklistExigencia['catalogo_item_normam'] ?? ''));
+    $descricao = trim((string)($checklistExigencia['catalogo_descricao'] ?? '')) ?: $itemNormam;
+    $exigencias[] = [
+        'id' => 'checklist-' . $catalogoId,
+        'catalogo_id' => $catalogoId,
+        'bloco_vistoria' => trim((string)($checklistExigencia['bloco_vistoria'] ?? '')) ?: 'flutuando',
+        'ordem' => $ordemFallback++,
+        'item' => $itemNormam ?: $descricao,
+        'descricao' => $descricao,
+        'conforme' => 'nao',
+        'observacao' => $checklistExigencia['observacao'] ?? null,
+        'item_normam' => $itemNormam ?: null,
+        'vencimento' => $checklistExigencia['vencimento'] ?? null,
+        'antes_de_suspender' => (int)($checklistExigencia['sem_prazo'] ?? 0),
+        'status_item' => 'pendente',
+    ];
+    $catalogosJaExibidos[$catalogoId] = true;
+}
+$exigencias = calcularNumerosOrigemExigencias($pdo, $exigencias);
+
 // Carregar autoloader do Composer (inclui TCPDF automaticamente)
 $autoload_path = __DIR__ . '/../../vendor/autoload.php';
 if (!file_exists($autoload_path)) {
