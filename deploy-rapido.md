@@ -8,13 +8,13 @@ Guia prático e direto em **3 etapas** para atualizar os arquivos do sistema e o
 
 Você pode exportar o banco de dados atualizado de duas formas (escolha a que preferir):
 
-### Opção A: Pelo Terminal do Windows / PowerShell (1 comando — Mais rápido)
-Com o Docker local rodando no Windows, abra o PowerShell e execute:
+### Opção A: Pelo Terminal do Windows / PowerShell (Recomendado — 1 comando, gera UTF-8 perfeito)
+Com o Docker rodando, abra o PowerShell e execute:
 
 ```powershell
-docker exec erp_db mysqldump -u root -proot_pass_2026 --default-character-set=utf8mb4 erp_sistema > C:\sistema\db.sql
+docker exec erp_app sh -c "mysqldump -h db -u root -proot_pass_2026 --skip-ssl --default-character-set=utf8mb4 erp_sistema > /var/www/html/db.sql"
 ```
-*(Esse comando já gera o arquivo `db.sql` atualizado diretamente na raiz do projeto).*
+*(Esse comando roda direto no Linux do container e grava o `db.sql` em UTF-8 puro, sem problemas de codificação no Linux da VPS).*
 
 ---
 
