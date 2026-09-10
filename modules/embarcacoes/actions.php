@@ -99,47 +99,70 @@ switch ($action) {
 
         // Validacoes
         $erros = [];
+        $errosCampos = [];
 
         if (empty($nome)) {
-            $erros[] = 'O nome da embarcacao e obrigatorio.';
+            $erros[] = 'O nome da embarcação é obrigatório.';
+            $errosCampos['nome'] = 'O nome da embarcação é obrigatório.';
         } elseif (strlen($nome) < 2) {
             $erros[] = 'O nome deve ter pelo menos 2 caracteres.';
+            $errosCampos['nome'] = 'O nome deve ter pelo menos 2 caracteres.';
         }
 
         if (!empty($ano) && ($ano < 1900 || $ano > 2099)) {
             $erros[] = 'O ano deve estar entre 1900 e 2099.';
+            $errosCampos['ano'] = 'O ano deve estar entre 1900 e 2099.';
         }
 
         foreach ([
-            'tripulantes' => $numero_tripulantes,
-            'passageiros N1' => $numero_passageiros_n1,
-            'passageiros N2' => $numero_passageiros_n2,
-        ] as $rotulo => $quantidade) {
+            'numero_tripulantes' => ['label' => 'tripulantes', 'val' => $numero_tripulantes],
+            'numero_passageiros_n1' => ['label' => 'passageiros N1', 'val' => $numero_passageiros_n1],
+            'numero_passageiros_n2' => ['label' => 'passageiros N2', 'val' => $numero_passageiros_n2],
+        ] as $campoNome => $item) {
+            $quantidade = $item['val'];
             if ($quantidade !== '' && (!ctype_digit($quantidade) || (int)$quantidade < 0)) {
-                $erros[] = 'A quantidade de ' . $rotulo . ' deve ser um número inteiro igual ou maior que zero.';
+                $msgErro = 'A quantidade de ' . $item['label'] . ' deve ser um número inteiro igual ou maior que zero.';
+                $erros[] = $msgErro;
+                $errosCampos[$campoNome] = $msgErro;
             }
         }
 
         foreach ([
-            'comprimento total' => $comprimento_total,
-            'comprimento do casco' => $comprimento_casco,
-            'comprimento LPP' => $comprimento_lpp,
-            'pontal moldado' => $pontal_moldado,
-            'boca moldada' => $boca_moldada,
-            'boca máxima' => $boca_maxima,
-        ] as $rotulo => $medida) {
+            'comprimento_total' => ['label' => 'comprimento total', 'val' => $comprimento_total],
+            'comprimento_casco' => ['label' => 'comprimento do casco', 'val' => $comprimento_casco],
+            'comprimento_lpp' => ['label' => 'comprimento LPP', 'val' => $comprimento_lpp],
+            'pontal_moldado' => ['label' => 'pontal moldado', 'val' => $pontal_moldado],
+            'boca_moldada' => ['label' => 'boca moldada', 'val' => $boca_moldada],
+            'boca_maxima' => ['label' => 'boca máxima', 'val' => $boca_maxima],
+        ] as $campoNome => $item) {
+            $medida = $item['val'];
             if ($medida !== '' && (!is_numeric($medida) || (float)$medida < 0)) {
-                $erros[] = 'O campo ' . $rotulo . ' deve conter um valor igual ou maior que zero.';
+                $msgErro = 'O campo ' . $item['label'] . ' deve conter um valor igual ou maior que zero.';
+                $erros[] = $msgErro;
+                $errosCampos[$campoNome] = $msgErro;
             }
         }
 
         if (!in_array($possui_propulsao, [0, 1], true)) {
             $erros[] = 'A informação se possui propulsão é obrigatória.';
+            $errosCampos['possui_propulsao'] = 'A informação se possui propulsão é obrigatória.';
         } elseif ($possui_propulsao === 1) {
-            if ($fabricante_motor === '') $erros[] = 'Informe o fabricante do motor.';
-            if ($modelo_motor === '') $erros[] = 'Informe o modelo do motor.';
-            if ($numero_motor === '') $erros[] = 'Informe o número do motor.';
-            if ($potencia_kw === '') $erros[] = 'Informe a potência propulsiva.';
+            if ($fabricante_motor === '') {
+                $erros[] = 'Informe o fabricante do motor.';
+                $errosCampos['fabricante_motor'] = 'Informe o fabricante do motor.';
+            }
+            if ($modelo_motor === '') {
+                $erros[] = 'Informe o modelo do motor.';
+                $errosCampos['modelo_motor'] = 'Informe o modelo do motor.';
+            }
+            if ($numero_motor === '') {
+                $erros[] = 'Informe o número do motor.';
+                $errosCampos['numero_motor'] = 'Informe o número do motor.';
+            }
+            if ($potencia_kw === '') {
+                $erros[] = 'Informe a potência propulsiva.';
+                $errosCampos['potencia_kw'] = 'Informe a potência propulsiva.';
+            }
         } else {
             $fabricante_motor = '';
             $modelo_motor = '';
@@ -149,7 +172,7 @@ switch ($action) {
         $isEdicao = !empty($id);
 
         if (!empty($erros)) {
-            setMensagem('error', implode(' ', $erros));
+            setMensagem('error', implode(' ', $erros), $errosCampos);
             $url = APP_URL . 'embarcacoes/form';
             if ($isEdicao) $url .= '?id=' . urlencode($id);
             redirecionar($url);

@@ -49,6 +49,16 @@ if (!empty($id)) {
     }
 }
 
+// Preservar valores de envio anterior caso tenha ocorrido erro de validação
+$valoresPreservados = $_SESSION['mensagem']['valores'] ?? [];
+if (!empty($valoresPreservados)) {
+    if (!$embarcacao) {
+        $embarcacao = $valoresPreservados;
+    } else {
+        $embarcacao = array_merge($embarcacao, $valoresPreservados);
+    }
+}
+
 // Gerar CSRF token
 $csrf = gerarCSRF();
 
@@ -106,16 +116,77 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
     font-weight: 500;
     color: var(--cor-texto-secundario);
     white-space: nowrap;
+    position: relative;
+    transition: all 0.2s ease;
 }
 .tab-item.active {
-    color: #fff;
-    background: var(--cor-destaque);
+    color: #fff !important;
+    background: var(--cor-destaque) !important;
     border-radius: 6px 6px 0 0;
-    border-bottom-color: var(--cor-destaque);
+    border-bottom-color: var(--cor-destaque) !important;
 }
 .tab-item:hover:not(.active) {
     color: var(--cor-texto);
     background: rgba(0,0,0,0.02);
+}
+.required-star {
+    color: #e74c3c;
+    font-weight: bold;
+    margin-left: 2px;
+}
+.tab-error-badge {
+    display: none;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: bold;
+    padding: 2px 7px;
+    border-radius: 10px;
+    margin-left: 6px;
+    line-height: 1.2;
+    vertical-align: middle;
+}
+.tab-item.has-error .tab-error-badge {
+    display: inline-block;
+}
+/* Aba inativa com erro: fundo sutilmente rosado e texto avermelhado legível */
+.tab-item:not(.active).has-error {
+    border-color: #e74c3c !important;
+    color: #c0392b !important;
+    background: #fff5f5 !important;
+}
+.tab-item:not(.active).has-error .required-star {
+    color: #e74c3c;
+}
+.tab-item:not(.active).has-error .tab-error-badge {
+    background: #e74c3c;
+    color: #fff;
+}
+/* Aba ativa com erro: NUNCA usa fundo vermelho sólido, mantém verde oficial do tema com texto branco */
+.tab-item.active.has-error {
+    color: #fff !important;
+    background: var(--cor-destaque) !important;
+    border-bottom: 3px solid #ff7675 !important;
+}
+.tab-item.active .required-star {
+    color: #ffeaa7;
+}
+.tab-item.active.has-error .tab-error-badge {
+    background: #ffffff;
+    color: #c0392b;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.field-invalid {
+    border-color: #e74c3c !important;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2) !important;
+}
+.mensagem-erro, .field-error {
+    color: #e74c3c;
+    font-size: 0.8rem;
+    margin-top: 4px;
+    display: block;
+    font-weight: 500;
 }
 .tab-pane {
     display: none;
@@ -177,7 +248,8 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                   action="<?php echo APP_URL; ?>embarcacoes/actions?action=salvar" 
                   id="formEmbarcacao"
                   autocomplete="off"
-                  onsubmit="return validarFormulario('formEmbarcacao')">
+                  novalidate
+                  onsubmit="return validarFormularioEmbarcacao(event)">
                 
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>">
                 <input type="hidden" name="_submission_token" value="<?php echo h(bin2hex(random_bytes(24))); ?>">
@@ -212,10 +284,22 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                 <?php endif; ?>
 
                 <ul class="tabs-nav" id="embarcacoesTabs">
-                    <li class="tab-item active" onclick="openTab('tab-gerais', this)">Dados Gerais</li>
-                    <li class="tab-item" onclick="openTab('tab-tecnicos', this)">Dados Técnicos e Propulsão</li>
-                    <li class="tab-item" onclick="openTab('tab-dimensoes', this)">Arqueação e Dimensões</li>
-                    <li class="tab-item" onclick="openTab('tab-bordalivre', this)">Linha de Carga (CNBL)</li>
+                    <li class="tab-item active" data-tab="tab-gerais" onclick="openTab('tab-gerais', this)">
+                        Dados Gerais <span class="required-star">*</span>
+                        <span class="tab-error-badge"></span>
+                    </li>
+                    <li class="tab-item" data-tab="tab-tecnicos" onclick="openTab('tab-tecnicos', this)">
+                        Dados Técnicos e Propulsão <span class="required-star">*</span>
+                        <span class="tab-error-badge"></span>
+                    </li>
+                    <li class="tab-item" data-tab="tab-dimensoes" onclick="openTab('tab-dimensoes', this)">
+                        Arqueação e Dimensões
+                        <span class="tab-error-badge"></span>
+                    </li>
+                    <li class="tab-item" data-tab="tab-bordalivre" onclick="openTab('tab-bordalivre', this)">
+                        Linha de Carga (CNBL)
+                        <span class="tab-error-badge"></span>
+                    </li>
                 </ul>
 
                 <!-- TAB: DADOS GERAIS -->
@@ -650,9 +734,15 @@ function openTab(tabId, element) {
     });
     
     // Mostrar painel selecionado
-    document.getElementById(tabId).classList.add('active');
-    // Adicionar classe ativa na aba
-    element.classList.add('active');
+    const targetPane = document.getElementById(tabId);
+    if (targetPane) targetPane.classList.add('active');
+
+    // Adicionar classe ativa na aba correspondente
+    if (!element) {
+        element = document.querySelector(`.tab-item[data-tab="${tabId}"]`) ||
+                  document.querySelector(`.tab-item[onclick*="${tabId}"]`);
+    }
+    if (element) element.classList.add('active');
 }
 
 function atualizarCamposPropulsao() {
@@ -676,28 +766,256 @@ function atualizarCamposPropulsao() {
         if (grupo) {
             grupo.style.opacity = semPropulsao ? '0.55' : '1';
             grupo.style.pointerEvents = semPropulsao ? 'none' : 'auto';
+
+            const label = grupo.querySelector('label');
+            if (label) {
+                let star = label.querySelector('.motor-star');
+                if (comPropulsao) {
+                    if (!star) {
+                        star = document.createElement('span');
+                        star.className = 'required-star motor-star';
+                        star.textContent = ' *';
+                        label.appendChild(star);
+                    }
+                } else if (star) {
+                    star.remove();
+                }
+            }
         }
 
-        if (semPropulsao) campo.value = '';
+        if (semPropulsao) {
+            campo.value = '';
+            campo.classList.remove('field-invalid');
+            campo.style.borderColor = '';
+            if (campo.nextElementSibling && (campo.nextElementSibling.classList.contains('mensagem-erro') || campo.nextElementSibling.classList.contains('field-error'))) {
+                campo.nextElementSibling.remove();
+            }
+        }
     });
 
     const ajuda = document.getElementById('ajuda_propulsao');
-    ajuda.textContent = semPropulsao
-        ? 'Embarcação sem propulsão: os dados do motor não se aplicam e serão apresentados assim no CSN.'
-        : 'Para embarcações com propulsão, fabricante, modelo, número do motor e potência são obrigatórios e alimentam o CSN.';
+    if (ajuda) {
+        ajuda.textContent = semPropulsao
+            ? 'Embarcação sem propulsão: os dados do motor não se aplicam e serão apresentados assim no CSN.'
+            : (comPropulsao
+                ? 'Para embarcações com propulsão, fabricante, modelo, número do motor e potência são obrigatórios e alimentam o CSN.'
+                : 'Selecione se a embarcação possui propulsão. Caso possua, os dados do motor serão obrigatórios.');
+    }
 }
 
 function agendarAtualizacaoCamposPropulsao() {
     atualizarCamposPropulsao();
-    // Alguns navegadores atualizam o valor visual do select no fim do clique.
     setTimeout(atualizarCamposPropulsao, 0);
 }
 
 const campoPossuiPropulsao = document.getElementById('possui_propulsao');
-['change', 'input', 'click'].forEach(evento => {
-    campoPossuiPropulsao.addEventListener(evento, agendarAtualizacaoCamposPropulsao);
-});
+if (campoPossuiPropulsao) {
+    ['change', 'input', 'click'].forEach(evento => {
+        campoPossuiPropulsao.addEventListener(evento, agendarAtualizacaoCamposPropulsao);
+    });
+}
 atualizarCamposPropulsao();
+
+function validarFormularioEmbarcacao(event) {
+    const form = document.getElementById('formEmbarcacao');
+    if (!form) return true;
+
+    atualizarCamposPropulsao();
+
+    // Limpar mensagens e estados anteriores
+    form.querySelectorAll('.mensagem-erro, .field-error').forEach(el => el.remove());
+    form.querySelectorAll('.field-invalid').forEach(el => {
+        el.classList.remove('field-invalid');
+        el.style.borderColor = '';
+    });
+    document.querySelectorAll('.tab-item').forEach(item => {
+        item.classList.remove('has-error');
+        const badge = item.querySelector('.tab-error-badge');
+        if (badge) badge.style.display = 'none';
+    });
+
+    let valido = true;
+    let primeiroInvalido = null;
+    const errosPorAba = {};
+
+    function registrarErro(campo, mensagem) {
+        if (!campo) return;
+        valido = false;
+        campo.classList.add('field-invalid');
+        campo.style.borderColor = '#e74c3c';
+
+        if (!campo.nextElementSibling || (!campo.nextElementSibling.classList.contains('mensagem-erro') && !campo.nextElementSibling.classList.contains('field-error'))) {
+            const span = document.createElement('span');
+            span.className = 'mensagem-erro';
+            span.textContent = mensagem;
+            campo.parentElement.appendChild(span);
+        }
+
+        const tabPane = campo.closest('.tab-pane');
+        if (tabPane) {
+            errosPorAba[tabPane.id] = (errosPorAba[tabPane.id] || 0) + 1;
+        }
+
+        if (!primeiroInvalido) {
+            primeiroInvalido = campo;
+        }
+    }
+
+    // 1. Nome da embarcação (obrigatório, min 2 caracteres)
+    const campoNome = document.getElementById('nome');
+    if (campoNome) {
+        const valNome = (campoNome.value || '').trim();
+        if (!valNome) {
+            registrarErro(campoNome, 'O nome da embarcação é obrigatório.');
+        } else if (valNome.length < 2) {
+            registrarErro(campoNome, 'O nome deve ter pelo menos 2 caracteres.');
+        }
+    }
+
+    // 2. Possui propulsão (obrigatório: 0 ou 1)
+    if (campoPossuiPropulsao) {
+        const valProp = campoPossuiPropulsao.value;
+        if (valProp === '' || (valProp !== '0' && valProp !== '1')) {
+            registrarErro(campoPossuiPropulsao, 'A informação se possui propulsão é obrigatória.');
+        } else if (valProp === '1') {
+            // Motores obrigatórios quando possui propulsão
+            const camposMotor = [
+                { id: 'fabricante_motor', label: 'Informe o fabricante do motor.' },
+                { id: 'modelo_motor', label: 'Informe o modelo do motor.' },
+                { id: 'numero_motor', label: 'Informe o número do motor.' },
+                { id: 'potencia_kw', label: 'Informe a potência propulsiva.' }
+            ];
+            camposMotor.forEach(item => {
+                const c = document.getElementById(item.id);
+                if (c && !(c.value || '').trim()) {
+                    registrarErro(c, item.label);
+                }
+            });
+        }
+    }
+
+    // 3. Demais campos com atributo required ativo
+    form.querySelectorAll('[required]').forEach(campo => {
+        if (campo.disabled || campo.id === 'nome' || campo.id === 'possui_propulsao' ||
+            campo.id === 'fabricante_motor' || campo.id === 'modelo_motor' ||
+            campo.id === 'numero_motor' || campo.id === 'potencia_kw') {
+            return;
+        }
+        if (!(campo.value || '').trim()) {
+            registrarErro(campo, 'Este campo é obrigatório.');
+        }
+    });
+
+    // 4. Validação de ano
+    const campoAno = document.getElementById('ano');
+    if (campoAno && campoAno.value) {
+        const anoVal = parseInt(campoAno.value, 10);
+        if (isNaN(anoVal) || anoVal < 1900 || anoVal > 2099) {
+            registrarErro(campoAno, 'O ano deve estar entre 1900 e 2099.');
+        }
+    }
+
+    // 5. Atualizar badges de erro nas abas
+    Object.keys(errosPorAba).forEach(tabId => {
+        const tabItem = document.querySelector(`.tab-item[data-tab="${tabId}"]`) ||
+                        document.querySelector(`.tab-item[onclick*="${tabId}"]`);
+        if (tabItem) {
+            tabItem.classList.add('has-error');
+            const badge = tabItem.querySelector('.tab-error-badge');
+            if (badge) {
+                badge.textContent = errosPorAba[tabId];
+                badge.style.display = 'inline-block';
+            }
+        }
+    });
+
+    if (!valido && primeiroInvalido) {
+        if (event && event.preventDefault) {
+            event.preventDefault();
+        }
+
+        const tabPaneInvalido = primeiroInvalido.closest('.tab-pane');
+        let nomeAba = 'na aba indicada';
+        if (tabPaneInvalido) {
+            openTab(tabPaneInvalido.id);
+            const tabItem = document.querySelector(`.tab-item[data-tab="${tabPaneInvalido.id}"]`) ||
+                            document.querySelector(`.tab-item[onclick*="${tabPaneInvalido.id}"]`);
+            if (tabItem) {
+                // Obter texto do primeiro nó de texto da aba
+                nomeAba = '"' + tabItem.childNodes[0].textContent.trim() + '"';
+            }
+        }
+
+        if (typeof mostrarMensagem === 'function') {
+            mostrarMensagem('error', 'Por favor, preencha os campos obrigatórios destacados ' + (nomeAba ? 'na aba ' + nomeAba : '') + '.');
+        }
+
+        setTimeout(() => {
+            primeiroInvalido.focus({ preventScroll: true });
+            primeiroInvalido.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 80);
+
+        return false;
+    }
+
+    return true;
+}
+
+// Limpeza de erros em tempo real
+const formEl = document.getElementById('formEmbarcacao');
+if (formEl) {
+    formEl.addEventListener('input', function(e) {
+        const target = e.target;
+        if (target.classList.contains('field-invalid') && (target.value || '').trim()) {
+            target.classList.remove('field-invalid');
+            target.style.borderColor = '';
+            if (target.nextElementSibling && (target.nextElementSibling.classList.contains('mensagem-erro') || target.nextElementSibling.classList.contains('field-error'))) {
+                target.nextElementSibling.remove();
+            }
+            const tabPane = target.closest('.tab-pane');
+            if (tabPane) {
+                const restantes = tabPane.querySelectorAll('.field-invalid').length;
+                const tabItem = document.querySelector(`.tab-item[data-tab="${tabPane.id}"]`) ||
+                                document.querySelector(`.tab-item[onclick*="${tabPane.id}"]`);
+                if (tabItem) {
+                    const badge = tabItem.querySelector('.tab-error-badge');
+                    if (restantes > 0) {
+                        if (badge) badge.textContent = restantes;
+                    } else {
+                        tabItem.classList.remove('has-error');
+                        if (badge) badge.style.display = 'none';
+                    }
+                }
+            }
+        }
+    });
+
+    formEl.addEventListener('change', function(e) {
+        const target = e.target;
+        if (target.classList.contains('field-invalid') && (target.value || '').trim()) {
+            target.classList.remove('field-invalid');
+            target.style.borderColor = '';
+            if (target.nextElementSibling && (target.nextElementSibling.classList.contains('mensagem-erro') || target.nextElementSibling.classList.contains('field-error'))) {
+                target.nextElementSibling.remove();
+            }
+            const tabPane = target.closest('.tab-pane');
+            if (tabPane) {
+                const restantes = tabPane.querySelectorAll('.field-invalid').length;
+                const tabItem = document.querySelector(`.tab-item[data-tab="${tabPane.id}"]`) ||
+                                document.querySelector(`.tab-item[onclick*="${tabPane.id}"]`);
+                if (tabItem) {
+                    const badge = tabItem.querySelector('.tab-error-badge');
+                    if (restantes > 0) {
+                        if (badge) badge.textContent = restantes;
+                    } else {
+                        tabItem.classList.remove('has-error');
+                        if (badge) badge.style.display = 'none';
+                    }
+                }
+            }
+        }
+    });
+}
 
 <?php if ($dadosTesteAtivos && !$isEdicao): ?>
 const perfisDadosTeste = <?php echo json_encode($perfisTeste, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
@@ -713,6 +1031,19 @@ function preencherFormularioComDadosTeste() {
         return;
     }
 
+    // Limpar mensagens e estados de erro anteriores
+    const form = document.getElementById('formEmbarcacao');
+    form.querySelectorAll('.field-invalid').forEach(el => {
+        el.classList.remove('field-invalid');
+        el.style.borderColor = '';
+    });
+    form.querySelectorAll('.mensagem-erro, .field-error').forEach(el => el.remove());
+    document.querySelectorAll('.tab-item').forEach(el => {
+        el.classList.remove('has-error');
+        const badge = el.querySelector('.tab-error-badge');
+        if (badge) badge.style.display = 'none';
+    });
+
     const sufixo = new Date().toISOString().replace(/\D/g, '').slice(2, 14);
     const dados = {
         ...perfil.dados,
@@ -722,7 +1053,6 @@ function preencherFormularioComDadosTeste() {
         numero_motor: perfil.dados.numero_motor ? `MOT-${sufixo}` : '',
         numero_casco: `CASCO-${sufixo}`,
     };
-    const form = document.getElementById('formEmbarcacao');
 
     Object.entries(dados).forEach(([nome, valor]) => {
         const campo = form.elements.namedItem(nome);

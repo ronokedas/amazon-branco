@@ -105,8 +105,19 @@
         });
 
         if (primeiroInvalido) {
-            primeiroInvalido.focus({ preventScroll: true });
-            primeiroInvalido.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            var tabPaneFeedback = primeiroInvalido.closest('.tab-pane');
+            if (tabPaneFeedback) {
+                if (typeof window.openTab === 'function') {
+                    window.openTab(tabPaneFeedback.id);
+                } else {
+                    document.querySelectorAll('.tab-pane').forEach(function(tp) { tp.classList.remove('active'); });
+                    tabPaneFeedback.classList.add('active');
+                }
+            }
+            setTimeout(function() {
+                primeiroInvalido.focus({ preventScroll: true });
+                primeiroInvalido.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
         }
     });
 
@@ -128,24 +139,87 @@
         if (!form) return true;
         var campos = form.querySelectorAll('[required]');
         var valido = true;
+        var primeiroInvalido = null;
+        var erroPorAba = {};
+
+        // Limpar mensagens e classes anteriores
+        form.querySelectorAll('.mensagem-erro, .field-error').forEach(function(el) { el.remove(); });
+        form.querySelectorAll('.field-invalid').forEach(function(el) { el.classList.remove('field-invalid'); });
+
         campos.forEach(function(campo) {
-            if (!campo.value.trim()) {
+            if (campo.disabled) return;
+            var valor = (campo.value || '').trim();
+            if (!valor) {
                 campo.style.borderColor = '#E74C3C';
+                campo.classList.add('field-invalid');
                 valido = false;
-                if (!campo.nextElementSibling || !campo.nextElementSibling.classList.contains('mensagem-erro')) {
+                if (!primeiroInvalido) {
+                    primeiroInvalido = campo;
+                }
+
+                var tabPane = campo.closest('.tab-pane');
+                if (tabPane) {
+                    erroPorAba[tabPane.id] = (erroPorAba[tabPane.id] || 0) + 1;
+                }
+
+                if (!campo.nextElementSibling || (!campo.nextElementSibling.classList.contains('mensagem-erro') && !campo.nextElementSibling.classList.contains('field-error'))) {
                     var msg = document.createElement('span');
                     msg.className = 'mensagem-erro';
-                    msg.style.cssText = 'color: #E74C3C; font-size: 0.8rem; margin-top: 4px; display: block;';
+                    msg.style.cssText = 'color: #E74C3C; font-size: 0.8rem; margin-top: 4px; display: block; font-weight: 500;';
                     msg.textContent = 'Este campo é obrigatório';
                     campo.parentElement.appendChild(msg);
                 }
             } else {
                 campo.style.borderColor = '';
-                if (campo.nextElementSibling && campo.nextElementSibling.classList.contains('mensagem-erro')) {
+                campo.classList.remove('field-invalid');
+                if (campo.nextElementSibling && (campo.nextElementSibling.classList.contains('mensagem-erro') || campo.nextElementSibling.classList.contains('field-error'))) {
                     campo.nextElementSibling.remove();
                 }
             }
         });
+
+        // Atualizar abas se existirem no formulário
+        var tabsNav = form.querySelector('.tabs-nav') || document.querySelector('.tabs-nav');
+        if (tabsNav) {
+            tabsNav.querySelectorAll('.tab-item').forEach(function(item) {
+                var tabId = item.getAttribute('data-tab');
+                if (!tabId) {
+                    var onclickAttr = item.getAttribute('onclick') || '';
+                    var m = onclickAttr.match(/openTab\(['"]([^'"]+)['"]/);
+                    if (m) tabId = m[1];
+                }
+                var badge = item.querySelector('.tab-error-badge');
+                if (tabId && erroPorAba[tabId]) {
+                    item.classList.add('has-error');
+                    if (badge) {
+                        badge.textContent = erroPorAba[tabId];
+                        badge.style.display = 'inline-block';
+                    }
+                } else {
+                    item.classList.remove('has-error');
+                    if (badge) {
+                        badge.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        if (!valido && primeiroInvalido) {
+            var tabPaneInvalido = primeiroInvalido.closest('.tab-pane');
+            if (tabPaneInvalido) {
+                if (typeof window.openTab === 'function') {
+                    window.openTab(tabPaneInvalido.id);
+                }
+            }
+            if (typeof window.mostrarMensagem === 'function') {
+                window.mostrarMensagem('error', 'Por favor, preencha os campos obrigatórios destacados.');
+            }
+            setTimeout(function() {
+                primeiroInvalido.focus({ preventScroll: true });
+                primeiroInvalido.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+
         return valido;
     };
 

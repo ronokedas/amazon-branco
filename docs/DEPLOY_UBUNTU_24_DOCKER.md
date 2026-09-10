@@ -44,10 +44,6 @@ docker compose version
 sudo ufw allow OpenSSH
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw allow 8082/tcp
-sudo ufw allow 8083/tcp
-sudo ufw allow 9002/tcp
-sudo ufw allow 9003/tcp
 sudo ufw enable
 sudo ufw status
 ```
@@ -57,7 +53,10 @@ Portas padrão:
 - `8082`: ERP, salvo se `APP_PORT` definir outra porta;
 - `8083`: phpMyAdmin;
 - `9002`: API do MinIO;
-- `9003`: console do MinIO.
+- `9003`: console do MinIO (acesso administrativo; não precisa ser público).
+
+As portas internas do Docker (`8082`, `8083`, `9002` e `9003`) não devem ser
+liberadas no firewall quando o acesso público será feito pelo Cloudflare.
 
 ## 3. Publicar com backup recuperável criptografado
 
@@ -430,6 +429,57 @@ docker compose up -d --build
 docker compose ps
 ```
 
+### Publicar o ERP com Nginx e Cloudflare Flexível
+
+O Docker publica o ERP na porta `8082`. Para usar um domínio Cloudflare com o
+modo SSL/TLS **Flexível**, instale somente o Nginx no VPS: o Cloudflare termina
+o HTTPS e conversa em HTTP com o Nginx. Não instale certificado, Certbot ou
+HTTPS no VPS nesse cenário.
+
+```bash
+sudo apt update
+sudo apt install -y nginx
+
+sudo tee /etc/nginx/sites-available/sistema-amazon >/dev/null <<'NGINX'
+server {
+    listen 80;
+    listen [::]:80;
+    server_name sistema.amazonnaval.com.br;
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8082;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+NGINX
+
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/sistema-amazon \
+  /etc/nginx/sites-enabled/sistema-amazon
+sudo nginx -t
+sudo systemctl enable --now nginx
+sudo systemctl reload nginx
+```
+
+No Cloudflare, mantenha o registro DNS do domínio apontando para o IP público
+da VPS com proxy laranja ativado e deixe SSL/TLS em **Flexível**. O teste no
+VPS deve retornar `200`:
+
+```bash
+curl -I -H 'Host: sistema.amazonnaval.com.br' http://127.0.0.1
+curl -I https://sistema.amazonnaval.com.br/
+```
+
+Se aparecer `521`, confira se o Nginx está ativo, se a porta 80 está liberada
+no firewall da VPS/Google Cloud e se o DNS do Cloudflare aponta para o IP atual.
+
 Se o build apresentar erro de permissão em uma pasta operacional:
 
 ```bash
@@ -500,3 +550,24 @@ git status
 Os dois hashes devem ser iguais. Para migrar para outra VPS, clone o
 repositório, crie o novo `.env`, suba os containers e restaure o arquivo SQL
 mais recente de `storage/backups/`.
+
+
+
+
+
+
+
+
+======================
+
+
+
+cd /opt/sistema-amazon
+git pull origin main
+
+
+docker compose up -d --build
+
+
+git log -1 --oneline
+
