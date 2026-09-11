@@ -101,3 +101,97 @@ Para atualizar a VPS no futuro com apenas **um único comando**, copie e cole es
 ```bash
 cd /opt/sistema-amazon && sudo chown -R "$USER":"$USER" . && git fetch origin main && git reset --hard origin/main && sudo docker compose down -v && sudo docker compose up -d --build && sudo chown -R www-data:www-data storage uploads logs temp_pdf tmp && sudo chmod -R 775 storage uploads logs temp_pdf tmp && sudo docker compose ps && sudo docker compose exec -T db mysql -u root -proot_pass_2026 erp_sistema -e "SELECT count(*) AS total_usuarios FROM usuarios;"
 ```
+
+---
+
+## 🐧 Guia Especial: Configuração Inicial em VPS com AlmaLinux (HostGator / RHEL)
+
+Se você contratou uma VPS nova na **HostGator** com **AlmaLinux** (sistema limpo, recém-instalado e sem nada prévio), siga este roteiro único do zero para deixar a VPS pronta e o sistema rodando:
+
+### 1. Acessar a VPS via SSH e Atualizar o Sistema
+Abra o seu terminal (ou PuTTY / PowerShell) e acerte a conexão:
+```bash
+ssh root@IP_DA_SUA_VPS
+```
+
+Atualize todos os pacotes básicos e instale o Git e utilitários de repositório:
+```bash
+sudo dnf update -y
+sudo dnf install -y git curl dnf-plugins-core
+```
+
+---
+
+### 2. Instalar o Docker e Docker Compose no AlmaLinux
+O AlmaLinux é 100% compatível com o Docker empresarial (RHEL/CentOS):
+```bash
+# 1. Adicionar o repositório oficial do Docker
+sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+# 2. Instalar o Docker Engine e o plugin oficial Docker Compose
+sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+# 3. Iniciar o serviço do Docker e habilitar para iniciar automaticamente com a VPS
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# 4. Conferir a instalação
+docker --version
+docker compose version
+```
+
+---
+
+### 3. Configurar o SELinux (Fundamental no AlmaLinux)
+Por padrão, o AlmaLinux vem com o **SELinux** ativado em modo restritivo (`Enforcing`), o que costuma bloquear o Docker de ler e gravar pastas de uploads e banco de dados. Configure para modo permissivo:
+```bash
+# Desativa temporariamente para uso imediato
+sudo setenforce 0
+
+# Torna a alteração permanente para reinicializações futuras
+sudo sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+```
+
+---
+
+### 4. Liberar as Portas no Firewall do AlmaLinux (`firewalld`)
+O AlmaLinux utiliza o firewall nativo `firewalld`. Execute os comandos abaixo para liberar o tráfego web do sistema:
+```bash
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --permanent --add-port=8082/tcp
+sudo firewall-cmd --permanent --add-port=8083/tcp
+sudo firewall-cmd --reload
+```
+
+---
+
+### 5. Clonar o Repositório e Subir o Sistema Amazon
+Com o Docker ativo e as portas abertas, basta baixar o projeto do GitHub e iniciar os containers:
+```bash
+# 1. Ir para a pasta de aplicações do servidor
+cd /opt
+
+# 2. Baixar o repositório completo
+sudo git clone https://github.com/ronokedas/amazon-branco.git sistema-amazon
+cd /opt/sistema-amazon
+
+# 3. Dar permissão ao seu usuário na pasta
+sudo chown -R "$USER":"$USER" /opt/sistema-amazon
+
+# 4. Subir todos os containers pela primeira vez (o banco db.sql será importado sozinho)
+sudo docker compose up -d --build
+
+# 5. Configurar permissões de escrita para as pastas de uploads e relatórios
+# (O UID 33 corresponde ao usuário www-data do Apache dentro do container)
+sudo chown -R 33:33 storage uploads logs temp_pdf tmp
+sudo chmod -R 775 storage uploads logs temp_pdf tmp
+
+# 6. Conferir se todos os containers subiram saudáveis
+sudo docker compose ps
+```
+
+Pronto! Seu sistema já estará disponível no navegador no IP da sua VPS:
+* **Sistema ERP:** `http://IP_DA_SUA_VPS:8082`
+* **phpMyAdmin:** `http://IP_DA_SUA_VPS:8083`
+
