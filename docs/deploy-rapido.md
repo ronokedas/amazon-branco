@@ -124,7 +124,25 @@ sudo apt install -y git curl ufw ca-certificates gnupg
 
 ---
 
-### 2. Instalar o Docker e Docker Compose Oficial
+### 2. Configurar Memória Swap (Fundamental para Evitar Travamentos de RAM)
+Em qualquer VPS, o conjunto Docker (MySQL 8.0, PHP, MinIO) precisa de uma reserva de memória para evitar que o servidor trave por falta de RAM (*Out-of-Memory*). Crie 2GB de Swap com estes comandos rápidos:
+```bash
+# 1. Criar arquivo de 2GB de Swap
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# 2. Tornar o Swap permanente no boot
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+# 3. Conferir se o Swap está ativo
+free -h
+```
+
+---
+
+### 3. Instalar o Docker e Docker Compose Oficial
 No Ubuntu, a instalação recomendada pela Docker é direta via script oficial:
 ```bash
 # Baixa e instala o Docker Engine + plugin Docker Compose
@@ -141,7 +159,7 @@ docker compose version
 
 ---
 
-### 3. Liberar as Portas no Firewall do Ubuntu (`ufw`)
+### 4. Liberar as Portas no Firewall do Ubuntu (`ufw`)
 Configure o firewall do Ubuntu para liberar o SSH e as portas do sistema:
 ```bash
 # Liberar porta de acesso SSH (imprescindível para não perder a conexão)
@@ -160,7 +178,7 @@ sudo ufw status
 
 ---
 
-### 4. Baixar o Sistema do GitHub e Subir os Containers
+### 5. Baixar o Sistema do GitHub e Subir os Containers
 ```bash
 # 1. Acessar a pasta /opt e clonar o repositório
 cd /opt
