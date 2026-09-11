@@ -58,6 +58,18 @@ switch ($action) {
         $dataUltimaAvaliacao       = trim((string)($_POST['data_ultima_avaliacao_competencia'] ?? '')) ?: null;
         $motivoAlteracaoSgq        = trim((string)($_POST['motivo_alteracao_sgq'] ?? ''));
 
+        // Credenciais técnicas marítimas se aplicam exclusivamente ao perfil Vistoriador
+        if ($cargo !== 'VISTORIADOR') {
+            $statusSgq                 = 'QUALIFICADO';
+            $registroConselhoTipo      = null;
+            $registroConselhoNumero    = null;
+            $registroConselhoValidade  = null;
+            $credencialMarinhaNumero   = null;
+            $credencialMarinhaValidade = null;
+            $escopoHabilitacao         = null;
+            $dataUltimaAvaliacao       = null;
+        }
+
         // Validacoes
         $erros = [];
         $errosCampos = [];

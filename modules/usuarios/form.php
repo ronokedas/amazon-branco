@@ -158,8 +158,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <small class="text-muted">Este vínculo define equipe e gestor nas regras de mensagens internas.</small>
                 </div>
 
-                <!-- Seção SGQ: Competências e Credenciais Técnicas (ISO 7.2 e NORMAM) -->
-                <div style="margin: 20px 0; padding: 16px; border: 1px solid rgba(88, 166, 255, 0.3); border-radius: 8px; background: rgba(56, 139, 253, 0.04);">
+                <!-- Seção SGQ: Competências e Credenciais Técnicas (ISO 7.2 e NORMAM) - Somente para Vistoriadores -->
+                <?php 
+                $cargoAtual = $usuario['cargo'] ?? ($isEdicao ? '' : 'VISTORIADOR');
+                $isVistoriador = ($cargoAtual === 'VISTORIADOR'); 
+                ?>
+                <div id="secao-sgq-credenciais" style="margin: 20px 0; padding: 16px; border: 1px solid rgba(88, 166, 255, 0.3); border-radius: 8px; background: rgba(56, 139, 253, 0.04); display: <?= $isVistoriador ? 'block' : 'none' ?>;">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                         <h4 style="margin: 0; color: var(--cor-destaque); font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
                             <i class="fas fa-award"></i> Competências e Credenciais Técnicas (ISO 9001:2015 & NORMAM)
@@ -395,6 +399,18 @@ document.getElementById('formUsuario').addEventListener('submit', function(event
     document.getElementById('erroEscritorios').style.display = temEscritorio && temPrincipal ? 'none' : 'block';
     if (!temEscritorio || !temPrincipal) event.preventDefault();
 });
+function toggleSecaoSgq() {
+    const cargoSelect = document.getElementById('cargo');
+    const secaoSgq = document.getElementById('secao-sgq-credenciais');
+    if (cargoSelect && secaoSgq) {
+        secaoSgq.style.display = (cargoSelect.value === 'VISTORIADOR') ? 'block' : 'none';
+    }
+}
+const cargoSelectEl = document.getElementById('cargo');
+if (cargoSelectEl) {
+    cargoSelectEl.addEventListener('change', toggleSecaoSgq);
+    toggleSecaoSgq();
+}
 atualizarEscritoriosUsuario();
 </script>
 
