@@ -1668,7 +1668,8 @@ function criarRelatorioCumprimentoAgendamento(PDO $pdo, array $agendamento, stri
                NULL,item_normam,vencimento,antes_de_suspender,'pendente',id
         FROM vistoria_exigencias
         WHERE vistoria_id=:origem
-          AND conforme='nao' AND status_item<>'cumprida'");
+          AND conforme='nao'
+          AND status_item<>'cumprida'");
     $stmt->execute([':novo' => $novoId, ':origem' => $origemId]);
     if ($stmt->rowCount() === 0) {
         throw new RuntimeException('Nenhuma exigencia pendente foi encontrada para o retorno.');

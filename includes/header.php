@@ -268,8 +268,8 @@ header('Content-Type: text/html; charset=UTF-8');
             }).catch(() => {});
         window.setInterval(refresh, 60000);
         document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
-        <?php if (!isset($_SESSION['feedback_toast_login'])): $_SESSION['feedback_toast_login']=true; if ($feedbackGlobal['count']): ?>
-        window.addEventListener('DOMContentLoaded', () => showToast('Você tem <?= (int)$feedbackGlobal['count'] ?> conversa<?= $feedbackGlobal['count']===1?'':'s' ?> com novidades.', 'info', 5500));
+        <?php if (!isset($_SESSION['feedback_toast_login'])): $_SESSION['feedback_toast_login']=true; if (!empty($feedbackGlobal['count'])): ?>
+        window.addEventListener('DOMContentLoaded', () => showToast('Você tem <?= (int)$feedbackGlobal['count'] ?> conversa<?= (int)$feedbackGlobal['count']===1?'':'s' ?> com novidades.', 'info', 5500));
         <?php endif; endif; ?>
     })();
     </script>

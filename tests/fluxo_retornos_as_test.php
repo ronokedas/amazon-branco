@@ -8,7 +8,7 @@ function assertRetornoAS(bool $condicao, string $mensagem): void
 $migration = file_get_contents(__DIR__ . '/../migrations/087_fluxo_retornos_as.sql');
 $migration095 = file_get_contents(__DIR__ . '/../migrations/095_retorno_as_sem_aprovacao.sql');
 $migration096 = file_get_contents(__DIR__ . '/../migrations/096_sincronizar_as_checklist.sql');
-$functions = file_get_contents(__DIR__ . '/../includes/functions.php');
+$functions = str_replace("\r\n", "\n", file_get_contents(__DIR__ . '/../includes/functions.php'));
 $vistorias = file_get_contents(__DIR__ . '/../modules/vistorias/actions.php');
 $agendamentos = file_get_contents(__DIR__ . '/../modules/agendamentos/actions.php');
 $formAgendamento = file_get_contents(__DIR__ . '/../modules/agendamentos/form.php');
