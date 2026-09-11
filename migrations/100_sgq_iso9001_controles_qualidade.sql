@@ -39,7 +39,7 @@ WHERE cargo = 'VISTORIADOR';
 -- 2. Trilha de Auditoria Cadastral de Mudancas Criticas (ISO 7.5 e ISO 8.2)
 CREATE TABLE IF NOT EXISTS sgq_auditoria_cadastral (
     id CHAR(36) NOT NULL PRIMARY KEY,
-    entidade_tipo ENUM('CLIENTE','PROPRIETARIO','ARMADOR','DESPACHANTE','EMBARCACAO') NOT NULL,
+    entidade_tipo ENUM('CLIENTE','PROPRIETARIO','ARMADOR','DESPACHANTE','EMBARCACAO','USUARIO') NOT NULL,
     entidade_id CHAR(36) NOT NULL,
     acao ENUM('CRIACAO','ALTERACAO','INATIVACAO') NOT NULL,
     dados_anteriores JSON NULL,

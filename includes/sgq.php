@@ -51,7 +51,7 @@ function sgqRegistrarAuditoriaCadastral(
             ) VALUES (
                 :id, :tipo, :entidade_id, :acao,
                 :dados_ant, :dados_post, :campos_alt,
-                :motivo, :usuario_id, :usuario_nome, :ip, :ua, NOW()
+                :motivo, :usuario_id, :usuario_nome, :ip, :ua, :criado_em
             )
         ");
 
@@ -68,6 +68,7 @@ function sgqRegistrarAuditoriaCadastral(
             ':usuario_nome' => $usuarioNome,
             ':ip' => $ip,
             ':ua' => $userAgent,
+            ':criado_em' => date('Y-m-d H:i:s'),
         ]);
     } catch (Throwable $e) {
         error_log('[SGQ AUDITORIA ERRO] ' . $e->getMessage());

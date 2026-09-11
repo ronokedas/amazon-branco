@@ -158,6 +158,129 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <small class="text-muted">Este vínculo define equipe e gestor nas regras de mensagens internas.</small>
                 </div>
 
+                <!-- Seção SGQ: Competências e Credenciais Técnicas (ISO 7.2 e NORMAM) -->
+                <div style="margin: 20px 0; padding: 16px; border: 1px solid rgba(88, 166, 255, 0.3); border-radius: 8px; background: rgba(56, 139, 253, 0.04);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <h4 style="margin: 0; color: var(--cor-destaque); font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-award"></i> Competências e Credenciais Técnicas (ISO 9001:2015 & NORMAM)
+                        </h4>
+                        <span class="badge" style="background: rgba(56, 139, 253, 0.2); color: #58a6ff; font-size: 0.75rem;">Requisito ISO 7.2</span>
+                    </div>
+                    <p class="text-muted" style="font-size: 0.82rem; margin-bottom: 14px;">
+                        Credenciais obrigatórias para atuação técnica em vistorias navais e emissão de laudos. Alterações nestes campos são auditadas compulsoriamente no SGQ.
+                    </p>
+
+                    <div class="grid-2">
+                        <!-- Status no SGQ -->
+                        <div class="form-group">
+                            <label for="status_sgq">
+                                <i class="fas fa-shield-halved"></i> Status Qualificação SGQ *
+                            </label>
+                            <select id="status_sgq" name="status_sgq">
+                                <option value="QUALIFICADO" <?= ($usuario['status_sgq'] ?? 'QUALIFICADO') === 'QUALIFICADO' ? 'selected' : '' ?>>QUALIFICADO (Apto para Vistorias)</option>
+                                <option value="SUSPENSO_RECICLAGEM" <?= ($usuario['status_sgq'] ?? '') === 'SUSPENSO_RECICLAGEM' ? 'selected' : '' ?>>SUSPENSO_RECICLAGEM (Treinamento Pendente)</option>
+                                <option value="DESQUALIFICADO" <?= ($usuario['status_sgq'] ?? '') === 'DESQUALIFICADO' ? 'selected' : '' ?>>DESQUALIFICADO (Bloqueado no Agendamento)</option>
+                                <option value="INATIVO" <?= ($usuario['status_sgq'] ?? '') === 'INATIVO' ? 'selected' : '' ?>>INATIVO</option>
+                            </select>
+                        </div>
+
+                        <!-- Data da última avaliação de competência -->
+                        <div class="form-group">
+                            <label for="data_ultima_avaliacao_competencia">
+                                <i class="fas fa-calendar-check"></i> Última Avaliação de Competência
+                            </label>
+                            <input type="date" 
+                                   id="data_ultima_avaliacao_competencia" 
+                                   name="data_ultima_avaliacao_competencia" 
+                                   value="<?= h($usuario['data_ultima_avaliacao_competencia'] ?? '') ?>">
+                        </div>
+                    </div>
+
+                    <div class="grid-3" style="display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 12px; margin-top: 10px;">
+                        <!-- Conselho Profissional (Tipo) -->
+                        <div class="form-group">
+                            <label for="registro_conselho_tipo">Conselho de Classe</label>
+                            <select id="registro_conselho_tipo" name="registro_conselho_tipo">
+                                <option value="">Nenhum / Não aplicável</option>
+                                <option value="CREA" <?= ($usuario['registro_conselho_tipo'] ?? '') === 'CREA' ? 'selected' : '' ?>>CREA (Engenheiro Naval)</option>
+                                <option value="CFT" <?= ($usuario['registro_conselho_tipo'] ?? '') === 'CFT' ? 'selected' : '' ?>>CFT (Técnico Naval)</option>
+                                <option value="OUTRO" <?= ($usuario['registro_conselho_tipo'] ?? '') === 'OUTRO' ? 'selected' : '' ?>>OUTRO</option>
+                            </select>
+                        </div>
+
+                        <!-- Registro Conselho (Número) -->
+                        <div class="form-group">
+                            <label for="registro_conselho_numero">Nº Registro Conselho</label>
+                            <input type="text" 
+                                   id="registro_conselho_numero" 
+                                   name="registro_conselho_numero" 
+                                   placeholder="Ex: 12345/D-PA" 
+                                   value="<?= h($usuario['registro_conselho_numero'] ?? '') ?>">
+                        </div>
+
+                        <!-- Validade Conselho -->
+                        <div class="form-group">
+                            <label for="registro_conselho_validade">Validade Conselho</label>
+                            <input type="date" 
+                                   id="registro_conselho_validade" 
+                                   name="registro_conselho_validade" 
+                                   value="<?= h($usuario['registro_conselho_validade'] ?? '') ?>">
+                        </div>
+                    </div>
+
+                    <div class="grid-2" style="margin-top: 10px;">
+                        <!-- Credencial Marinha (Número) -->
+                        <div class="form-group">
+                            <label for="credencial_marinha_numero">
+                                <i class="fas fa-anchor"></i> Nº Credencial Marinha (DPC)
+                            </label>
+                            <input type="text" 
+                                   id="credencial_marinha_numero" 
+                                   name="credencial_marinha_numero" 
+                                   placeholder="Ex: DPC/CP-2026/045" 
+                                   value="<?= h($usuario['credencial_marinha_numero'] ?? '') ?>">
+                        </div>
+
+                        <!-- Validade Marinha -->
+                        <div class="form-group">
+                            <label for="credencial_marinha_validade">
+                                <i class="fas fa-calendar-day"></i> Validade Credencial Marinha
+                            </label>
+                            <input type="date" 
+                                   id="credencial_marinha_validade" 
+                                   name="credencial_marinha_validade" 
+                                   value="<?= h($usuario['credencial_marinha_validade'] ?? '') ?>">
+                        </div>
+                    </div>
+
+                    <!-- Escopo de Habilitação -->
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label for="escopo_habilitacao">
+                            <i class="fas fa-list-check"></i> Escopo de Habilitação Técnica / NORMAM
+                        </label>
+                        <input type="text" 
+                               id="escopo_habilitacao" 
+                               name="escopo_habilitacao" 
+                               placeholder="Ex: Arqueação NORMAM-202, Borda Livre NORMAM-201, Vistorias CSN Interior" 
+                               value="<?= h($usuario['escopo_habilitacao'] ?? '') ?>">
+                    </div>
+
+                    <?php if ($isEdicao): ?>
+                    <!-- Justificativa de alteração para auditoria ISO 7.5 -->
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label for="motivo_alteracao_sgq" style="color: #e3b341;">
+                            <i class="fas fa-pen-to-square"></i> Justificativa de Alteração / Renovação de Credencial (ISO 7.5)
+                        </label>
+                        <input type="text" 
+                               id="motivo_alteracao_sgq" 
+                               name="motivo_alteracao_sgq" 
+                               placeholder="Ex: Renovação anual de credencial deferida pela Capitania dos Portos conforme Portaria nº 123" 
+                               value="">
+                        <small class="text-muted">Se você alterou datas ou status de qualificação, informe a justificativa para a trilha de auditoria.</small>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
                 <div class="form-group">
                     <label><i class="fas fa-building"></i> Escritório(s) do funcionário *</label>
                     <small class="text-muted" style="display:block;margin-bottom:10px">Selecione todos os escritórios em que este funcionário pode atuar e marque um como principal.</small>

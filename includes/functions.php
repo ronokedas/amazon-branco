@@ -316,6 +316,16 @@ function podeExcluirProprioAdministrador(int $totalAdministradores): bool {
     return $totalAdministradores > 1;
 }
 
+/**
+ * Verifica se a requisicao atual e do tipo AJAX ou API JSON.
+ */
+function isAjax(): bool {
+    return strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest'
+        || str_contains(strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? '')), 'application/json')
+        || str_contains(strtolower((string)($_SERVER['HTTP_CONTENT_TYPE'] ?? $_SERVER['CONTENT_TYPE'] ?? '')), 'application/json')
+        || isset($_GET['api']);
+}
+
 // Redirecionar
 function redirecionar($url) {
     header('Location: ' . $url);

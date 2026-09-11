@@ -44,6 +44,20 @@ switch ($action) {
         $escritoriosIds = array_values(array_unique(array_filter(array_map('trim', (array)($_POST['escritorios_ids'] ?? [])))));
         $escritorioPrincipalId = trim($_POST['escritorio_principal_id'] ?? '');
 
+        // Campos do SGQ (ISO 7.2 e NORMAM)
+        $statusSgq                 = trim((string)($_POST['status_sgq'] ?? 'QUALIFICADO'));
+        if (!in_array($statusSgq, ['QUALIFICADO', 'SUSPENSO_RECICLAGEM', 'DESQUALIFICADO', 'INATIVO'], true)) {
+            $statusSgq = 'QUALIFICADO';
+        }
+        $registroConselhoTipo      = trim((string)($_POST['registro_conselho_tipo'] ?? '')) ?: null;
+        $registroConselhoNumero    = trim((string)($_POST['registro_conselho_numero'] ?? '')) ?: null;
+        $registroConselhoValidade  = trim((string)($_POST['registro_conselho_validade'] ?? '')) ?: null;
+        $credencialMarinhaNumero   = trim((string)($_POST['credencial_marinha_numero'] ?? '')) ?: null;
+        $credencialMarinhaValidade = trim((string)($_POST['credencial_marinha_validade'] ?? '')) ?: null;
+        $escopoHabilitacao         = trim((string)($_POST['escopo_habilitacao'] ?? '')) ?: null;
+        $dataUltimaAvaliacao       = trim((string)($_POST['data_ultima_avaliacao_competencia'] ?? '')) ?: null;
+        $motivoAlteracaoSgq        = trim((string)($_POST['motivo_alteracao_sgq'] ?? ''));
+
         // Validacoes
         $erros = [];
         $errosCampos = [];
@@ -162,29 +176,70 @@ switch ($action) {
 
         try {
             $pdo->beginTransaction();
+            $usuarioAntigo = null;
             if ($isEdicao) {
+                $stmtAnt = $pdo->prepare("SELECT * FROM usuarios WHERE id = :id LIMIT 1");
+                $stmtAnt->execute([':id' => $id]);
+                $usuarioAntigo = $stmtAnt->fetch(PDO::FETCH_ASSOC);
+
                 // Atualizar
+                $paramsUpdate = [
+                    ':nome'               => $nome,
+                    ':email'              => $email,
+                    ':cargo'              => $cargo,
+                    ':ativo'              => $ativo,
+                    ':gestor'             => $gestorId,
+                    ':escritorio'         => $escritorioPrincipalId,
+                    ':status_sgq'         => $statusSgq,
+                    ':conselho_tipo'      => $registroConselhoTipo,
+                    ':conselho_numero'    => $registroConselhoNumero,
+                    ':conselho_validade'  => $registroConselhoValidade,
+                    ':marinha_numero'     => $credencialMarinhaNumero,
+                    ':marinha_validade'   => $credencialMarinhaValidade,
+                    ':escopo'             => $escopoHabilitacao,
+                    ':data_avaliacao'     => $dataUltimaAvaliacao,
+                    ':id'                 => $id,
+                ];
+
                 if (!empty($senha)) {
-                    $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, senha_hash = :senha, ativo = :ativo, gestor_id=:gestor, escritorio_id=:escritorio WHERE id = :id AND excluido_em IS NULL");
-                    $stmt->execute([
-                        ':nome'   => $nome,
-                        ':email'  => $email,
-                        ':cargo'  => $cargo,
-                        ':senha'  => $senhaHash,
-                        ':ativo'  => $ativo, ':gestor'=>$gestorId, ':escritorio'=>$escritorioPrincipalId,
-                        ':id'     => $id
-                    ]);
+                    $paramsUpdate[':senha'] = password_hash($senha, PASSWORD_DEFAULT);
+                    $sqlUpd = "UPDATE usuarios 
+                               SET nome = :nome, email = :email, cargo = :cargo, senha_hash = :senha, 
+                                   ativo = :ativo, gestor_id = :gestor, escritorio_id = :escritorio,
+                                   status_sgq = :status_sgq, registro_conselho_tipo = :conselho_tipo,
+                                   registro_conselho_numero = :conselho_numero, registro_conselho_validade = :conselho_validade,
+                                   credencial_marinha_numero = :marinha_numero, credencial_marinha_validade = :marinha_validade,
+                                   escopo_habilitacao = :escopo, data_ultima_avaliacao_competencia = :data_avaliacao
+                               WHERE id = :id AND excluido_em IS NULL";
                 } else {
-                    $stmt = $pdo->prepare("UPDATE usuarios SET nome = :nome, email = :email, cargo = :cargo, ativo = :ativo, gestor_id=:gestor, escritorio_id=:escritorio WHERE id = :id AND excluido_em IS NULL");
-                    $stmt->execute([
-                        ':nome'   => $nome,
-                        ':email'  => $email,
-                        ':cargo'  => $cargo,
-                        ':ativo'  => $ativo, ':gestor'=>$gestorId, ':escritorio'=>$escritorioPrincipalId,
-                        ':id'     => $id
-                    ]);
+                    $sqlUpd = "UPDATE usuarios 
+                               SET nome = :nome, email = :email, cargo = :cargo, 
+                                   ativo = :ativo, gestor_id = :gestor, escritorio_id = :escritorio,
+                                   status_sgq = :status_sgq, registro_conselho_tipo = :conselho_tipo,
+                                   registro_conselho_numero = :conselho_numero, registro_conselho_validade = :conselho_validade,
+                                   credencial_marinha_numero = :marinha_numero, credencial_marinha_validade = :marinha_validade,
+                                   escopo_habilitacao = :escopo, data_ultima_avaliacao_competencia = :data_avaliacao
+                               WHERE id = :id AND excluido_em IS NULL";
                 }
+                $stmt = $pdo->prepare($sqlUpd);
+                $stmt->execute($paramsUpdate);
+
+                // Auditoria Cadastral do SGQ (ISO 7.5 e 8.2)
+                if (function_exists('sgqRegistrarAuditoriaCadastral')) {
+                    $stmtNovo = $pdo->prepare("SELECT * FROM usuarios WHERE id = :id LIMIT 1");
+                    $stmtNovo->execute([':id' => $id]);
+                    $usuarioNovo = $stmtNovo->fetch(PDO::FETCH_ASSOC);
+                    sgqRegistrarAuditoriaCadastral(
+                        $pdo,
+                        'USUARIO',
+                        $id,
+                        'ALTERACAO',
+                        $usuarioAntigo,
+                        $usuarioNovo,
+                        $motivoAlteracaoSgq ?: 'Atualização cadastral e de credenciais técnicas do usuário.'
+                    );
+                }
+
                 try {
                     $stmtPerfil = $pdo->prepare("INSERT IGNORE INTO usuario_perfis (usuario_id, perfil) VALUES (:usuario_id, :perfil)");
                     $stmtPerfil->execute([':usuario_id' => $id, ':perfil' => $cargo]);
@@ -200,15 +255,53 @@ switch ($action) {
                 // Criar
                 $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
                 $novoUsuarioId = gerarUUID();
-                $stmt = $pdo->prepare("INSERT INTO usuarios (id, nome, email, senha_hash, cargo, ativo, gestor_id, escritorio_id) VALUES (:id, :nome, :email, :senha, :cargo, :ativo, :gestor, :escritorio)");
+                $stmt = $pdo->prepare("
+                    INSERT INTO usuarios (
+                        id, nome, email, senha_hash, cargo, ativo, gestor_id, escritorio_id,
+                        status_sgq, registro_conselho_tipo, registro_conselho_numero, registro_conselho_validade,
+                        credencial_marinha_numero, credencial_marinha_validade, escopo_habilitacao,
+                        data_ultima_avaliacao_competencia
+                    ) VALUES (
+                        :id, :nome, :email, :senha, :cargo, :ativo, :gestor, :escritorio,
+                        :status_sgq, :conselho_tipo, :conselho_numero, :conselho_validade,
+                        :marinha_numero, :marinha_validade, :escopo, :data_avaliacao
+                    )
+                ");
                 $stmt->execute([
-                    ':id'     => $novoUsuarioId,
-                    ':nome'   => $nome,
-                    ':email'  => $email,
-                    ':senha'  => $senhaHash,
-                    ':cargo'  => $cargo,
-                    ':ativo'  => $ativo, ':gestor'=>$gestorId, ':escritorio'=>$escritorioPrincipalId
+                    ':id'                => $novoUsuarioId,
+                    ':nome'              => $nome,
+                    ':email'             => $email,
+                    ':senha'             => $senhaHash,
+                    ':cargo'             => $cargo,
+                    ':ativo'             => $ativo,
+                    ':gestor'            => $gestorId,
+                    ':escritorio'        => $escritorioPrincipalId,
+                    ':status_sgq'        => $statusSgq,
+                    ':conselho_tipo'     => $registroConselhoTipo,
+                    ':conselho_numero'   => $registroConselhoNumero,
+                    ':conselho_validade' => $registroConselhoValidade,
+                    ':marinha_numero'    => $credencialMarinhaNumero,
+                    ':marinha_validade'  => $credencialMarinhaValidade,
+                    ':escopo'            => $escopoHabilitacao,
+                    ':data_avaliacao'    => $dataUltimaAvaliacao,
                 ]);
+
+                // Auditoria Cadastral do SGQ (ISO 7.5 e 8.2)
+                if (function_exists('sgqRegistrarAuditoriaCadastral')) {
+                    $stmtNovo = $pdo->prepare("SELECT * FROM usuarios WHERE id = :id LIMIT 1");
+                    $stmtNovo->execute([':id' => $novoUsuarioId]);
+                    $usuarioCriado = $stmtNovo->fetch(PDO::FETCH_ASSOC);
+                    sgqRegistrarAuditoriaCadastral(
+                        $pdo,
+                        'USUARIO',
+                        $novoUsuarioId,
+                        'CRIACAO',
+                        null,
+                        $usuarioCriado,
+                        'Cadastro inicial do usuário e credenciais técnicas no sistema.'
+                    );
+                }
+
                 try {
                     $stmtPerfil = $pdo->prepare("INSERT IGNORE INTO usuario_perfis (usuario_id, perfil) VALUES (:usuario_id, :perfil)");
                     $stmtPerfil->execute([':usuario_id' => $novoUsuarioId, ':perfil' => $cargo]);

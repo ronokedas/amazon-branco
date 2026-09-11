@@ -3041,7 +3041,7 @@ DROP TABLE IF EXISTS `sgq_auditoria_cadastral`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sgq_auditoria_cadastral` (
   `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `entidade_tipo` enum('CLIENTE','PROPRIETARIO','ARMADOR','DESPACHANTE','EMBARCACAO') COLLATE utf8mb4_general_ci NOT NULL,
+  `entidade_tipo` enum('CLIENTE','PROPRIETARIO','ARMADOR','DESPACHANTE','EMBARCACAO','USUARIO') COLLATE utf8mb4_general_ci NOT NULL,
   `entidade_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
   `acao` enum('CRIACAO','ALTERACAO','INATIVACAO') COLLATE utf8mb4_general_ci NOT NULL,
   `dados_anteriores` json DEFAULT NULL,
@@ -3067,6 +3067,48 @@ CREATE TABLE `sgq_auditoria_cadastral` (
 LOCK TABLES `sgq_auditoria_cadastral` WRITE;
 /*!40000 ALTER TABLE `sgq_auditoria_cadastral` DISABLE KEYS */;
 /*!40000 ALTER TABLE `sgq_auditoria_cadastral` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `sgq_matriz_riscos`
+--
+
+DROP TABLE IF EXISTS `sgq_matriz_riscos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sgq_matriz_riscos` (
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `codigo_risco` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `processo_setor` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `tipo_risco` enum('AMEACA','OPORTUNIDADE') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'AMEACA',
+  `descricao_risco` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `causas` text COLLATE utf8mb4_general_ci,
+  `impacto_consequencias` text COLLATE utf8mb4_general_ci,
+  `probabilidade` tinyint unsigned NOT NULL DEFAULT '3',
+  `impacto` tinyint unsigned NOT NULL DEFAULT '3',
+  `nivel_risco` enum('BAIXO','MEDIO','ALTO','CRITICO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'MEDIO',
+  `acao_mitigacao` text COLLATE utf8mb4_general_ci NOT NULL,
+  `responsavel_nome` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `prazo_revisao` date DEFAULT NULL,
+  `status_tratamento` enum('IDENTIFICADO','EM_MITIGACAO','MITIGADO','RESIDUAL_ACEITO') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'EM_MITIGACAO',
+  `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `codigo_risco` (`codigo_risco`),
+  KEY `idx_risco_processo` (`processo_setor`),
+  KEY `idx_risco_nivel` (`nivel_risco`),
+  KEY `idx_risco_status` (`status_tratamento`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sgq_matriz_riscos`
+--
+
+LOCK TABLES `sgq_matriz_riscos` WRITE;
+/*!40000 ALTER TABLE `sgq_matriz_riscos` DISABLE KEYS */;
+INSERT INTO `sgq_matriz_riscos` VALUES ('c6fb0fb9-adfb-11f1-8a7c-be2fb1f77be2','RSK-2026-001','OperaÃ§Ã£o de Campo','AMEACA','Indisponibilidade de sinal 4G/5G em Ã¡reas fluviais e terminais de carga remotos','Infraestrutura de telecomunicaÃ§Ãµes instÃ¡vel na bacia amazÃ´nica','Atraso no sincronismo de laudos e fotos da vistoria',4,3,'ALTO','UtilizaÃ§Ã£o obrigatÃ³ria do PWA de Campo com suporte a armazenamento local (IndexedDB) e sincronizaÃ§Ã£o resiliente em segundo plano.','Coordenador Operacional','2027-03-11','EM_MITIGACAO','2026-09-11 16:13:51','2026-09-11 16:13:51'),('c6fb15ee-adfb-11f1-8a7c-be2fb1f77be2','RSK-2026-002','CompetÃªncia TÃ©cnica','AMEACA','EscalaÃ§Ã£o de vistoriador com credencial profissional ou da Autoridade MarÃ­tima (DPC) expirada','Falha no acompanhamento tempestivo do calendÃ¡rio de reciclagem','RejeiÃ§Ã£o do laudo pela Capitania dos Portos e nÃ£o conformidade ISO 7.2',2,5,'ALTO','Trava automÃ¡tica de validaÃ§Ã£o no ERP no ato do agendamento contra a data da vistoria com bloqueio e retorno HTTP 400 em caso de tentativa de burla.','ResponsÃ¡vel TÃ©cnico','2027-09-11','MITIGADO','2026-09-11 16:13:51','2026-09-11 16:13:51'),('c6fb1804-adfb-11f1-8a7c-be2fb1f77be2','RSK-2026-003','Controle MetrolÃ³gico','AMEACA','UtilizaÃ§Ã£o de aparelho de mediÃ§Ã£o de espessura de chapeamento com laudo de calibraÃ§Ã£o RBC vencido','Falta de calibraÃ§Ã£o periÃ³dica do transdutor de ultrassom','ImprecisÃ£o na mediÃ§Ã£o de perda de espessura de casco e apontamentos A/S contestados',2,4,'MEDIO','Plano de calibraÃ§Ã£o anual compulsÃ³rio de todos os instrumentos de mediÃ§Ã£o da empresa em laboratÃ³rio RBC credenciado pelo Inmetro.','Gerente da Qualidade','2027-03-11','EM_MITIGACAO','2026-09-11 16:13:51','2026-09-11 16:13:51'),('c6fb1904-adfb-11f1-8a7c-be2fb1f77be2','RSK-2026-004','RegulatÃ³rio / NORMAM','AMEACA','PublicaÃ§Ã£o de nova Portaria da DPC alterando critÃ©rios de salvatagem sem atualizaÃ§Ã£o imediata dos checklists','Descompasso entre o DiÃ¡rio Oficial da UniÃ£o e as rotinas operacionais','EmissÃ£o de relatÃ³rio com base em versÃ£o revogada de NORMAM',3,3,'MEDIO','ReuniÃ£o mensal de alinhamento normativo do corpo tÃ©cnico e revisÃ£o imediata dos blocos de checklist no ERP.','ResponsÃ¡vel TÃ©cnico','2026-12-11','EM_MITIGACAO','2026-09-11 16:13:51','2026-09-11 16:13:51'),('c6fb1bb3-adfb-11f1-8a7c-be2fb1f77be2','RSK-2026-005','Comercial e EstratÃ©gico','OPORTUNIDADE','Aumento de demanda por certificaÃ§Ã£o de comboios de empurradores fluviais de grande porte no Arco Norte','Crescimento do escoamento de safras agrÃ­colas por hidrovias','ExpansÃ£o da receita e consolidaÃ§Ã£o da lideranÃ§a tÃ©cnica regional',4,4,'ALTO','Treinamento e habilitaÃ§Ã£o do corpo de engenheiros navais para vistorias em comboios integrados e balsas oceÃ¢nicas.','Diretoria Executiva','2027-03-11','EM_MITIGACAO','2026-09-11 16:13:51','2026-09-11 16:13:51');
+/*!40000 ALTER TABLE `sgq_matriz_riscos` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -3643,4 +3685,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-11 15:32:37
+-- Dump completed on 2026-09-11 16:23:25

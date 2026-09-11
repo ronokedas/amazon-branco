@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/sgq.php';
 
 verificar_sessao();
 $cargo = getCargo();
@@ -226,11 +227,24 @@ switch ($action) {
                     $chequeCompetencia = vistoriadorElegivelParaAgendamento($pdo, $vistoriador_id, $data_vistoria, $tipo_vistoria);
                     if (!$chequeCompetencia['elegivel']) {
                         $errosCampos['vistoriador_id'] = $chequeCompetencia['motivo'];
+                        $isApi = isAjax() || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') || str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') || isset($_GET['api']);
+                        if ($isApi) {
+                            http_response_code(400);
+                            header('Content-Type: application/json; charset=utf-8');
+                            echo json_encode([
+                                'sucesso' => false,
+                                'codigo' => 'COMPETENCIA_SGQ_INVALIDA',
+                                'erro' => 'O profissional não está qualificado para a ISO 9001 / NORMAM.',
+                                'mensagem' => $chequeCompetencia['motivo'],
+                                'detalhes' => $chequeCompetencia,
+                            ], JSON_UNESCAPED_UNICODE);
+                            exit;
+                        }
                     }
                 }
             }
             if (!empty($errosCampos)) {
-                setMensagem('error', 'Revise os campos destacados e tente novamente.', $errosCampos);
+                setMensagem('error', 'Bloqueio de Competência SGQ (ISO 7.2 / NORMAM): ' . implode(' ', $errosCampos), $errosCampos);
                 redirecionar(APP_URL . 'agendamentos/form');
             }
 
@@ -440,12 +454,25 @@ switch ($action) {
                     $chequeCompetencia = vistoriadorElegivelParaAgendamento($pdo, $vistoriador_id, $data_vistoria, $tipo_vistoria);
                     if (!$chequeCompetencia['elegivel']) {
                         $errosCampos['vistoriador_id'] = $chequeCompetencia['motivo'];
+                        $isApi = isAjax() || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') || str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') || isset($_GET['api']);
+                        if ($isApi) {
+                            http_response_code(400);
+                            header('Content-Type: application/json; charset=utf-8');
+                            echo json_encode([
+                                'sucesso' => false,
+                                'codigo' => 'COMPETENCIA_SGQ_INVALIDA',
+                                'erro' => 'O profissional não está qualificado para a ISO 9001 / NORMAM.',
+                                'mensagem' => $chequeCompetencia['motivo'],
+                                'detalhes' => $chequeCompetencia,
+                            ], JSON_UNESCAPED_UNICODE);
+                            exit;
+                        }
                     }
                 }
             }
 
             if (!empty($errosCampos)) {
-                setMensagem('error', 'Revise os campos destacados e tente novamente.', $errosCampos);
+                setMensagem('error', 'Bloqueio de Competência SGQ (ISO 7.2 / NORMAM): ' . implode(' ', $errosCampos), $errosCampos);
                 $destino = !empty($id)
                     ? $destinoFormulario
                     : APP_URL . 'agendamentos';
