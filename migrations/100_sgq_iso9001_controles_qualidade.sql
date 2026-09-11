@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS sgq_auditoria_cadastral (
     KEY idx_auditoria_entidade (entidade_tipo, entidade_id),
     KEY idx_auditoria_criado_em (criado_em),
     KEY idx_auditoria_usuario (usuario_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- 3. Gestao de Nao Conformidades (RNC - ISO 8.7 e ISO 10.2)
 CREATE TABLE IF NOT EXISTS sgq_nao_conformidades (
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS sgq_nao_conformidades (
     KEY idx_rnc_embarcacao (embarcacao_id),
     KEY idx_rnc_status (status_ciclo_vida),
     KEY idx_rnc_criado_em (criado_em)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- 4. Planos de Acao Corretiva 5W2H (ISO 10.2)
 CREATE TABLE IF NOT EXISTS sgq_planos_acao (
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS sgq_planos_acao (
     KEY idx_plano_rnc (nao_conformidade_id),
     KEY idx_plano_status (status_acao),
     CONSTRAINT fk_plano_rnc FOREIGN KEY (nao_conformidade_id) REFERENCES sgq_nao_conformidades (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- 5. Pesquisa de Satisfacao do Cliente vinculada a Ordem de Servico (ISO 9.1.2)
 CREATE TABLE IF NOT EXISTS sgq_satisfacao_clientes (
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS sgq_satisfacao_clientes (
     data_avaliacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_satisfacao_cliente (cliente_id),
     KEY idx_satisfacao_data (data_avaliacao)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- 6. Registrar sequencial RNC se a tabela sequenciais_documentos existir
 INSERT INTO sequenciais_documentos (tipo_documento, ano, ultimo_numero)
@@ -134,3 +134,11 @@ SELECT 'RNC', YEAR(CURRENT_DATE), 0
 WHERE NOT EXISTS (
     SELECT 1 FROM sequenciais_documentos WHERE tipo_documento = 'RNC' AND ano = YEAR(CURRENT_DATE)
 );
+
+-- 7. Assegurar compatibilidade de Collation utf8mb4_general_ci em tabelas existentes
+SET FOREIGN_KEY_CHECKS = 0;
+ALTER TABLE sgq_auditoria_cadastral CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+ALTER TABLE sgq_nao_conformidades CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+ALTER TABLE sgq_planos_acao CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+ALTER TABLE sgq_satisfacao_clientes CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+SET FOREIGN_KEY_CHECKS = 1;

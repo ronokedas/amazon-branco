@@ -3037,24 +3037,24 @@ DROP TABLE IF EXISTS `sgq_auditoria_cadastral`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sgq_auditoria_cadastral` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `entidade_tipo` enum('CLIENTE','PROPRIETARIO','ARMADOR','DESPACHANTE','EMBARCACAO') COLLATE utf8mb4_unicode_ci NOT NULL,
-  `entidade_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `acao` enum('CRIACAO','ALTERACAO','INATIVACAO') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `entidade_tipo` enum('CLIENTE','PROPRIETARIO','ARMADOR','DESPACHANTE','EMBARCACAO') COLLATE utf8mb4_general_ci NOT NULL,
+  `entidade_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `acao` enum('CRIACAO','ALTERACAO','INATIVACAO') COLLATE utf8mb4_general_ci NOT NULL,
   `dados_anteriores` json DEFAULT NULL,
   `dados_posteriores` json DEFAULT NULL,
   `campos_alterados` json DEFAULT NULL,
-  `motivo_justificativa` text COLLATE utf8mb4_unicode_ci,
-  `usuario_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `usuario_nome` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `ip_origem` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `user_agent` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `motivo_justificativa` text COLLATE utf8mb4_general_ci,
+  `usuario_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `usuario_nome` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ip_origem` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `user_agent` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_auditoria_entidade` (`entidade_tipo`,`entidade_id`),
   KEY `idx_auditoria_criado_em` (`criado_em`),
   KEY `idx_auditoria_usuario` (`usuario_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3074,25 +3074,25 @@ DROP TABLE IF EXISTS `sgq_nao_conformidades`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sgq_nao_conformidades` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `numero_rnc` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `origem` enum('AUDITORIA_INTERNA_RT','INSPECAO_CAMPO','RECLAMACAO_CLIENTE','AUDITORIA_EXTERNA') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'AUDITORIA_INTERNA_RT',
-  `ordem_servico_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `vistoria_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `embarcacao_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `cliente_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `classificacao_falha` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `severidade` enum('BAIXA','MEDIA','CRITICA_IMPEDITIVA') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'MEDIA',
-  `titulo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `descricao_detalhada` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `analise_causa_raiz` text COLLATE utf8mb4_unicode_ci,
-  `status_ciclo_vida` enum('ABERTA','EM_ANALISE_CAUSA','PLANO_ACAO_DEFINIDO','EM_EXECUCAO','AGUARDANDO_EFICACIA','ENCERRADA_EFICAZ','REABERTA') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ABERTA',
-  `responsavel_abertura_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `responsavel_abertura_nome` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `numero_rnc` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `origem` enum('AUDITORIA_INTERNA_RT','INSPECAO_CAMPO','RECLAMACAO_CLIENTE','AUDITORIA_EXTERNA') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'AUDITORIA_INTERNA_RT',
+  `ordem_servico_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vistoria_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `classificacao_falha` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `severidade` enum('BAIXA','MEDIA','CRITICA_IMPEDITIVA') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'MEDIA',
+  `titulo` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `descricao_detalhada` text COLLATE utf8mb4_general_ci NOT NULL,
+  `analise_causa_raiz` text COLLATE utf8mb4_general_ci,
+  `status_ciclo_vida` enum('ABERTA','EM_ANALISE_CAUSA','PLANO_ACAO_DEFINIDO','EM_EXECUCAO','AGUARDANDO_EFICACIA','ENCERRADA_EFICAZ','REABERTA') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ABERTA',
+  `responsavel_abertura_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `responsavel_abertura_nome` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `data_identificacao` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `data_conclusao_prevista` date DEFAULT NULL,
   `encerrada_em` datetime DEFAULT NULL,
-  `encerrada_por` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `encerrada_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -3102,7 +3102,7 @@ CREATE TABLE `sgq_nao_conformidades` (
   KEY `idx_rnc_embarcacao` (`embarcacao_id`),
   KEY `idx_rnc_status` (`status_ciclo_vida`),
   KEY `idx_rnc_criado_em` (`criado_em`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3122,18 +3122,18 @@ DROP TABLE IF EXISTS `sgq_planos_acao`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sgq_planos_acao` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `nao_conformidade_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `o_que_fazer_what` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `por_que_fazer_why` text COLLATE utf8mb4_unicode_ci,
-  `onde_fazer_where` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `quem_fara_who` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `nao_conformidade_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `o_que_fazer_what` text COLLATE utf8mb4_general_ci NOT NULL,
+  `por_que_fazer_why` text COLLATE utf8mb4_general_ci,
+  `onde_fazer_where` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `quem_fara_who` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
   `quando_fara_when` date NOT NULL,
-  `como_fazer_how` text COLLATE utf8mb4_unicode_ci,
+  `como_fazer_how` text COLLATE utf8mb4_general_ci,
   `quanto_custa_how_much` decimal(12,2) NOT NULL DEFAULT '0.00',
-  `status_acao` enum('PENDENTE','EM_ANDAMENTO','CONCLUIDA','CANCELADA') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PENDENTE',
-  `evidencia_cumprimento` text COLLATE utf8mb4_unicode_ci,
-  `eficacia_aprovada_por` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status_acao` enum('PENDENTE','EM_ANDAMENTO','CONCLUIDA','CANCELADA') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PENDENTE',
+  `evidencia_cumprimento` text COLLATE utf8mb4_general_ci,
+  `eficacia_aprovada_por` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `eficacia_data` datetime DEFAULT NULL,
   `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -3141,7 +3141,7 @@ CREATE TABLE `sgq_planos_acao` (
   KEY `idx_plano_rnc` (`nao_conformidade_id`),
   KEY `idx_plano_status` (`status_acao`),
   CONSTRAINT `fk_plano_rnc` FOREIGN KEY (`nao_conformidade_id`) REFERENCES `sgq_nao_conformidades` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3161,25 +3161,25 @@ DROP TABLE IF EXISTS `sgq_satisfacao_clientes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sgq_satisfacao_clientes` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `ordem_servico_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `cliente_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `embarcacao_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `documento_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `documento_tipo` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `ordem_servico_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `cliente_id` char(36) COLLATE utf8mb4_general_ci NOT NULL,
+  `embarcacao_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `documento_id` char(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `documento_tipo` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `nota_atendimento_comercial` tinyint unsigned NOT NULL,
   `nota_qualidade_tecnica` tinyint unsigned NOT NULL,
   `nota_cumprimento_prazo` tinyint unsigned NOT NULL,
   `nota_nps_geral` tinyint unsigned NOT NULL,
-  `comentario_elogio_critica` text COLLATE utf8mb4_unicode_ci,
-  `dispositivo_acesso` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PORTAL_WEB',
-  `ip_origem` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `comentario_elogio_critica` text COLLATE utf8mb4_general_ci,
+  `dispositivo_acesso` varchar(50) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PORTAL_WEB',
+  `ip_origem` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `data_avaliacao` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ordem_servico_id` (`ordem_servico_id`),
   KEY `idx_satisfacao_cliente` (`cliente_id`),
   KEY `idx_satisfacao_data` (`data_avaliacao`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3640,4 +3640,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-11 14:54:35
+-- Dump completed on 2026-09-11 15:02:14
