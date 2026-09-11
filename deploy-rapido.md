@@ -104,7 +104,90 @@ cd /opt/sistema-amazon && sudo chown -R "$USER":"$USER" . && git fetch origin ma
 
 ---
 
-## 🐧 Guia Especial: Configuração Inicial em VPS com AlmaLinux (HostGator / RHEL)
+## 🚀 Guia de Instalação do Zero: Nova VPS com Ubuntu 22.04 LTS (HostGator - Recomendado)
+
+O **Ubuntu 22.04 LTS** é a melhor escolha possível para o seu ERP: é o sistema operacional mais estável, padronizado e rápido de configurar para Docker, sem necessidade de lidar com bloqueios de SELinux.
+
+Se você contratou uma VPS nova na **HostGator** com **Ubuntu 22.04 LTS** (sistema limpo e sem nada instalado), siga este passo a passo:
+
+### 1. Acessar a VPS via SSH e Atualizar o Sistema
+No seu terminal (PowerShell, PuTTY ou terminal Linux):
+```bash
+ssh root@IP_DA_SUA_VPS
+```
+
+Atualize os pacotes do sistema e instale utilitários essenciais:
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git curl ufw ca-certificates gnupg
+```
+
+---
+
+### 2. Instalar o Docker e Docker Compose Oficial
+No Ubuntu, a instalação recomendada pela Docker é direta via script oficial:
+```bash
+# Baixa e instala o Docker Engine + plugin Docker Compose
+curl -fsSL https://get.docker.com | sudo sh
+
+# Iniciar o serviço e habilitar para iniciar automaticamente no boot
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Conferir as versões instaladas
+docker --version
+docker compose version
+```
+
+---
+
+### 3. Liberar as Portas no Firewall do Ubuntu (`ufw`)
+Configure o firewall do Ubuntu para liberar o SSH e as portas do sistema:
+```bash
+# Liberar porta de acesso SSH (imprescindível para não perder a conexão)
+sudo ufw allow OpenSSH
+
+# Liberar portas Web do sistema e phpMyAdmin
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 8082/tcp
+sudo ufw allow 8083/tcp
+
+# Ativar o firewall
+sudo ufw --force enable
+sudo ufw status
+```
+
+---
+
+### 4. Baixar o Sistema do GitHub e Subir os Containers
+```bash
+# 1. Acessar a pasta /opt e clonar o repositório
+cd /opt
+sudo git clone https://github.com/ronokedas/amazon-branco.git sistema-amazon
+cd /opt/sistema-amazon
+
+# 2. Conceder permissão ao seu usuário na pasta
+sudo chown -R "$USER":"$USER" /opt/sistema-amazon
+
+# 3. Subir todos os containers pela primeira vez (o banco db.sql será importado automaticamente)
+sudo docker compose up -d --build
+
+# 4. Ajustar permissões para pastas de uploads, laudos e sessões
+sudo chown -R www-data:www-data storage uploads logs temp_pdf tmp
+sudo chmod -R 775 storage uploads logs temp_pdf tmp
+
+# 5. Conferir se todos os containers subiram saudáveis
+sudo docker compose ps
+```
+
+Pronto! Seu sistema já estará disponível no navegador:
+* **Sistema ERP:** `http://IP_DA_SUA_VPS:8082`
+* **phpMyAdmin:** `http://IP_DA_SUA_VPS:8083`
+
+---
+
+## 🐧 Guia Alternativo: Configuração Inicial em VPS com AlmaLinux (RHEL)
 
 Se você contratou uma VPS nova na **HostGator** com **AlmaLinux** (sistema limpo, recém-instalado e sem nada prévio), siga este roteiro único do zero para deixar a VPS pronta e o sistema rodando:
 
