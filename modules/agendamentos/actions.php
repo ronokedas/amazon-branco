@@ -221,6 +221,13 @@ switch ($action) {
             $errosCampos = validarCamposAgendamento($data_vistoria, $embarcacao_id, $cliente_id, $tipo_vistoria);
             if (empty($vistoriador_id)) {
                 $errosCampos['vistoriador_id'] = 'Selecione o vistoriador responsável.';
+            } else {
+                if (function_exists('vistoriadorElegivelParaAgendamento')) {
+                    $chequeCompetencia = vistoriadorElegivelParaAgendamento($pdo, $vistoriador_id, $data_vistoria, $tipo_vistoria);
+                    if (!$chequeCompetencia['elegivel']) {
+                        $errosCampos['vistoriador_id'] = $chequeCompetencia['motivo'];
+                    }
+                }
             }
             if (!empty($errosCampos)) {
                 setMensagem('error', 'Revise os campos destacados e tente novamente.', $errosCampos);
@@ -428,6 +435,13 @@ switch ($action) {
             }
             if (empty($vistoriador_id)) {
                 $errosCampos['vistoriador_id'] = 'Selecione o vistoriador responsável.';
+            } else {
+                if (function_exists('vistoriadorElegivelParaAgendamento')) {
+                    $chequeCompetencia = vistoriadorElegivelParaAgendamento($pdo, $vistoriador_id, $data_vistoria, $tipo_vistoria);
+                    if (!$chequeCompetencia['elegivel']) {
+                        $errosCampos['vistoriador_id'] = $chequeCompetencia['motivo'];
+                    }
+                }
             }
 
             if (!empty($errosCampos)) {

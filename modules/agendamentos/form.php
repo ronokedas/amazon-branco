@@ -144,7 +144,7 @@ try {
 
     $vistoriadores = [];
     if ($cargo === 'ADMIN' || $cargo === 'VENDEDOR') {
-        $vistoriadores = $pdo->query("SELECT id, nome FROM usuarios WHERE ativo = 1 AND cargo = 'VISTORIADOR' ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $vistoriadores = $pdo->query("SELECT id, nome, status_sgq, credencial_marinha_numero, credencial_marinha_validade, registro_conselho_tipo, registro_conselho_validade FROM usuarios WHERE ativo = 1 AND cargo = 'VISTORIADOR' ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
     }
 
     $servicos = $pdo->query("SELECT id, nome FROM servicos WHERE ativo = 1 ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -324,9 +324,18 @@ $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['
                             <select id="vistoriador_id" name="vistoriador_id" required>
                                 <option value="">-- Selecione o vistoriador --</option>
                                 <?php foreach ($vistoriadores as $v): ?>
+                                    <?php
+                                    $statusSgq = $v['status_sgq'] ?? 'QUALIFICADO';
+                                    $marinhaVal = !empty($v['credencial_marinha_validade']) ? date('d/m/Y', strtotime($v['credencial_marinha_validade'])) : '';
+                                    $vencido = !empty($v['credencial_marinha_validade']) && $v['credencial_marinha_validade'] < date('Y-m-d');
+                                    $tagSgq = $vencido
+                                        ? ' [INAPTO - Credencial Marinha Vencida]'
+                                        : ($statusSgq !== 'QUALIFICADO' ? " [SGQ: {$statusSgq}]" : ($marinhaVal ? " (Qualificado - Marinha: {$marinhaVal})" : ' (Qualificado)'));
+                                    ?>
                                     <option value="<?php echo h($v['id']); ?>"
+                                            <?php echo $vencido ? 'style="color:#b42318;font-weight:600;"' : ''; ?>
                                             <?php echo $agendamento['vistoriador_id'] === $v['id'] ? 'selected' : ''; ?>>
-                                        <?php echo h($v['nome']); ?>
+                                        <?php echo h($v['nome'] . $tagSgq); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>

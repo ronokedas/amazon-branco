@@ -1554,6 +1554,11 @@ function encaminharRelatorioParaRetornoAS(
         throw new RuntimeException('O relatorio foi alterado por outra operacao.');
     }
 
+    // SGQ ISO 8.7 e 10.2: Abertura automatica de RNC vinculada a OS
+    if (function_exists('sgqGerarRncAutomaticaPorRetornoAS')) {
+        sgqGerarRncAutomaticaPorRetornoAS($pdo, $id, $usuarioId, $observacao);
+    }
+
     return criarPendenciaRetornoAS($pdo, $id, $usuarioId);
 }
 
@@ -1973,3 +1978,6 @@ function blocosComExigenciasRelatorioPdf(string $tipoVistoria, array $todos, arr
     }
     return $resultado;
 }
+
+// Sistema de Gestão da Qualidade (ISO 9001:2015 & NORMAM)
+require_once __DIR__ . '/sgq.php';

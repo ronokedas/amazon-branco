@@ -252,6 +252,11 @@ switch ($action) {
 
         try {
             if ($isEdicao) {
+                // Obter dados anteriores para auditoria
+                $stmtAnt = $pdo->prepare("SELECT * FROM embarcacoes WHERE id = :id LIMIT 1");
+                $stmtAnt->execute([':id' => $id]);
+                $dadosAntigos = $stmtAnt->fetch(PDO::FETCH_ASSOC) ?: [];
+
                 // Atualizar
                 $sql = "UPDATE embarcacoes SET 
                     nome = :nome, 
@@ -316,19 +321,30 @@ switch ($action) {
                 $stmt = $pdo->prepare($sql);
                 $dados[':id'] = $id;
                 $stmt->execute($dados);
+
+                if (function_exists('sgqRegistrarAuditoriaCadastral')) {
+                    sgqRegistrarAuditoriaCadastral($pdo, 'EMBARCACAO', $id, 'ALTERACAO', $dadosAntigos, $dados, $_POST['motivo_alteracao'] ?? 'Edição de cadastro técnico da embarcação');
+                }
+
                 setMensagem('success', 'Embarcacao atualizada com sucesso!');
             } else {
                 // Criar
+                $novoId = gerarUUID();
                 $sql = "INSERT INTO embarcacoes (
                     id, nome, registro, tipo_embarcacao_id, tipo_embarcacao, cnbl_tipo_embarcacao, ano, porto_inscricao, numero_inscricao, indicativo_chamada, observacoes, possui_propulsao, fabricante_motor, modelo_motor, numero_motor, potencia_kw, material_casco, tipo_navegacao, area_navegacao, cnbl_area_navegacao, tipo_servico, autorizado_carga, numero_tripulantes, numero_passageiros_n1, numero_passageiros_n2, obs_passageiros, acessibilidade, comprimento_total, comprimento_casco, comprimento_lpp, pontal_moldado, boca_moldada, boca_maxima, arqueacao_bruta, arqueacao_liquida, metodo_arqueacao, cnarq_data_quilha, cnarq_calado_moldado_m, cnarq_espacos_incluidos_ab, cnarq_espacos_incluidos_al, cnarq_espacos_excluidos_m3, cnarq_data_local_arqueacao_original, cnarq_data_local_ultima_rearqueacao, local_construcao, numero_casco, porte_bruto, estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco, borda_livre_mm, borda_livre_tipo, calado_maximo_m, aresta_superior_linha_conves, centro_disco_situado, acrescimo_agua_salgada, dist_linha_conves_bico_proa, dist_linha_conves_abaixo_disco, marca_linha_carga_area1, marca_linha_carga_area2, criado_por
                 ) VALUES (
                     :id, :nome, :registro, :tipo_embarcacao_id, :tipo_embarcacao, :cnbl_tipo_embarcacao, :ano, :porto_inscricao, :numero_inscricao, :indicativo_chamada, :observacoes, :possui_propulsao, :fabricante_motor, :modelo_motor, :numero_motor, :potencia_kw, :material_casco, :tipo_navegacao, :area_navegacao, :cnbl_area_navegacao, :tipo_servico, :autorizado_carga, :numero_tripulantes, :numero_passageiros_n1, :numero_passageiros_n2, :obs_passageiros, :acessibilidade, :comprimento_total, :comprimento_casco, :comprimento_lpp, :pontal_moldado, :boca_moldada, :boca_maxima, :arqueacao_bruta, :arqueacao_liquida, :metodo_arqueacao, :cnarq_data_quilha, :cnarq_calado_moldado_m, :cnarq_espacos_incluidos_ab, :cnarq_espacos_incluidos_al, :cnarq_espacos_excluidos_m3, :cnarq_data_local_arqueacao_original, :cnarq_data_local_ultima_rearqueacao, :local_construcao, :numero_casco, :porte_bruto, :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco, :borda_livre_mm, :borda_livre_tipo, :calado_maximo_m, :aresta_superior_linha_conves, :centro_disco_situado, :acrescimo_agua_salgada, :dist_linha_conves_bico_proa, :dist_linha_conves_abaixo_disco, :marca_linha_carga_area1, :marca_linha_carga_area2, :criado_por
                 )";
                 $stmt = $pdo->prepare($sql);
-                $dados[':id'] = gerarUUID();
+                $dados[':id'] = $novoId;
                 $dados[':criado_por'] = $_SESSION['usuario_id'];
                 $stmt->execute($dados);
-                setMensagem('success', 'Embarcacao criada com sucesso!');
+
+                if (function_exists('sgqRegistrarAuditoriaCadastral')) {
+                    sgqRegistrarAuditoriaCadastral($pdo, 'EMBARCACAO', $novoId, 'CRIACAO', null, $dados, 'Cadastro inicial da embarcação');
+                }
+
+                setMensagem('success', 'Embarcacao cadastrada com sucesso!');
             }
         } catch (Exception $e) {
             error_log('Erro ao salvar embarcacao: ' . $e->getMessage());
@@ -349,7 +365,7 @@ switch ($action) {
         }
 
         try {
-            $stmt = $pdo->prepare("SELECT id, nome FROM embarcacoes WHERE id = :id AND ativo = 1");
+            $stmt = $pdo->prepare("SELECT * FROM embarcacoes WHERE id = :id AND ativo = 1");
             $stmt->execute([':id' => $id]);
             $embarcacao = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -360,6 +376,10 @@ switch ($action) {
 
             $stmt = $pdo->prepare("UPDATE embarcacoes SET ativo = 0 WHERE id = :id");
             $stmt->execute([':id' => $id]);
+
+            if (function_exists('sgqRegistrarAuditoriaCadastral')) {
+                sgqRegistrarAuditoriaCadastral($pdo, 'EMBARCACAO', $id, 'INATIVACAO', $embarcacao, null, 'Inativação de cadastro da embarcação');
+            }
 
             setMensagem('success', 'Embarcacao "' . $embarcacao['nome'] . '" desativada com sucesso!');
         } catch (Exception $e) {

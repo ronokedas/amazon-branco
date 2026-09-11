@@ -85,6 +85,13 @@ switch ($action) {
 
             sincronizarClienteEmbarcacoes($pdo, $cliente_id, is_array($embarcacoes_ids) ? $embarcacoes_ids : [], $_SESSION['usuario_id'] ?? null);
 
+            if (function_exists('sgqRegistrarAuditoriaCadastral')) {
+                sgqRegistrarAuditoriaCadastral($pdo, 'CLIENTE', $cliente_id, 'CRIACAO', null, [
+                    'nome' => $nome, 'tipo_pessoa' => $tipo_pessoa, 'cpf_cnpj' => $cpf_cnpj,
+                    'perfil' => $perfil, 'telefone' => $telefone, 'email' => $email, 'endereco' => $endereco
+                ], 'Cadastro inicial de cliente/proprietário');
+            }
+
             $pdo->commit();
 
             log_atividade('cliente_criado', "Cliente '{$nome}' criado.");
@@ -121,6 +128,10 @@ switch ($action) {
                 redirecionar(APP_URL . 'clientes');
             }
 
+            $stmtAnt = $pdo->prepare("SELECT * FROM clientes WHERE id = :id LIMIT 1");
+            $stmtAnt->execute([':id' => $id]);
+            $dadosAntigos = $stmtAnt->fetch(PDO::FETCH_ASSOC) ?: [];
+
             $pdo->beginTransaction();
 
             $stmt = $pdo->prepare("
@@ -134,7 +145,7 @@ switch ($action) {
                     endereco = :endereco
                 WHERE id = :id AND status = 'ATIVO'
             ");
-            $stmt->execute([
+            $dadosNovos = [
                 ':nome'       => $nome,
                 ':tipo_pessoa' => $tipo_pessoa,
                 ':cpf_cnpj'   => $cpf_cnpj ?: null,
@@ -143,10 +154,15 @@ switch ($action) {
                 ':email'      => $email ?: null,
                 ':endereco'   => $endereco ?: null,
                 ':id'         => $id,
-            ]);
+            ];
+            $stmt->execute($dadosNovos);
 
             sincronizarClienteEmbarcacoes($pdo, $id, is_array($embarcacoes_ids) ? $embarcacoes_ids : [], $_SESSION['usuario_id'] ?? null);
             sincronizarLoginPortalCliente($pdo, $id);
+
+            if (function_exists('sgqRegistrarAuditoriaCadastral')) {
+                sgqRegistrarAuditoriaCadastral($pdo, 'CLIENTE', $id, 'ALTERACAO', $dadosAntigos, $dadosNovos, $_POST['motivo_alteracao'] ?? 'Atualização de dados cadastrais do cliente');
+            }
 
             $pdo->commit();
 
@@ -176,8 +192,16 @@ switch ($action) {
                 redirecionar(APP_URL . 'clientes');
             }
 
+            $stmtAnt = $pdo->prepare("SELECT * FROM clientes WHERE id = :id LIMIT 1");
+            $stmtAnt->execute([':id' => $id]);
+            $clienteAntigo = $stmtAnt->fetch(PDO::FETCH_ASSOC);
+
             $stmt = $pdo->prepare("UPDATE clientes SET status = 'INATIVO' WHERE id = :id");
             $stmt->execute([':id' => $id]);
+
+            if (function_exists('sgqRegistrarAuditoriaCadastral') && $clienteAntigo) {
+                sgqRegistrarAuditoriaCadastral($pdo, 'CLIENTE', $id, 'INATIVACAO', $clienteAntigo, null, 'Inativação de cadastro de cliente');
+            }
 
             log_atividade('cliente_desativado', "Cliente ID: {$id} desativado.");
             setMensagem('success', 'Cliente desativado com sucesso!');

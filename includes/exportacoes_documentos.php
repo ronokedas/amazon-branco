@@ -114,11 +114,20 @@ function exportacaoGerarAtual(PDO $pdo, string $tipo, array $documento): array {
     exportacaoGerarPdfIsolado($tipo,$documento['id'],$destino);
     $id = gerarUUID();
     $hash = hash_file('sha256',$destino);
-    $pdo->prepare("INSERT INTO documento_artefatos (id,documento_tipo,documento_id,versao,status_documento,caminho_arquivo,nome_arquivo,tamanho_bytes,sha256)
-        VALUES (:id,:tipo,:documento,:versao,:status,:caminho,:nome,:tamanho,:hash)")
-        ->execute([':id'=>$id,':tipo'=>$tipo,':documento'=>$documento['id'],':versao'=>$versao,':status'=>$status,
+
+    // SGQ ISO 8.5.2: Vincular versão documental à Ordem de Serviço (OS)
+    $osId = null;
+    if ($tipo === 'RELATORIO') {
+        $stmtOs = $pdo->prepare("SELECT os.id FROM ordens_servico os JOIN vistorias v ON v.agendamento_id = os.agendamento_id WHERE v.id = :v_id LIMIT 1");
+        $stmtOs->execute([':v_id' => $documento['id']]);
+        $osId = $stmtOs->fetchColumn() ?: null;
+    }
+
+    $pdo->prepare("INSERT INTO documento_artefatos (id,documento_tipo,documento_id,ordem_servico_id,versao,status_documento,caminho_arquivo,nome_arquivo,tamanho_bytes,sha256)
+        VALUES (:id,:tipo,:documento,:os_id,:versao,:status,:caminho,:nome,:tamanho,:hash)")
+        ->execute([':id'=>$id,':tipo'=>$tipo,':documento'=>$documento['id'],':os_id'=>$osId,':versao'=>$versao,':status'=>$status,
             ':caminho'=>$relDir.$nome,':nome'=>$nome,':tamanho'=>filesize($destino),':hash'=>$hash]);
-    return ['id'=>$id,'versao'=>$versao,'status_documento'=>$status,'caminho_arquivo'=>$relDir.$nome,'nome_arquivo'=>$nome,
+    return ['id'=>$id,'ordem_servico_id'=>$osId,'versao'=>$versao,'status_documento'=>$status,'caminho_arquivo'=>$relDir.$nome,'nome_arquivo'=>$nome,
         'tamanho_bytes'=>filesize($destino),'sha256'=>$hash];
 }
 

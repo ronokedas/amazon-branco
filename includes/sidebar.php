@@ -45,6 +45,12 @@ if (!function_exists('isActive')) {
         <?php if (podeAcessar('emails')): ?><a href="<?= APP_URL ?>emails" class="nav-item<?= isActive('emails',$pagina_atual) ?>" data-label="E-mails"><i class="fa-solid fa-paper-plane"></i><span class="nav-text">E-mails</span></a><?php endif; ?>
         <?php if (podeAcessar('portal_clientes')): ?><a href="<?= APP_URL ?>portal-clientes" class="nav-item<?= isActive('portal-clientes',$pagina_atual) ?>" data-label="Portal do Cliente"><i class="fa-solid fa-user-shield"></i><span class="nav-text">Portal do Cliente</span></a><?php endif; ?>
         <a href="<?= APP_URL ?>feedback" class="nav-item<?= strpos($pagina_atual,'feedback')===0?' active':'' ?>" data-label="Central de Feedback"><i class="fa-regular fa-comments"></i><span class="nav-text">Feedback</span></a>
+
+        <div class="nav-group-label">QUALIDADE (SGQ)</div>
+        <a href="<?= APP_URL ?>sgq/indicadores" class="nav-item<?= strpos($pagina_atual,'sgq/indicadores')===0?' active':'' ?>" data-label="Indicadores SGQ"><i class="fa-solid fa-chart-pie"></i><span class="nav-text">Indicadores SGQ</span></a>
+        <a href="<?= APP_URL ?>sgq/nao-conformidades" class="nav-item<?= strpos($pagina_atual,'sgq/nao-conformidades')===0?' active':'' ?>" data-label="Não Conformidades"><i class="fa-solid fa-triangle-exclamation"></i><span class="nav-text">Não Conformidades (RNC)</span></a>
+        <a href="<?= APP_URL ?>sgq/auditoria" class="nav-item<?= strpos($pagina_atual,'sgq/auditoria')===0?' active':'' ?>" data-label="Trilha de Auditoria"><i class="fa-solid fa-clock-rotate-left"></i><span class="nav-text">Trilha de Auditoria</span></a>
+
         <?php if (podeAcessar('usuarios')): ?><a href="<?= APP_URL ?>usuarios" class="nav-item<?= isActive('usuarios',$pagina_atual) ?>" data-label="Usuários"><i class="fa-solid fa-users-gear"></i><span class="nav-text">Usuários</span></a><?php endif; ?>
         <?php if (podeAcessar('configuracoes')): ?><a href="<?= APP_URL ?>configuracoes" class="nav-item<?= isActive('configuracoes',$pagina_atual) ?>" data-label="Configurações"><i class="fa-solid fa-sliders"></i><span class="nav-text">Configurações</span></a><?php endif; ?>
     </nav>

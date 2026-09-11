@@ -258,6 +258,15 @@ switch ($action) {
             foreach ($dadosServicos as $embData) {
                 $emb_id = $embData['embarcacao_id'] ?? '';
                 if (empty($emb_id)) continue;
+
+                // SGQ ISO 8.2 & NORMAM: Validação de Prontidão Técnica da Embarcação
+                if (function_exists('embarcacaoValidarProntidaoComercial')) {
+                    $validacaoTecnica = embarcacaoValidarProntidaoComercial($pdo, $emb_id);
+                    if (!$validacaoTecnica['valido']) {
+                        throw new Exception($validacaoTecnica['mensagem']);
+                    }
+                }
+
                 $embarcacoes_ids[] = $emb_id;
 
                 $servicos = $embData['servicos'] ?? [];
