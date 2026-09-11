@@ -4,15 +4,18 @@
  * Arquivo de configuracao principal - Conexao MySQL e constantes
  */
 
-// Forcar reload dos arquivos (desabilitar OPcache)
-ini_set('opcache.enable', '0');
-ini_set('opcache.enable_cli', '0');
-
 // Erros: registrar sempre, mas so exibir quando APP_DEBUG estiver habilitado.
 define('APP_DEBUG', filter_var(getenv('APP_DEBUG') ?: '0', FILTER_VALIDATE_BOOL));
 error_reporting(E_ALL);
 ini_set('display_errors', APP_DEBUG ? '1' : '0');
 ini_set('log_errors', '1');
+
+// Em modo de depuracao (debug), desativa OPcache para recarregar alteracoes na hora.
+// Em producao (padrao), o OPcache otimiza o bytecode em RAM com revalidacao de 2s para maxima velocidade.
+if (APP_DEBUG) {
+    ini_set('opcache.enable', '0');
+    ini_set('opcache.enable_cli', '0');
+}
 
 // Configurar encoding UTF-8 para PHP
 mb_internal_encoding('UTF-8');

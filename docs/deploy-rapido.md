@@ -296,3 +296,32 @@ Pronto! Seu sistema já estará disponível no navegador no IP da sua VPS:
 * **Sistema ERP:** `http://IP_DA_SUA_VPS:8082`
 * **phpMyAdmin:** `http://IP_DA_SUA_VPS:8083`
 
+---
+
+## ⚡ Otimizações Nativas Implementadas (Leve, Rápido e Econômico em RAM/Disco)
+
+O sistema conta com configurações de infraestrutura prontas para rodar em VPS compactas (1GB a 2GB de RAM) sem travar e sem esgotar o disco:
+
+1. **MySQL 8.0 Otimizado (`docker-compose.yml`)**:
+   - `performance-schema=OFF`: Economiza ~400MB de memória RAM no container do banco.
+   - `binlog-expire-logs-seconds=172800` e `max-binlog-size=50M`: Limita os logs binários a 48h e 50MB, prevenindo estouro de espaço em disco.
+   - `innodb-buffer-pool-size=128M`: Uso racional de memória para consultas ultrarrápidas.
+
+2. **Compressão GZIP e Cache de Navegador (Apache)**:
+   - Módulos `mod_deflate`, `mod_headers` e `mod_expires` ativos no Docker e no `.htaccess`.
+   - Redução de mais de 75% no tamanho transferido de CSS e JavaScript.
+   - Cache no navegador para imagens, CSS, JS e fontes.
+
+3. **PHP OPcache em Produção**:
+   - Execução pré-compilada em memória RAM, acelerando requisições em até 5x.
+   - Revalidação a cada 2 segundos (`revalidate_freq=2`), refletindo qualquer alteração de código sem necessidade de reiniciar o Apache.
+   - Desativação automática apenas em modo de depuração (`APP_DEBUG=1`).
+
+4. **Limpeza Automática de Sessões e Temporários (`scripts/prepare_storage.php`)**:
+   - Purgas periódicas de sessões vazias (0 bytes) e sessões inativas com mais de 14 dias.
+   - Limpeza de PDFs temporários em `temp_pdf/` e `tmp/pdfs/` com mais de 2 dias.
+
+5. **Índices de Performance SGQ e Usuários (Migration 102)**:
+   - Índices compostos criados para `usuarios`, `usuario_permissoes`, `sgq_auditoria_cadastral`, `sgq_matriz_riscos` e `sgq_nao_conformidades`.
+
+

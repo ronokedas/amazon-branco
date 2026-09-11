@@ -21,8 +21,8 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Habilitar mod_rewrite do Apache
-RUN a2enmod rewrite
+# Habilitar modulos essenciais do Apache (roteamento, compressao e cache)
+RUN a2enmod rewrite deflate headers expires
 
 # Instalar Composer
 COPY --from=composer:2.8@sha256:5248900ab8b5f7f880c2d62180e40960cd87f60149ec9a1abfd62ac72a02577c /usr/bin/composer /usr/bin/composer

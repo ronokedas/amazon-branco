@@ -100,6 +100,15 @@ services:
       - MYSQL_DATABASE=${DB_NAME:-erp_sistema}
       - MYSQL_USER=${DB_USER:-erp_user}
       - MYSQL_PASSWORD=${DB_PASS:-erp_pass_2026}
+    command:
+      - --performance-schema=OFF
+      - --max-connections=60
+      - --binlog-expire-logs-seconds=172800
+      - --max-binlog-size=50M
+      - --innodb-buffer-pool-size=128M
+      - --innodb-log-buffer-size=16M
+      - --table-open-cache=400
+      - --table-definition-cache=400
     volumes:
       - db_data:/var/lib/mysql
       # O db.sql e restaurado pelo pacote criptografado antes da primeira subida.
