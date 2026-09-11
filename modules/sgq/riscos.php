@@ -217,7 +217,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             </span>
                         </td>
                         <td style="padding: 12px 16px; text-align: right; white-space: nowrap;">
-                            <button type="button" class="btn btn-sm btn-secondary" onclick='editarRisco(<?= json_encode($r) ?>)' title="Editar Risco">
+                            <button type="button" class="btn btn-sm btn-secondary" data-risco="<?= htmlspecialchars(json_encode($r, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>" onclick="editarRiscoElemento(this)" title="Editar Risco">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <form method="POST" action="<?= APP_URL ?>sgq/riscos/actions?action=excluir" style="display: inline;" onsubmit="return confirm('Deseja realmente remover este risco da matriz?');">
@@ -366,6 +366,15 @@ function abrirModalRisco() {
 
 function fecharModalRisco() {
     document.getElementById('modalRisco').style.display = 'none';
+}
+
+function editarRiscoElemento(btn) {
+    try {
+        const r = JSON.parse(btn.getAttribute('data-risco'));
+        editarRisco(r);
+    } catch (e) {
+        console.error('Erro ao ler risco:', e);
+    }
 }
 
 function editarRisco(r) {
