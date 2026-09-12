@@ -4894,7 +4894,7 @@ table .badge,
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .portal-nav a {

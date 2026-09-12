@@ -16,6 +16,14 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Current Database: `erp_sistema`
+--
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `erp_sistema` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+
+USE `erp_sistema`;
+
+--
 -- Table structure for table `agendamentos`
 --
 
@@ -1175,6 +1183,7 @@ CREATE TABLE `cliente_portal_acessos` (
 
 LOCK TABLES `cliente_portal_acessos` WRITE;
 /*!40000 ALTER TABLE `cliente_portal_acessos` DISABLE KEYS */;
+INSERT INTO `cliente_portal_acessos` VALUES ('1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','anykedas@gmail.com','$2y$10$bOtgmPOA1yUjz.0zMKgkr.tFNt34TAa6Q9pcC2hTF6aro6rqT.yhG',1,0,'2026-09-12 03:31:46','dd121661-feb4-42f6-895a-68eb0608d1e4','2026-09-12 03:30:55','2026-09-12 03:31:57');
 /*!40000 ALTER TABLE `cliente_portal_acessos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1616,7 +1625,7 @@ CREATE TABLE `email_logs` (
 
 LOCK TABLES `email_logs` WRITE;
 /*!40000 ALTER TABLE `email_logs` DISABLE KEYS */;
-INSERT INTO `email_logs` VALUES ('bdb50d86-2ca9-4450-90d4-58c6b601cfbb','neto@amazonnaval.com.br','Documento aguardando assinatura - CSN','assinatura','CSN','faa23877-c468-4114-9182-3b6157402f0f','erro','Erro ao enviar e-mail: SMTP Error: Could not authenticate.','dd121661-feb4-42f6-895a-68eb0608d1e4','2026-09-10 20:25:13');
+INSERT INTO `email_logs` VALUES ('5ee11414-ae5a-11f1-8a7c-be2fb1f77be2','anykedas@gmail.com','Acesso ao Portal do Cliente','portal_acesso','clientes','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','erro','Erro ao enviar e-mail: SMTP Error: Could not authenticate.','dd121661-feb4-42f6-895a-68eb0608d1e4','2026-09-12 03:30:58'),('7a2412df-ae5a-11f1-8a7c-be2fb1f77be2','anykedas@gmail.com','Acesso ao Portal do Cliente','portal_acesso','clientes','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','erro','Erro ao enviar e-mail: SMTP Error: Could not authenticate.','dd121661-feb4-42f6-895a-68eb0608d1e4','2026-09-12 03:31:44'),('bdb50d86-2ca9-4450-90d4-58c6b601cfbb','neto@amazonnaval.com.br','Documento aguardando assinatura - CSN','assinatura','CSN','faa23877-c468-4114-9182-3b6157402f0f','erro','Erro ao enviar e-mail: SMTP Error: Could not authenticate.','dd121661-feb4-42f6-895a-68eb0608d1e4','2026-09-10 20:25:13');
 /*!40000 ALTER TABLE `email_logs` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2411,7 +2420,7 @@ CREATE TABLE `portal_auditoria` (
   KEY `fk_portal_auditoria_embarcacao` (`embarcacao_id`),
   CONSTRAINT `fk_portal_auditoria_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_portal_auditoria_embarcacao` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2420,6 +2429,7 @@ CREATE TABLE `portal_auditoria` (
 
 LOCK TABLES `portal_auditoria` WRITE;
 /*!40000 ALTER TABLE `portal_auditoria` DISABLE KEYS */;
+INSERT INTO `portal_auditoria` VALUES (1,'1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,'LOGIN_FALHA',NULL,NULL,NULL,0,'Login informado: anykedas@gmail.com','172.23.0.1','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0','2026-09-12 03:31:15'),(2,'1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,'LOGIN_FALHA',NULL,NULL,NULL,0,'Login informado: anykedas@gmail.com','172.23.0.1','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0','2026-09-12 03:31:29'),(3,'1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,'LOGIN_SUCESSO',NULL,NULL,NULL,1,'Perfil: proprietario','172.23.0.1','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0','2026-09-12 03:31:46');
 /*!40000 ALTER TABLE `portal_auditoria` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2993,7 +3003,7 @@ CREATE TABLE `sequenciais_documentos` (
 
 LOCK TABLES `sequenciais_documentos` WRITE;
 /*!40000 ALTER TABLE `sequenciais_documentos` DISABLE KEYS */;
-INSERT INTO `sequenciais_documentos` VALUES ('ORC',2026,1),('REL-V',2026,2),('RNC',2026,0);
+INSERT INTO `sequenciais_documentos` VALUES ('ORC',2026,1),('REL-V',2026,2),('RNC',2026,1);
 /*!40000 ALTER TABLE `sequenciais_documentos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -3681,6 +3691,10 @@ LOCK TABLES `vistorias` WRITE;
 INSERT INTO `vistorias` (`id`, `numero`, `embarcacao_id`, `pessoa_id`, `armador_id`, `operador_nome`, `agendamento_id`, `relatorio_anterior_id`, `finalidade`, `data_vistoria`, `prazo_exigencias_dias`, `data_emissao`, `status`, `mobile_versao`, `mobile_finalizada_em`, `aprovado_por`, `responsavel_assinatura_id`, `assinatura_status`, `assinatura_em`, `data_aprovacao`, `observacao_admin`, `observacoes`, `resultado`, `observacoes_tecnicas`, `texto_observacoes_geradas`, `criado_por`, `criado_em`, `atualizado_em`) VALUES ('c0cc81fc-b11d-40a6-b8f8-f410d3c1982a','AM-REL-V-2/26','317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,NULL,'e1b20145-ebe6-4640-9f1f-f491d004e485','c3670566-76b2-4376-88b4-234c09701f37','CUMPRIMENTO_EXIGENCIAS','2026-09-24',90,NULL,'APROVADA_COM_EXIGENCIAS',0,NULL,'dd121661-feb4-42f6-895a-68eb0608d1e4',7,'ASSINADO','2026-09-10 17:24:25','2026-09-10 20:23:34',NULL,NULL,NULL,NULL,NULL,'d2a16613-dfa4-4948-8de4-8c802abdf394','2026-09-10 20:23:03','2026-09-10 20:24:27'),('c3670566-76b2-4376-88b4-234c09701f37','AM-REL-V-1/26','317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,NULL,'25be9af2-ad55-11f1-8a7c-be2fb1f77be2',NULL,'VISTORIA','2026-09-15',90,NULL,'RETORNO_AS',0,NULL,'dd121661-feb4-42f6-895a-68eb0608d1e4',NULL,'PENDENTE',NULL,'2026-09-10 20:22:36',NULL,NULL,NULL,NULL,NULL,'d2a16613-dfa4-4948-8de4-8c802abdf394','2026-09-10 20:22:22','2026-09-10 20:22:36');
 /*!40000 ALTER TABLE `vistorias` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Dumping routines for database 'erp_sistema'
+--
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -3691,4 +3705,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-12  3:25:56
+-- Dump completed on 2026-09-12  5:08:03

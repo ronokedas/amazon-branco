@@ -7,6 +7,7 @@ $portalInicioAtivo = preg_match('#/portal/?(?:\?.*)?$#', $portalRequestUri) === 
 $portalDocumentosAtivo = strpos($portalRequestUri, '/portal/documentos') !== false;
 $portalAnalisesAtivo = strpos($portalRequestUri, '/portal/analises-planos') !== false;
 $portalEmbarcacoesAtivo = strpos($portalRequestUri, '/portal/embarcacoes') !== false;
+$portalOuvidoriaAtivo = strpos($portalRequestUri, '/portal/ouvidoria') !== false;
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -37,6 +38,7 @@ $portalEmbarcacoesAtivo = strpos($portalRequestUri, '/portal/embarcacoes') !== f
                 <a class="<?php echo $portalDocumentosAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/documentos">Meus documentos</a>
                 <a class="<?php echo $portalAnalisesAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/analises-planos">Enviar planos</a>
                 <a class="<?php echo $portalEmbarcacoesAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/embarcacoes">Embarcações</a>
+                <a class="<?php echo $portalOuvidoriaAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/ouvidoria">Ouvidoria</a>
             </nav>
             <div class="portal-user-chip">
                 <span class="portal-user-avatar"><?php echo h(strtoupper(substr(clientePortalNome(), 0, 1))); ?></span>

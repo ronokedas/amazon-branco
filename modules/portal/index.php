@@ -9,6 +9,7 @@ $clienteId = clientePortalId();
 $embarcacoes = clientePortalEmbarcacoes($pdo, $clienteId);
 $documentos = clientePortalSelectDocumentos($pdo, $clienteId);
 $vencendo = clientePortalSelectDocumentos($pdo, $clienteId, ['vencendo_dias' => 90]);
+$vencendo = array_values(array_filter($vencendo, fn($doc) => !empty($doc['data_validade'])));
 $documentosRecentes = array_slice($documentos, 0, 5);
 $documentosAssinados = array_filter($documentos, fn($doc) => ($doc['status'] ?? '') === 'assinado');
 $documentosPendentes = array_filter($documentos, fn($doc) => ($doc['status'] ?? '') === 'emitido');
@@ -145,11 +146,10 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                     <thead>
                         <tr>
                             <th>Documento</th>
-                            <th>Embarcação</th>
                             <th>Emissão</th>
                             <th>Validade</th>
                             <th>Situação</th>
-                            <th></th>
+                            <th style="text-align: right;">Ação</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -157,20 +157,24 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                             <?php $dias = $diasAteVencer($doc['data_validade']); ?>
                             <tr>
                                 <td data-label="Documento">
-                                    <i class="fa-regular fa-file-lines portal-table-icon"></i>
-                                    <strong><?php echo h($doc['tipo_label'] . ' - ' . $doc['numero']); ?></strong>
+                                    <a class="portal-doc-link" target="_blank" href="<?php echo APP_URL; ?>portal/documentos/pdf?tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>" title="Visualizar PDF">
+                                        <i class="fa-regular fa-file-lines portal-table-icon"></i>
+                                        <div>
+                                            <strong><?php echo h($doc['tipo_label'] . ' - ' . $doc['numero']); ?></strong>
+                                            <small class="portal-doc-sub"><i class="fa-solid fa-ship"></i> <?php echo h($doc['embarcacao_nome']); ?></small>
+                                        </div>
+                                    </a>
                                 </td>
-                                <td data-label="Embarcação"><?php echo h($doc['embarcacao_nome']); ?></td>
                                 <td data-label="Emissão"><?php echo formatarData($doc['data_emissao']); ?></td>
-                                <td data-label="Validade"><?php echo formatarData($doc['data_validade']); ?></td>
+                                <td data-label="Validade"><?php echo !empty($doc['data_validade']) ? formatarData($doc['data_validade']) : '<span style="color:var(--p-muted);">-</span>'; ?></td>
                                 <td data-label="Situação">
                                     <span class="portal-status <?php echo ($dias !== null && $dias < 0) ? 'is-expired' : (($dias !== null && $dias <= 90) ? 'is-warning' : 'is-valid'); ?>">
                                         <?php echo ($dias !== null && $dias < 0) ? 'Vencido' : (($dias !== null && $dias <= 90) ? 'A vencer' : 'Válido'); ?>
                                     </span>
                                 </td>
-                                <td data-label="Ação">
-                                    <a class="portal-icon-action" target="_blank" href="<?php echo APP_URL; ?>portal/documentos/pdf?tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>" title="Visualizar PDF">
-                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                <td data-label="Ação" style="text-align: right;">
+                                    <a class="btn btn-sm btn-outline-success portal-btn-pdf" target="_blank" href="<?php echo APP_URL; ?>portal/documentos/pdf?tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>" title="Visualizar PDF">
+                                        <i class="fa-solid fa-file-pdf"></i> PDF
                                     </a>
                                 </td>
                             </tr>
@@ -178,7 +182,7 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                     </tbody>
                 </table>
             </div>
-            <a class="portal-panel-footer-link" href="<?php echo APP_URL; ?>portal/documentos">Ver documentos</a>
+            <a class="portal-panel-footer-link" href="<?php echo APP_URL; ?>portal/documentos">Ver todos os documentos</a>
         <?php endif; ?>
     </section>
 

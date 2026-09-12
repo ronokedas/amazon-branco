@@ -269,19 +269,39 @@ function clientePortalSelectDocumentos(PDO $pdo, string $clienteId, array $filtr
         $documentos = array_merge($documentos, $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
-    $tipoFiltro=$filtros['tipo']??'';$params=[];$in=clientePortalSqlIn($embarcacaoIds,'extra_emb_',$params);
-    if($tipoFiltro===''||$tipoFiltro==='rel_vistoria'){
-        $sql="SELECT v.id,'rel_vistoria' tipo,'Relatório de Vistoria' tipo_label,v.numero,v.data_vistoria data_emissao,NULL data_validade,v.status,1 assinado,v.criado_em,v.embarcacao_id,e.nome embarcacao_nome FROM vistorias v INNER JOIN embarcacoes e ON e.id=v.embarcacao_id WHERE v.embarcacao_id IN ({$in}) AND ((v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS') AND v.assinatura_status='ASSINADO') OR v.status='RETORNO_AS')";
-        if(!empty($filtros['embarcacao_id'])){$sql.=' AND v.embarcacao_id=:extra_vist_emb';$params[':extra_vist_emb']=$filtros['embarcacao_id'];}
-        if(!empty($filtros['busca'])){$sql.=' AND (v.numero LIKE :extra_vist_busca OR e.nome LIKE :extra_vist_busca)';$params[':extra_vist_busca']='%'.$filtros['busca'].'%';}
-        $st=$pdo->prepare($sql);$st->execute($params);$documentos=array_merge($documentos,$st->fetchAll(PDO::FETCH_ASSOC));
+    $tipoFiltro = $filtros['tipo'] ?? '';
+    $apenasVencendo = !empty($filtros['vencendo_dias']) || !empty($filtros['vencendo']);
+    if (!$apenasVencendo && ($tipoFiltro === '' || $tipoFiltro === 'rel_vistoria')) {
+        $params = [];
+        $in = clientePortalSqlIn($embarcacaoIds, 'extra_vist_emb_', $params);
+        $sql = "SELECT v.id, 'rel_vistoria' tipo, 'Relatório de Vistoria' tipo_label, v.numero, v.data_vistoria data_emissao, NULL data_validade, v.status, 1 assinado, v.criado_em, v.embarcacao_id, e.nome embarcacao_nome FROM vistorias v INNER JOIN embarcacoes e ON e.id=v.embarcacao_id WHERE v.embarcacao_id IN ({$in}) AND ((v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS') AND v.assinatura_status='ASSINADO') OR v.status='RETORNO_AS')";
+        if (!empty($filtros['embarcacao_id'])) {
+            $sql .= ' AND v.embarcacao_id = :extra_vist_emb';
+            $params[':extra_vist_emb'] = $filtros['embarcacao_id'];
+        }
+        if (!empty($filtros['busca'])) {
+            $sql .= ' AND (v.numero LIKE :extra_vist_busca OR e.nome LIKE :extra_vist_busca)';
+            $params[':extra_vist_busca'] = '%' . $filtros['busca'] . '%';
+        }
+        $st = $pdo->prepare($sql);
+        $st->execute($params);
+        $documentos = array_merge($documentos, $st->fetchAll(PDO::FETCH_ASSOC));
     }
-    if($tipoFiltro===''||$tipoFiltro==='parecer_planos'){
-        $params2=[];$in2=clientePortalSqlIn($embarcacaoIds,'plan_emb_',$params2);
-        $sql="SELECT p.id,'parecer_planos' tipo,'Análise de Planos' tipo_label,CONCAT(ap.numero,' v',p.versao) numero,p.publicado_em data_emissao,NULL data_validade,p.resultado status,1 assinado,p.criado_em,ap.embarcacao_id,e.nome embarcacao_nome FROM analise_planos_pareceres p INNER JOIN analises_planos ap ON ap.id=p.analise_id INNER JOIN embarcacoes e ON e.id=ap.embarcacao_id WHERE ap.embarcacao_id IN ({$in2}) AND p.status='PUBLICADO'";
-        if(!empty($filtros['embarcacao_id'])){$sql.=' AND ap.embarcacao_id=:plan_filtro_emb';$params2[':plan_filtro_emb']=$filtros['embarcacao_id'];}
-        if(!empty($filtros['busca'])){$sql.=' AND (ap.numero LIKE :plan_busca OR e.nome LIKE :plan_busca)';$params2[':plan_busca']='%'.$filtros['busca'].'%';}
-        $st=$pdo->prepare($sql);$st->execute($params2);$documentos=array_merge($documentos,$st->fetchAll(PDO::FETCH_ASSOC));
+    if (!$apenasVencendo && ($tipoFiltro === '' || $tipoFiltro === 'parecer_planos')) {
+        $params2 = [];
+        $in2 = clientePortalSqlIn($embarcacaoIds, 'plan_emb_', $params2);
+        $sql = "SELECT p.id, 'parecer_planos' tipo, 'Análise de Planos' tipo_label, CONCAT(ap.numero,' v',p.versao) numero, p.publicado_em data_emissao, NULL data_validade, p.resultado status, 1 assinado, p.criado_em, ap.embarcacao_id, e.nome embarcacao_nome FROM analise_planos_pareceres p INNER JOIN analises_planos ap ON ap.id=p.analise_id INNER JOIN embarcacoes e ON e.id=ap.embarcacao_id WHERE ap.embarcacao_id IN ({$in2}) AND p.status='PUBLICADO'";
+        if (!empty($filtros['embarcacao_id'])) {
+            $sql .= ' AND ap.embarcacao_id = :plan_filtro_emb';
+            $params2[':plan_filtro_emb'] = $filtros['embarcacao_id'];
+        }
+        if (!empty($filtros['busca'])) {
+            $sql .= ' AND (ap.numero LIKE :plan_busca OR e.nome LIKE :plan_busca)';
+            $params2[':plan_busca'] = '%' . $filtros['busca'] . '%';
+        }
+        $st = $pdo->prepare($sql);
+        $st->execute($params2);
+        $documentos = array_merge($documentos, $st->fetchAll(PDO::FETCH_ASSOC));
     }
 
     usort($documentos, function ($a, $b) {

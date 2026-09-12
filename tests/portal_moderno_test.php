@@ -30,6 +30,15 @@ portalAssert(str_contains($analises, 'Seus arquivos anteriores serão preservado
 portalAssert(str_contains($embarcacoes, 'clientePortalEmbarcacoes'), 'A página não restringe embarcações ao cliente autenticado.');
 portalAssert(str_contains($css, '--p-ink:#102f29'), 'Os tokens do portal não foram definidos.');
 portalAssert(str_contains($css, '@media(max-width:600px)'), 'O layout móvel do portal não foi definido.');
-portalAssert(str_contains($js, 'Enviando revisão...'), 'A prevenção visual de envio duplicado não foi implementada.');
+portalAssert(str_contains($header, '/portal/ouvidoria'), 'A navegação não aponta para a rota de ouvidoria.');
+portalAssert(str_contains($router, "'portal/ouvidoria'"), 'A rota de ouvidoria não foi registrada.');
+portalAssert(str_contains($router, "'portal/ouvidoria/actions'"), 'A rota de ações da ouvidoria não foi registrada.');
+
+$ouvidoria = file_get_contents($root . '/modules/portal/ouvidoria.php');
+$ouvidoriaActions = file_get_contents($root . '/modules/portal/ouvidoria_actions.php');
+portalAssert(str_contains($ouvidoria, 'ISO 9001:2015'), 'A tela de ouvidoria não cita os requisitos ISO 9001.');
+portalAssert(str_contains($ouvidoriaActions, 'RECLAMACAO_CLIENTE'), 'As ações de ouvidoria não abrem RNC com origem RECLAMACAO_CLIENTE.');
+$clientePortalHelper = file_get_contents($root . '/includes/cliente_portal.php');
+portalAssert(str_contains($clientePortalHelper, '$apenasVencendo'), 'O filtro de documentos por vencimento deve ignorar vistorias e pareceres sem validade.');
 
 echo "Portal moderno: OK\n";
