@@ -33,9 +33,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </p>
         </div>
 
-        <div style="display: flex; gap: 10px; align-items: center;">
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <a href="<?= APP_URL ?>sgq/apresentacao" target="_blank" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; font-weight: 600; background: #0b5944; border-color: #0b5944;">
+                <i class="fa-solid fa-file-pdf"></i> Apresentação em Slides (PDF)
+            </a>
             <button type="button" class="btn btn-outline-secondary" onclick="window.print()" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; font-weight: 600;">
-                <i class="fa-solid fa-print"></i> Imprimir / Exportar PDF
+                <i class="fa-solid fa-print"></i> Imprimir Manual
             </button>
             <span style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
                 <i class="fa-solid fa-stamp"></i> Versão Vigente 2026.1

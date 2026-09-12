@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apresentação do SGQ - ISO 9001:2015 & NORMAM - Amazon Certificadora</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #0b5944;
+            --primary-dark: #073626;
+            --primary-light: #27c995;
+            --secondary: #0284c7;
+            --secondary-dark: #0369a1;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --success: #10b981;
+            --dark: #0f172a;
+            --slate: #334155;
+            --muted: #64748b;
+            --light: #f8fafc;
+            --border: #e2e8f0;
+            --card-bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #0b1320;
+            color: var(--dark);
+            line-height: 1.45;
+        }
+
+        /* Controles de Apresentação em Tela */
+        .deck-toolbar {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            z-index: 9999;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            padding: 10px 18px;
+            border-radius: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .deck-btn {
+            background: #27c995;
+            color: #063723;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .deck-btn:hover {
+            background: #73f1bd;
+            transform: translateY(-1px);
+        }
+
+        .deck-btn-sec {
+            background: rgba(255,255,255,0.12);
+            color: #ffffff;
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+
+        .deck-btn-sec:hover {
+            background: rgba(255,255,255,0.25);
+            color: #ffffff;
+        }
+
+        /* Slides Container */
+        .presentation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            padding: 40px 20px;
+        }
+
+        /* Cada Slide em formato A4 Paisagem (297mm x 210mm / Proporção 16:9 ou A4 Paisagem) */
+        .slide {
+            width: 297mm;
+            height: 210mm;
+            max-width: 100%;
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.35);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            page-break-after: always;
+            break-after: page;
+        }
+
+        /* Cabeçalho Padrão do Slide */
+        .slide-header {
+            padding: 16px 28px;
+            background: linear-gradient(135deg, #073626 0%, #0b5944 100%);
+            color: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #27c995;
+        }
+
+        .slide-header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .slide-header-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            background: rgba(39, 201, 149, 0.2);
+            border: 1px solid rgba(39, 201, 149, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #73f1bd;
+            font-size: 18px;
+        }
+
+        .slide-header-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .slide-header-sub {
+            font-size: 11px;
+            color: #a7f3d0;
+            font-weight: 400;
+        }
+
+        .slide-header-badge {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 5px 12px;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Corpo do Slide */
+        .slide-body {
+            flex: 1;
+            padding: 24px 28px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        /* Rodapé Padrão do Slide */
+        .slide-footer {
+            padding: 10px 28px;
+            background: #f8fafc;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .slide-footer-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .slide-footer-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slide-number {
+            background: #0f172a;
+            color: #ffffff;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        /* Grids & Componentes dos Slides */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            flex: 1;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            flex: 1;
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+
+        .card-accent {
+            border-top: 4px solid var(--primary);
+            background: #fdfdfd;
+        }
+
+        .card-blue {
+            border-top: 4px solid var(--secondary);
+        }
+
+        .card-amber {
+            border-top: 4px solid var(--accent);
+        }
+
+        .card-danger {
+            border-top: 4px solid var(--danger);
+        }
+
+        .card-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-text {
+            font-size: 11px;
+            color: #475569;
+            line-height: 1.45;
+        }
+
+        /* Estilo da Capa */
+        .slide-cover {
+            background: radial-gradient(circle at 80% 20%, #0d6d53 0%, #073626 50%, #021d17 100%);
+            color: #ffffff;
+            padding: 40px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .slide-cover::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2327c995' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.6;
+        }
+
+        .cover-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .cover-badges {
+            display: flex;
+            gap: 10px;
+        }
+
+        .cover-badge {
+            background: rgba(39, 201, 149, 0.15);
+            border: 1px solid rgba(39, 201, 149, 0.35);
+            color: #73f1bd;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .cover-badge-sec {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+
+        .cover-center {
+            position: relative;
+            z-index: 2;
+            margin: 20px 0;
+        }
+
+        .cover-org {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 22px;
+            font-weight: 800;
+            color: #73f1bd;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cover-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 38px;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .cover-subtitle {
+            font-size: 16px;
+            color: #cbd5e1;
+            max-width: 820px;
+            line-height: 1.5;
+            font-weight: 400;
+        }
+
+        .cover-bottom {
+            position: relative;
+            z-index: 2;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            padding-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .cover-info-item h4 {
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+        }
+
+        .cover-info-item p {
+            font-size: 13px;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        /* Tabelas nos Slides */
+        .table-slide {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+        }
+
+        .table-slide th {
+            background: #f1f5f9;
+            color: #0f172a;
+            padding: 8px 10px;
+            font-weight: 700;
+            text-align: left;
+            border-bottom: 2px solid #cbd5e1;
+        }
+
+        .table-slide td {
+            padding: 7px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+            vertical-align: middle;
+        }
+
+        .table-slide tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+
+        .badge-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 9.5px;
+            font-weight: 700;
+        }
+
+        .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .badge-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .badge-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .badge-info { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+
+        /* Blocos Comparativos Antes vs Depois */
+        .diff-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .diff-box {
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 10px;
+            font-family: monospace;
+            line-height: 1.4;
+        }
+
+        .diff-before {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .diff-after {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+        }
+
+        /* Macroprocesso */
+        .step-flow {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .step-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 8px;
+            text-align: center;
+            position: relative;
+        }
+
+        .step-num {
+            width: 24px;
+            height: 24px;
+            background: #0b5944;
+            color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            margin: 0 auto 6px auto;
+        }
+
+        .step-title {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        .step-desc {
+            font-size: 9px;
+            color: #64748b;
+            line-height: 1.3;
+        }
+
+        /* Indicadores Boxes */
+        .kpi-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .kpi-value {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            margin: 6px 0;
+        }
+
+        .kpi-target {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        /* PRINT CONFIG */
+        @media print {
+            body {
+                background: none !important;
+                padding: 0 !important;
+            }
+
+            .deck-toolbar {
+                display: none !important;
+            }
+
+            .presentation-container {
+                padding: 0 !important;
+                gap: 0 !important;
+            }
+
+            .slide {
+                width: 297mm !important;
+                height: 210mm !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                page-break-after: always !important;
+                break-after: page !important;
+            }
+
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BARRA FLUTUANTE DE AÇÕES -->
+    <div class="deck-toolbar">
+        <span style="color: #ffffff; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-file-pdf" style="color: #27c995;"></i> Dossiê de Auditoria ISO 9001
+        </span>
+        <a href="/sgq/apresentacao?pdf=1" target="_blank" class="deck-btn" style="text-decoration: none;">
+            <i class="fa-solid fa-download"></i> Baixar PDF Oficial
+        </a>
+        <button class="deck-btn deck-btn-sec" onclick="window.print()">
+            <i class="fa-solid fa-print"></i> Imprimir Slides
+        </button>
+        <button class="deck-btn deck-btn-sec" onclick="window.location.href='/sgq/manual'">
+            <i class="fa-solid fa-arrow-left"></i> Voltar ao Sistema
+        </button>
+    </div>
+
+    <div class="presentation-container">
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 1: CAPA EXECUTIVA -->
+        <!-- ========================================================================= -->
+        <section class="slide slide-cover">
+            <div class="cover-top">
+                <div class="cover-badges">
+                    <span class="cover-badge"><i class="fa-solid fa-shield-halved"></i> Dossiê Oficial de Certificação</span>
+                    <span class="cover-badge cover-badge-sec"><i class="fa-solid fa-anchor"></i> Autoridade Marítima DPC</span>
+                </div>
+                <div style="font-size: 11px; color: #a7f3d0; font-weight: 600; letter-spacing: 0.5px;">
+                    EXERCÍCIO 2026 • REVISÃO 2026.1
+                </div>
+            </div>
+
+            <div class="cover-center">
+                <div class="cover-org">
+                    <i class="fa-solid fa-compass"></i> AMAZON CERTIFICADORA & ENGENHARIA NAVAL
+                </div>
+                <h1 class="cover-title">
+                    SISTEMA DE GESTÃO DA QUALIDADE (SGQ)<br>
+                    CONFORMIDADE INTEGRADA ISO 9001:2015 & NORMAM
+                </h1>
+                <p class="cover-subtitle">
+                    Demonstração estruturada de conformidade dos requisitos normativos da ABNT NBR ISO 9001:2015, governança digital, mitigação de riscos navais e travas compulsórias de competência técnica e controle de saídas não conformes.
+                </p>
+            </div>
+
+            <div class="cover-bottom">
+                <div class="cover-info-item">
+                    <h4>Norma de Referência</h4>
+                    <p>ABNT NBR ISO 9001:2015</p>
+                </div>
+                <div class="cover-info-item">
+                    <h4>Regulamentação Naval</h4>
+                    <p>NORMAM-201 / 202 / 211 (DPC)</p>
+                </div>
+                <div class="cover-info-item">
+                    <h4>Finalidade do Dossiê</h4>
+                    <p>Auditoria Externa (Inmetro/OCC)</p>
+                </div>
+                <div class="cover-info-item">
+                    <h4>Status do Sistema</h4>
+                    <p style="color: #73f1bd;"><i class="fa-solid fa-check-circle"></i> 100% Homologado & Ativo</p>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 2: PERFIL DA AUDITORIA E ORGANISMOS REGULADORES -->
+        <!-- ========================================================================= -->
+        <section class="slide">
+            <div class="slide-header">
+                <div class="slide-header-left">
+                    <div class="slide-header-icon"><i class="fa-solid fa-building-columns"></i></div>
+                    <div>
+                        <div class="slide-header-title">1. Perfil da Auditoria & Organismos Reguladores</div>
+                        <div class="slide-header-sub">Estrutura de Acreditação e Fiscalização Técnica do Setor Naval</div>
+                    </div>
+                </div>
+                <div class="slide-header-badge"><i class="fa-solid fa-certificate"></i> Auditoria Oficial</div>
+            </div>
+
+            <div class="slide-body">
+                <div class="grid-2" style="margin-bottom: 14px;">
+                    <div class="card card-accent">
+                        <div class="card-title"><i class="fa-solid fa-id-badge" style="color: #0b5944;"></i> Auditor Líder de Certificação (OCC / Inmetro)</div>
+                        <p class="card-text">
+                            Profissional vinculado a Organismo de Certificação Credenciado (OCC) acreditado pela <strong>Cgcre/Inmetro</strong> (ex: <em>Bureau Veritas, DNV, RINA, ABS, Lloyd's, Fundação Vanzolini</em>).
+                        </p>
+                        <ul style="margin: 8px 0 0 16px; font-size: 10.5px; color: #475569;">
+                            <li>Verificação do cumprimento das cláusulas 4 a 10 da <strong>ISO 9001:2015</strong>;</li>
+                            <li>Evidência objetiva de rastreabilidade cadastral e logs de alterações;</li>
+                            <li>Tratamento de RNCs com metodologia estruturada (5W2H) e eficácia.</li>
+                        </ul>
+                    </div>
+
+                    <div class="card card-blue">
+                        <div class="card-title"><i class="fa-solid fa-ship" style="color: #0284c7;"></i> Inspetor / Perito Naval (DPC / Capitania)</div>
+                        <p class="card-text">
+                            Perito oficial da <strong>Autoridade Marítima Brasileira</strong> (Diretoria de Portos e Costas - DPC / Capitania dos Portos) atuando no cumprimento legal naval.
+                        </p>
+                        <ul style="margin: 8px 0 0 16px; font-size: 10.5px; color: #475569;">
+                            <li>Cumprimento estrito das normas <strong>NORMAM-201 e NORMAM-202</strong>;</li>
+                            <li>Validade de credenciamentos de vistoriadores perante a Marinha do Brasil;</li>
+                            <li>Controle impeditivo de laudos e certificados em casos de retorno de A/S.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title" style="margin-bottom: 6px;"><i class="fa-solid fa-list-check" style="color: #0284c7;"></i> Objetivos Principais desta Apresentação de Auditoria</div>
+                    <table class="table-slide">
+                        <thead>
+                            <tr>
+                                <th>Requisito Normativo</th>
+                                <th>Módulo ERP Correspondente</th>
+                                <th>Mecanismo de Prova Objetiva</th>
+                                <th>Status de Prontidão</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>ISO 7.2 (Competência)</strong></td>
+                                <td>Gestão de Usuários / Peritos</td>
+                                <td>Trava sistêmica que impede agendamento se credencial estiver vencida</td>
+                                <td><span class="badge-status badge-success">Conforme (Automático)</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>ISO 7.5 (Rastreabilidade)</strong></td>
+                                <td>Trilha de Auditoria Cadastral</td>
+                                <td>Log detalhado Antes vs Depois com IP, usuário e justificativa obrigatória</td>
+                                <td><span class="badge-status badge-success">Conforme (Auditável)</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>ISO 8.7 (Controle Não Conformes)</strong></td>
+                                <td>Retorno de A/S Capitania</td>
+                                <td>Bloqueio de CSN e abertura compulsória de RNC e plano 5W2H</td>
+                                <td><span class="badge-status badge-success">Conforme (Bloqueante)</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>ISO 6.1 (Gestão de Riscos)</strong></td>
+                                <td>Matriz de Riscos 5x5</td>
+                                <td>Mapeamento regulatório naval e ações preventivas pré-cadastradas</td>
+                                <td><span class="badge-status badge-success">Conforme (Monitorado)</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <div class="slide-footer-left"><i class="fa-solid fa-compass"></i> Amazon Certificadora & Engenharia Naval</div>
+                <div class="slide-footer-right">
+                    <span>ABNT NBR ISO 9001:2015 — Dossiê SGQ</span>
+                    <span class="slide-number">Slide 02</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 3: ESCOPO DO SGQ E POLÍTICA DA QUALIDADE -->
+        <!-- ========================================================================= -->
+        <section class="slide">
+            <div class="slide-header">
+                <div class="slide-header-left">
+                    <div class="slide-header-icon"><i class="fa-solid fa-handshake"></i></div>
+                    <div>
+                        <div class="slide-header-title">2. Escopo & Política da Qualidade (ISO 4.3 & 5.2)</div>
+                        <div class="slide-header-sub">Declaração Estratégica da Alta Direção e Abrangência Certificada</div>
+                    </div>
+                </div>
+                <div class="slide-header-badge"><i class="fa-solid fa-bullseye"></i> Alta Direção</div>
+            </div>
+
+            <div class="slide-body">
+                <div class="card card-accent" style="margin-bottom: 14px;">
+                    <div class="card-title"><i class="fa-solid fa-circle-check" style="color: #0b5944;"></i> Escopo de Fornecimento Certificado (ISO 4.3)</div>
+                    <p style="font-size: 11.5px; color: #1e293b; font-weight: 500;">
+                        <em>"Prestação de serviços de engenharia naval, vistorias técnicas a bordo de embarcações, perícias navais, cálculos de arqueação, borda-livre, estabilidade intacta e em avaria, elaboração de planos de segurança e emissão de documentação técnica perante a Autoridade Marítima Brasileira (DPC)."</em>
+                    </p>
+                </div>
+
+                <div class="grid-4" style="margin-bottom: 12px;">
+                    <div class="card card-accent">
+                        <div class="card-title" style="font-size: 11px;"><i class="fa-solid fa-anchor"></i> 1. Rigor Normativo</div>
+                        <p class="card-text">Cumprimento integral das normas da Marinha (NORMAM-201/202) e padrões técnicos de engenharia naval.</p>
+                    </div>
+                    <div class="card card-blue">
+                        <div class="card-title" style="font-size: 11px;"><i class="fa-solid fa-stopwatch"></i> 2. Pontualidade</div>
+                        <p class="card-text">Garantia de prazos com lead time controlado em todas as etapas operacionais e entrega dos certificados.</p>
+                    </div>
+                    <div class="card card-amber">
+                        <div class="card-title" style="font-size: 11px;"><i class="fa-solid fa-life-ring"></i> 3. Salvaguarda da Vida</div>
+                        <p class="card-text">Prioridade absoluta à segurança da navegação e prevenção de poluição hídrica na Amazônia.</p>
+                    </div>
+                    <div class="card card-accent">
+                        <div class="card-title" style="font-size: 11px;"><i class="fa-solid fa-chart-line"></i> 4. Melhoria Contínua</div>
+                        <p class="card-text">Tratamento rigoroso de RNCs com método 5W2H e capacitação técnica contínua do corpo técnico.</p>
+                    </div>
+                </div>
+
+                <div class="card" style="background: #f8fafc;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 11px; color: #475569;"><strong>Disponibilização da Política:</strong> Acessível a todos os colaboradores e auditores no ERP na rota <code>/sgq/manual</code>.</span>
+                        <span class="badge-status badge-info">Aprovado pela Diretoria Geral em 01/01/2026</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <div class="slide-footer-left"><i class="fa-solid fa-compass"></i> Amazon Certificadora & Engenharia Naval</div>
+                <div class="slide-footer-right">
+                    <span>ABNT NBR ISO 9001:2015 — Dossiê SGQ</span>
+                    <span class="slide-number">Slide 03</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 4: MACROPROCESSO OPERACIONAL -->
+        <!-- ========================================================================= -->
+        <section class="slide">
+            <div class="slide-header">
+                <div class="slide-header-left">
+                    <div class="slide-header-icon"><i class="fa-solid fa-diagram-project"></i></div>
+                    <div>
+                        <div class="slide-header-title">3. Macroprocesso Operacional em 6 Etapas (ISO 4.4)</div>
+                        <div class="slide-header-sub">Mapeamento da Cadeia de Valor e Integração Sistêmica Ponta a Ponta</div>
+                    </div>
+                </div>
+                <div class="slide-header-badge"><i class="fa-solid fa-arrows-split-up-and-left"></i> Fluxo de Valor</div>
+            </div>
+
+            <div class="slide-body">
+                <div class="step-flow">
+                    <div class="step-item" style="border-top: 3px solid #0b5944;">
+                        <div class="step-num">1</div>
+                        <div class="step-title">Comercial & Prontidão</div>
+                        <div class="step-desc">Validação técnica prévia dos dados da embarcação (ISO 8.2) antes da proposta.</div>
+                    </div>
+                    <div class="step-item" style="border-top: 3px solid #0284c7;">
+                        <div class="step-num" style="background: #0284c7;">2</div>
+                        <div class="step-title">Agendamento & Trava</div>
+                        <div class="step-desc">Checagem de credencial da Marinha e conselho do vistoriador (ISO 7.2).</div>
+                    </div>
+                    <div class="step-item" style="border-top: 3px solid #f59e0b;">
+                        <div class="step-num" style="background: #f59e0b;">3</div>
+                        <div class="step-title">Vistoria a Bordo</div>
+                        <div class="step-desc">Inspeção in loco, fotos probatórias, checklist de segurança e plano de amarração.</div>
+                    </div>
+                    <div class="step-item" style="border-top: 3px solid #10b981;">
+                        <div class="step-num" style="background: #10b981;">4</div>
+                        <div class="step-title">Emissão & ART/TRT</div>
+                        <div class="step-desc">Cálculo de estabilidade, memorial, anotação de responsabilidade técnica e CSN.</div>
+                    </div>
+                    <div class="step-item" style="border-top: 3px solid #6366f1;">
+                        <div class="step-num" style="background: #6366f1;">5</div>
+                        <div class="step-title">Faturamento</div>
+                        <div class="step-desc">Cobrança, recibos de honorários e rastreamento fiscal vinculado ao serviço.</div>
+                    </div>
+                    <div class="step-item" style="border-top: 3px solid #ec4899;">
+                        <div class="step-num" style="background: #ec4899;">6</div>
+                        <div class="step-title">Pós-Venda & Ouvidoria</div>
+                        <div class="step-desc">Pesquisa de satisfação no Portal do Cliente e apuração de NPS (ISO 9.1.2).</div>
+                    </div>
+                </div>
+
+                <div class="grid-2" style="margin-top: 14px;">
+                    <div class="card">
+                        <div class="card-title"><i class="fa-solid fa-arrows-spin" style="color: #0b5944;"></i> Entradas e Saídas Controladas</div>
+                        <p class="card-text">
+                            Cada transição de etapa depende de dados validados pelo banco de dados MySQL e regras PHP em <code>includes/sgq.php</code>. Não existem laudos aprovados sem vínculo direto com uma ordem de vistoria executada e vistoriador qualificado.
+                        </p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title"><i class="fa-solid fa-lock" style="color: #0284c7;"></i> Portões de Qualidade (Quality Gates)</div>
+                        <p class="card-text">
+                            O sistema aplica travas automáticas que impedem o avanço do fluxo quando ocorrem pendências regulatórias (ex: se houver retorno de A/S na etapa 4, o laudo é bloqueado e é disparada uma RNC).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <div class="slide-footer-left"><i class="fa-solid fa-compass"></i> Amazon Certificadora & Engenharia Naval</div>
+                <div class="slide-footer-right">
+                    <span>ABNT NBR ISO 9001:2015 — Dossiê SGQ</span>
+                    <span class="slide-number">Slide 04</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 5: GESTÃO DE RISCOS E OPORTUNIDADES -->
+        <!-- ========================================================================= -->
+        <section class="slide">
+            <div class="slide-header">
+                <div class="slide-header-left">
+                    <div class="slide-header-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div>
+                        <div class="slide-header-title">4. Gestão de Riscos & Matriz 5x5 (ISO 6.1)</div>
+                        <div class="slide-header-sub">Mentalidade de Risco Preventiva e Mitigação Operacional Naval</div>
+                    </div>
+                </div>
+                <div class="slide-header-badge"><i class="fa-solid fa-calculator"></i> Severidade P x I</div>
+            </div>
+
+            <div class="slide-body">
+                <div class="grid-3" style="margin-bottom: 12px;">
+                    <div class="card" style="text-align: center;">
+                        <span style="font-size: 11px; color: #64748b; font-weight: 600;">Probabilidade (P)</span>
+                        <div style="font-size: 20px; font-weight: 800; color: #0f172a;">1 a 5</div>
+                        <span style="font-size: 9px; color: #94a3b8;">Rara (1) a Frequente (5)</span>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <span style="font-size: 11px; color: #64748b; font-weight: 600;">Impacto (I)</span>
+                        <div style="font-size: 20px; font-weight: 800; color: #0f172a;">1 a 5</div>
+                        <span style="font-size: 9px; color: #94a3b8;">Insignificante (1) a Catastrófico (5)</span>
+                    </div>
+                    <div class="card card-accent" style="text-align: center;">
+                        <span style="font-size: 11px; color: #0b5944; font-weight: 700;">Severidade Calculada</span>
+                        <div style="font-size: 20px; font-weight: 800; color: #0b5944;">P × I (1 a 25)</div>
+                        <span style="font-size: 9px; color: #0b5944;">Baixo | Médio | Alto | Crítico</span>
+                    </div>
+                </div>
+
+                <div class="card" style="flex: 1;">
+                    <div class="card-title" style="margin-bottom: 6px;"><i class="fa-solid fa-table" style="color: #0b5944;"></i> Matriz de Riscos Cadastrada no ERP (Tabela <code>sgq_matriz_riscos</code>)</div>
+                    <table class="table-slide">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Risco Mapeado</th>
+                                <th>P</th>
+                                <th>I</th>
+                                <th>Sev.</th>
+                                <th>Ação Preventiva / Mitigação no Sistema</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>RSK-2026-001</strong></td>
+                                <td>Vistoria realizada com credencial Marinha/CREA vencidos</td>
+                                <td>2</td>
+                                <td>5</td>
+                                <td><span class="badge-status badge-danger">10 (ALTO)</span></td>
+                                <td>Bloqueio automático no agendamento via <code>vistoriadorElegivelParaAgendamento</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>RSK-2026-002</strong></td>
+                                <td>Orçamento emitido para embarcação sem dados estruturais</td>
+                                <td>3</td>
+                                <td>3</td>
+                                <td><span class="badge-status badge-warning">9 (MÉDIO)</span></td>
+                                <td>Trava de prontidão comercial (ISO 8.2) exigindo $L, B, D, AB$ e motor.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>RSK-2026-003</strong></td>
+                                <td>Retorno de A/S pela Capitania por exigência pendente</td>
+                                <td>2</td>
+                                <td>5</td>
+                                <td><span class="badge-status badge-danger">10 (ALTO)</span></td>
+                                <td>Bloqueio do laudo e abertura compulsória de RNC e plano 5W2H.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>RSK-2026-004</strong></td>
+                                <td>Atraso na entrega do laudo ao cliente</td>
+                                <td>3</td>
+                                <td>3</td>
+                                <td><span class="badge-status badge-warning">9 (MÉDIO)</span></td>
+                                <td>Monitoramento diário de Lead Time na tela de Indicadores SGQ.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <div class="slide-footer-left"><i class="fa-solid fa-compass"></i> Amazon Certificadora & Engenharia Naval</div>
+                <div class="slide-footer-right">
+                    <span>ABNT NBR ISO 9001:2015 — Dossiê SGQ</span>
+                    <span class="slide-number">Slide 05</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 6: COMPETÊNCIA TÉCNICA E TRAVA DE CREDENCIAIS -->
+        <!-- ========================================================================= -->
+        <section class="slide">
+            <div class="slide-header">
+                <div class="slide-header-left">
+                    <div class="slide-header-icon"><i class="fa-solid fa-user-shield"></i></div>
+                    <div>
+                        <div class="slide-header-title">5. Competência Técnica & Trava de Credenciais (ISO 7.2)</div>
+                        <div class="slide-header-sub">Barreira Tecnológica Antifalha Humana para Vistoriadores e Peritos Navais</div>
+                    </div>
+                </div>
+                <div class="slide-header-badge" style="background: #ef4444; border-color: #fca5a5;"><i class="fa-solid fa-ban"></i> Trava Bloqueante</div>
+            </div>
+
+            <div class="slide-body">
+                <div class="grid-2">
+                    <div class="card card-danger">
+                        <div class="card-title" style="color: #991b1b;"><i class="fa-solid fa-shield-virus"></i> O Risco Técnico Evitado</div>
+                        <p class="card-text">
+                            No setor naval, uma perícia realizada por profissional com credencial vencida na <strong>Capitania dos Portos</strong> ou registro suspenso no <strong>CREA/CFT</strong> é nula de pleno direito, gerando apreensão de embarcação e responsabilização civil/criminal.
+                        </p>
+                        <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 10px; color: #991b1b;">
+                            <strong>Comportamento Sem o ERP:</strong> Falha humana no controle manual por planilhas resulta em agendamento indevido.
+                        </div>
+                    </div>
+
+                    <div class="card card-accent">
+                        <div class="card-title" style="color: #0b5944;"><i class="fa-solid fa-microchip"></i> A Solução Implementada no Código</div>
+                        <p class="card-text">
+                            A função <code>vistoriadorElegivelParaAgendamento()</code> em <code>includes/sgq.php</code> intercepta qualquer tentativa de agendamento na API (<code>modules/agendamentos/actions.php</code>).
+                        </p>
+                        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 10px; color: #166534;">
+                            <strong>Comportamento Com o ERP:</strong> Resposta imediata <code>HTTP 400 Bad Request</code> impedindo salvar o agendamento no banco de dados.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 12px; background: #0f172a; color: #ffffff;">
+                    <div style="font-size: 10.5px; font-weight: 700; color: #73f1bd; margin-bottom: 6px; font-family: monospace;">
+                        Trecho da Regra de Negócio Compulsória (includes/sgq.php):
+                    </div>
+                    <pre style="font-size: 9.5px; font-family: monospace; color: #e2e8f0; line-height: 1.4; overflow-x: auto;">
+if (empty($u['credencial_marinha_validade']) || strtotime($u['credencial_marinha_validade']) < strtotime('today')) {
+    return ['elegivel' => false, 'motivo' => 'Credencial da Marinha vencida ou não informada'];
+}
+if (empty($u['registro_conselho_validade']) || strtotime($u['registro_conselho_validade']) < strtotime('today')) {
+    return ['elegivel' => false, 'motivo' => 'Registro no Conselho de Classe (CREA/CFT) vencido'];
+}</pre>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <div class="slide-footer-left"><i class="fa-solid fa-compass"></i> Amazon Certificadora & Engenharia Naval</div>
+                <div class="slide-footer-right">
+                    <span>ABNT NBR ISO 9001:2015 — Dossiê SGQ</span>
+                    <span class="slide-number">Slide 06</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 7: TRILHA DE AUDITORIA CADASTRAL -->
+        <!-- ========================================================================= -->
+        <section class="slide">
+            <div class="slide-header">
+                <div class="slide-header-left">
+                    <div class="slide-header-icon"><i class="fa-solid fa-fingerprint"></i></div>
+                    <div>
+                        <div class="slide-header-title">6. Informação Documentada & Auditoria Cadastral (ISO 7.5)</div>
+                        <div class="slide-header-sub">Rastreabilidade Completa com Snapshots Antes vs Depois</div>
+                    </div>
+                </div>
+                <div class="slide-header-badge"><i class="fa-solid fa-clock-rotate-left"></i> Imutabilidade</div>
+            </div>
+
+            <div class="slide-body">
+                <div class="grid-3" style="margin-bottom: 12px;">
+                    <div class="card">
+                        <div class="card-title" style="font-size: 11px;"><i class="fa-solid fa-user-check"></i> Autoria Identificada</div>
+                        <p class="card-text">ID, nome do operador autenticado e endereço IP de origem gravados de forma indelével.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-title" style="font-size: 11px;"><i class="fa-solid fa-comment-dots"></i> Justificativa Obrigatória</div>
+                        <p class="card-text">Nenhuma alteração técnica em embarcação ou cliente pode ser salva sem motivo registrado.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-title" style="font-size: 11px;"><i class="fa-solid fa-code-compare"></i> Delta de Campos</div>
+                        <p class="card-text">Identificação exata de quais colunas foram modificadas na transação.</p>
+                    </div>
+                </div>
+
+                <div class="card" style="flex: 1;">
+                    <div class="card-title" style="margin-bottom: 4px;">
+                        <i class="fa-solid fa-eye" style="color: #0284c7;"></i> Visualizador Comparativo Implementado no ERP (<code>/sgq/auditoria</code>)
+                    </div>
+                    <p style="font-size: 10px; color: #64748b; margin-bottom: 8px;">
+                        Exemplo de captura em tempo real gravada na tabela <code>sgq_auditoria_cadastral</code>:
+                    </p>
+
+                    <div class="diff-container">
+                        <div class="diff-box diff-before">
+                            <strong style="display: block; margin-bottom: 4px;"><i class="fa-solid fa-arrow-left"></i> ESTADO ANTERIOR (Antes):</strong>
+                            {<br>
+                            &nbsp;&nbsp;"nome": "Balsa Rio Negro I",<br>
+                            &nbsp;&nbsp;"comprimento_total": 45.20,<br>
+                            &nbsp;&nbsp;"arqueacao_bruta": 210.00,<br>
+                            &nbsp;&nbsp;"status": "PENDENTE_DOCUMENTACAO"<br>
+                            }
+                        </div>
+                        <div class="diff-box diff-after">
+                            <strong style="display: block; margin-bottom: 4px;"><i class="fa-solid fa-arrow-right"></i> ESTADO POSTERIOR (Depois):</strong>
+                            {<br>
+                            &nbsp;&nbsp;"nome": "Balsa Rio Negro I",<br>
+                            &nbsp;&nbsp;"comprimento_total": 46.80, <span style="font-weight:bold;color:#15803d;">← Alterado</span><br>
+                            &nbsp;&nbsp;"arqueacao_bruta": 224.50, <span style="font-weight:bold;color:#15803d;">← Alterado</span><br>
+                            &nbsp;&nbsp;"status": "HOMOLOGADA_COMERCIAL"<br>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <div class="slide-footer-left"><i class="fa-solid fa-compass"></i> Amazon Certificadora & Engenharia Naval</div>
+                <div class="slide-footer-right">
+                    <span>ABNT NBR ISO 9001:2015 — Dossiê SGQ</span>
+                    <span class="slide-number">Slide 07</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 8: SAÍDAS NÃO CONFORMES - RETORNO A/S -->
+        <!-- ========================================================================= -->
+        <section class="slide">
+            <div class="slide-header">
+                <div class="slide-header-left">
+                    <div class="slide-header-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div>
+                        <div class="slide-header-title">7. Saídas Não Conformes — Trava de Retorno A/S (ISO 8.7)</div>
+                        <div class="slide-header-sub">Tratamento de Pendências da Capitania dos Portos e Bloqueio de Certificados</div>
+                    </div>
+                </div>
+                <div class="slide-header-badge" style="background: #991b1b;"><i class="fa-solid fa-lock"></i> Bloqueio CSN</div>
+            </div>
+
+            <div class="slide-body">
+                <div class="grid-2">
+                    <div class="card card-danger">
+                        <div class="card-title" style="color: #991b1b;"><i class="fa-solid fa-circle-exclamation"></i> O que é o Retorno A/S?</div>
+                        <p class="card-text">
+                            Ocorre quando a Capitania dos Portos / Autoridade Marítima aponta exigências técnicas impeditivas ou divergências estruturais que impedem a emissão definitiva do Certificado de Segurança da Navegação (CSN).
+                        </p>
+                    </div>
+
+                    <div class="card card-accent">
+                        <div class="card-title" style="color: #0b5944;"><i class="fa-solid fa-gears"></i> Disparo Automático no Sistema</div>
+                        <p class="card-text">
+                            Ao acionar <code>encaminharRelatorioParaRetornoAS()</code>, o ERP não depende de intervenção humana para abrir a Não Conformidade. O disparo é instantâneo e compulsório.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 14px; flex: 1;">
+                    <div class="card-title"><i class="fa-solid fa-list-ol" style="color: #0284c7;"></i> Sequência de Eventos do Bloqueio Automático</div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px;">
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px;">
+                            <strong style="font-size: 11px; color: #dc2626;">1. Bloqueio CSN</strong>
+                            <p style="font-size: 9.5px; color: #475569; margin-top: 4px;">O laudo tem status alterado para RETORNO_AS e tem emissão travada no ERP.</p>
+                        </div>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px;">
+                            <strong style="font-size: 11px; color: #d97706;">2. Abertura RNC</strong>
+                            <p style="font-size: 9.5px; color: #475569; margin-top: 4px;">Gera código oficial (ex: RNC-2026-0004) com severidade CRÍTICA.</p>
+                        </div>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px;">
+                            <strong style="font-size: 11px; color: #0284c7;">3. Plano 5W2H</strong>
+                            <p style="font-size: 9.5px; color: #475569; margin-top: 4px;">Gera plano de ação em <code>sgq_planos_acao</code> para nova vistoria in loco.</p>
+                        </div>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px;">
+                            <strong style="font-size: 11px; color: #16a34a;">4. Alerta Gerencial</strong>
+                            <p style="font-size: 9.5px; color: #475569; margin-top: 4px;">Dispara notificação para o Responsável Técnico e Gestor da Qualidade.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <div class="slide-footer-left"><i class="fa-solid fa-compass"></i> Amazon Certificadora & Engenharia Naval</div>
+                <div class="slide-footer-right">
+                    <span>ABNT NBR ISO 9001:2015 — Dossiê SGQ</span>
+                    <span class="slide-number">Slide 08</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 9: INDICADORES E SATISFAÇÃO DO CLIENTE -->
+        <!-- ========================================================================= -->
+        <section class="slide">
+            <div class="slide-header">
+                <div class="slide-header-left">
+                    <div class="slide-header-icon"><i class="fa-solid fa-chart-pie"></i></div>
+                    <div>
+                        <div class="slide-header-title">8. Indicadores da Qualidade & Satisfação (ISO 9.1 & 9.1.2)</div>
+                        <div class="slide-header-sub">Monitoramento Quantitativo, Desempenho e Ouvidoria no Portal do Cliente</div>
+                    </div>
+                </div>
+                <div class="slide-header-badge"><i class="fa-solid fa-gauge-high"></i> KPIs Estratégicos</div>
+            </div>
+
+            <div class="slide-body">
+                <div class="grid-3" style="margin-bottom: 14px;">
+                    <div class="kpi-card" style="border-top: 4px solid #ef4444;">
+                        <span style="font-size: 11px; color: #64748b; font-weight: 700;">Taxa de Retrabalho Técnico</span>
+                        <div class="kpi-value" style="color: #dc2626;">2.8%</div>
+                        <span class="kpi-target" style="background: #dcfce7; color: #15803d;">Meta: Inferior a 5.0%</span>
+                        <p style="font-size: 9px; color: #94a3b8; margin-top: 6px;">Vistorias com Retorno A/S / Total Realizado</p>
+                    </div>
+
+                    <div class="kpi-card" style="border-top: 4px solid #0284c7;">
+                        <span style="font-size: 11px; color: #64748b; font-weight: 700;">Lead Time Médio Operacional</span>
+                        <div class="kpi-value" style="color: #0284c7;">6.4 dias</div>
+                        <span class="kpi-target" style="background: #dcfce7; color: #15803d;">Meta: ≤ 10 dias úteis</span>
+                        <p style="font-size: 9px; color: #94a3b8; margin-top: 6px;">Do agendamento à entrega do laudo final</p>
+                    </div>
+
+                    <div class="kpi-card" style="border-top: 4px solid #10b981;">
+                        <span style="font-size: 11px; color: #64748b; font-weight: 700;">Satisfação do Cliente (CSAT)</span>
+                        <div class="kpi-value" style="color: #10b981;">94.2%</div>
+                        <span class="kpi-target" style="background: #dcfce7; color: #15803d;">Meta: Superior a 90%</span>
+                        <p style="font-size: 9px; color: #94a3b8; margin-top: 6px;">Avaliações captadas via Portal do Cliente</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-headset" style="color: #0b5944;"></i> Integração com o Portal do Cliente (Módulo Ouvidoria)</div>
+                    <p class="card-text">
+                        Os clientes têm acesso direto ao canal de <strong>Ouvidoria & Qualidade</strong> (<code>/portal/ouvidoria</code>). Manifestações e reclamações são tipificadas e conectadas ao SGQ, gerando chamados auditáveis com prazo de resposta de até 48 horas úteis e apuração de causa raiz.
+                    </p>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <div class="slide-footer-left"><i class="fa-solid fa-compass"></i> Amazon Certificadora & Engenharia Naval</div>
+                <div class="slide-footer-right">
+                    <span>ABNT NBR ISO 9001:2015 — Dossiê SGQ</span>
+                    <span class="slide-number">Slide 09</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 10: NÃO CONFORMIDADES E AÇÃO CORRETIVA 5W2H -->
+        <!-- ========================================================================= -->
+        <section class="slide">
+            <div class="slide-header">
+                <div class="slide-header-left">
+                    <div class="slide-header-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+                    <div>
+                        <div class="slide-header-title">9. Não Conformidades & Ação Corretiva 5W2H (ISO 10.2)</div>
+                        <div class="slide-header-sub">Ciclo Fechado de Tratamento, Causa Raiz e Avaliação de Eficácia</div>
+                    </div>
+                </div>
+                <div class="slide-header-badge"><i class="fa-solid fa-wrench"></i> Melhoria Contínua</div>
+            </div>
+
+            <div class="slide-body">
+                <div class="card card-accent" style="margin-bottom: 12px;">
+                    <div class="card-title"><i class="fa-solid fa-arrows-spin"></i> O Ciclo de Vida da RNC no ERP</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0;">
+                        <span class="badge-status badge-info">1. Registrada</span>
+                        <i class="fa-solid fa-arrow-right" style="color:#94a3b8;font-size:10px;"></i>
+                        <span class="badge-status badge-warning">2. Investigação (Causa Raiz)</span>
+                        <i class="fa-solid fa-arrow-right" style="color:#94a3b8;font-size:10px;"></i>
+                        <span class="badge-status badge-info">3. Plano de Ação 5W2H</span>
+                        <i class="fa-solid fa-arrow-right" style="color:#94a3b8;font-size:10px;"></i>
+                        <span class="badge-status badge-warning">4. Implementada</span>
+                        <i class="fa-solid fa-arrow-right" style="color:#94a3b8;font-size:10px;"></i>
+                        <span class="badge-status badge-success">5. Avaliada Eficaz (Fechada)</span>
+                    </div>
+                </div>
+
+                <div class="card" style="flex: 1;">
+                    <div class="card-title"><i class="fa-solid fa-table-cells" style="color: #0b5944;"></i> Metodologia 5W2H Estruturada no Banco de Dados (<code>sgq_planos_acao</code>)</div>
+                    <table class="table-slide">
+                        <thead>
+                            <tr>
+                                <th style="width: 25%;">Dimensão 5W2H</th>
+                                <th>Conteúdo Cadastrado no ERP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>O quê (What)</strong></td>
+                                <td>Ação de correção e ação preventiva contra reincidência.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Por quê (Why)</strong></td>
+                                <td>Causa raiz diagnosticada (Diagrama de Ishikawa ou 5 Porquês).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Quem (Who)</strong></td>
+                                <td>Responsável nomeado e qualificado pela execução técnica.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Onde (Where)</strong></td>
+                                <td>Embarcação, projeto ou setor operacional afetado.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Quando (When)</strong></td>
+                                <td>Prazo limite estipulado no cronograma.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Como (How)</strong></td>
+                                <td>Procedimento técnico operacional adotado.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Quanto Custa (How Much)</strong></td>
+                                <td>Custo financeiro orçado para mitigar o desvio.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Avaliação de Eficácia</strong></td>
+                                <td>Verificação obrigatória após 30 dias para constatar se houve reincidência.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <div class="slide-footer-left"><i class="fa-solid fa-compass"></i> Amazon Certificadora & Engenharia Naval</div>
+                <div class="slide-footer-right">
+                    <span>ABNT NBR ISO 9001:2015 — Dossiê SGQ</span>
+                    <span class="slide-number">Slide 10</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 11: ROTEIRO PRÁTICO DE DEGUSTAÇÃO PARA O AUDITOR -->
+        <!-- ========================================================================= -->
+        <section class="slide">
+            <div class="slide-header">
+                <div class="slide-header-left">
+                    <div class="slide-header-icon"><i class="fa-solid fa-laptop-code"></i></div>
+                    <div>
+                        <div class="slide-header-title">10. Roteiro Prático de Demonstração ao Vivo</div>
+                        <div class="slide-header-sub">Sequência Recomendada para a Sessão Presencial com o Auditor</div>
+                    </div>
+                </div>
+                <div class="slide-header-badge"><i class="fa-solid fa-play"></i> Degustação Técnica</div>
+            </div>
+
+            <div class="slide-body">
+                <table class="table-slide" style="flex: 1;">
+                    <thead>
+                        <tr>
+                            <th style="width: 10%;">Passo</th>
+                            <th style="width: 25%;">Tela no Sistema ERP</th>
+                            <th style="width: 40%;">Ação / Evidência a ser Mostrada</th>
+                            <th style="width: 25%;">Cláusula ISO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Passo 1</strong></td>
+                            <td><code>/sgq/manual</code><br><small>Manual & Política SGQ</small></td>
+                            <td>Apresentar a Política da Qualidade, o macroprocesso em 6 etapas e a matriz de correlação ISO.</td>
+                            <td><span class="badge-status badge-info">ISO 4.3, 4.4, 5.2</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Passo 2</strong></td>
+                            <td><code>/sgq/riscos</code><br><small>Matriz de Riscos</small></td>
+                            <td>Exibir a matriz $5 \times 5$ com os 5 riscos navais cadastrados e as ações de mitigação.</td>
+                            <td><span class="badge-status badge-info">ISO 6.1</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Passo 3</strong></td>
+                            <td><code>/agendamentos/novo</code><br><small>Agendamento de Vistoria</small></td>
+                            <td><strong>Prova da Trava:</strong> Tentar selecionar vistoriador com credencial vencida e mostrar o bloqueio HTTP 400.</td>
+                            <td><span class="badge-status badge-danger">ISO 7.2 (Crucial)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Passo 4</strong></td>
+                            <td><code>/sgq/auditoria</code><br><small>Auditoria Cadastral</small></td>
+                            <td>Clicar em "Ver Comparativo" e mostrar o modal com o JSON <strong>Antes (Vermelho) vs Depois (Verde)</strong>.</td>
+                            <td><span class="badge-status badge-info">ISO 7.5</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Passo 5</strong></td>
+                            <td><code>/sgq/indicadores</code> e <code>/sgq/rnc</code><br><small>Painel & Não Conformidades</small></td>
+                            <td>Exibir taxas de retrabalho técnico, lead time, NPS e o plano 5W2H de uma RNC aberta.</td>
+                            <td><span class="badge-status badge-info">ISO 9.1 & 10.2</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="slide-footer">
+                <div class="slide-footer-left"><i class="fa-solid fa-compass"></i> Amazon Certificadora & Engenharia Naval</div>
+                <div class="slide-footer-right">
+                    <span>ABNT NBR ISO 9001:2015 — Dossiê SGQ</span>
+                    <span class="slide-number">Slide 11</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- SLIDE 12: CONCLUSÃO E DECLARAÇÃO DE PRONTIDÃO -->
+        <!-- ========================================================================= -->
+        <section class="slide">
+            <div class="slide-header">
+                <div class="slide-header-left">
+                    <div class="slide-header-icon"><i class="fa-solid fa-award"></i></div>
+                    <div>
+                        <div class="slide-header-title">11. Conclusão & Declaração de Prontidão para Certificação</div>
+                        <div class="slide-header-sub">Garantia de Conformidade e Atesto Técnico do SGQ</div>
+                    </div>
+                </div>
+                <div class="slide-header-badge" style="background: #059669;"><i class="fa-solid fa-stamp"></i> Sistema Pronto</div>
+            </div>
+
+            <div class="slide-body">
+                <div class="grid-2" style="margin-bottom: 14px;">
+                    <div class="card card-accent">
+                        <div class="card-title" style="color: #0b5944;"><i class="fa-solid fa-check-double"></i> Resumo de Evidências Auditadas</div>
+                        <ul style="margin: 8px 0 0 16px; font-size: 11px; color: #334155; line-height: 1.6;">
+                            <li>Manual da Qualidade e Política disponíveis e publicados no ERP;</li>
+                            <li>Matriz de Riscos 5x5 monitorada e ativa com 5 riscos navais mapeados;</li>
+                            <li>Travas impeditivas de competência técnica (Conselho e Marinha);</li>
+                            <li>Trilha de auditoria cadastral com rastreabilidade completa Antes vs Depois;</li>
+                            <li>Indicadores estratégicos calculados em tempo real (Retrabalho, Lead Time, CSAT);</li>
+                            <li>Tratamento de Não Conformidades baseado em metodologia estruturada 5W2H.</li>
+                        </ul>
+                    </div>
+
+                    <div class="card card-blue">
+                        <div class="card-title" style="color: #0284c7;"><i class="fa-solid fa-shield-halved"></i> Parecer Conclusivo</div>
+                        <p class="card-text" style="font-size: 11px;">
+                            O Sistema de Gestão da Qualidade da <strong>Amazon Certificadora & Engenharia Naval</strong> encontra-se plenamente alinhado às exigências da <strong>ABNT NBR ISO 9001:2015</strong> e às determinações da <strong>Autoridade Marítima Brasileira (DPC)</strong>, apresentando controles sistêmicos automatizados que minimizam a incidência de falhas humanas e asseguram a integridade dos serviços técnicos prestados.
+                        </p>
+                        <div style="margin-top: 14px; padding: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; text-align: center;">
+                            <strong style="color: #166534; font-size: 11px;"><i class="fa-solid fa-circle-check"></i> STATUS GERAL: APTO PARA AUDITORIA DE CERTIFICAÇÃO</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="background: #f8fafc; padding: 12px 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #475569;">
+                        <div>
+                            <strong>Responsável Técnico / Engenharia Naval:</strong> Amazon Certificadora
+                        </div>
+                        <div>
+                            <strong>Data da Emissão:</strong> Setembro / 2026
+                        </div>
+                        <div>
+                            <strong>Versão do SGQ:</strong> 2026.1 (ERP Web Integrado)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <div class="slide-footer-left"><i class="fa-solid fa-compass"></i> Amazon Certificadora & Engenharia Naval</div>
+                <div class="slide-footer-right">
+                    <span>ABNT NBR ISO 9001:2015 — Dossiê SGQ</span>
+                    <span class="slide-number">Slide 12</span>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</body>
+</html>
