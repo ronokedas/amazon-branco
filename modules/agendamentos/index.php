@@ -30,10 +30,20 @@ try {
     $where = [];
     $params = [];
     if ($cargo === 'VISTORIADOR') {
-        $uEmail = (string)($_SESSION['usuario_email'] ?? '');
-        $params[':vistoriador_id'] = $usuario_id;
-        $params[':vistoriador_email'] = $uEmail;
-        $where[] = "(a.vistoriador_id = :vistoriador_id OR (a.vistoriador_id IN (SELECT u2.id FROM usuarios u2 WHERE u2.email = :vistoriador_email AND :vistoriador_email <> '')) OR a.vistoriador_id IS NULL)";
+        $uEmail = trim((string)($_SESSION['usuario_email'] ?? ''));
+        $vistoriadorIds = array_values(array_filter([$usuario_id]));
+        if ($uEmail !== '') {
+            try {
+                $stmtIds = $pdo->prepare("SELECT id FROM usuarios WHERE email = :mail");
+                $stmtIds->execute([':mail' => $uEmail]);
+                $idsEncontrados = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
+                if (!empty($idsEncontrados)) {
+                    $vistoriadorIds = array_values(array_unique(array_merge($vistoriadorIds, $idsEncontrados)));
+                }
+            } catch (Throwable $e) {}
+        }
+        $escapedAgIds = "'" . implode("','", array_map('addslashes', $vistoriadorIds)) . "'";
+        $where[] = "(a.vistoriador_id IN ({$escapedAgIds}) OR a.vistoriador_id IS NULL)";
     }
     if ($filtro_status !== '') {
         $where[] = 'a.status = :status';

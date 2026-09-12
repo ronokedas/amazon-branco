@@ -68,10 +68,22 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
     $params = [':uid'=>$usuarioId];
 
     if ($cargo === 'VISTORIADOR') {
-        $uEmail = (string)($_SESSION['usuario_email'] ?? '');
-        $params[':uemail'] = $uEmail;
-        $wVist = " (a.vistoriador_id = :uid OR (a.vistoriador_id IN (SELECT u2.id FROM usuarios u2 WHERE u2.email = :uemail AND :uemail <> '')) OR a.vistoriador_id IS NULL) ";
-        $wHist = " (a.vistoriador_id = :uid OR (a.vistoriador_id IN (SELECT u2.id FROM usuarios u2 WHERE u2.email = :uemail AND :uemail <> '')) OR v.criado_por = :uid) ";
+        $uEmail = trim((string)($_SESSION['usuario_email'] ?? ''));
+        $vistoriadorIds = array_values(array_filter([$usuarioId]));
+        if ($uEmail !== '') {
+            try {
+                $stmtIds = $pdo->prepare("SELECT id FROM usuarios WHERE email = :mail");
+                $stmtIds->execute([':mail' => $uEmail]);
+                $idsEncontrados = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
+                if (!empty($idsEncontrados)) {
+                    $vistoriadorIds = array_values(array_unique(array_merge($vistoriadorIds, $idsEncontrados)));
+                }
+            } catch (Throwable $e) {}
+        }
+        $escapedIds = "'" . implode("','", array_map('addslashes', $vistoriadorIds)) . "'";
+        $wVist = " (a.vistoriador_id IN ({$escapedIds}) OR a.vistoriador_id IS NULL) ";
+        $wHist = " (a.vistoriador_id IN ({$escapedIds}) OR v.criado_por IN ({$escapedIds})) ";
+        $params = [];
 
         $base['kpis'] = [
             'atrasadas'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM agendamentos a LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1) WHERE {$wVist} AND a.status IN ('pendente','confirmado','em_andamento') AND a.data_vistoria<CURDATE() AND (v.id IS NULL OR v.status='PENDENTE')",$params),

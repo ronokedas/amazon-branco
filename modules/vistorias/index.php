@@ -22,18 +22,35 @@ if (!podeAcessar('vistorias')) {
 $filtro_status = $_GET['status'] ?? '';
 $cargo = getCargo();
 
+$vistoriadorIds = [];
+$escapedVistIds = "''";
+if ($cargo === 'VISTORIADOR') {
+    $uEmail = trim((string)($_SESSION['usuario_email'] ?? ''));
+    $usuarioId = (string)($_SESSION['usuario_id'] ?? '');
+    $vistoriadorIds = array_values(array_filter([$usuarioId]));
+    if ($uEmail !== '') {
+        try {
+            $stmtIds = $pdo->prepare("SELECT id FROM usuarios WHERE email = :mail");
+            $stmtIds->execute([':mail' => $uEmail]);
+            $idsEncontrados = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
+            if (!empty($idsEncontrados)) {
+                $vistoriadorIds = array_values(array_unique(array_merge($vistoriadorIds, $idsEncontrados)));
+            }
+        } catch (Throwable $e) {}
+    }
+    $escapedVistIds = "'" . implode("','", array_map('addslashes', $vistoriadorIds)) . "'";
+}
+
 try {
     $params = [];
     $where_extra = '';
 
-    if (getCargo() === 'VISTORIADOR') {
-        $where_extra = " AND (a.vistoriador_id = :vistoriador_id OR a.vistoriador_id IN (SELECT u2.id FROM usuarios u2 WHERE u2.email = :uemail AND :uemail <> '') OR v.criado_por = :vistoriador_id)";
-        $params[':vistoriador_id'] = $_SESSION['usuario_id'];
-        $params[':uemail'] = $_SESSION['usuario_email'] ?? '';
-    } elseif (getCargo() === 'ANALISTA') {
+    if ($cargo === 'VISTORIADOR') {
+        $where_extra = " AND (a.vistoriador_id IN ({$escapedVistIds}) OR v.criado_por IN ({$escapedVistIds}) OR a.vistoriador_id IS NULL)";
+    } elseif ($cargo === 'ANALISTA') {
         $where_extra = " AND EXISTS (SELECT 1 FROM analises_planos ap WHERE ap.embarcacao_id=v.embarcacao_id AND ap.analista_id=:analista_id)";
         $params[':analista_id'] = $_SESSION['usuario_id'];
-    } elseif (getCargo() === 'VENDEDOR') {
+    } elseif ($cargo === 'VENDEDOR') {
         $where_extra = " AND (a.vendedor_id = :vendedor_id OR a.id IN (SELECT id FROM agendamentos WHERE vendedor_id = :agend_vendedor_id))";
         $params[':vendedor_id'] = $_SESSION['usuario_id'];
         $params[':agend_vendedor_id'] = $_SESSION['usuario_id'];
@@ -86,9 +103,7 @@ try {
                 AND (v.id IS NULL OR v.status = 'PENDENTE')";
     $paramsAg = [];
     if ($cargo === 'VISTORIADOR') {
-        $sqlAg .= " AND (a.vistoriador_id = :uid OR a.vistoriador_id IN (SELECT u2.id FROM usuarios u2 WHERE u2.email = :uemail AND :uemail <> '') OR a.vistoriador_id IS NULL)";
-        $paramsAg[':uid'] = $_SESSION['usuario_id'];
-        $paramsAg[':uemail'] = $_SESSION['usuario_email'] ?? '';
+        $sqlAg .= " AND (a.vistoriador_id IN ({$escapedVistIds}) OR a.vistoriador_id IS NULL)";
     }
     $sqlAg .= " ORDER BY a.data_vistoria IS NULL, a.data_vistoria ASC, a.hora_vistoria ASC LIMIT 10";
     $stmtAg = $pdo->prepare($sqlAg);
@@ -103,7 +118,7 @@ try {
 try {
     $sql_contadores = "SELECT v.status, COUNT(*) as total FROM vistorias v LEFT JOIN agendamentos a ON v.agendamento_id = a.id WHERE 1=1";
     if ($cargo === 'VISTORIADOR') {
-        $sql_contadores .= " AND (a.vistoriador_id = :vistoriador_id OR a.vistoriador_id IN (SELECT u2.id FROM usuarios u2 WHERE u2.email = :uemail AND :uemail <> '') OR v.criado_por = :vistoriador_id)";
+        $sql_contadores .= " AND (a.vistoriador_id IN ({$escapedVistIds}) OR v.criado_por IN ({$escapedVistIds}) OR a.vistoriador_id IS NULL)";
     } elseif ($cargo === 'ANALISTA') {
         $sql_contadores .= " AND EXISTS (SELECT 1 FROM analises_planos ap WHERE ap.embarcacao_id=v.embarcacao_id AND ap.analista_id=:analista_id)";
     } elseif ($cargo === 'VENDEDOR') {
@@ -112,8 +127,7 @@ try {
     $sql_contadores .= " GROUP BY v.status";
     
     if ($cargo === 'VISTORIADOR') {
-        $stmt = $pdo->prepare($sql_contadores);
-        $stmt->execute([':vistoriador_id' => $_SESSION['usuario_id'], ':uemail' => $_SESSION['usuario_email'] ?? '']);
+        $stmt = $pdo->query($sql_contadores);
     } elseif ($cargo === 'ANALISTA') {
         $stmt = $pdo->prepare($sql_contadores);
         $stmt->execute([':analista_id' => $_SESSION['usuario_id']]);
