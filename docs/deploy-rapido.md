@@ -4,9 +4,13 @@ Guia prático e direto em **3 etapas** para atualizar os arquivos do sistema e o
 
 ---
 
-## 📦 ETAPA 1: Gerar o Backup do Banco de Dados Local
+## 📦 ETAPA 1: Salvar Alterações e Banco Local (Opcional para dia a dia)
 
-Você pode exportar o banco de dados atualizado de duas formas (escolha a que preferir):
+> [!TIP]
+> **No dia a dia (atualizações normais):** Você **não** precisa exportar o `db.sql` toda vez se só alterou telas ou código. O script na VPS já aplica as novas tabelas e preserva os dados reais da VPS.
+> Exporte o `db.sql` apenas quando quiser atualizar o modelo inicial para novas VPS limpas ou guardar um backup dos seus testes locais.
+
+Você pode exportar o banco de dados local atualizado de duas formas (escolha a que preferir):
 
 ### Opção A: Pelo Terminal do Windows / PowerShell (Recomendado — 100% compatível MySQL 8.0)
 Com o Docker rodando, abra o PowerShell e execute:
