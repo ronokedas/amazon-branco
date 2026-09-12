@@ -102,11 +102,11 @@ switch ($action) {
                 ':id' => $id,
             ]);
 
-            setMensagem('success', 'Análise de causa raiz e status atualizados!');
+            setMensagem('success', 'Diagnóstico e status da ocorrência atualizados com sucesso!');
             redirecionar(APP_URL . 'sgq/nao-conformidades?id=' . urlencode($id));
         } catch (Exception $e) {
             error_log('[SGQ SALVAR CAUSA ERRO] ' . $e->getMessage());
-            setMensagem('error', 'Erro ao salvar análise: ' . $e->getMessage());
+            setMensagem('error', 'Erro ao salvar diagnóstico: ' . $e->getMessage());
             redirecionar(APP_URL . 'sgq/nao-conformidades');
         }
         break;
@@ -123,7 +123,7 @@ switch ($action) {
             $howMuch = (float)($_POST['quanto_custa_how_much'] ?? 0);
 
             if ($rncId === '' || $what === '' || $who === '' || $when === '') {
-                throw new Exception('Preencha os campos obrigatórios (O que, Quem e Quando).');
+                throw new Exception('Preencha os campos obrigatórios (O que fazer, Responsável e Prazo).');
             }
 
             $planoId = gerarUUID();
@@ -152,11 +152,11 @@ switch ($action) {
             // Atualiza status da RNC para PLANO_ACAO_DEFINIDO se estiver ABERTA
             $pdo->prepare("UPDATE sgq_nao_conformidades SET status_ciclo_vida = 'PLANO_ACAO_DEFINIDO' WHERE id = :id AND status_ciclo_vida = 'ABERTA'")->execute([':id' => $rncId]);
 
-            setMensagem('success', 'Ação 5W2H adicionada com sucesso!');
+            setMensagem('success', 'Ação corretiva registrada com sucesso!');
             redirecionar(APP_URL . 'sgq/nao-conformidades?id=' . urlencode($rncId));
         } catch (Exception $e) {
             error_log('[SGQ ADICIONAR PLANO ERRO] ' . $e->getMessage());
-            setMensagem('error', 'Erro ao adicionar ação 5W2H: ' . $e->getMessage());
+            setMensagem('error', 'Erro ao registrar ação: ' . $e->getMessage());
             redirecionar(APP_URL . 'sgq/nao-conformidades' . (!empty($rncId) ? '?id=' . urlencode($rncId) : ''));
         }
         break;
@@ -182,7 +182,7 @@ switch ($action) {
                 ':id' => $planoId,
             ]);
 
-            setMensagem('success', 'Ação 5W2H marcada como concluída com eficácia!');
+            setMensagem('success', 'Ação corretiva concluída com sucesso!');
             redirecionar(APP_URL . 'sgq/nao-conformidades?id=' . urlencode($rncId));
         } catch (Exception $e) {
             error_log('[SGQ CONCLUIR PLANO ERRO] ' . $e->getMessage());
