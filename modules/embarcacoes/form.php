@@ -320,7 +320,7 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                     <?php if ($isEdicao): ?>
                     <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;padding:12px;border:1px solid var(--cor-borda);border-radius:10px;background:rgba(9,155,112,.05)">
                         <img src="<?= h($embarcacao['foto_url'] ?: APP_URL . 'assets/img/portal-hero-ship.png') ?>" alt="Foto oficial da embarcação" style="width:104px;height:78px;object-fit:cover;border-radius:9px;border:1px solid var(--cor-borda)">
-                        <span><strong style="display:block">Foto oficial da embarcação</strong><small class="text-muted"><?= $embarcacao['foto_url'] ? 'Capturada pelo vistoriador no Amazon Campo.' : 'Ainda não capturada. O vistoriador poderá adicionar pelo Amazon Campo.' ?></small></span>
+                        <span><strong style="display:block">Foto oficial da embarcação</strong><small class="text-muted"><?= $embarcacao['foto_url'] ? 'Capturada durante a vistoria técnica.' : 'Ainda não capturada. O vistoriador poderá adicionar durante a vistoria.' ?></small></span>
                     </div>
                     <?php endif; ?>
                     <div class="grid-2">
