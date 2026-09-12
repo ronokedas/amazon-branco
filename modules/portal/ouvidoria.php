@@ -28,6 +28,21 @@ $stmt = $pdo->prepare("
 $stmt->execute([':cli_id' => $clienteId]);
 $manifestacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+$acoesPorManifestacao = [];
+$manifestacaoIds = array_column($manifestacoes, 'id');
+if (!empty($manifestacaoIds)) {
+    $inSql = implode(',', array_fill(0, count($manifestacaoIds), '?'));
+    $stmtAcoes = $pdo->prepare("
+        SELECT * FROM sgq_planos_acao 
+        WHERE nao_conformidade_id IN ($inSql)
+        ORDER BY quando_fara_when ASC, criado_em ASC
+    ");
+    $stmtAcoes->execute($manifestacaoIds);
+    while ($acao = $stmtAcoes->fetch(PDO::FETCH_ASSOC)) {
+        $acoesPorManifestacao[$acao['nao_conformidade_id']][] = $acao;
+    }
+}
+
 $total = count($manifestacoes);
 $abertas = 0;
 $emTratamento = 0;
@@ -228,6 +243,7 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                         <th>Classificação</th>
                         <th>Data de Registro</th>
                         <th>Situação SGQ</th>
+                        <th style="text-align: center;">Ação</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -293,16 +309,169 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                                     <?php echo h($statusNome); ?>
                                 </span>
                                 <?php if (!empty($item['analise_causa_raiz'])): ?>
-                                    <div style="margin-top: 6px; font-size: 11px; color: var(--p-muted);">
-                                        <i class="fa-solid fa-comment-dots"></i> Parecer técnico registrado
+                                    <div style="margin-top: 6px; font-size: 11px; color: var(--p-green); font-weight: 600;">
+                                        <i class="fa-solid fa-circle-check"></i> Parecer técnico disponível
                                     </div>
                                 <?php endif; ?>
+                            </td>
+                            <td data-label="Ação" style="text-align: center;">
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#modalDetalhe<?php echo h($item['id']); ?>" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600;">
+                                    <i class="fa-solid fa-eye"></i> Ver Detalhes
+                                </button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
+
+        <!-- Modais de Detalhes de Cada Manifestação -->
+        <?php foreach ($manifestacoes as $item): ?>
+            <?php
+            $status = $item['status_ciclo_vida'];
+            $badgeClass = 'is-valid';
+            $statusNome = 'Concluída';
+
+            switch ($status) {
+                case 'ABERTA':
+                    $badgeClass = 'is-warning';
+                    $statusNome = 'Aberta / Aguardando RT';
+                    break;
+                case 'EM_ANALISE_CAUSA':
+                    $badgeClass = 'is-analysis';
+                    $statusNome = 'Em Investigação Técnica';
+                    break;
+                case 'PLANO_ACAO_DEFINIDO':
+                case 'EM_EXECUCAO':
+                case 'AGUARDANDO_EFICACIA':
+                    $badgeClass = 'is-analysis';
+                    $statusNome = 'Plano de Ação em Andamento';
+                    break;
+                case 'ENCERRADA_EFICAZ':
+                    $badgeClass = 'is-valid';
+                    $statusNome = 'Encerrada / Resolvida';
+                    break;
+                case 'REABERTA':
+                    $badgeClass = 'is-rejected';
+                    $statusNome = 'Reaberta';
+                    break;
+            }
+            ?>
+            <div class="modal fade" id="modalDetalhe<?php echo h($item['id']); ?>" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <span style="background: #0f172a; color: #fff; padding: 5px 12px; border-radius: 6px; font-weight: 700; font-size: 13px; font-family: monospace;">
+                                    <?php echo h($item['numero_rnc']); ?>
+                                </span>
+                                <strong style="font-size: 1.05rem; color: #1e293b;"><?php echo h($item['titulo']); ?></strong>
+                            </div>
+                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                        </div>
+                        <div class="modal-body" style="padding: 24px;">
+                            <!-- Resumo em cards -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px;">
+                                <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block;">Data de Registro</span>
+                                    <strong style="color: #1e293b; font-size: 13px;"><?php echo date('d/m/Y H:i', strtotime($item['criado_em'])); ?></strong>
+                                </div>
+                                <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block;">Embarcação Vinculada</span>
+                                    <strong style="color: #1e293b; font-size: 13px;"><?php echo h($item['embarcacao_nome'] ?: 'Geral / Administrativo'); ?></strong>
+                                </div>
+                                <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block;">Classificação</span>
+                                    <strong style="color: #1e293b; font-size: 13px;"><?php echo h($item['classificacao_falha'] ?: 'Reclamação'); ?></strong>
+                                </div>
+                                <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block;">Situação Atual</span>
+                                    <span class="portal-status <?php echo $badgeClass; ?>" style="margin-top: 4px; display: inline-block;">
+                                        <?php echo h($statusNome); ?>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Relato do Cliente -->
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 20px;">
+                                <div style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fa-solid fa-file-lines" style="color: #08a774;"></i> Relato Registrado por Você:
+                                </div>
+                                <div style="font-size: 14px; color: #1e293b; line-height: 1.6; white-space: pre-line;">
+                                    <?php echo h($item['descricao_detalhada']); ?>
+                                </div>
+                            </div>
+
+                            <!-- Retorno Técnico da Amazon Certificadora -->
+                            <div style="margin-bottom: 20px;">
+                                <div style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fa-solid fa-shield-halved" style="color: #08a774;"></i> Parecer Técnico da Amazon Certificadora:
+                                </div>
+                                <?php if (!empty($item['analise_causa_raiz'])): ?>
+                                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px 18px;">
+                                        <div style="font-size: 14px; color: #14532d; line-height: 1.6; white-space: pre-line;">
+                                            <?php echo h($item['analise_causa_raiz']); ?>
+                                        </div>
+                                        <?php if (!empty($item['encerrada_em'])): ?>
+                                            <div style="margin-top: 10px; font-size: 12px; color: #16a34a; font-weight: 600;">
+                                                <i class="fa-solid fa-circle-check"></i> Manifestação concluída e resolvida em <?php echo date('d/m/Y \à\s H:i', strtotime($item['encerrada_em'])); ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 14px 18px; color: #92400e; font-size: 13px; display: flex; align-items: flex-start; gap: 10px;">
+                                        <i class="fa-solid fa-hourglass-half" style="font-size: 16px; margin-top: 2px;"></i>
+                                        <div>
+                                            <strong>Em Investigação Técnica pela Diretoria de Qualidade</strong>
+                                            <p style="margin: 3px 0 0; font-size: 12px; color: #a16207;">Sua manifestação foi recebida e está sendo apurada pela equipe técnica. O parecer e as providências adotadas serão detalhados aqui em breve.</p>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Ações Corretivas Executadas (se houver) -->
+                            <?php $acoes = $acoesPorManifestacao[$item['id']] ?? []; ?>
+                            <?php if (!empty($acoes)): ?>
+                                <div>
+                                    <div style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                        <i class="fa-solid fa-clipboard-check" style="color: #08a774;"></i> Providências e Ações Adotadas:
+                                    </div>
+                                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                            <thead style="background: #f8fafc;">
+                                                <tr>
+                                                    <th style="padding: 10px 12px; text-align: left; font-weight: 700; color: #475569; font-size: 12px;">Ação Corretiva</th>
+                                                    <th style="padding: 10px 12px; text-align: left; font-weight: 700; color: #475569; font-size: 12px;">Prazo</th>
+                                                    <th style="padding: 10px 12px; text-align: center; font-weight: 700; color: #475569; font-size: 12px;">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($acoes as $ac): ?>
+                                                    <tr style="border-top: 1px solid #f1f5f9;">
+                                                        <td style="padding: 10px 12px; font-weight: 600; color: #1e293b;"><?php echo h($ac['o_que_fazer_what']); ?></td>
+                                                        <td style="padding: 10px 12px; color: #64748b; font-size: 12px;"><?php echo formatarData($ac['quando_fara_when']); ?></td>
+                                                        <td style="padding: 10px 12px; text-align: center;">
+                                                            <?php if ($ac['status_acao'] === 'CONCLUIDA'): ?>
+                                                                <span style="background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">Concluída</span>
+                                                            <?php else: ?>
+                                                                <span style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">Em Andamento</span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="modal-footer" style="padding: 14px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
     <?php endif; ?>
 </section>
 

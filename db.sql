@@ -3161,7 +3161,7 @@ CREATE TABLE `sgq_nao_conformidades` (
 
 LOCK TABLES `sgq_nao_conformidades` WRITE;
 /*!40000 ALTER TABLE `sgq_nao_conformidades` DISABLE KEYS */;
-INSERT INTO `sgq_nao_conformidades` VALUES ('0f6e952c-5b5f-4e0d-83e3-219ab26eba2f','RNC-2026-0003','RECLAMACAO_CLIENTE',NULL,NULL,'317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','Atraso de Prazo / Vistoria','CRITICA_IMPEDITIVA','[Reclamação Formal (ISO 10.2)] solicito a documentação','MANIFESTAÇÃO REGISTRADA PELO CLIENTE NO PORTAL:\nTipo: Reclamação Formal (ISO 10.2)\nCliente: Rosano Souza\nCategoria: Atraso de Prazo / Vistoria\nData de Registro: 12/09/2026 02:42\n\nRELATO DO CLIENTE:\ncertificado atrasado',NULL,'ABERTA',NULL,'Portal do Cliente - Rosano Souza','2026-09-12 05:42:48',NULL,NULL,NULL,'2026-09-12 05:42:48','2026-09-12 05:42:48'),('8bd56fbf-5d15-4dc6-b681-89e48d8da542','RNC-2026-0002','RECLAMACAO_CLIENTE',NULL,NULL,'317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','Atraso de Prazo / Vistoria','MEDIA','[Reclamação Formal] Teste de Envio pelo Portal','Relato de teste de envio de manifestação no portal.',NULL,'ABERTA',NULL,'Portal do Cliente - Rosano Souza','2026-09-12 05:17:45',NULL,NULL,NULL,'2026-09-12 05:17:45','2026-09-12 05:17:45');
+INSERT INTO `sgq_nao_conformidades` VALUES ('0f6e952c-5b5f-4e0d-83e3-219ab26eba2f','RNC-2026-0003','RECLAMACAO_CLIENTE',NULL,NULL,'317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','Atraso de Prazo / Vistoria','CRITICA_IMPEDITIVA','[Reclamação Formal (ISO 10.2)] solicito a documentação','MANIFESTAÇÃO REGISTRADA PELO CLIENTE NO PORTAL:\nTipo: Reclamação Formal (ISO 10.2)\nCliente: Rosano Souza\nCategoria: Atraso de Prazo / Vistoria\nData de Registro: 12/09/2026 02:42\n\nRELATO DO CLIENTE:\ncertificado atrasado',NULL,'PLANO_ACAO_DEFINIDO',NULL,'Portal do Cliente - Rosano Souza','2026-09-12 05:42:48',NULL,NULL,NULL,'2026-09-12 05:42:48','2026-09-12 06:12:07'),('8bd56fbf-5d15-4dc6-b681-89e48d8da542','RNC-2026-0002','RECLAMACAO_CLIENTE',NULL,NULL,'317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','Atraso de Prazo / Vistoria','MEDIA','[Reclamação Formal] Teste de Envio pelo Portal','Relato de teste de envio de manifestação no portal.','Identificada falha operacional e retificado procedimento conforme norma.','EM_EXECUCAO',NULL,'Portal do Cliente - Rosano Souza','2026-09-12 05:17:45',NULL,NULL,NULL,'2026-09-12 05:17:45','2026-09-12 06:17:02');
 /*!40000 ALTER TABLE `sgq_nao_conformidades` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -3201,6 +3201,7 @@ CREATE TABLE `sgq_planos_acao` (
 
 LOCK TABLES `sgq_planos_acao` WRITE;
 /*!40000 ALTER TABLE `sgq_planos_acao` DISABLE KEYS */;
+INSERT INTO `sgq_planos_acao` VALUES ('d52dd331-de91-4b22-a3a1-c77242ccd344','0f6e952c-5b5f-4e0d-83e3-219ab26eba2f','wwewe','eeee',NULL,'amzon','2026-09-27',NULL,0.00,'PENDENTE',NULL,NULL,NULL,'2026-09-12 06:12:07','2026-09-12 06:12:07');
 /*!40000 ALTER TABLE `sgq_planos_acao` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -3694,4 +3695,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-12  6:00:49
+-- Dump completed on 2026-09-12  6:17:20

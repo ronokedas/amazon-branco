@@ -79,35 +79,32 @@ switch ($action) {
             $statusCiclo = trim(sanitizar($_POST['status_ciclo_vida'] ?? ''));
 
             if ($id === '') {
-                throw new Exception('RNC inválida.');
+                throw new Exception('Ocorrência inválida.');
             }
 
-            $encerradaEm = ($statusCiclo === 'ENCERRADA_EFICAZ') ? date('Y-m-d H:i:s') : null;
-            $encerradaPor = ($statusCiclo === 'ENCERRADA_EFICAZ') ? $usuarioId : null;
-
-            $stmt = $pdo->prepare("
-                UPDATE sgq_nao_conformidades
-                SET analise_causa_raiz = :causa,
-                    status_ciclo_vida = :status,
-                    encerrada_em = IF(:enc_em IS NOT NULL, :enc_em, encerrada_em),
-                    encerrada_por = IF(:enc_por IS NOT NULL, :enc_por, encerrada_por)
-                WHERE id = :id
-            ");
-
-            $stmt->execute([
+            $sql = "UPDATE sgq_nao_conformidades SET analise_causa_raiz = :causa, status_ciclo_vida = :status";
+            $params = [
                 ':causa' => $causaRaiz ?: null,
                 ':status' => $statusCiclo,
-                ':enc_em' => $encerradaEm,
-                ':enc_por' => $encerradaPor,
                 ':id' => $id,
-            ]);
+            ];
+
+            if ($statusCiclo === 'ENCERRADA_EFICAZ') {
+                $sql .= ", encerrada_em = NOW(), encerrada_por = :enc_por";
+                $params[':enc_por'] = $usuarioId;
+            }
+
+            $sql .= " WHERE id = :id";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
 
             setMensagem('success', 'Diagnóstico e status da ocorrência atualizados com sucesso!');
             redirecionar(APP_URL . 'sgq/nao-conformidades?id=' . urlencode($id));
         } catch (Exception $e) {
             error_log('[SGQ SALVAR CAUSA ERRO] ' . $e->getMessage());
             setMensagem('error', 'Erro ao salvar diagnóstico: ' . $e->getMessage());
-            redirecionar(APP_URL . 'sgq/nao-conformidades');
+            redirecionar(APP_URL . 'sgq/nao-conformidades' . (!empty($id) ? '?id=' . urlencode($id) : ''));
         }
         break;
 
