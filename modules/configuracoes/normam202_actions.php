@@ -68,7 +68,7 @@ if ($action === 'toggle_obrigatoria') {
     $depois = $antes;
     $depois['obrigatoria'] = $valor;
 
-    // Registrar na Auditoria SGQ (ISO 7.5)
+    // Registrar no Histórico de Alterações Técnicas (Auditoria Naval)
     sgqRegistrarAuditoriaCadastral(
         $pdo,
         'exigencias_catalogo',
@@ -111,7 +111,7 @@ if ($action === 'toggle_foto') {
     $depois = $antes;
     $depois['exige_foto'] = $valor;
 
-    // Registrar na Auditoria SGQ (ISO 7.5)
+    // Registrar no Histórico de Alterações Técnicas (Auditoria Naval)
     sgqRegistrarAuditoriaCadastral(
         $pdo,
         'exigencias_catalogo',

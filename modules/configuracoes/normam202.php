@@ -87,7 +87,7 @@ $exigencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </h1>
             </div>
             <p style="margin: 0; color: #64748b; font-size: 0.88rem;">
-                Gerenciamento dinâmico dos itens de vistoria técnica naval, regras de cumprimento e exigência de fotos comprobatórias (ISO 9001 / DPC).
+                Gerenciamento dinâmico dos itens de vistoria técnica naval e referências normativas (NORMAM / DPC - Marinha do Brasil).
             </p>
         </div>
 
@@ -415,7 +415,7 @@ $exigencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </p>
 
             <div style="margin-bottom: 18px;">
-                <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 5px;">Motivo / Justificativa da Inativação (Auditável ISO 7.5) *</label>
+                <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 5px;">Motivo / Justificativa da Inativação (Histórico Técnico) *</label>
                 <textarea name="motivo" class="form-control" rows="3" required placeholder="Ex: Norma revogada por atualização da NORMAM ou substituída pela exigência EX-XXX..."></textarea>
             </div>
 

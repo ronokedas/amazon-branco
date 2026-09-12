@@ -433,7 +433,7 @@ try {
         SELECT *
         FROM exigencias_catalogo
         WHERE ativo = 1
-        ORDER BY obrigatoria DESC, exige_foto DESC, codigo_interno ASC
+        ORDER BY codigo_interno ASC
     ");
     $stmtItens->execute();
     $itens_bd = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
@@ -547,7 +547,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 .checklist-summary > div { min-width: 0; display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--cor-borda, #d9e2df); border-radius: 10px; background: rgba(127,145,138,.045); }
 .checklist-summary-icon { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; border-radius: 8px; }
 .checklist-summary-icon.is-progress { color: #087a58; background: #dff5ec; }
-.checklist-summary-icon.is-obrig { color: #c2410c; background: #ffedd5; }
+.checklist-summary-icon.is-conforme { color: #059669; background: #ecfdf5; }
+.checklist-summary-icon.is-obrig { color: #059669; background: #ecfdf5; }
 .checklist-summary-icon.is-pending { color: #936516; background: #fff1ce; }
 .checklist-summary-icon.is-danger { color: #b42318; background: #fee4e2; }
 .checklist-summary-icon.is-as { color: #8a1c13; background: #ffd5d2; }
@@ -1446,7 +1447,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
                 <div class="checklist-summary" aria-live="polite">
                     <div><span class="checklist-summary-icon is-progress"><i class="fas fa-list-check"></i></span><span><small>Respondidos</small><strong id="checklistRespondidos">0</strong></span></div>
-                    <div><span class="checklist-summary-icon is-obrig"><i class="fas fa-shield-halved"></i></span><span><small>Obrigatórios NORMAM</small><strong id="checklistObrigatorias">0</strong></span></div>
+                    <div><span class="checklist-summary-icon is-conforme"><i class="fas fa-circle-check"></i></span><span><small>Conformes</small><strong id="checklistConformes">0</strong></span></div>
                     <div><span class="checklist-summary-icon is-pending"><i class="fas fa-clock"></i></span><span><small>Pendentes</small><strong id="checklistPendentes">0</strong></span></div>
                     <div><span class="checklist-summary-icon is-danger"><i class="fas fa-triangle-exclamation"></i></span><span><small>Não conformes</small><strong id="checklistNaoConformes">0</strong></span></div>
                     <div><span class="checklist-summary-icon is-as"><i class="fas fa-ban"></i></span><span><small>Exigências A/S</small><strong id="checklistAS">0</strong></span></div>
@@ -1460,25 +1461,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
                 <div id="checklist-container">
                     <?php foreach ($checklist_categorias as $cat): ?>
-                    <div class="checklist-section" data-cat="<?= $cat['id'] ?>" data-total="<?= count($cat['itens']) ?>" data-total-obrig="<?= (int)($cat['total_obrigatorias'] ?? 0) ?>" data-total-foto="<?= (int)($cat['total_exige_foto'] ?? 0) ?>">
+                    <div class="checklist-section" data-cat="<?= $cat['id'] ?>" data-total="<?= count($cat['itens']) ?>">
                         <button type="button" class="checklist-header" aria-expanded="false" aria-controls="cat_<?= $cat['id'] ?>" onclick="toggleSection('cat_<?= $cat['id'] ?>', this)">
                             <span class="checklist-category-name"><?= h($cat['nome']) ?></span>
                             <span class="checklist-category-metrics">
                                 <span class="category-progress"><b data-counter="respondidos">0</b>/<?= count($cat['itens']) ?> respondidos</span>
-                                <?php if (!empty($cat['total_obrigatorias'])): ?>
-                                    <span class="category-obrig" data-badge="obrigatorias" title="<?= (int)$cat['total_obrigatorias'] ?> exigência(s) com preenchimento obrigatório da NORMAM-202">
-                                        <i class="fa-solid fa-shield-halved"></i> <b data-counter="obrig-respondidas">0</b>/<?= (int)$cat['total_obrigatorias'] ?> obrigatórios
-                                    </span>
-                                <?php else: ?>
-                                    <span class="category-obrig is-zero" title="Nenhuma exigência obrigatória nesta categoria">
-                                        0 obrigatórios
-                                    </span>
-                                <?php endif; ?>
-                                <?php if (!empty($cat['total_exige_foto'])): ?>
-                                    <span class="category-foto" data-badge="fotos" title="<?= (int)$cat['total_exige_foto'] ?> exigência(s) com foto obrigatória">
-                                        <i class="fa-solid fa-camera"></i> <b data-counter="fotos-anexadas">0</b>/<?= (int)$cat['total_exige_foto'] ?> fotos
-                                    </span>
-                                <?php endif; ?>
                                 <span class="category-issues" data-badge="exigencias"><b data-counter="exigencias">0</b> exigências</span>
                                 <span class="category-as is-hidden" data-badge="as"><b data-counter="as">0</b> A/S</span>
                             </span>
@@ -1492,15 +1479,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 $venc = $resp['vencimento'] ?? '';
                                 $semPrazo = ($status === 'NAO_CONFORME' && !empty($resp['sem_prazo']));
                             ?>
-                            <div class="checklist-item" data-id="<?= $item['id'] ?>" data-obrigatoria="<?= !empty($item['obrigatoria']) ? '1' : '0' ?>" data-exige-foto="<?= !empty($item['exige_foto']) ? '1' : '0' ?>" data-text="<?= htmlspecialchars(strtolower($item['codigo_interno'] . ' ' . $item['descricao'] . ' ' . $item['item_normam'])) ?>">
+                            <div class="checklist-item" data-id="<?= $item['id'] ?>" data-text="<?= htmlspecialchars(strtolower($item['codigo_interno'] . ' ' . $item['descricao'] . ' ' . $item['item_normam'])) ?>">
                                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
                                     <span class="item-codigo" style="font-family: monospace; font-weight: 700; color: #0f172a; font-size: 11.5px;"><?= h($item['codigo_interno']) ?></span>
-                                    <?php if (!empty($item['obrigatoria'])): ?>
-                                        <span class="badge" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;"><i class="fa-solid fa-shield-halved"></i> OBRIGATÓRIA</span>
-                                    <?php endif; ?>
-                                    <?php if (!empty($item['exige_foto'])): ?>
-                                        <span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;"><i class="fa-solid fa-camera"></i> FOTO OBRIGATÓRIA</span>
-                                    <?php endif; ?>
                                 </div>
                                 <div class="item-text"><?= h($item['descricao']) ?></div>
                                 <?php if($item['item_normam']): ?>
@@ -1535,12 +1516,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     </label>
                                 </div>
 
-                                <!-- Bloco de Evidência Fotográfica da Norma (Múltiplas Fotos Inteligente) -->
-                                <div class="item-foto-box" id="foto_box_<?= $item['id'] ?>" style="display: <?= in_array($status, ['CONFORME', 'NAO_CONFORME']) ? 'block' : 'none' ?>; margin-top: 10px; padding: 12px; background: #f8fafc; border: 1px dashed <?= !empty($item['exige_foto']) ? '#0284c7' : '#cbd5e1' ?>; border-radius: 8px;">
+                                <!-- Bloco de Evidência Fotográfica da Norma (Múltiplas Fotos) -->
+                                <div class="item-foto-box" id="foto_box_<?= $item['id'] ?>" style="display: <?= in_array($status, ['CONFORME', 'NAO_CONFORME']) ? 'block' : 'none' ?>; margin-top: 10px; padding: 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
                                         <label style="margin: 0; font-size: 11.5px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
-                                            <i class="fa-solid fa-camera" style="color: <?= !empty($item['exige_foto']) ? '#0284c7' : '#64748b' ?>;"></i>
-                                            Fotos da Evidência <?= !empty($item['exige_foto']) ? '<span style="color: #dc2626; font-size: 11px;">* (Obrigatória ISO/NORMAM)</span>' : '<span style="color: #64748b; font-size: 11px;">(Opcional)</span>' ?>
+                                            <i class="fa-solid fa-camera" style="color: #64748b;"></i>
+                                            Fotos da Evidência <span style="color: #64748b; font-size: 11px;">(Múltiplas fotos)</span>
                                         </label>
                                         <span id="foto_badge_<?= $item['id'] ?>" style="font-size: 11px; color: <?= !empty($fotos_por_catalogo[$item['id']]) ? '#15803d' : '#64748b' ?>; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
                                             <i class="fa-solid <?= !empty($fotos_por_catalogo[$item['id']]) ? 'fa-circle-check' : 'fa-images' ?>"></i>
@@ -1571,27 +1552,53 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <!-- Previews de novas fotos adicionadas antes de salvar -->
                                     <div id="foto_preview_<?= $item['id'] ?>" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;"></div>
 
-                                    <!-- Botão para tirar foto com a câmera ou adicionar da galeria (acumula sem perder) -->
+                                    <!-- Botões para tirar foto com a câmera do celular ou adicionar da galeria (acumula sem perder) -->
                                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        <!-- Input Master que envia no formulário POST -->
                                         <input type="file"
                                                name="checklist_foto[<?= h($item['id']) ?>][]"
                                                id="foto_input_<?= $item['id'] ?>"
                                                accept="image/*"
                                                multiple
                                                data-item-id="<?= h($item['id']) ?>"
-                                               data-exige-foto="<?= !empty($item['exige_foto']) ? '1' : '0' ?>"
                                                data-ja-tem-foto="<?= !empty($fotos_por_catalogo[$item['id']]) ? '1' : '0' ?>"
                                                class="checklist-foto-input"
+                                               style="display: none;">
+
+                                        <!-- Input para Câmera Direta do Celular (Android / iPhone) -->
+                                        <input type="file"
+                                               id="foto_camera_<?= $item['id'] ?>"
+                                               accept="image/*"
+                                               capture="environment"
                                                style="display: none;"
                                                onchange="adicionarFotosItem('<?= $item['id'] ?>', this)">
+
+                                        <!-- Input para Galeria / Múltiplas Fotos -->
+                                        <input type="file"
+                                               id="foto_galeria_<?= $item['id'] ?>"
+                                               accept="image/*"
+                                               multiple
+                                               style="display: none;"
+                                               onchange="adicionarFotosItem('<?= $item['id'] ?>', this)">
+
                                         <button type="button" 
-                                                class="btn btn-sm btn-outline-primary"
-                                                onclick="abrirSeletorFotos('<?= $item['id'] ?>')"
-                                                style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; padding: 5px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; background: #fff; border: 1px solid #0284c7; color: #0284c7;">
-                                            <i class="fa-solid fa-camera"></i> + Adicionar Foto(s)
+                                                class="btn btn-sm"
+                                                onclick="abrirCameraItem('<?= $item['id'] ?>')"
+                                                title="Abrir a câmera do smartphone para fotografar a evidência agora"
+                                                style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; padding: 6px 13px; border-radius: 6px; font-weight: 700; cursor: pointer; background: #0284c7; border: 1px solid #0284c7; color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                                            <i class="fa-solid fa-camera"></i> Tirar Foto (Câmera)
                                         </button>
+
+                                        <button type="button" 
+                                                class="btn btn-sm"
+                                                onclick="abrirGaleriaItem('<?= $item['id'] ?>')"
+                                                title="Escolher fotos existentes na galeria do aparelho"
+                                                style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; background: #fff; border: 1px solid #cbd5e1; color: #334155;">
+                                            <i class="fa-solid fa-images"></i> Galeria
+                                        </button>
+
                                         <span style="font-size: 11px; color: #64748b;">
-                                            Tire fotos pela câmera ou escolha da galeria (sem limite de quantidade).
+                                            Fotografe direto pela câmera ou anexe da galeria (acumulativas).
                                         </span>
                                     </div>
                                 </div>
@@ -1926,31 +1933,21 @@ document.getElementById('formRelatorio')?.addEventListener('submit', atualizarCa
 atualizarCamposReescrita();
 
 function atualizarContadoresChecklist() {
-    let total = 0, respondidos = 0, naoConformes = 0, totalAS = 0;
-    let totalObrigGeral = 0, respondidasObrigGeral = 0;
+    let total = 0, respondidos = 0, conformes = 0, naoConformes = 0, totalAS = 0;
 
     document.querySelectorAll('.checklist-section').forEach(function(section) {
         let catRespondidos = 0, catExigencias = 0, catAS = 0;
-        let catTotalObrig = parseInt(section.dataset.totalObrig || '0', 10);
-        let catTotalFoto = parseInt(section.dataset.totalFoto || '0', 10);
-        let catRespondidasObrig = 0;
-        let catFotosAnexadas = 0;
-
-        totalObrigGeral += catTotalObrig;
 
         const itens = section.querySelectorAll('.checklist-item');
         total += itens.length;
         itens.forEach(function(item) {
-            const isObrig = item.dataset.obrigatoria === '1';
-            const exigeFoto = item.dataset.exigeFoto === '1';
             const status = document.getElementById('status_' + item.dataset.id)?.value || '';
 
             if (status !== '') {
                 respondidos++;
                 catRespondidos++;
-                if (isObrig) {
-                    catRespondidasObrig++;
-                    respondidasObrigGeral++;
+                if (status === 'CONFORME') {
+                    conformes++;
                 }
             }
             if (status === 'NAO_CONFORME') {
@@ -1962,51 +1959,31 @@ function atualizarContadoresChecklist() {
                     catAS++;
                 }
             }
-            if (exigeFoto) {
-                const fotoInput = document.getElementById('foto_input_' + item.dataset.id);
-                const jaTemFoto = fotoInput?.getAttribute('data-ja-tem-foto') === '1' || (fotoInput?.files && fotoInput.files.length > 0);
-                if (jaTemFoto) {
-                    catFotosAnexadas++;
-                }
-            }
         });
 
         const contadorRespondidos = section.querySelector('[data-counter="respondidos"]');
         const contadorExigencias = section.querySelector('[data-counter="exigencias"]');
         const contadorAS = section.querySelector('[data-counter="as"]');
-        const contadorObrig = section.querySelector('[data-counter="obrig-respondidas"]');
-        const contadorFotos = section.querySelector('[data-counter="fotos-anexadas"]');
 
         if (contadorRespondidos) contadorRespondidos.textContent = String(catRespondidos);
         if (contadorExigencias) contadorExigencias.textContent = String(catExigencias);
         if (contadorAS) contadorAS.textContent = String(catAS);
-        if (contadorObrig) {
-            contadorObrig.textContent = String(catRespondidasObrig);
-            const badgeObrig = section.querySelector('[data-badge="obrigatorias"]');
-            if (badgeObrig) {
-                const completo = catTotalObrig > 0 && catRespondidasObrig >= catTotalObrig;
-                badgeObrig.classList.toggle('is-concluido', completo);
-            }
-        }
-        if (contadorFotos) {
-            contadorFotos.textContent = String(catFotosAnexadas);
-        }
 
         section.querySelector('[data-badge="exigencias"]')?.classList.toggle('is-zero', catExigencias === 0);
         section.querySelector('[data-badge="as"]')?.classList.toggle('is-hidden', catAS === 0);
     });
 
     const resumoRespondidos = document.getElementById('checklistRespondidos');
+    const resumoConformes = document.getElementById('checklistConformes');
     const resumoPendentes = document.getElementById('checklistPendentes');
     const resumoNaoConformes = document.getElementById('checklistNaoConformes');
     const resumoAS = document.getElementById('checklistAS');
-    const resumoObrigatorias = document.getElementById('checklistObrigatorias');
 
     if (resumoRespondidos) resumoRespondidos.textContent = respondidos + ' / ' + total;
+    if (resumoConformes) resumoConformes.textContent = String(conformes);
     if (resumoPendentes) resumoPendentes.textContent = String(Math.max(0, total - respondidos));
     if (resumoNaoConformes) resumoNaoConformes.textContent = String(naoConformes);
     if (resumoAS) resumoAS.textContent = String(totalAS);
-    if (resumoObrigatorias) resumoObrigatorias.textContent = respondidasObrigGeral + ' / ' + totalObrigGeral;
 }
 
 // Toggle Accordions
@@ -2070,12 +2047,24 @@ function setStatus(itemId, status, btnElement) {
 // Gerenciador de múltiplas fotos acumuladas por exigência
 window.checklistArquivos = window.checklistArquivos || {};
 
-function abrirSeletorFotos(itemId) {
-    const input = document.getElementById('foto_input_' + itemId);
+function abrirCameraItem(itemId) {
+    const input = document.getElementById('foto_camera_' + itemId);
     if (input) {
         input.value = '';
         input.click();
     }
+}
+
+function abrirGaleriaItem(itemId) {
+    const input = document.getElementById('foto_galeria_' + itemId);
+    if (input) {
+        input.value = '';
+        input.click();
+    }
+}
+
+function abrirSeletorFotos(itemId) {
+    abrirCameraItem(itemId);
 }
 
 function adicionarFotosItem(itemId, input) {
@@ -2087,10 +2076,7 @@ function adicionarFotosItem(itemId, input) {
 
     for (let i = 0; i < input.files.length; i++) {
         const file = input.files[i];
-        const exists = window.checklistArquivos[itemId].some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified);
-        if (!exists) {
-            window.checklistArquivos[itemId].push(file);
-        }
+        window.checklistArquivos[itemId].push(file);
     }
 
     sincronizarInputFiles(itemId);
@@ -2431,62 +2417,9 @@ function renumerarLinhasAvulsas() {
 
 atualizarEstadoTabelaAvulsa();
 
-// Confirmacao e validações ao salvar formulário
+// Confirmacao ao salvar formulário
 document.getElementById('formRelatorio').addEventListener('submit', function(e) {
     const status = document.getElementById('status_vistoria').value;
-
-    // Validação 1: Fotos obrigatórias quando a norma tiver exige_foto = 1 e for avaliada (CONFORME ou NAO_CONFORME)
-    let pendenciasFoto = [];
-    document.querySelectorAll('.checklist-item').forEach(function(itemDiv) {
-        const itemId = itemDiv.getAttribute('data-id');
-        const statusVal = document.getElementById('status_' + itemId)?.value;
-        const fotoInput = document.getElementById('foto_input_' + itemId);
-
-        if (statusVal && (statusVal === 'CONFORME' || statusVal === 'NAO_CONFORME') && fotoInput) {
-            const exigeFoto = fotoInput.getAttribute('data-exige-foto') === '1';
-            const jaTemFoto = fotoInput.getAttribute('data-ja-tem-foto') === '1';
-            const temArquivoNovo = (fotoInput.files && fotoInput.files.length > 0) || (window.checklistArquivos[itemId] && window.checklistArquivos[itemId].length > 0);
-
-            if (exigeFoto && !jaTemFoto && !temArquivoNovo) {
-                const itemCodigo = itemDiv.querySelector('.item-codigo')?.textContent?.trim() || ('Item #' + itemId);
-                pendenciasFoto.push(itemCodigo);
-                itemDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                itemDiv.style.outline = '2px solid #ef4444';
-            } else {
-                itemDiv.style.outline = 'none';
-            }
-        }
-    });
-
-    if (pendenciasFoto.length > 0) {
-        e.preventDefault();
-        alert('Atenção: Existem ' + pendenciasFoto.length + ' exigência(s) com foto obrigatória sem imagem anexada:\n\n' + 
-              pendenciasFoto.slice(0, 8).join(', ') + (pendenciasFoto.length > 8 ? ' e mais ' + (pendenciasFoto.length - 8) : '') + 
-              '\n\nPor favor, anexe a foto da evidência para cada item obrigatório antes de salvar.');
-        return false;
-    }
-
-    // Validação 2: Se enviando para AGUARDANDO_APROVACAO, garantir que itens OBRIGATÓRIOS foram respondidos
-    if (status === 'AGUARDANDO_APROVACAO') {
-        let pendenciasObrigatorias = [];
-        document.querySelectorAll('.checklist-item[data-obrigatoria="1"]').forEach(function(itemDiv) {
-            const itemId = itemDiv.getAttribute('data-id');
-            const statusVal = document.getElementById('status_' + itemId)?.value;
-            if (!statusVal) {
-                const itemCodigo = itemDiv.querySelector('.item-codigo')?.textContent?.trim() || ('Item #' + itemId);
-                pendenciasObrigatorias.push(itemCodigo);
-                itemDiv.style.outline = '2px solid #f97316';
-            }
-        });
-
-        if (pendenciasObrigatorias.length > 0) {
-            e.preventDefault();
-            alert('Atenção: Não é possível enviar o relatório para aprovação pois existem ' + pendenciasObrigatorias.length + ' exigência(s) obrigatória(s) da NORMAM-202 sem resposta:\n\n' +
-                  pendenciasObrigatorias.slice(0, 8).join(', ') + (pendenciasObrigatorias.length > 8 ? ' e mais ' + (pendenciasObrigatorias.length - 8) : '') +
-                  '\n\nResponda todas as exigências obrigatórias antes de prosseguir.');
-            return false;
-        }
-    }
 
     if (status === 'APROVADA' || status === 'REPROVADA') {
         const msg = status === 'APROVADA'

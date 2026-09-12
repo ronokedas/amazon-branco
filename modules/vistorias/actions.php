@@ -1048,32 +1048,6 @@ switch ($action) {
                 }
             }
 
-            // Se o vistoriador está enviando o relatório para aprovação, validar regras NORMAM-202 e ISO:
-            if ($status_vistoria === 'AGUARDANDO_APROVACAO') {
-                // 1. Validar itens com foto obrigatória (exige_foto = 1) respondidos como CONFORME ou NAO_CONFORME
-                $stmtFotoCheck = $pdo->prepare("
-                    SELECT ec.codigo_interno, ec.descricao, ec.item_normam
-                    FROM vistoria_checklist_respostas r
-                    INNER JOIN exigencias_catalogo ec ON ec.id = r.catalogo_id
-                    WHERE r.vistoria_id = :vistoria_id
-                      AND r.status IN ('CONFORME', 'NAO_CONFORME')
-                      AND ec.exige_foto = 1
-                      AND NOT EXISTS (
-                          SELECT 1 FROM vistoria_anexos va
-                          WHERE va.vistoria_id = r.vistoria_id
-                            AND va.catalogo_id = r.catalogo_id
-                            AND va.excluido_em IS NULL
-                      )
-                ");
-                $stmtFotoCheck->execute([':vistoria_id' => $vistoria_id]);
-                $faltandoFotos = $stmtFotoCheck->fetchAll(PDO::FETCH_ASSOC);
-                if (!empty($faltandoFotos)) {
-                    $nomesFaltantes = array_map(function($f) {
-                        return ($f['codigo_interno'] ? $f['codigo_interno'] . ' - ' : '') . mb_strimwidth($f['descricao'], 0, 40, '...');
-                    }, array_slice($faltandoFotos, 0, 4));
-                    throw new Exception("O relatório não pode ser enviado para aprovação sem foto nos itens obrigatórios: " . implode('; ', $nomesFaltantes) . (count($faltandoFotos) > 4 ? ' e outros.' : '.'));
-                }
-            }
 
             // REGRA: Se status for APROVADA ou REPROVADA, avancar OS para Executado
             if (in_array($status_vistoria, ['APROVADA', 'APROVADA_COM_EXIGENCIAS', 'REPROVADA'])) {
