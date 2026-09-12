@@ -30,8 +30,10 @@ try {
     $where = [];
     $params = [];
     if ($cargo === 'VISTORIADOR') {
-        $where[] = 'a.vistoriador_id = :vistoriador_id';
+        $uEmail = (string)($_SESSION['usuario_email'] ?? '');
         $params[':vistoriador_id'] = $usuario_id;
+        $params[':vistoriador_email'] = $uEmail;
+        $where[] = "(a.vistoriador_id = :vistoriador_id OR (a.vistoriador_id IN (SELECT u2.id FROM usuarios u2 WHERE u2.email = :vistoriador_email AND :vistoriador_email <> '')) OR a.vistoriador_id IS NULL)";
     }
     if ($filtro_status !== '') {
         $where[] = 'a.status = :status';

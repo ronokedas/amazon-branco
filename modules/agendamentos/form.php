@@ -144,7 +144,7 @@ try {
 
     $vistoriadores = [];
     if ($cargo === 'ADMIN' || $cargo === 'VENDEDOR') {
-        $vistoriadores = $pdo->query("SELECT id, nome, status_sgq, credencial_marinha_numero, credencial_marinha_validade, registro_conselho_tipo, registro_conselho_validade FROM usuarios WHERE ativo = 1 AND cargo = 'VISTORIADOR' ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $vistoriadores = $pdo->query("SELECT DISTINCT u.id, u.nome, u.email, u.status_sgq, u.credencial_marinha_numero, u.credencial_marinha_validade, u.registro_conselho_tipo, u.registro_conselho_validade FROM usuarios u LEFT JOIN usuario_perfis up ON up.usuario_id = u.id WHERE u.ativo = 1 AND (u.cargo = 'VISTORIADOR' OR up.perfil = 'VISTORIADOR') ORDER BY u.nome ASC")->fetchAll(PDO::FETCH_ASSOC);
     }
 
     $servicos = $pdo->query("SELECT id, nome FROM servicos WHERE ativo = 1 ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);

@@ -22,24 +22,14 @@ if (!podeAcessar('vistorias')) {
 $filtro_status = $_GET['status'] ?? '';
 $cargo = getCargo();
 
-// Buscar vistorias com JOINs para mostrar nomes
 try {
-    $sql = "SELECT v.id, v.data_vistoria, v.status, v.observacoes, v.criado_em, v.atualizado_em,
-                   e.nome AS embarcacao_nome, e.registro AS embarcacao_registro,
-                   p.nome AS pessoa_nome, p.cpf_cnpj AS pessoa_cpf,
-                   u.nome AS criado_por_nome
-            FROM vistorias v
-            LEFT JOIN embarcacoes e ON v.embarcacao_id = e.id
-            LEFT JOIN clientes p ON v.pessoa_id = p.id
-            LEFT JOIN usuarios u ON v.criado_por = u.id
-            LEFT JOIN agendamentos a ON v.agendamento_id = a.id";
-
     $params = [];
     $where_extra = '';
 
     if (getCargo() === 'VISTORIADOR') {
-        $where_extra = " AND a.vistoriador_id = :vistoriador_id";
+        $where_extra = " AND (a.vistoriador_id = :vistoriador_id OR a.vistoriador_id IN (SELECT u2.id FROM usuarios u2 WHERE u2.email = :uemail AND :uemail <> '') OR v.criado_por = :vistoriador_id)";
         $params[':vistoriador_id'] = $_SESSION['usuario_id'];
+        $params[':uemail'] = $_SESSION['usuario_email'] ?? '';
     } elseif (getCargo() === 'ANALISTA') {
         $where_extra = " AND EXISTS (SELECT 1 FROM analises_planos ap WHERE ap.embarcacao_id=v.embarcacao_id AND ap.analista_id=:analista_id)";
         $params[':analista_id'] = $_SESSION['usuario_id'];
@@ -48,18 +38,31 @@ try {
         $params[':vendedor_id'] = $_SESSION['usuario_id'];
         $params[':agend_vendedor_id'] = $_SESSION['usuario_id'];
     }
+} catch (Exception $e) {
+    error_log('Erro ao buscar filtros de vistorias: ' . $e->getMessage());
+}
 
+// Buscar vistorias
+try {
+    $status_filter = '';
     if ($filtro_status === 'APROVADA') {
-        $sql .= " WHERE v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')" . $where_extra;
+        $status_filter = " AND v.status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')";
     } elseif (!empty($filtro_status) && in_array($filtro_status, ['PENDENTE', 'RETORNO_AS', 'REPROVADA', 'CANCELADA'], true)) {
-        $sql .= " WHERE v.status = :status" . $where_extra;
+        $status_filter = " AND v.status = :status";
         $params[':status'] = $filtro_status;
-    } elseif ($where_extra !== '') {
-        $sql .= " WHERE 1=1" . $where_extra;
     }
 
-    $sql .= " ORDER BY v.criado_em DESC";
-
+    $sql = "SELECT v.*, a.data_vistoria, a.hora_vistoria, a.local, a.tipo_vistoria,
+                   e.nome AS embarcacao_nome, e.tipo AS embarcacao_tipo, e.numero_inscricao,
+                   c.nome AS cliente_nome,
+                   u.nome AS vistoriador_nome
+            FROM vistorias v
+            LEFT JOIN agendamentos a ON v.agendamento_id = a.id
+            LEFT JOIN embarcacoes e ON v.embarcacao_id = e.id
+            LEFT JOIN clientes c ON a.cliente_id = c.id
+            LEFT JOIN usuarios u ON a.vistoriador_id = u.id
+            WHERE 1=1 {$status_filter} {$where_extra}
+            ORDER BY v.criado_em DESC";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $vistorias = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -83,8 +86,9 @@ try {
                 AND (v.id IS NULL OR v.status = 'PENDENTE')";
     $paramsAg = [];
     if ($cargo === 'VISTORIADOR') {
-        $sqlAg .= " AND a.vistoriador_id = :uid";
+        $sqlAg .= " AND (a.vistoriador_id = :uid OR a.vistoriador_id IN (SELECT u2.id FROM usuarios u2 WHERE u2.email = :uemail AND :uemail <> '') OR a.vistoriador_id IS NULL)";
         $paramsAg[':uid'] = $_SESSION['usuario_id'];
+        $paramsAg[':uemail'] = $_SESSION['usuario_email'] ?? '';
     }
     $sqlAg .= " ORDER BY a.data_vistoria IS NULL, a.data_vistoria ASC, a.hora_vistoria ASC LIMIT 10";
     $stmtAg = $pdo->prepare($sqlAg);
@@ -99,7 +103,7 @@ try {
 try {
     $sql_contadores = "SELECT v.status, COUNT(*) as total FROM vistorias v LEFT JOIN agendamentos a ON v.agendamento_id = a.id WHERE 1=1";
     if ($cargo === 'VISTORIADOR') {
-        $sql_contadores .= " AND a.vistoriador_id = :vistoriador_id";
+        $sql_contadores .= " AND (a.vistoriador_id = :vistoriador_id OR a.vistoriador_id IN (SELECT u2.id FROM usuarios u2 WHERE u2.email = :uemail AND :uemail <> '') OR v.criado_por = :vistoriador_id)";
     } elseif ($cargo === 'ANALISTA') {
         $sql_contadores .= " AND EXISTS (SELECT 1 FROM analises_planos ap WHERE ap.embarcacao_id=v.embarcacao_id AND ap.analista_id=:analista_id)";
     } elseif ($cargo === 'VENDEDOR') {
@@ -109,7 +113,7 @@ try {
     
     if ($cargo === 'VISTORIADOR') {
         $stmt = $pdo->prepare($sql_contadores);
-        $stmt->execute([':vistoriador_id' => $_SESSION['usuario_id']]);
+        $stmt->execute([':vistoriador_id' => $_SESSION['usuario_id'], ':uemail' => $_SESSION['usuario_email'] ?? '']);
     } elseif ($cargo === 'ANALISTA') {
         $stmt = $pdo->prepare($sql_contadores);
         $stmt->execute([':analista_id' => $_SESSION['usuario_id']]);
