@@ -42,12 +42,13 @@ $portalOuvidoriaAtivo = strpos($portalRequestUri, '/portal/ouvidoria') !== false
             </nav>
             <div class="portal-user-chip">
                 <span class="portal-user-avatar"><?php echo h(strtoupper(substr(clientePortalNome(), 0, 1))); ?></span>
-                <div>
+                <div class="portal-user-info">
                     <strong><?php echo h(clientePortalNome()); ?></strong>
                     <small>Cliente</small>
                 </div>
-                <a class="portal-logout" href="<?php echo APP_URL; ?>portal/logout" title="Sair do portal" aria-label="Sair do portal">
+                <a class="portal-logout portal-logout-btn" href="<?php echo APP_URL; ?>portal/logout" title="Sair do portal" aria-label="Sair do portal">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <span>Sair</span>
                 </a>
             </div>
         </div>

@@ -1183,7 +1183,7 @@ CREATE TABLE `cliente_portal_acessos` (
 
 LOCK TABLES `cliente_portal_acessos` WRITE;
 /*!40000 ALTER TABLE `cliente_portal_acessos` DISABLE KEYS */;
-INSERT INTO `cliente_portal_acessos` VALUES ('1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','anykedas@gmail.com','$2y$10$bOtgmPOA1yUjz.0zMKgkr.tFNt34TAa6Q9pcC2hTF6aro6rqT.yhG',1,0,'2026-09-12 03:31:46','dd121661-feb4-42f6-895a-68eb0608d1e4','2026-09-12 03:30:55','2026-09-12 03:31:57');
+INSERT INTO `cliente_portal_acessos` VALUES ('1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','anykedas@gmail.com','$2y$10$bOtgmPOA1yUjz.0zMKgkr.tFNt34TAa6Q9pcC2hTF6aro6rqT.yhG',1,0,'2026-09-12 05:11:40','dd121661-feb4-42f6-895a-68eb0608d1e4','2026-09-12 03:30:55','2026-09-12 05:11:40');
 /*!40000 ALTER TABLE `cliente_portal_acessos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2420,7 +2420,7 @@ CREATE TABLE `portal_auditoria` (
   KEY `fk_portal_auditoria_embarcacao` (`embarcacao_id`),
   CONSTRAINT `fk_portal_auditoria_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_portal_auditoria_embarcacao` FOREIGN KEY (`embarcacao_id`) REFERENCES `embarcacoes` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2429,7 +2429,7 @@ CREATE TABLE `portal_auditoria` (
 
 LOCK TABLES `portal_auditoria` WRITE;
 /*!40000 ALTER TABLE `portal_auditoria` DISABLE KEYS */;
-INSERT INTO `portal_auditoria` VALUES (1,'1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,'LOGIN_FALHA',NULL,NULL,NULL,0,'Login informado: anykedas@gmail.com','172.23.0.1','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0','2026-09-12 03:31:15'),(2,'1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,'LOGIN_FALHA',NULL,NULL,NULL,0,'Login informado: anykedas@gmail.com','172.23.0.1','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0','2026-09-12 03:31:29'),(3,'1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,'LOGIN_SUCESSO',NULL,NULL,NULL,1,'Perfil: proprietario','172.23.0.1','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0','2026-09-12 03:31:46');
+INSERT INTO `portal_auditoria` VALUES (1,'1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,'LOGIN_FALHA',NULL,NULL,NULL,0,'Login informado: anykedas@gmail.com','172.23.0.1','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0','2026-09-12 03:31:15'),(2,'1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,'LOGIN_FALHA',NULL,NULL,NULL,0,'Login informado: anykedas@gmail.com','172.23.0.1','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0','2026-09-12 03:31:29'),(3,'1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,'LOGIN_SUCESSO',NULL,NULL,NULL,1,'Perfil: proprietario','172.23.0.1','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0','2026-09-12 03:31:46'),(4,'1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,'LOGIN_SUCESSO',NULL,NULL,NULL,1,'Perfil: proprietario','172.23.0.1','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0','2026-09-12 05:11:40');
 /*!40000 ALTER TABLE `portal_auditoria` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -3003,7 +3003,7 @@ CREATE TABLE `sequenciais_documentos` (
 
 LOCK TABLES `sequenciais_documentos` WRITE;
 /*!40000 ALTER TABLE `sequenciais_documentos` DISABLE KEYS */;
-INSERT INTO `sequenciais_documentos` VALUES ('ORC',2026,1),('REL-V',2026,2),('RNC',2026,1);
+INSERT INTO `sequenciais_documentos` VALUES ('ORC',2026,1),('REL-V',2026,2),('RNC',2026,2);
 /*!40000 ALTER TABLE `sequenciais_documentos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -3169,6 +3169,7 @@ CREATE TABLE `sgq_nao_conformidades` (
 
 LOCK TABLES `sgq_nao_conformidades` WRITE;
 /*!40000 ALTER TABLE `sgq_nao_conformidades` DISABLE KEYS */;
+INSERT INTO `sgq_nao_conformidades` VALUES ('8bd56fbf-5d15-4dc6-b681-89e48d8da542','RNC-2026-0002','RECLAMACAO_CLIENTE',NULL,NULL,'317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','Atraso de Prazo / Vistoria','MEDIA','[Reclamação Formal] Teste de Envio pelo Portal','Relato de teste de envio de manifestação no portal.',NULL,'ABERTA',NULL,'Portal do Cliente - Rosano Souza','2026-09-12 05:17:45',NULL,NULL,NULL,'2026-09-12 05:17:45','2026-09-12 05:17:45');
 /*!40000 ALTER TABLE `sgq_nao_conformidades` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -3705,4 +3706,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-12  5:08:03
+-- Dump completed on 2026-09-12  5:21:48

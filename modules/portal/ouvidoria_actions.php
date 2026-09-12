@@ -45,13 +45,8 @@ if ($action === 'registrar_manifestacao') {
 
         // Se informou embarcação, validar que pertence ao cliente
         if ($embarcacaoId !== '') {
-            $stmtEmb = $pdo->prepare("
-                SELECT id FROM embarcacoes 
-                WHERE id = :emb_id AND (cliente_id = :cli_id OR armador_id = :cli_id)
-                LIMIT 1
-            ");
-            $stmtEmb->execute([':emb_id' => $embarcacaoId, ':cli_id' => $clienteId]);
-            if (!$stmtEmb->fetchColumn()) {
+            $idsValidos = clientePortalEmbarcacaoIds($pdo, $clienteId);
+            if (!in_array($embarcacaoId, $idsValidos, true)) {
                 $embarcacaoId = null;
             }
         } else {

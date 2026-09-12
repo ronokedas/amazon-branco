@@ -2027,10 +2027,9 @@ table td strong { color: var(--erp-text) !important; }
     .toast-container { left: 12px !important; right: 12px !important; top: 12px !important; }
     .toast-container > * { min-width: 0 !important; max-width: none !important; width: 100%; }
     .footer-main { display: none; }
-    .portal-page,
-    .portal-topbar { width: calc(100% - 20px) !important; }
-    .portal-topbar { margin-top: 10px !important; border-radius: 12px !important; }
-    .portal-topbar-inner { min-height: 68px !important; }
+    .portal-page { width: min(1200px, calc(100% - 32px)) !important; }
+    .portal-topbar { width: 100% !important; margin: 0 !important; border-radius: 0 !important; }
+    .portal-topbar-inner { width: min(1200px, calc(100% - 32px)) !important; min-height: 68px !important; }
     .portal-dashboard { padding: 12px 0 !important; border: 0 !important; }
     .portal-panel,
     .portal-page-header,
