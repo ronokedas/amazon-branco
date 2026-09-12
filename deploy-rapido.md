@@ -85,39 +85,6 @@ cd /opt/sistema-amazon && sudo chown -R "$USER":"$USER" . && git pull origin mai
 
 ---
 
-### Opção B: Passo a Passo Manual Seguro
-
-Caso prefira executar passo a passo:
-
-```bash
-# 1. Entrar na pasta do sistema na VPS
-cd /opt/sistema-amazon
-
-# 2. Gerar backup preventivo imediato do banco de dados atual da VPS (Garantia Total)
-sudo docker compose exec -T db mysqldump -u root -proot_pass_2026 --default-character-set=utf8mb4 erp_sistema > /opt/backup_seguranca_$(date +%Y%m%d_%H%M%S).sql
-
-# 3. Liberar permissão para o Git atualizar sem travar
-sudo chown -R "$USER":"$USER" /opt/sistema-amazon
-
-# 4. Baixar as novas modificações enviadas ao GitHub
-git fetch origin main
-git pull origin main
-
-# 5. Aplicar as novas tabelas e índices sem sobrescrever ou apagar os dados existentes
-sudo docker compose exec -T db mysql -u root -proot_pass_2026 erp_sistema < migrations/100_sgq_iso9001_controles_qualidade.sql
-sudo docker compose exec -T db mysql -u root -proot_pass_2026 erp_sistema < migrations/101_sgq_matriz_riscos.sql
-sudo docker compose exec -T db mysql -u root -proot_pass_2026 erp_sistema < migrations/102_otimizacao_indices_performance.sql
-
-# 6. Reconstruir apenas a aplicação e workers com as novas telas (SEM mexer no container de banco e SEM down -v)
-sudo docker compose up -d --build app worker
-
-# 7. Ajustar permissões para pastas de uploads, PDFs e logs (servidor Apache / PHP)
-sudo chown -R www-data:www-data storage uploads logs temp_pdf tmp
-sudo chmod -R 775 storage uploads logs temp_pdf tmp
-
-# 8. Conferir se todos os containers continuam saudáveis
-sudo docker compose ps
-```
 
 ---
 
