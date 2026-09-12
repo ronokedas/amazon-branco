@@ -48,7 +48,8 @@ if (!function_exists('isActive')) {
 
         <div class="nav-group-label">QUALIDADE (SGQ)</div>
         <a href="<?= APP_URL ?>sgq/indicadores" class="nav-item<?= strpos($pagina_atual,'sgq/indicadores')===0?' active':'' ?>" data-label="Indicadores SGQ"><i class="fa-solid fa-chart-pie"></i><span class="nav-text">Indicadores SGQ</span></a>
-        <a href="<?= APP_URL ?>sgq/nao-conformidades" class="nav-item<?= strpos($pagina_atual,'sgq/nao-conformidades')===0?' active':'' ?>" data-label="Não Conformidades"><i class="fa-solid fa-triangle-exclamation"></i><span class="nav-text">Não Conformidades (RNC)</span></a>
+        <a href="<?= APP_URL ?>sgq/nao-conformidades" class="nav-item<?= strpos($pagina_atual,'sgq/nao-conformidades')===0 && empty($_GET['origem'])?' active':'' ?>" data-label="Não Conformidades"><i class="fa-solid fa-triangle-exclamation"></i><span class="nav-text">Não Conformidades (RNC)</span></a>
+        <a href="<?= APP_URL ?>sgq/nao-conformidades?origem=RECLAMACAO_CLIENTE" class="nav-item<?= strpos($pagina_atual,'sgq/nao-conformidades')===0 && ($_GET['origem'] ?? '')==='RECLAMACAO_CLIENTE'?' active':'' ?>" data-label="Reclamações de Clientes"><i class="fa-solid fa-headset"></i><span class="nav-text">Reclamações / Ouvidoria</span></a>
         <a href="<?= APP_URL ?>sgq/riscos" class="nav-item<?= strpos($pagina_atual,'sgq/riscos')===0?' active':'' ?>" data-label="Gestão de Riscos"><i class="fa-solid fa-shield-virus"></i><span class="nav-text">Gestão de Riscos (ISO 6.1)</span></a>
         <a href="<?= APP_URL ?>sgq/auditoria" class="nav-item<?= strpos($pagina_atual,'sgq/auditoria')===0?' active':'' ?>" data-label="Trilha de Auditoria"><i class="fa-solid fa-clock-rotate-left"></i><span class="nav-text">Trilha de Auditoria</span></a>
 

@@ -56,13 +56,13 @@ echo "   ✅ Arquivos do sistema atualizados para a versão mais recente do GitH
 echo ""
 echo "🔄 [3/5] Aplicando Migrações Incrementais no Banco (Sem sobrescrever nada)..."
 if docker ps --format '{{.Names}}' | grep -q "erp_db"; then
-    for migracao in migrations/100_*.sql migrations/101_*.sql migrations/102_*.sql; do
+    for migracao in migrations/099_*.sql migrations/100_*.sql migrations/101_*.sql migrations/102_*.sql migrations/103_*.sql; do
         if [ -f "$migracao" ]; then
             echo "   -> Aplicando $(basename "$migracao")..."
             docker exec -i erp_db mysql -u"$DB_USER" -p"$DB_PASS" --default-character-set=utf8mb4 "$DB_NAME" < "$migracao" || true
         fi
     done
-    echo "   ✅ Estruturas novas e índices de performance aplicados com sucesso."
+    echo "   ✅ Estruturas novas, manifestações da ISO e índices aplicados com sucesso."
 fi
 
 echo ""

@@ -333,6 +333,22 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </div>
     <?php endif; ?>
 
+    <!-- Abas de Seleção Rápida de Origem -->
+    <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+        <a href="<?= APP_URL ?>sgq/nao-conformidades" class="btn btn-sm <?= empty($filtroOrigem) ? 'btn-primary' : 'btn-outline-secondary' ?>" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 20px; padding: 6px 16px;">
+            <i class="fa-solid fa-list-check"></i> Todas as Ocorrências
+        </a>
+        <a href="<?= APP_URL ?>sgq/nao-conformidades?origem=RECLAMACAO_CLIENTE" class="btn btn-sm <?= $filtroOrigem === 'RECLAMACAO_CLIENTE' ? 'btn-primary' : 'btn-outline-secondary' ?>" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 20px; padding: 6px 16px;">
+            <i class="fa-solid fa-headset"></i> Reclamações de Clientes (Ouvidoria)
+        </a>
+        <a href="<?= APP_URL ?>sgq/nao-conformidades?origem=INSPECAO_CAMPO" class="btn btn-sm <?= $filtroOrigem === 'INSPECAO_CAMPO' ? 'btn-primary' : 'btn-outline-secondary' ?>" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 20px; padding: 6px 16px;">
+            <i class="fa-solid fa-clipboard-check"></i> Inspeções de Campo
+        </a>
+        <a href="<?= APP_URL ?>sgq/nao-conformidades?origem=AUDITORIA_INTERNA_RT" class="btn btn-sm <?= $filtroOrigem === 'AUDITORIA_INTERNA_RT' ? 'btn-primary' : 'btn-outline-secondary' ?>" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 20px; padding: 6px 16px;">
+            <i class="fa-solid fa-shield-check"></i> Auditorias Internas (RT)
+        </a>
+    </div>
+
     <!-- Filtros e Busca -->
     <div class="card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
         <form method="GET" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) auto; gap: 14px; align-items: flex-end;">
@@ -387,7 +403,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <th style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; text-align: left;">Número RNC</th>
                         <th style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; text-align: left;">Título / Assunto</th>
                         <th style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; text-align: left;">Origem</th>
-                        <th style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; text-align: left;">Embarcação</th>
+                        <th style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; text-align: left;">Embarcação / Cliente</th>
                         <th style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; text-align: center;">Severidade</th>
                         <th style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; text-align: center;">Status</th>
                         <th style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; text-align: center;">Ações</th>
@@ -416,7 +432,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <?= h($origemLabels[$r['origem']] ?? str_replace('_', ' ', $r['origem'])) ?>
                                 </td>
                                 <td style="padding: 14px 16px; font-size: 13px; color: #1e293b;">
-                                    <strong><?= h($r['embarcacao_nome'] ?: 'N/D') ?></strong>
+                                    <strong><?= h($r['embarcacao_nome'] ?: 'Sem embarcação') ?></strong>
+                                    <?php if (!empty($r['cliente_nome'])): ?>
+                                        <small style="display: block; color: #0284c7; margin-top: 2px; font-weight: 600;">
+                                            <i class="fa-solid fa-user"></i> <?= h($r['cliente_nome']) ?>
+                                        </small>
+                                    <?php endif; ?>
                                 </td>
                                 <td style="padding: 14px 16px; text-align: center;">
                                     <?php $sevR = $severidadeLabels[$r['severidade']] ?? ['label' => $r['severidade'], 'color' => '#64748b', 'bg' => '#f1f5f9', 'border' => '#e2e8f0']; ?>
