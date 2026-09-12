@@ -83,8 +83,8 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
                 c.nome cliente,v.id vistoria_id,v.status vistoria_status,
                 vr.tipo retorno_tipo,vo.numero relatorio_origem_numero
             FROM agendamentos a
-            JOIN embarcacoes e ON e.id=a.embarcacao_id
-            JOIN clientes c ON c.id=a.cliente_id
+            LEFT JOIN embarcacoes e ON e.id=a.embarcacao_id
+            LEFT JOIN clientes c ON c.id=a.cliente_id
             LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2
                 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1)
             LEFT JOIN vistoria_retornos vr ON vr.agendamento_id=a.id
@@ -95,8 +95,8 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
             ORDER BY CASE vr.tipo WHEN 'AS' THEN 0 WHEN 'EXIGENCIAS' THEN 1 ELSE 2 END,
                      a.data_vistoria IS NULL,a.data_vistoria,a.hora_vistoria,a.created_at
             LIMIT 8",$params);
-        $base['fila'] = dashRows($pdo,"SELECT a.id,a.data_vistoria,a.hora_vistoria,a.local,a.tipo_vistoria,a.status,e.nome embarcacao,v.id vistoria_id,v.numero,v.status vistoria_status,v.finalidade FROM agendamentos a JOIN embarcacoes e ON e.id=a.embarcacao_id LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1) WHERE a.vistoriador_id=:uid AND ((a.status IN ('pendente','confirmado','em_andamento') AND (v.id IS NULL OR v.status='PENDENTE')) OR (v.finalidade='CUMPRIMENTO_EXIGENCIAS' AND v.status='PENDENTE')) ORDER BY (v.finalidade='CUMPRIMENTO_EXIGENCIAS') DESC,(a.data_vistoria<CURDATE()) DESC,a.data_vistoria,a.hora_vistoria LIMIT 8",$params);
-        $base['atribuicoes'] = dashRows($pdo,"SELECT a.id,a.data_vistoria,a.hora_vistoria,a.local,a.tipo_vistoria,a.created_at,e.nome embarcacao,e.registro,c.nome cliente FROM agendamentos a JOIN embarcacoes e ON e.id=a.embarcacao_id JOIN clientes c ON c.id=a.cliente_id LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1) WHERE a.vistoriador_id=:uid AND a.status IN ('pendente','confirmado') AND v.id IS NULL ORDER BY a.data_vistoria IS NULL,a.data_vistoria,a.hora_vistoria,a.created_at DESC LIMIT 4",$params);
+        $base['fila'] = dashRows($pdo,"SELECT a.id,a.data_vistoria,a.hora_vistoria,a.local,a.tipo_vistoria,a.status,e.nome embarcacao,v.id vistoria_id,v.numero,v.status vistoria_status,v.finalidade FROM agendamentos a LEFT JOIN embarcacoes e ON e.id=a.embarcacao_id LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1) WHERE a.vistoriador_id=:uid AND ((a.status IN ('pendente','confirmado','em_andamento') AND (v.id IS NULL OR v.status='PENDENTE')) OR (v.finalidade='CUMPRIMENTO_EXIGENCIAS' AND v.status='PENDENTE')) ORDER BY (v.finalidade='CUMPRIMENTO_EXIGENCIAS') DESC,(a.data_vistoria<CURDATE()) DESC,a.data_vistoria,a.hora_vistoria LIMIT 8",$params);
+        $base['atribuicoes'] = dashRows($pdo,"SELECT a.id,a.data_vistoria,a.hora_vistoria,a.local,a.tipo_vistoria,a.created_at,e.nome embarcacao,e.registro,c.nome cliente FROM agendamentos a LEFT JOIN embarcacoes e ON e.id=a.embarcacao_id LEFT JOIN clientes c ON c.id=a.cliente_id LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1) WHERE a.vistoriador_id=:uid AND a.status IN ('pendente','confirmado') AND v.id IS NULL ORDER BY a.data_vistoria IS NULL,a.data_vistoria,a.hora_vistoria,a.created_at DESC LIMIT 4",$params);
         $base['proxima'] = null;
         foreach ($base['fila'] as $itemFila) {
             if (($itemFila['finalidade'] ?? 'VISTORIA') !== 'CUMPRIMENTO_EXIGENCIAS') {

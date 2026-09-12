@@ -4,6 +4,9 @@
  * Arquivo: index.php - Listagem de vistorias com filtro por status
  */
 
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
@@ -65,6 +68,33 @@ try {
     $vistorias = [];
 }
 
+// Buscar agendamentos pendentes ou em andamento para a escala imediata
+$agendamentos_escala = [];
+try {
+    $sqlAg = "SELECT a.id, a.data_vistoria, a.hora_vistoria, a.local, a.tipo_vistoria, a.status AS agendamento_status,
+                     e.nome AS embarcacao_nome, COALESCE(NULLIF(e.registro,''), e.numero_inscricao) AS embarcacao_registro,
+                     c.nome AS cliente_nome,
+                     v.id AS vistoria_id, v.status AS vistoria_status, v.numero AS vistoria_numero
+              FROM agendamentos a
+              LEFT JOIN embarcacoes e ON a.embarcacao_id = e.id
+              LEFT JOIN clientes c ON a.cliente_id = c.id
+              LEFT JOIN vistorias v ON v.id = (SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id = a.id ORDER BY v2.criado_em DESC, v2.id DESC LIMIT 1)
+              WHERE a.status IN ('pendente', 'confirmado', 'em_andamento')
+                AND (v.id IS NULL OR v.status = 'PENDENTE')";
+    $paramsAg = [];
+    if ($cargo === 'VISTORIADOR') {
+        $sqlAg .= " AND a.vistoriador_id = :uid";
+        $paramsAg[':uid'] = $_SESSION['usuario_id'];
+    }
+    $sqlAg .= " ORDER BY a.data_vistoria IS NULL, a.data_vistoria ASC, a.hora_vistoria ASC LIMIT 10";
+    $stmtAg = $pdo->prepare($sqlAg);
+    $stmtAg->execute($paramsAg);
+    $agendamentos_escala = $stmtAg->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log('Erro ao buscar escala de agendamentos em vistorias: ' . $e->getMessage());
+    $agendamentos_escala = [];
+}
+
 // Contadores para os cards de filtro
 try {
     $sql_contadores = "SELECT v.status, COUNT(*) as total FROM vistorias v LEFT JOIN agendamentos a ON v.agendamento_id = a.id WHERE 1=1";
@@ -122,9 +152,81 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <p>Acompanhe a execução, a análise e o resultado de cada vistoria.</p>
         </div>
         <a href="<?php echo APP_URL; ?>agendamentos" class="inspection-new-button">
-            <i class="fas fa-calendar-check" aria-hidden="true"></i> Ver agendamentos
+            <i class="fas fa-calendar-check" aria-hidden="true"></i> Ver todos agendamentos
         </a>
     </header>
+
+    <?php if (!empty($agendamentos_escala)): ?>
+    <!-- Seção: Próximas Vistorias Agendadas & Em Andamento -->
+    <section class="inspection-schedule-highlight" style="margin-bottom: 24px;">
+        <div style="background: #ffffff; border: 2px solid #0d9488; border-radius: 12px; padding: 18px 20px; box-shadow: 0 4px 14px rgba(13, 148, 136, 0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                    <h2 style="margin: 0; font-size: 16px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-calendar-days" style="color: #0d9488;"></i>
+                        Vistorias Agendadas & Em Andamento
+                    </h2>
+                    <p style="margin: 2px 0 0 0; font-size: 12.5px; color: #64748b;">
+                        Inicie ou continue suas inspeções pendentes da escala diretamente pelo ERP web.
+                    </p>
+                </div>
+                <span class="badge" style="background: #ccfbf1; color: #0f766e; font-weight: 700; padding: 4px 10px; border-radius: 999px; font-size: 11.5px;">
+                    <?= count($agendamentos_escala) ?> pendente<?= count($agendamentos_escala) === 1 ? '' : 's' ?>
+                </span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
+                <?php foreach ($agendamentos_escala as $agItem): ?>
+                    <?php
+                    $urlRelatorio = APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agItem['id'])
+                        . (!empty($agItem['vistoria_id']) ? '&vistoria_id=' . urlencode($agItem['vistoria_id']) : '');
+                    $isEmAndamento = ($agItem['vistoria_status'] ?? '') === 'PENDENTE';
+                    $dataAgenda = !empty($agItem['data_vistoria']) ? date('d/m/Y', strtotime($agItem['data_vistoria'])) : 'Data a definir';
+                    $horaAgenda = !empty($agItem['hora_vistoria']) ? substr($agItem['hora_vistoria'], 0, 5) : '';
+                    ?>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                                <span style="font-size: 11px; font-weight: 700; color: #0f766e; background: #e6fffa; padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fa-regular fa-calendar"></i> <?= h($dataAgenda) ?><?= $horaAgenda ? ' às ' . h($horaAgenda) : '' ?>
+                                </span>
+                                <?php if ($isEmAndamento): ?>
+                                    <span style="font-size: 10.5px; font-weight: 800; background: #e0f2fe; color: #0284c7; padding: 2px 6px; border-radius: 4px; border: 1px solid #bae6fd;">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> EM ANDAMENTO
+                                    </span>
+                                <?php else: ?>
+                                    <span style="font-size: 10.5px; font-weight: 700; background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 4px;">
+                                        <i class="fa-regular fa-clock"></i> AGENDADA
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                            <strong style="font-size: 14px; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-ship" style="color: #0f766e;"></i>
+                                <?= h($agItem['embarcacao_nome']) ?>
+                            </strong>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
+                                <?php if (!empty($agItem['embarcacao_registro'])): ?>
+                                    <span>Reg: <strong><?= h($agItem['embarcacao_registro']) ?></strong></span> · 
+                                <?php endif; ?>
+                                <span><?= h($agItem['cliente_nome'] ?: 'Cliente a confirmar') ?></span>
+                            </div>
+                            <?php if (!empty($agItem['tipo_vistoria'])): ?>
+                                <div style="font-size: 11px; color: #475569; margin-top: 4px;">
+                                    <i class="fa-solid fa-tag" style="color: #94a3b8;"></i> <?= h($agItem['tipo_vistoria']) ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <a href="<?= h($urlRelatorio) ?>" class="btn btn-sm" style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 8px 12px; border-radius: 6px; text-decoration: none; color: #fff; background: <?= $isEmAndamento ? '#0284c7' : '#0d9488' ?>;">
+                            <i class="fa-solid <?= $isEmAndamento ? 'fa-pen-to-square' : 'fa-play' ?>"></i>
+                            <?= $isEmAndamento ? 'Continuar Vistoria' : 'Iniciar Vistoria' ?>
+                        </a>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    <?php endif; ?>
 
     <nav class="inspection-status-nav" aria-label="Filtrar vistorias por situação">
         <?php

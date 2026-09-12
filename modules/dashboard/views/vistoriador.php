@@ -681,7 +681,9 @@ function obterStatusHistoricoInfo(string $status): array
             <div class="dash-v-hero__top">
                 <div class="dash-v-hero__tag">
                     <?php if ($isRetornoAsFoco): ?>
-                        <span class="hero-tag hero-tag--danger"><i class="fa-solid fa-triangle-exclamation"></i> Retorno A/S — Bloqueio de Navegação</span>
+                        <span class="hero-tag hero-tag--danger return-as"><i class="fa-solid fa-triangle-exclamation"></i> Retorno A/S — Bloqueio de Navegação</span>
+                    <?php elseif (($vistoriaFoco['retorno_tipo'] ?? '') === 'EXIGENCIAS'): ?>
+                        <span class="hero-tag hero-tag--warning return-requirements"><i class="fa-solid fa-clipboard-check"></i> Retorno de Exigências</span>
                     <?php elseif ($isPendenteFoco): ?>
                         <span class="hero-tag hero-tag--progress"><i class="fa-solid fa-spinner fa-spin"></i> Vistoria em Andamento no ERP Web</span>
                     <?php else: ?>
