@@ -586,6 +586,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 .btn-toggle.active.nao-conforme { background: #E74C3C; color: #fff; border-color: #E74C3C; }
 .btn-toggle.active.na { background: #95a5a6; color: #fff; border-color: #95a5a6; }
 
+.foto-thumb-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.foto-thumb-card:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.25); }
+
 .item-details { margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-left: 3px solid #E74C3C; border-radius: 0 4px 4px 0; }
 .item-details label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #aaa; }
 .item-details input { width: 100%; padding: 8px 10px; margin-bottom: 10px; background: var(--cor-input-bg, #2a2a3e); border: 1px solid var(--cor-borda, #444); border-radius: 4px; color: var(--cor-texto, #ddd); }
@@ -1532,46 +1535,64 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     </label>
                                 </div>
 
-                                <!-- Bloco de Evidência Fotográfica da Norma -->
+                                <!-- Bloco de Evidência Fotográfica da Norma (Múltiplas Fotos Inteligente) -->
                                 <div class="item-foto-box" id="foto_box_<?= $item['id'] ?>" style="display: <?= in_array($status, ['CONFORME', 'NAO_CONFORME']) ? 'block' : 'none' ?>; margin-top: 10px; padding: 12px; background: #f8fafc; border: 1px dashed <?= !empty($item['exige_foto']) ? '#0284c7' : '#cbd5e1' ?>; border-radius: 8px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
                                         <label style="margin: 0; font-size: 11.5px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
                                             <i class="fa-solid fa-camera" style="color: <?= !empty($item['exige_foto']) ? '#0284c7' : '#64748b' ?>;"></i>
-                                            Foto da Evidência <?= !empty($item['exige_foto']) ? '<span style="color: #dc2626; font-size: 11px;">* (Obrigatória ISO/NORMAM)</span>' : '<span style="color: #64748b; font-size: 11px;">(Opcional)</span>' ?>
+                                            Fotos da Evidência <?= !empty($item['exige_foto']) ? '<span style="color: #dc2626; font-size: 11px;">* (Obrigatória ISO/NORMAM)</span>' : '<span style="color: #64748b; font-size: 11px;">(Opcional)</span>' ?>
                                         </label>
+                                        <span id="foto_badge_<?= $item['id'] ?>" style="font-size: 11px; color: <?= !empty($fotos_por_catalogo[$item['id']]) ? '#15803d' : '#64748b' ?>; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                                            <i class="fa-solid <?= !empty($fotos_por_catalogo[$item['id']]) ? 'fa-circle-check' : 'fa-images' ?>"></i>
+                                            <span id="foto_count_<?= $item['id'] ?>"><?= count($fotos_por_catalogo[$item['id']] ?? []) ?></span> foto(s) anexada(s)
+                                        </span>
+                                    </div>
+
+                                    <!-- Fotos já salvas na vistoria com opção de exclusão individual -->
+                                    <div id="fotos_existentes_<?= $item['id'] ?>" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: <?= !empty($fotos_por_catalogo[$item['id']]) ? '8px' : '0' ?>;">
                                         <?php if (!empty($fotos_por_catalogo[$item['id']])): ?>
-                                            <span style="font-size: 11px; color: #15803d; font-weight: 700;">
-                                                <i class="fa-solid fa-circle-check"></i> <?= count($fotos_por_catalogo[$item['id']]) ?> foto(s) anexada(s)
-                                            </span>
+                                            <?php foreach ($fotos_por_catalogo[$item['id']] as $fotoExistente): ?>
+                                                <?php $fotoUrl = APP_URL . 'api/campo/v1/anexos/' . rawurlencode((string)$fotoExistente['id']); ?>
+                                                <div class="foto-thumb-card" id="foto_card_<?= h($fotoExistente['id']) ?>" style="position: relative; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; width: 68px; height: 68px; background: #0f172a;" title="<?= h($fotoExistente['nome_original'] ?: 'Evidência salva') ?>">
+                                                    <a href="<?= h($fotoUrl) ?>" target="_blank" rel="noopener noreferrer">
+                                                        <img src="<?= h($fotoUrl) ?>" alt="Evidência" style="width: 100%; height: 100%; object-fit: cover;">
+                                                    </a>
+                                                    <button type="button" 
+                                                            onclick="excluirFotoExistente('<?= h($fotoExistente['id']) ?>', '<?= h($item['id']) ?>', this)" 
+                                                            title="Excluir esta foto"
+                                                            style="position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%; background: rgba(220, 38, 38, 0.95); color: #fff; border: none; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.5);">
+                                                        <i class="fa-solid fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            <?php endforeach; ?>
                                         <?php endif; ?>
                                     </div>
 
-                                    <?php if (!empty($fotos_por_catalogo[$item['id']])): ?>
-                                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
-                                            <?php foreach ($fotos_por_catalogo[$item['id']] as $fotoExistente): ?>
-                                                <?php $fotoUrl = APP_URL . 'api/campo/v1/anexos/' . rawurlencode((string)$fotoExistente['id']); ?>
-                                                <div style="position: relative; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; width: 64px; height: 64px; background: #0f172a;" title="<?= h($fotoExistente['nome_original'] ?: 'Evidência') ?>">
-                                                    <a href="<?= h($fotoUrl) ?>" target="_blank">
-                                                        <img src="<?= h($fotoUrl) ?>" alt="Evidência" style="width: 100%; height: 100%; object-fit: cover;">
-                                                    </a>
-                                                </div>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    <?php endif; ?>
+                                    <!-- Previews de novas fotos adicionadas antes de salvar -->
+                                    <div id="foto_preview_<?= $item['id'] ?>" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;"></div>
 
-                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                    <!-- Botão para tirar foto com a câmera ou adicionar da galeria (acumula sem perder) -->
+                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                                         <input type="file"
-                                               name="checklist_foto[<?= h($item['id']) ?>]"
+                                               name="checklist_foto[<?= h($item['id']) ?>][]"
                                                id="foto_input_<?= $item['id'] ?>"
                                                accept="image/*"
-                                               capture="environment"
+                                               multiple
                                                data-item-id="<?= h($item['id']) ?>"
                                                data-exige-foto="<?= !empty($item['exige_foto']) ? '1' : '0' ?>"
                                                data-ja-tem-foto="<?= !empty($fotos_por_catalogo[$item['id']]) ? '1' : '0' ?>"
-                                               class="checklist-foto-input form-control-file"
-                                               style="font-size: 11px;"
-                                               onchange="previewFotoItem('<?= $item['id'] ?>', this)">
-                                        <div id="foto_preview_<?= $item['id'] ?>" style="display: none; width: 36px; height: 36px; border-radius: 6px; overflow: hidden; border: 1px solid #0284c7; flex-shrink: 0;"></div>
+                                               class="checklist-foto-input"
+                                               style="display: none;"
+                                               onchange="adicionarFotosItem('<?= $item['id'] ?>', this)">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-primary"
+                                                onclick="abrirSeletorFotos('<?= $item['id'] ?>')"
+                                                style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; padding: 5px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; background: #fff; border: 1px solid #0284c7; color: #0284c7;">
+                                            <i class="fa-solid fa-camera"></i> + Adicionar Foto(s)
+                                        </button>
+                                        <span style="font-size: 11px; color: #64748b;">
+                                            Tire fotos pela câmera ou escolha da galeria (sem limite de quantidade).
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -2046,22 +2067,164 @@ function setStatus(itemId, status, btnElement) {
     atualizarContadoresChecklist();
 }
 
-function previewFotoItem(itemId, input) {
-    const previewDiv = document.getElementById('foto_preview_' + itemId);
-    if (!previewDiv) return;
-    if (input.files && input.files[0]) {
+// Gerenciador de múltiplas fotos acumuladas por exigência
+window.checklistArquivos = window.checklistArquivos || {};
+
+function abrirSeletorFotos(itemId) {
+    const input = document.getElementById('foto_input_' + itemId);
+    if (input) {
+        input.value = '';
+        input.click();
+    }
+}
+
+function adicionarFotosItem(itemId, input) {
+    if (!input.files || input.files.length === 0) return;
+
+    if (!window.checklistArquivos[itemId]) {
+        window.checklistArquivos[itemId] = [];
+    }
+
+    for (let i = 0; i < input.files.length; i++) {
+        const file = input.files[i];
+        const exists = window.checklistArquivos[itemId].some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified);
+        if (!exists) {
+            window.checklistArquivos[itemId].push(file);
+        }
+    }
+
+    sincronizarInputFiles(itemId);
+    renderizarPreviewsNovasFotos(itemId);
+    atualizarContadorFotosItem(itemId);
+    atualizarContadoresChecklist();
+}
+
+function sincronizarInputFiles(itemId) {
+    const input = document.getElementById('foto_input_' + itemId);
+    if (!input) return;
+
+    try {
+        const dt = new DataTransfer();
+        const files = window.checklistArquivos[itemId] || [];
+        files.forEach(f => dt.items.add(f));
+        input.files = dt.files;
+    } catch (e) {
+        console.warn('DataTransfer não suportado diretamente:', e);
+    }
+}
+
+function removerNovaFotoItem(itemId, fileIndex) {
+    if (!window.checklistArquivos[itemId]) return;
+    window.checklistArquivos[itemId].splice(fileIndex, 1);
+    sincronizarInputFiles(itemId);
+    renderizarPreviewsNovasFotos(itemId);
+    atualizarContadorFotosItem(itemId);
+    atualizarContadoresChecklist();
+}
+
+function renderizarPreviewsNovasFotos(itemId) {
+    const previewContainer = document.getElementById('foto_preview_' + itemId);
+    if (!previewContainer) return;
+
+    previewContainer.innerHTML = '';
+    const files = window.checklistArquivos[itemId] || [];
+
+    files.forEach((file, idx) => {
+        const thumbDiv = document.createElement('div');
+        thumbDiv.className = 'foto-thumb-card nova-foto';
+        thumbDiv.style.cssText = 'position: relative; border: 2px solid #0284c7; border-radius: 6px; overflow: hidden; width: 68px; height: 68px; background: #0f172a; flex-shrink: 0;';
+        thumbDiv.title = file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)';
+
+        const img = document.createElement('img');
+        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+        img.alt = file.name;
+
         const reader = new FileReader();
         reader.onload = function(e) {
-            previewDiv.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width:100%;height:100%;object-fit:cover;">`;
-            previewDiv.style.display = 'block';
-            atualizarContadoresChecklist();
+            img.src = e.target.result;
         };
-        reader.readAsDataURL(input.files[0]);
-    } else {
-        previewDiv.style.display = 'none';
-        previewDiv.innerHTML = '';
-        atualizarContadoresChecklist();
+        reader.readAsDataURL(file);
+        thumbDiv.appendChild(img);
+
+        const btnRemove = document.createElement('button');
+        btnRemove.type = 'button';
+        btnRemove.innerHTML = '<i class="fa-solid fa-times"></i>';
+        btnRemove.title = 'Remover esta foto';
+        btnRemove.style.cssText = 'position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%; background: rgba(220, 38, 38, 0.95); color: #fff; border: none; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.5);';
+        btnRemove.onclick = function(e) {
+            e.stopPropagation();
+            removerNovaFotoItem(itemId, idx);
+        };
+        thumbDiv.appendChild(btnRemove);
+
+        const tagNova = document.createElement('span');
+        tagNova.textContent = 'Nova';
+        tagNova.style.cssText = 'position: absolute; bottom: 0; left: 0; right: 0; background: rgba(2, 132, 199, 0.9); color: #fff; font-size: 9px; text-align: center; font-weight: 700; line-height: 14px;';
+        thumbDiv.appendChild(tagNova);
+
+        previewContainer.appendChild(thumbDiv);
+    });
+}
+
+function atualizarContadorFotosItem(itemId) {
+    const input = document.getElementById('foto_input_' + itemId);
+    const countSpan = document.getElementById('foto_count_' + itemId);
+    const badgeSpan = document.getElementById('foto_badge_' + itemId);
+    const existDiv = document.getElementById('fotos_existentes_' + itemId);
+    
+    const countExistentes = existDiv ? existDiv.querySelectorAll('.foto-thumb-card').length : 0;
+    const countNovas = (window.checklistArquivos[itemId] || []).length;
+    const total = countExistentes + countNovas;
+
+    if (countSpan) countSpan.textContent = total;
+    if (input) {
+        input.setAttribute('data-ja-tem-foto', total > 0 ? '1' : '0');
     }
+    if (badgeSpan) {
+        badgeSpan.style.color = total > 0 ? '#15803d' : '#64748b';
+        const icon = badgeSpan.querySelector('i');
+        if (icon) {
+            icon.className = total > 0 ? 'fa-solid fa-circle-check' : 'fa-solid fa-images';
+        }
+    }
+}
+
+function excluirFotoExistente(fotoId, itemId, btn) {
+    if (!confirm('Deseja realmente excluir esta foto da evidência?')) {
+        return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+    const formData = new FormData();
+    formData.append('foto_id', fotoId);
+    formData.append('csrf_token', <?= json_encode(gerarCSRF()) ?>);
+
+    fetch('<?= APP_URL ?>vistorias/actions?action=excluir_foto_checklist', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            const card = document.getElementById('foto_card_' + fotoId);
+            if (card) {
+                card.remove();
+            }
+            atualizarContadorFotosItem(itemId);
+            atualizarContadoresChecklist();
+        } else {
+            alert(data.mensagem || 'Erro ao excluir foto.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-times"></i>';
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Falha na comunicação com o servidor.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-times"></i>';
+    });
 }
 
 document.querySelectorAll('.checklist-sem-prazo').forEach(function(checkbox) {
@@ -2282,7 +2445,7 @@ document.getElementById('formRelatorio').addEventListener('submit', function(e) 
         if (statusVal && (statusVal === 'CONFORME' || statusVal === 'NAO_CONFORME') && fotoInput) {
             const exigeFoto = fotoInput.getAttribute('data-exige-foto') === '1';
             const jaTemFoto = fotoInput.getAttribute('data-ja-tem-foto') === '1';
-            const temArquivoNovo = fotoInput.files && fotoInput.files.length > 0;
+            const temArquivoNovo = (fotoInput.files && fotoInput.files.length > 0) || (window.checklistArquivos[itemId] && window.checklistArquivos[itemId].length > 0);
 
             if (exigeFoto && !jaTemFoto && !temArquivoNovo) {
                 const itemCodigo = itemDiv.querySelector('.item-codigo')?.textContent?.trim() || ('Item #' + itemId);

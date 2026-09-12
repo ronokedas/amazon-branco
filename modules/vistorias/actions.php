@@ -84,6 +84,51 @@ function bloquearMutacaoRelatorioAuditavel(PDO $pdo, string $vistoriaId, string 
 switch ($action) {
 
     // ==============================
+    // EXCLUIR FOTO DE EVIDENCIA DO CHECKLIST
+    // ==============================
+    case 'excluir_foto_checklist':
+        header('Content-Type: application/json; charset=utf-8');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verificarCSRF($_POST['csrf_token'] ?? '')) {
+            echo json_encode(['ok' => false, 'mensagem' => 'Requisição inválida ou token expirado.']);
+            exit;
+        }
+        $fotoId = trim((string)($_POST['foto_id'] ?? ''));
+        if (empty($fotoId)) {
+            echo json_encode(['ok' => false, 'mensagem' => 'Identificador da foto não informado.']);
+            exit;
+        }
+        try {
+            $stmtFoto = $pdo->prepare("SELECT va.*, v.status, a.vistoriador_id 
+                FROM vistoria_anexos va
+                INNER JOIN vistorias v ON v.id = va.vistoria_id
+                LEFT JOIN agendamentos a ON a.id = v.agendamento_id
+                WHERE va.id = :id AND va.excluido_em IS NULL LIMIT 1");
+            $stmtFoto->execute([':id' => $fotoId]);
+            $foto = $stmtFoto->fetch(PDO::FETCH_ASSOC);
+            if (!$foto) {
+                echo json_encode(['ok' => false, 'mensagem' => 'Foto não encontrada ou já excluída.']);
+                exit;
+            }
+            if (getCargo() === 'VISTORIADOR' && ($foto['vistoriador_id'] ?? '') !== ($_SESSION['usuario_id'] ?? '')) {
+                echo json_encode(['ok' => false, 'mensagem' => 'Acesso negado. Esta vistoria não está atribuída a você.']);
+                exit;
+            }
+            if (in_array($foto['status'], ['APROVADA', 'REPROVADA'], true) && getCargo() !== 'ADMIN') {
+                echo json_encode(['ok' => false, 'mensagem' => 'Não é permitido excluir fotos de um relatório finalizado.']);
+                exit;
+            }
+            $stmtDel = $pdo->prepare("UPDATE vistoria_anexos SET excluido_em = NOW(), excluido_por = :usuario WHERE id = :id");
+            $stmtDel->execute([':usuario' => $_SESSION['usuario_id'], ':id' => $fotoId]);
+            log_atividade('foto_vistoria_excluida', "Foto {$fotoId} excluída da vistoria {$foto['vistoria_id']}.");
+            echo json_encode(['ok' => true]);
+            exit;
+        } catch (Exception $e) {
+            echo json_encode(['ok' => false, 'mensagem' => $e->getMessage()]);
+            exit;
+        }
+        break;
+
+    // ==============================
     // INICIAR VERIFICACAO DE CUMPRIMENTO DE EXIGENCIAS
     // ==============================
     case 'iniciar_cumprimento_exigencias':
@@ -932,71 +977,74 @@ switch ($action) {
                 }
             }
 
-            // Processar fotos anexadas às exigências do checklist
+            // Processar fotos anexadas às exigências do checklist (suporte a múltiplas fotos por exigência)
             if (!empty($_FILES['checklist_foto']['name']) && is_array($_FILES['checklist_foto']['name'])) {
                 require_once BASE_PATH . '/includes/campo_storage.php';
-                foreach ($_FILES['checklist_foto']['name'] as $cat_id => $origName) {
-                    if (empty($origName)) continue;
-                    $fileTmp = $_FILES['checklist_foto']['tmp_name'][$cat_id] ?? '';
-                    $fileErr = $_FILES['checklist_foto']['error'][$cat_id] ?? UPLOAD_ERR_NO_FILE;
-                    $fileSize = (int)($_FILES['checklist_foto']['size'][$cat_id] ?? 0);
+                foreach ($_FILES['checklist_foto']['name'] as $cat_id => $namesRaw) {
+                    $namesList = is_array($namesRaw) ? $namesRaw : [$namesRaw];
+                    foreach ($namesList as $fIdx => $origName) {
+                        if (empty($origName)) continue;
+                        $fileTmp = is_array($namesRaw) ? ($_FILES['checklist_foto']['tmp_name'][$cat_id][$fIdx] ?? '') : ($_FILES['checklist_foto']['tmp_name'][$cat_id] ?? '');
+                        $fileErr = is_array($namesRaw) ? ($_FILES['checklist_foto']['error'][$cat_id][$fIdx] ?? UPLOAD_ERR_NO_FILE) : ($_FILES['checklist_foto']['error'][$cat_id] ?? UPLOAD_ERR_NO_FILE);
+                        $fileSize = (int)(is_array($namesRaw) ? ($_FILES['checklist_foto']['size'][$cat_id][$fIdx] ?? 0) : ($_FILES['checklist_foto']['size'][$cat_id] ?? 0));
 
-                    if ($fileErr !== UPLOAD_ERR_OK || empty($fileTmp) || !is_uploaded_file($fileTmp)) {
-                        continue;
-                    }
-
-                    $finfo = new finfo(FILEINFO_MIME_TYPE);
-                    $mime = (string)$finfo->file($fileTmp);
-                    if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
-                        throw new Exception("A imagem da exigência deve estar no formato JPEG, PNG ou WebP.");
-                    }
-                    if ($fileSize > 15 * 1024 * 1024) {
-                        throw new Exception("A imagem da exigência deve ter no máximo 15 MB.");
-                    }
-
-                    $binario = file_get_contents($fileTmp);
-                    if ($binario === false) {
-                        throw new Exception("Falha ao ler imagem anexada para a exigência.");
-                    }
-
-                    $hash = hash('sha256', $binario);
-                    $anexoId = gerarUUID();
-                    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime] ?? 'jpg';
-                    $chave = 'vistorias/' . $vistoria_id . '/originais/' . $anexoId . '.' . $ext;
-
-                    $s3 = campoStorageS3();
-                    if ($s3) {
-                        campoStorageGarantirBucket();
-                        $s3->putObject(['Bucket' => campoStorageBucket(), 'Key' => $chave, 'Body' => $binario, 'ContentType' => $mime]);
-                        $chaveGuardada = $chave;
-                    } else {
-                        $diretorio = BASE_PATH . '/storage/private/' . dirname($chave);
-                        if (!is_dir($diretorio)) mkdir($diretorio, 0750, true);
-                        $arquivo = BASE_PATH . '/storage/private/' . $chave;
-                        if (file_put_contents($arquivo, $binario) === false) {
-                            throw new Exception("Falha ao salvar a imagem da evidência no disco.");
+                        if ($fileErr !== UPLOAD_ERR_OK || empty($fileTmp) || !is_uploaded_file($fileTmp)) {
+                            continue;
                         }
-                        $chaveGuardada = 'local:' . $chave;
+
+                        $finfo = new finfo(FILEINFO_MIME_TYPE);
+                        $mime = (string)$finfo->file($fileTmp);
+                        if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+                            throw new Exception("A imagem da exigência deve estar no formato JPEG, PNG ou WebP.");
+                        }
+                        if ($fileSize > 15 * 1024 * 1024) {
+                            throw new Exception("A imagem da exigência deve ter no máximo 15 MB.");
+                        }
+
+                        $binario = file_get_contents($fileTmp);
+                        if ($binario === false) {
+                            throw new Exception("Falha ao ler imagem anexada para a exigência.");
+                        }
+
+                        $hash = hash('sha256', $binario);
+                        $anexoId = gerarUUID();
+                        $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime] ?? 'jpg';
+                        $chave = 'vistorias/' . $vistoria_id . '/originais/' . $anexoId . '.' . $ext;
+
+                        $s3 = campoStorageS3();
+                        if ($s3) {
+                            campoStorageGarantirBucket();
+                            $s3->putObject(['Bucket' => campoStorageBucket(), 'Key' => $chave, 'Body' => $binario, 'ContentType' => $mime]);
+                            $chaveGuardada = $chave;
+                        } else {
+                            $diretorio = BASE_PATH . '/storage/private/' . dirname($chave);
+                            if (!is_dir($diretorio)) mkdir($diretorio, 0750, true);
+                            $arquivo = BASE_PATH . '/storage/private/' . $chave;
+                            if (file_put_contents($arquivo, $binario) === false) {
+                                throw new Exception("Falha ao salvar a imagem da evidência no disco.");
+                            }
+                            $chaveGuardada = 'local:' . $chave;
+                        }
+
+                        $basePath = rtrim((string)(parse_url(APP_URL, PHP_URL_PATH) ?: ''), '/');
+                        $url = $basePath . '/api/campo/v1/anexos/' . rawurlencode($anexoId);
+
+                        $stmtInsFoto = $pdo->prepare("INSERT INTO vistoria_anexos
+                            (id, vistoria_id, catalogo_id, url_arquivo, chave_arquivo, nome_original, mime_type, tamanho_bytes, sha256, capturado_em, criado_por)
+                            VALUES (:id, :vistoria_id, :catalogo_id, :url, :chave, :nome, :mime, :tamanho, :hash, NOW(), :criado_por)");
+                        $stmtInsFoto->execute([
+                            ':id' => $anexoId,
+                            ':vistoria_id' => $vistoria_id,
+                            ':catalogo_id' => $cat_id,
+                            ':url' => $url,
+                            ':chave' => $chaveGuardada,
+                            ':nome' => substr($origName, 0, 255),
+                            ':mime' => $mime,
+                            ':tamanho' => $fileSize,
+                            ':hash' => $hash,
+                            ':criado_por' => $_SESSION['usuario_id']
+                        ]);
                     }
-
-                    $basePath = rtrim((string)(parse_url(APP_URL, PHP_URL_PATH) ?: ''), '/');
-                    $url = $basePath . '/api/campo/v1/anexos/' . rawurlencode($anexoId);
-
-                    $stmtInsFoto = $pdo->prepare("INSERT INTO vistoria_anexos
-                        (id, vistoria_id, catalogo_id, url_arquivo, chave_arquivo, nome_original, mime_type, tamanho_bytes, sha256, capturado_em, criado_por)
-                        VALUES (:id, :vistoria_id, :catalogo_id, :url, :chave, :nome, :mime, :tamanho, :hash, NOW(), :criado_por)");
-                    $stmtInsFoto->execute([
-                        ':id' => $anexoId,
-                        ':vistoria_id' => $vistoria_id,
-                        ':catalogo_id' => $cat_id,
-                        ':url' => $url,
-                        ':chave' => $chaveGuardada,
-                        ':nome' => substr($origName, 0, 255),
-                        ':mime' => $mime,
-                        ':tamanho' => $fileSize,
-                        ':hash' => $hash,
-                        ':criado_por' => $_SESSION['usuario_id']
-                    ]);
                 }
             }
 

@@ -25,6 +25,7 @@ $id = $_GET['id'] ?? '';
 $vistoria = null;
 $exigencias = [];
 $anexos_campo = [];
+$fotos_por_catalogo = [];
 $os_info = null;
 
 if (empty($id)) {
@@ -85,8 +86,14 @@ try {
                                     ORDER BY va.criado_em ASC");
             $stmtA->execute([':vistoria_id' => $vistoria['id']]);
             $anexos_campo = $stmtA->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($anexos_campo as $anx) {
+                if (!empty($anx['catalogo_id'])) {
+                    $fotos_por_catalogo[$anx['catalogo_id']][] = $anx;
+                }
+            }
         } catch (Throwable $e) {
             $anexos_campo = [];
+            $fotos_por_catalogo = [];
         }
     }
 
@@ -371,6 +378,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <th style="text-align: left; padding: 6px 8px;">Item</th>
                                 <th style="text-align: left; padding: 6px 8px;">Descricao</th>
                                 <th style="text-align: center; padding: 6px 8px; width: 80px;">Conforme?</th>
+                                <th style="text-align: center; padding: 6px 8px; width: 95px;">Evidências</th>
                                 <th style="text-align: left; padding: 6px 8px;">Observacao</th>
                             </tr>
                         </thead>
@@ -391,6 +399,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         $conformeClass = 'color: #999;';
                                         $conformeIcon = '<i class="fas fa-minus-circle"></i> ';
                                 }
+                                $itemFotos = !empty($ex['catalogo_id']) ? ($fotos_por_catalogo[$ex['catalogo_id']] ?? []) : [];
                             ?>
                             <tr style="border-bottom: 1px solid var(--cor-borda);">
                                 <td style="text-align: center; padding: 6px 8px;"><?php echo (int)$ex['ordem']; ?></td>
@@ -401,6 +410,20 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         <?php echo $conformeIcon; ?>
                                         <?php echo $ex['conforme'] === 'sim' ? 'Sim' : ($ex['conforme'] === 'nao' ? 'Nao' : 'N/A'); ?>
                                     </span>
+                                </td>
+                                <td style="text-align: center; padding: 6px 8px;">
+                                    <?php if (!empty($itemFotos)): ?>
+                                        <div style="display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;">
+                                            <?php foreach ($itemFotos as $fIt): ?>
+                                                <?php $fUrl = APP_URL . 'api/campo/v1/anexos/' . rawurlencode((string)$fIt['id']); ?>
+                                                <a href="<?= h($fUrl) ?>" target="_blank" rel="noopener noreferrer" title="<?= h($fIt['nome_original'] ?: 'Evidência') ?>" style="display: inline-block; width: 28px; height: 28px; border-radius: 4px; overflow: hidden; border: 1px solid var(--cor-borda); background: #000; vertical-align: middle;">
+                                                    <img src="<?= h($fUrl) ?>" alt="Evidência" style="width: 100%; height: 100%; object-fit: cover;">
+                                                </a>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-muted" style="font-size: 0.75rem;">-</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td style="padding: 6px 8px;"><?php echo h($ex['observacao'] ?: '-'); ?></td>
                             </tr>
