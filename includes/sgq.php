@@ -103,6 +103,11 @@ function embarcacaoValidarProntidaoComercial(PDO $pdo, string $embarcacaoId): ar
     $pendencias = [];
     $nome = $emb['nome'] ?: 'Embarcação #' . substr($embarcacaoId, 0, 8);
 
+    // Tipo de Embarcação
+    if (empty($emb['tipo_embarcacao_id']) && empty($emb['tipo'])) {
+        $pendencias[] = 'Tipo de Embarcação não informado';
+    }
+
     // 1. Comprimento (Total ou Casco)
     $compTotal = (float)($emb['comprimento_total'] ?? 0);
     $compCasco = (float)($emb['comprimento_casco'] ?? 0);
@@ -117,13 +122,19 @@ function embarcacaoValidarProntidaoComercial(PDO $pdo, string $embarcacaoId): ar
         $pendencias[] = 'Boca (Moldada ou Máxima) não informada';
     }
 
-    // 3. Arqueação Bruta
+    // 3. Pontal Moldado
+    $pontal = (float)($emb['pontal_moldado'] ?? 0);
+    if ($pontal <= 0) {
+        $pendencias[] = 'Pontal Moldado não informado';
+    }
+
+    // 4. Arqueação Bruta (AB)
     $ab = trim((string)($emb['arqueacao_bruta'] ?? ''));
     if ($ab === '' || $ab === '0') {
         $pendencias[] = 'Arqueação Bruta (AB) obrigatória pela NORMAM não informada';
     }
 
-    // 4. Propulsão
+    // 5. Propulsão
     if (!isset($emb['possui_propulsao']) || $emb['possui_propulsao'] === null) {
         $pendencias[] = 'Declaração de propulsão (Possui Propulsão? Sim/Não) pendente';
     } elseif ((int)$emb['possui_propulsao'] === 1) {
