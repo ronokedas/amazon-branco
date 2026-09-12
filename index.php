@@ -59,6 +59,7 @@ $rotas = [
     'portal/ouvidoria' => 'modules/portal/ouvidoria.php',
     'portal/ouvidoria/actions' => 'modules/portal/ouvidoria_actions.php',
     'portal/satisfacao/actions' => 'modules/portal/satisfacao_actions.php',
+    'sgq/manual' => 'modules/sgq/manual.php',
     'sgq/indicadores' => 'modules/sgq/indicadores.php',
     'sgq/nao-conformidades' => 'modules/sgq/nao_conformidades.php',
     'sgq/nao-conformidades/actions' => 'modules/sgq/nao_conformidades_actions.php',

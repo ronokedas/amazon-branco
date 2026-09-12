@@ -47,6 +47,7 @@ if (!function_exists('isActive')) {
         <a href="<?= APP_URL ?>feedback" class="nav-item<?= strpos($pagina_atual,'feedback')===0?' active':'' ?>" data-label="Central de Feedback"><i class="fa-regular fa-comments"></i><span class="nav-text">Feedback</span></a>
 
         <div class="nav-group-label">QUALIDADE (SGQ)</div>
+        <a href="<?= APP_URL ?>sgq/manual" class="nav-item<?= strpos($pagina_atual,'sgq/manual')===0?' active':'' ?>" data-label="Manual da Qualidade"><i class="fa-solid fa-book-bookmark"></i><span class="nav-text">Manual & Política SGQ</span></a>
         <a href="<?= APP_URL ?>sgq/indicadores" class="nav-item<?= strpos($pagina_atual,'sgq/indicadores')===0?' active':'' ?>" data-label="Indicadores SGQ"><i class="fa-solid fa-chart-pie"></i><span class="nav-text">Indicadores SGQ</span></a>
         <a href="<?= APP_URL ?>sgq/nao-conformidades" class="nav-item<?= strpos($pagina_atual,'sgq/nao-conformidades')===0 && empty($_GET['origem'])?' active':'' ?>" data-label="Não Conformidades"><i class="fa-solid fa-triangle-exclamation"></i><span class="nav-text">Não Conformidades (RNC)</span></a>
         <a href="<?= APP_URL ?>sgq/nao-conformidades?origem=RECLAMACAO_CLIENTE" class="nav-item<?= strpos($pagina_atual,'sgq/nao-conformidades')===0 && ($_GET['origem'] ?? '')==='RECLAMACAO_CLIENTE'?' active':'' ?>" data-label="Reclamações de Clientes"><i class="fa-solid fa-headset"></i><span class="nav-text">Reclamações / Ouvidoria</span></a>
