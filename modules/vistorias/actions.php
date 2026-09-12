@@ -932,6 +932,101 @@ switch ($action) {
                 }
             }
 
+            // Processar fotos anexadas às exigências do checklist
+            if (!empty($_FILES['checklist_foto']['name']) && is_array($_FILES['checklist_foto']['name'])) {
+                require_once BASE_PATH . '/includes/campo_storage.php';
+                foreach ($_FILES['checklist_foto']['name'] as $cat_id => $origName) {
+                    if (empty($origName)) continue;
+                    $fileTmp = $_FILES['checklist_foto']['tmp_name'][$cat_id] ?? '';
+                    $fileErr = $_FILES['checklist_foto']['error'][$cat_id] ?? UPLOAD_ERR_NO_FILE;
+                    $fileSize = (int)($_FILES['checklist_foto']['size'][$cat_id] ?? 0);
+
+                    if ($fileErr !== UPLOAD_ERR_OK || empty($fileTmp) || !is_uploaded_file($fileTmp)) {
+                        continue;
+                    }
+
+                    $finfo = new finfo(FILEINFO_MIME_TYPE);
+                    $mime = (string)$finfo->file($fileTmp);
+                    if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+                        throw new Exception("A imagem da exigência deve estar no formato JPEG, PNG ou WebP.");
+                    }
+                    if ($fileSize > 15 * 1024 * 1024) {
+                        throw new Exception("A imagem da exigência deve ter no máximo 15 MB.");
+                    }
+
+                    $binario = file_get_contents($fileTmp);
+                    if ($binario === false) {
+                        throw new Exception("Falha ao ler imagem anexada para a exigência.");
+                    }
+
+                    $hash = hash('sha256', $binario);
+                    $anexoId = gerarUUID();
+                    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime] ?? 'jpg';
+                    $chave = 'vistorias/' . $vistoria_id . '/originais/' . $anexoId . '.' . $ext;
+
+                    $s3 = campoStorageS3();
+                    if ($s3) {
+                        campoStorageGarantirBucket();
+                        $s3->putObject(['Bucket' => campoStorageBucket(), 'Key' => $chave, 'Body' => $binario, 'ContentType' => $mime]);
+                        $chaveGuardada = $chave;
+                    } else {
+                        $diretorio = BASE_PATH . '/storage/private/' . dirname($chave);
+                        if (!is_dir($diretorio)) mkdir($diretorio, 0750, true);
+                        $arquivo = BASE_PATH . '/storage/private/' . $chave;
+                        if (file_put_contents($arquivo, $binario) === false) {
+                            throw new Exception("Falha ao salvar a imagem da evidência no disco.");
+                        }
+                        $chaveGuardada = 'local:' . $chave;
+                    }
+
+                    $basePath = rtrim((string)(parse_url(APP_URL, PHP_URL_PATH) ?: ''), '/');
+                    $url = $basePath . '/api/campo/v1/anexos/' . rawurlencode($anexoId);
+
+                    $stmtInsFoto = $pdo->prepare("INSERT INTO vistoria_anexos
+                        (id, vistoria_id, catalogo_id, url_arquivo, chave_arquivo, nome_original, mime_type, tamanho_bytes, sha256, capturado_em, criado_por)
+                        VALUES (:id, :vistoria_id, :catalogo_id, :url, :chave, :nome, :mime, :tamanho, :hash, NOW(), :criado_por)");
+                    $stmtInsFoto->execute([
+                        ':id' => $anexoId,
+                        ':vistoria_id' => $vistoria_id,
+                        ':catalogo_id' => $cat_id,
+                        ':url' => $url,
+                        ':chave' => $chaveGuardada,
+                        ':nome' => substr($origName, 0, 255),
+                        ':mime' => $mime,
+                        ':tamanho' => $fileSize,
+                        ':hash' => $hash,
+                        ':criado_por' => $_SESSION['usuario_id']
+                    ]);
+                }
+            }
+
+            // Se o vistoriador está enviando o relatório para aprovação, validar regras NORMAM-202 e ISO:
+            if ($status_vistoria === 'AGUARDANDO_APROVACAO') {
+                // 1. Validar itens com foto obrigatória (exige_foto = 1) respondidos como CONFORME ou NAO_CONFORME
+                $stmtFotoCheck = $pdo->prepare("
+                    SELECT ec.codigo_interno, ec.descricao, ec.item_normam
+                    FROM vistoria_checklist_respostas r
+                    INNER JOIN exigencias_catalogo ec ON ec.id = r.catalogo_id
+                    WHERE r.vistoria_id = :vistoria_id
+                      AND r.status IN ('CONFORME', 'NAO_CONFORME')
+                      AND ec.exige_foto = 1
+                      AND NOT EXISTS (
+                          SELECT 1 FROM vistoria_anexos va
+                          WHERE va.vistoria_id = r.vistoria_id
+                            AND va.catalogo_id = r.catalogo_id
+                            AND va.excluido_em IS NULL
+                      )
+                ");
+                $stmtFotoCheck->execute([':vistoria_id' => $vistoria_id]);
+                $faltandoFotos = $stmtFotoCheck->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($faltandoFotos)) {
+                    $nomesFaltantes = array_map(function($f) {
+                        return ($f['codigo_interno'] ? $f['codigo_interno'] . ' - ' : '') . mb_strimwidth($f['descricao'], 0, 40, '...');
+                    }, array_slice($faltandoFotos, 0, 4));
+                    throw new Exception("O relatório não pode ser enviado para aprovação sem foto nos itens obrigatórios: " . implode('; ', $nomesFaltantes) . (count($faltandoFotos) > 4 ? ' e outros.' : '.'));
+                }
+            }
+
             // REGRA: Se status for APROVADA ou REPROVADA, avancar OS para Executado
             if (in_array($status_vistoria, ['APROVADA', 'APROVADA_COM_EXIGENCIAS', 'REPROVADA'])) {
                 $stmtOs = $pdo->prepare("

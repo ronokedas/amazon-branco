@@ -223,12 +223,12 @@ function campoEmitirFotoPrivada(string $chave, string $mime, string $nome): neve
 }
 
 function campoListaChecklist(PDO $pdo, ?string $vistoriaId, bool $demonstracao = false): array {
-    $stmt = $pdo->query("SELECT ec.id, ec.descricao, ec.item_normam, ec.bloco_vistoria,
-                               ec.prazo_padrao_dias, cat.id AS categoria_id, cat.nome AS categoria_nome
+    $stmt = $pdo->query("SELECT ec.id, ec.codigo_interno, ec.descricao, ec.item_normam, ec.bloco_vistoria,
+                               ec.prazo_padrao_dias, ec.obrigatoria, ec.exige_foto, cat.id AS categoria_id, cat.nome AS categoria_nome
                         FROM exigencias_catalogo ec
                         LEFT JOIN exigencias_categorias cat ON cat.id = ec.categoria_id
                         WHERE ec.ativo = 1
-                        ORDER BY COALESCE(cat.nome, 'Outros'), ec.codigo_interno, ec.descricao");
+                        ORDER BY COALESCE(cat.nome, 'Outros'), ec.obrigatoria DESC, ec.exige_foto DESC, ec.codigo_interno, ec.descricao");
     $itens = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // Uso real: o app recebe todos os itens ativos para o vistoriador escolher em campo.
     $respostas = [];
@@ -736,13 +736,16 @@ try {
             COUNT(*) respondidos,
             SUM(CASE WHEN r.status='NAO_CONFORME' AND (r.observacao IS NULL OR TRIM(r.observacao)='') THEN 1 ELSE 0 END) sem_observacao,
             SUM(CASE WHEN r.status='NAO_CONFORME' AND r.vencimento IS NULL AND r.sem_prazo=0 THEN 1 ELSE 0 END) sem_prazo_definido,
-            SUM(CASE WHEN r.status='NAO_CONFORME' AND NOT EXISTS
+            SUM(CASE WHEN (r.status='NAO_CONFORME' OR (r.status='CONFORME' AND ec.exige_foto=1)) AND NOT EXISTS
                 (SELECT 1 FROM vistoria_anexos a WHERE a.vistoria_id=r.vistoria_id AND a.catalogo_id=r.catalogo_id AND a.excluido_em IS NULL) THEN 1 ELSE 0 END) sem_foto
-            FROM vistoria_checklist_respostas r WHERE r.vistoria_id=? AND r.catalogo_id IN ({$placeholders})");
+            FROM vistoria_checklist_respostas r
+            INNER JOIN exigencias_catalogo ec ON ec.id = r.catalogo_id
+            WHERE r.vistoria_id=? AND r.catalogo_id IN ({$placeholders})");
         $q->execute(array_merge([$vistoria['id']], $idsEscopo));
         $validacao = $q->fetch(PDO::FETCH_ASSOC);
         $erros = [];
         if ((int)$validacao['sem_prazo_definido'] > 0) $erros[] = 'Defina prazo ou marque sem prazo.';
+        if ((int)$validacao['sem_foto'] > 0) $erros[] = 'Anexe a foto da evidência para todos os itens obrigatórios da NORMAM-202.';
         if ($erros) { $pdo->rollBack(); campoErro('VISTORIA_INCOMPLETA', 'A vistoria ainda não pode ser enviada.', 422, $erros); }
         $pdo->prepare("UPDATE vistorias SET status='AGUARDANDO_APROVACAO', mobile_finalizada_em=NOW(), mobile_versao=mobile_versao+1 WHERE id=:id")
             ->execute([':id'=>$vistoria['id']]);

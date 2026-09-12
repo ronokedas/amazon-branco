@@ -78,6 +78,16 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
     <div class="dashboard-cards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
 
+        <a href="<?php echo APP_URL; ?>configuracoes/normam202" class="card-link" style="text-decoration:none;color:inherit;display:block;">
+            <div class="card" style="height:100%;transition:transform .2s,box-shadow .2s;cursor:pointer;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 20px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='';">
+                <div class="card-body" style="text-align:center;padding:40px 20px;">
+                    <i class="fa-solid fa-list-check" style="font-size:3rem;color:#0b5944;margin-bottom:15px;"></i>
+                    <h3 style="margin-bottom:10px;color:var(--cor-texto);">Catálogo NORMAM-202 & Checklist</h3>
+                    <p style="color:var(--cor-texto-secundario);font-size:.95rem;">Gerencie as 275+ exigências, cadastre novas normas e defina quais exigências são obrigatórias com foto.</p>
+                </div>
+            </div>
+        </a>
+
         <a href="<?php echo APP_URL; ?>feedback/configuracoes" class="card-link" style="text-decoration:none;color:inherit;display:block;">
             <div class="card" style="height:100%;"><div class="card-body" style="text-align:center;padding:40px 20px;"><i class="fa-regular fa-comments" style="font-size:3rem;color:#0d9b70;margin-bottom:15px"></i><h3>Regras de Feedback</h3><p>Configure quem pode iniciar conversas com cada cargo, gestores e equipes.</p></div></div>
         </a>
