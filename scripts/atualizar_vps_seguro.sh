@@ -56,13 +56,47 @@ echo "   ✅ Arquivos do sistema atualizados para a versão mais recente do GitH
 echo ""
 echo "🔄 [3/5] Aplicando Migrações Incrementais no Banco (Sem sobrescrever nada)..."
 if docker ps --format '{{.Names}}' | grep -q "erp_db"; then
-    for migracao in migrations/099_*.sql migrations/100_*.sql migrations/101_*.sql migrations/102_*.sql migrations/103_*.sql; do
-        if [ -f "$migracao" ]; then
-            echo "   -> Aplicando $(basename "$migracao")..."
-            docker exec -i erp_db mysql -u"$DB_USER" -p"$DB_PASS" --default-character-set=utf8mb4 "$DB_NAME" < "$migracao" || true
+    # 1. Cria tabela de controle de migrações na VPS se ainda não existir
+    docker exec -i erp_db mysql -u"$DB_USER" -p"$DB_PASS" --default-character-set=utf8mb4 "$DB_NAME" -e "
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            versao VARCHAR(255) PRIMARY KEY,
+            executado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    " 2>/dev/null || true
+
+    # 2. Se a tabela acabou de nascer e já existem dados, marca migrações legadas antigas (001 a 098)
+    total_registrado=$(docker exec -i erp_db mysql -u"$DB_USER" -p"$DB_PASS" -s -N "$DB_NAME" -e "SELECT COUNT(*) FROM schema_migrations;" 2>/dev/null || echo "0")
+    if [ "$total_registrado" = "0" ]; then
+        for legada in $(ls -1 migrations/0*.sql 2>/dev/null | grep -v "099_"); do
+            nome_leg=$(basename "$legada")
+            docker exec -i erp_db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "INSERT IGNORE INTO schema_migrations (versao) VALUES ('$nome_leg');" 2>/dev/null || true
+        done
+    fi
+
+    # 3. Executa dinamicamente TODAS as migrações novas que ainda não foram aplicadas (099, 100, 101, 102, 103, 104, 105...)
+    total_novas=0
+    for migracao in $(ls -1 migrations/*.sql 2>/dev/null | sort -V); do
+        [ -f "$migracao" ] || continue
+        nome=$(basename "$migracao")
+        ja_rodou=$(docker exec -i erp_db mysql -u"$DB_USER" -p"$DB_PASS" -s -N "$DB_NAME" -e "SELECT COUNT(*) FROM schema_migrations WHERE versao='$nome';" 2>/dev/null || echo "0")
+        if [ "$ja_rodou" = "0" ]; then
+            echo "   -> Aplicando nova migração: $nome..."
+            if docker exec -i erp_db mysql -u"$DB_USER" -p"$DB_PASS" --default-character-set=utf8mb4 "$DB_NAME" < "$migracao"; then
+                docker exec -i erp_db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "INSERT IGNORE INTO schema_migrations (versao) VALUES ('$nome');" 2>/dev/null || true
+                echo "      ✅ $nome executada com sucesso."
+                total_novas=$((total_novas + 1))
+            else
+                echo "      ⚠️ Aviso na migração $nome (verifique o arquivo se necessário)."
+                docker exec -i erp_db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "INSERT IGNORE INTO schema_migrations (versao) VALUES ('$nome');" 2>/dev/null || true
+            fi
         fi
     done
-    echo "   ✅ Estruturas novas, manifestações da ISO e índices aplicados com sucesso."
+
+    if [ "$total_novas" = "0" ]; then
+        echo "   ℹ️ O banco de dados já está na versão mais recente. Nenhuma nova tabela pendente."
+    else
+        echo "   ✅ Total de $total_novas nova(s) migração(ões) aplicada(s) com sucesso."
+    fi
 fi
 
 echo ""

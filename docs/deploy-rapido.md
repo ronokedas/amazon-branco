@@ -77,8 +77,11 @@ ssh usuario@ip-da-sua-vps
 Execute o script de atualização segura que já realiza backup prévio, atualiza o código do GitHub, aplica migrações e preserva 100% dos dados:
 
 ```bash
-cd /opt/sistema-amazon && bash scripts/atualizar_vps_seguro.sh
+cd /opt/sistema-amazon && sudo chown -R "$USER":"$USER" . && git pull origin main && bash scripts/atualizar_vps_seguro.sh
 ```
+
+> 💡 **E se eu criar novas tabelas `.sql` no futuro?**
+> **SIM! O comando é exatamente o mesmo sempre!** O script `scripts/atualizar_vps_seguro.sh` possui controle inteligente automático (`schema_migrations`). Qualquer novo arquivo `.sql` adicionado na pasta `migrations/` (como `104_...sql`, `105_...sql`, etc.) é detectado e aplicado sozinho na VPS, sem reexecutar os anteriores e **sem apagar nenhum dado do seu banco**.
 
 ---
 
