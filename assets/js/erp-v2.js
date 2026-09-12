@@ -224,6 +224,54 @@
         });
     }
 
+    let modalsInitialized = false;
+    function initModals() {
+        if (modalsInitialized) return;
+        modalsInitialized = true;
+
+        document.addEventListener('click', function(e) {
+            const trigger = e.target.closest('[data-toggle="modal"]');
+            if (trigger) {
+                e.preventDefault();
+                const targetSelector = trigger.getAttribute('data-target') || trigger.getAttribute('href');
+                if (targetSelector) {
+                    const targetModal = document.querySelector(targetSelector);
+                    if (targetModal) {
+                        targetModal.classList.add('show', 'active');
+                        document.body.style.overflow = 'hidden';
+                    }
+                }
+                return;
+            }
+
+            const closeBtn = e.target.closest('[data-dismiss="modal"], .modal-close, .close, .close-btn');
+            if (closeBtn) {
+                const openModal = closeBtn.closest('.modal, .modal-overlay');
+                if (openModal) {
+                    e.preventDefault();
+                    openModal.classList.remove('show', 'active');
+                    document.body.style.overflow = '';
+                }
+                return;
+            }
+
+            if (e.target.classList.contains('modal') && (e.target.classList.contains('show') || e.target.classList.contains('active'))) {
+                e.target.classList.remove('show', 'active');
+                document.body.style.overflow = '';
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const openModals = document.querySelectorAll('.modal.show, .modal.active, .modal-overlay.active');
+                if (openModals.length > 0) {
+                    openModals.forEach(m => m.classList.remove('show', 'active'));
+                    document.body.style.overflow = '';
+                }
+            }
+        });
+    }
+
     function enhance(root = document) {
         enhanceTables(root);
         enhanceTableScrolling(root);
@@ -231,6 +279,7 @@
         enhanceFilters(root);
         enhanceForms(root);
         enhanceDialogs(root);
+        initModals();
         document.documentElement.classList.add('erp-v2-ready');
     }
 

@@ -16,14 +16,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Current Database: `erp_sistema`
---
-
-CREATE DATABASE /*!32312 IF NOT EXISTS*/ `erp_sistema` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-
-USE `erp_sistema`;
-
---
 -- Table structure for table `agendamentos`
 --
 
@@ -3003,7 +2995,7 @@ CREATE TABLE `sequenciais_documentos` (
 
 LOCK TABLES `sequenciais_documentos` WRITE;
 /*!40000 ALTER TABLE `sequenciais_documentos` DISABLE KEYS */;
-INSERT INTO `sequenciais_documentos` VALUES ('ORC',2026,1),('REL-V',2026,2),('RNC',2026,2);
+INSERT INTO `sequenciais_documentos` VALUES ('ORC',2026,1),('REL-V',2026,2),('RNC',2026,3);
 /*!40000 ALTER TABLE `sequenciais_documentos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -3169,7 +3161,7 @@ CREATE TABLE `sgq_nao_conformidades` (
 
 LOCK TABLES `sgq_nao_conformidades` WRITE;
 /*!40000 ALTER TABLE `sgq_nao_conformidades` DISABLE KEYS */;
-INSERT INTO `sgq_nao_conformidades` VALUES ('8bd56fbf-5d15-4dc6-b681-89e48d8da542','RNC-2026-0002','RECLAMACAO_CLIENTE',NULL,NULL,'317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','Atraso de Prazo / Vistoria','MEDIA','[Reclamação Formal] Teste de Envio pelo Portal','Relato de teste de envio de manifestação no portal.',NULL,'ABERTA',NULL,'Portal do Cliente - Rosano Souza','2026-09-12 05:17:45',NULL,NULL,NULL,'2026-09-12 05:17:45','2026-09-12 05:17:45');
+INSERT INTO `sgq_nao_conformidades` VALUES ('0f6e952c-5b5f-4e0d-83e3-219ab26eba2f','RNC-2026-0003','RECLAMACAO_CLIENTE',NULL,NULL,'317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','Atraso de Prazo / Vistoria','CRITICA_IMPEDITIVA','[Reclamação Formal (ISO 10.2)] solicito a documentação','MANIFESTAÇÃO REGISTRADA PELO CLIENTE NO PORTAL:\nTipo: Reclamação Formal (ISO 10.2)\nCliente: Rosano Souza\nCategoria: Atraso de Prazo / Vistoria\nData de Registro: 12/09/2026 02:42\n\nRELATO DO CLIENTE:\ncertificado atrasado',NULL,'ABERTA',NULL,'Portal do Cliente - Rosano Souza','2026-09-12 05:42:48',NULL,NULL,NULL,'2026-09-12 05:42:48','2026-09-12 05:42:48'),('8bd56fbf-5d15-4dc6-b681-89e48d8da542','RNC-2026-0002','RECLAMACAO_CLIENTE',NULL,NULL,'317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed','Atraso de Prazo / Vistoria','MEDIA','[Reclamação Formal] Teste de Envio pelo Portal','Relato de teste de envio de manifestação no portal.',NULL,'ABERTA',NULL,'Portal do Cliente - Rosano Souza','2026-09-12 05:17:45',NULL,NULL,NULL,'2026-09-12 05:17:45','2026-09-12 05:17:45');
 /*!40000 ALTER TABLE `sgq_nao_conformidades` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -3692,10 +3684,6 @@ LOCK TABLES `vistorias` WRITE;
 INSERT INTO `vistorias` (`id`, `numero`, `embarcacao_id`, `pessoa_id`, `armador_id`, `operador_nome`, `agendamento_id`, `relatorio_anterior_id`, `finalidade`, `data_vistoria`, `prazo_exigencias_dias`, `data_emissao`, `status`, `mobile_versao`, `mobile_finalizada_em`, `aprovado_por`, `responsavel_assinatura_id`, `assinatura_status`, `assinatura_em`, `data_aprovacao`, `observacao_admin`, `observacoes`, `resultado`, `observacoes_tecnicas`, `texto_observacoes_geradas`, `criado_por`, `criado_em`, `atualizado_em`) VALUES ('c0cc81fc-b11d-40a6-b8f8-f410d3c1982a','AM-REL-V-2/26','317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,NULL,'e1b20145-ebe6-4640-9f1f-f491d004e485','c3670566-76b2-4376-88b4-234c09701f37','CUMPRIMENTO_EXIGENCIAS','2026-09-24',90,NULL,'APROVADA_COM_EXIGENCIAS',0,NULL,'dd121661-feb4-42f6-895a-68eb0608d1e4',7,'ASSINADO','2026-09-10 17:24:25','2026-09-10 20:23:34',NULL,NULL,NULL,NULL,NULL,'d2a16613-dfa4-4948-8de4-8c802abdf394','2026-09-10 20:23:03','2026-09-10 20:24:27'),('c3670566-76b2-4376-88b4-234c09701f37','AM-REL-V-1/26','317ba743-7aa6-4d66-a845-2d4670f126f0','1f0b7a8e-b521-4e80-afb1-4673f8e1c9ed',NULL,NULL,'25be9af2-ad55-11f1-8a7c-be2fb1f77be2',NULL,'VISTORIA','2026-09-15',90,NULL,'RETORNO_AS',0,NULL,'dd121661-feb4-42f6-895a-68eb0608d1e4',NULL,'PENDENTE',NULL,'2026-09-10 20:22:36',NULL,NULL,NULL,NULL,NULL,'d2a16613-dfa4-4948-8de4-8c802abdf394','2026-09-10 20:22:22','2026-09-10 20:22:36');
 /*!40000 ALTER TABLE `vistorias` ENABLE KEYS */;
 UNLOCK TABLES;
-
---
--- Dumping routines for database 'erp_sistema'
---
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -3706,4 +3694,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-12  5:21:48
+-- Dump completed on 2026-09-12  6:00:49

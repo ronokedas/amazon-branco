@@ -400,23 +400,25 @@ a:focus {
 }
 
 .btn-notification {
-    width: 36px;
-    height: 36px;
-    background: rgba(3, 20, 18, 0.48);
-    border: 1px solid rgba(86, 224, 173, 0.08);
-    color: var(--text-secondary);
-    border-radius: var(--radius-btn);
+    width: 38px;
+    height: 38px;
+    background: #f0f5f3;
+    border: 1px solid #d3e2dc;
+    color: #24483e;
+    border-radius: 9px;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s;
+    transition: all 0.18s ease;
+    text-decoration: none;
+    position: relative;
 }
 
 .btn-notification:hover {
-    background: rgba(86, 224, 173, 0.09);
-    color: var(--accent);
-    border-color: rgba(86, 224, 173, 0.20);
+    background: #e2ede7;
+    color: #08a774;
+    border-color: #08a774;
 }
 
 .topbar-separator {
@@ -2272,12 +2274,18 @@ input::placeholder { color: var(--text-tertiary); }
     min-width: 0;
 }
 
-.col-12 { grid-column: span 12; }
-.col-6 { grid-column: span 6; }
-.col-5 { grid-column: span 5; }
-.col-4 { grid-column: span 4; }
-.col-3 { grid-column: span 3; }
-.col-md-6 { grid-column: span 6; }
+.col-12, .col-md-12 { grid-column: span 12; }
+.col-11, .col-md-11 { grid-column: span 11; }
+.col-10, .col-md-10 { grid-column: span 10; }
+.col-9, .col-md-9 { grid-column: span 9; }
+.col-8, .col-md-8 { grid-column: span 8; }
+.col-7, .col-md-7 { grid-column: span 7; }
+.col-6, .col-md-6 { grid-column: span 6; }
+.col-5, .col-md-5 { grid-column: span 5; }
+.col-4, .col-md-4 { grid-column: span 4; }
+.col-3, .col-md-3 { grid-column: span 3; }
+.col-2, .col-md-2 { grid-column: span 2; }
+.col-1, .col-md-1 { grid-column: span 1; }
 
 .form-group label i {
     color: var(--accent);
@@ -2541,9 +2549,9 @@ input::placeholder { color: var(--text-tertiary); }
 .conteudo-principal table thead th,
 .card-body table thead th,
 .data-table thead th {
-    color: rgba(199, 244, 231, 0.72) !important;
-    background: rgba(3, 20, 18, 0.70) !important;
-    border-bottom: 1px solid rgba(86, 224, 173, 0.16) !important;
+    color: #24483e !important;
+    background: #f1f5f4 !important;
+    border-bottom: 1px solid #d3e2dc !important;
 }
 
 .conteudo-principal table tbody td,
@@ -2557,10 +2565,18 @@ table .btn,
 table .btn-sm,
 .action-buttons .btn,
 .acoes .btn {
-    border: 1px solid rgba(86, 224, 173, 0.20) !important;
-    background-color: rgba(3, 20, 18, 0.72);
-    color: var(--text-primary);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.025);
+    border: 1px solid #cce0d8 !important;
+    background-color: #f0f5f3 !important;
+    color: #1b4d3e !important;
+    box-shadow: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    transition: all 0.18s ease !important;
+    text-decoration: none !important;
 }
 
 .td-actions .btn:hover,
@@ -2568,9 +2584,10 @@ table .btn:hover,
 table .btn-sm:hover,
 .action-buttons .btn:hover,
 .acoes .btn:hover {
-    border-color: rgba(86, 224, 173, 0.48) !important;
-    background-color: rgba(86, 224, 173, 0.10);
-    color: var(--accent);
+    border-color: #08a774 !important;
+    background-color: #08a774 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(8, 167, 116, 0.22) !important;
 }
 
 .btn-secondary,
@@ -3023,6 +3040,32 @@ tbody tr:last-child td {
 }
 
 .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.modal.active,
+.modal.show {
+    display: flex;
+}
+
+.modal-overlay .modal {
+    display: block;
+    position: relative;
     background-color: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-card);

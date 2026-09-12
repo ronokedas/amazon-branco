@@ -402,11 +402,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
             <div class="modal-body">
                 <div class="form-row">
-                    <div class="form-group col-md-8">
+                    <div class="form-group col-8 col-md-8">
                         <label class="font-weight-bold">Título do Desvio *</label>
                         <input type="text" name="titulo" class="form-control" required placeholder="Ex.: Falha na vedação da antepara estanque...">
                     </div>
-                    <div class="form-group col-md-4">
+                    <div class="form-group col-4 col-md-4">
                         <label class="font-weight-bold">Severidade *</label>
                         <select name="severidade" class="form-control" required>
                             <option value="CRITICA_IMPEDITIVA">Crítica (Impeditiva)</option>
@@ -416,7 +416,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-6 col-md-6">
                         <label class="font-weight-bold">Origem *</label>
                         <select name="origem" class="form-control" required>
                             <option value="AUDITORIA_INTERNA_RT">Auditoria Interna (RT)</option>
@@ -425,7 +425,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <option value="AUDITORIA_EXTERNA">Auditoria Externa (NORMAM / Marinha)</option>
                         </select>
                     </div>
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-6 col-md-6">
                         <label class="font-weight-bold">Prazo Previsto de Resolução *</label>
                         <input type="date" name="data_conclusao_prevista" class="form-control" required min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d', strtotime('+30 days')) ?>">
                     </div>
@@ -461,31 +461,31 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <input type="text" name="o_que_fazer_what" class="form-control" required placeholder="Ação corretiva imediata ou de contenção...">
                 </div>
                 <div class="form-row">
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-6 col-md-6">
                         <label class="font-weight-bold">Por que fazer? (Why)</label>
                         <input type="text" name="por_que_fazer_why" class="form-control" placeholder="Justificativa técnica...">
                     </div>
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-6 col-md-6">
                         <label class="font-weight-bold">Onde executar? (Where)</label>
                         <input type="text" name="onde_fazer_where" class="form-control" placeholder="Local da ação (ex: A bordo, Oficina...)">
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-6 col-md-6">
                         <label class="font-weight-bold">Quem executará? (Who) *</label>
                         <input type="text" name="quem_fara_who" class="form-control" required placeholder="Responsável pela ação...">
                     </div>
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-6 col-md-6">
                         <label class="font-weight-bold">Quando concluir? (When) *</label>
                         <input type="date" name="quando_fara_when" class="form-control" required min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d', strtotime('+15 days')) ?>">
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group col-md-8">
+                    <div class="form-group col-8 col-md-8">
                         <label class="font-weight-bold">Como será executado? (How)</label>
                         <input type="text" name="como_fazer_how" class="form-control" placeholder="Método ou procedimento operacional...">
                     </div>
-                    <div class="form-group col-md-4">
+                    <div class="form-group col-4 col-md-4">
                         <label class="font-weight-bold">Custo Estimado (How much)</label>
                         <input type="number" step="0.01" name="quanto_custa_how_much" class="form-control" value="0.00">
                     </div>
