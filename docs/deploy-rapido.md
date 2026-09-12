@@ -57,49 +57,59 @@ git push origin main
 
 ---
 
-## 🐧 ETAPA 3: Atualizar na VPS (Linux / Ubuntu com Docker)
+## 🐧 ETAPA 3: Atualizar na VPS (Linux / Ubuntu com Docker) SEM PERDER DADOS
+
+> [!CAUTION]
+> **REGRA DE OURO PARA VPS COM DADOS REAIS:**
+> **NUNCA** execute `docker compose down -v` na sua VPS ativa! O modificador `-v` apaga os volumes do Docker (o que apagaria o banco de dados MySQL `db_data` com todos os clientes, orçamentos e usuários reais cadastrados na VPS).
+> Utilize sempre o método seguro abaixo, que faz backup prévio, puxa as alterações de código e aplica as novas tabelas sem resetar nada.
 
 Acesse sua VPS via SSH:
 ```bash
 ssh usuario@ip-da-sua-vps
 ```
 
-Em seguida, execute o bloco de comandos abaixo. Ele já inclui a correção de permissões de usuário do Linux, atualização dos arquivos, recriação automática do banco no Docker e permissões para o servidor web (`www-data`):
+### Opção A: Atualização Automática em 1 Comando (Recomendado)
+Execute o script de atualização segura que já realiza backup prévio, atualiza o código do GitHub, aplica migrações e preserva 100% dos dados:
+
+```bash
+cd /opt/sistema-amazon && bash scripts/atualizar_vps_seguro.sh
+```
+
+---
+
+### Opção B: Passo a Passo Manual Seguro
+
+Caso prefira executar passo a passo:
 
 ```bash
 # 1. Entrar na pasta do sistema na VPS
 cd /opt/sistema-amazon
 
-# 2. Conceder permissão ao seu usuário Linux para o Git atualizar sem travar
+# 2. Gerar backup preventivo imediato do banco de dados atual da VPS (Garantia Total)
+sudo docker compose exec -T db mysqldump -u root -proot_pass_2026 --default-character-set=utf8mb4 erp_sistema > /opt/backup_seguranca_$(date +%Y%m%d_%H%M%S).sql
+
+# 3. Liberar permissão para o Git atualizar sem travar
 sudo chown -R "$USER":"$USER" /opt/sistema-amazon
 
-# 3. Baixar a versão mais recente do GitHub (espelho exato do repositório)
+# 4. Baixar as novas modificações enviadas ao GitHub
 git fetch origin main
-git reset --hard origin/main
+git pull origin main
 
-# 4. Parar os containers antigos e recriar com o novo db.sql automaticamente
-sudo docker compose down -v
-sudo docker compose up -d --build
+# 5. Aplicar as novas tabelas e índices sem sobrescrever ou apagar os dados existentes
+sudo docker compose exec -T db mysql -u root -proot_pass_2026 erp_sistema < migrations/100_sgq_iso9001_controles_qualidade.sql
+sudo docker compose exec -T db mysql -u root -proot_pass_2026 erp_sistema < migrations/101_sgq_matriz_riscos.sql
+sudo docker compose exec -T db mysql -u root -proot_pass_2026 erp_sistema < migrations/102_otimizacao_indices_performance.sql
 
-# 5. Ajustar permissões do Linux para pastas de uploads, PDFs e logs (servidor Apache / PHP)
+# 6. Reconstruir apenas a aplicação e workers com as novas telas (SEM mexer no container de banco e SEM down -v)
+sudo docker compose up -d --build app worker
+
+# 7. Ajustar permissões para pastas de uploads, PDFs e logs (servidor Apache / PHP)
 sudo chown -R www-data:www-data storage uploads logs temp_pdf tmp
 sudo chmod -R 775 storage uploads logs temp_pdf tmp
 
-# 6. Conferir se todos os containers subiram saudáveis
+# 8. Conferir se todos os containers continuam saudáveis
 sudo docker compose ps
-
-# 7. Confirmar se o banco e os usuários foram carregados com sucesso
-sudo docker compose exec -T db mysql -u root -proot_pass_2026 erp_sistema -e "SELECT count(*) AS total_usuarios FROM usuarios;"
-```
-
----
-
-### 💡 Dica: Comando Único de Atualização na VPS (Opcional)
-
-Para atualizar a VPS no futuro com apenas **um único comando**, copie e cole esta linha no terminal da sua VPS:
-
-```bash
-cd /opt/sistema-amazon && sudo chown -R "$USER":"$USER" . && git fetch origin main && git reset --hard origin/main && sudo docker compose down -v && sudo docker compose up -d --build && sudo chown -R www-data:www-data storage uploads logs temp_pdf tmp && sudo chmod -R 775 storage uploads logs temp_pdf tmp && sudo docker compose ps && sudo docker compose exec -T db mysql -u root -proot_pass_2026 erp_sistema -e "SELECT count(*) AS total_usuarios FROM usuarios;"
 ```
 
 ---
