@@ -73,15 +73,17 @@ Acesse sua VPS via SSH:
 ssh usuario@ip-da-sua-vps
 ```
 
-### Opção A: Atualização Automática em 1 Comando (Recomendado)
-Execute o script de atualização segura que já realiza backup prévio, atualiza o código do GitHub, aplica migrações e preserva 100% dos dados:
+### Opção A: Atualização Automática e Completa em 1 Único Comando (Recomendado)
+Execute este comando único no terminal da sua VPS. Ele faz o backup prévio, puxa as alterações do GitHub, aplica migrações e novos dados com segurança (`INSERT IGNORE`) sem apagar absolutamente nada do seu banco atual, e recarrega a aplicação:
 
 ```bash
 cd /opt/sistema-amazon && sudo chown -R "$USER":"$USER" . && git pull origin main && bash scripts/atualizar_vps_seguro.sh
 ```
 
-> 💡 **E se eu criar novas tabelas `.sql` no futuro?**
-> **SIM! O comando é exatamente o mesmo sempre!** O script `scripts/atualizar_vps_seguro.sh` possui controle inteligente automático (`schema_migrations`). Qualquer novo arquivo `.sql` adicionado na pasta `migrations/` (como `104_...sql`, `105_...sql`, etc.) é detectado e aplicado sozinho na VPS, sem reexecutar os anteriores e **sem apagar nenhum dado do seu banco**.
+> 💡 **O que este comando único faz automaticamente na VPS?**
+> 1. **Puxa o código atualizado:** Baixa as novas telas, relatórios e correções do GitHub.
+> 2. **Aplica migrações e novos dados com segurança:** O script executa qualquer nova migração da pasta `migrations/` (como a `104_sync_dados_operacionais_vistoriador.sql`), inserindo dados com `INSERT IGNORE` — ou seja, **apenas adiciona o que falta e NUNCA apaga ou sobrescreve clientes, propostas ou dados existentes na VPS**.
+> 3. **Reconstrói os containers da aplicação:** Atualiza o PHP, limpa o OPcache e reinicia o Apache para que as novidades fiquem visíveis imediatamente tanto no computador quanto no celular.
 
 ---
 

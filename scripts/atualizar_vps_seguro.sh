@@ -103,6 +103,7 @@ echo ""
 echo "🏗️ [4/5] Reconstruindo Containers da Aplicação (Preservando Volumes)..."
 # IMPORTANTE: NUNCA usar 'down -v'. O comando abaixo reconstrói apenas o código PHP/Apache e worker
 docker compose up -d --build app worker
+docker compose restart app
 echo "   ✅ Containers app e worker atualizados e em execução."
 
 echo ""

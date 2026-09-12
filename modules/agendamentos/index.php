@@ -57,8 +57,8 @@ try {
              WHERE v2.agendamento_id = a.id
              ORDER BY v2.criado_em DESC, v2.id DESC LIMIT 1
         )
-        INNER JOIN clientes c ON a.cliente_id = c.id
-        INNER JOIN embarcacoes e ON a.embarcacao_id = e.id
+        LEFT JOIN clientes c ON a.cliente_id = c.id
+        LEFT JOIN embarcacoes e ON a.embarcacao_id = e.id
         LEFT JOIN usuarios u ON a.vistoriador_id = u.id
         LEFT JOIN ordens_servico os ON os.agendamento_id = a.id
         LEFT JOIN vistoria_retornos vr ON vr.agendamento_id = a.id
