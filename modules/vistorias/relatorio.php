@@ -450,11 +450,19 @@ try {
 
     foreach ($categorias_bd as $c) {
         $c['itens'] = [];
+        $c['total_obrigatorias'] = 0;
+        $c['total_exige_foto'] = 0;
         $checklist_categorias[$c['id']] = $c;
     }
     foreach ($itens_bd as $it) {
         if (isset($checklist_categorias[$it['categoria_id']])) {
             $checklist_categorias[$it['categoria_id']]['itens'][] = $it;
+            if (!empty($it['obrigatoria'])) {
+                $checklist_categorias[$it['categoria_id']]['total_obrigatorias']++;
+            }
+            if (!empty($it['exige_foto'])) {
+                $checklist_categorias[$it['categoria_id']]['total_exige_foto']++;
+            }
         }
     }
 
@@ -535,10 +543,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 .report-validity-field select { max-width: 280px; }
 .report-field-help { display: block; margin-top: 7px; }
 .required-mark { color: #dc3545; }
-.checklist-summary { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; padding: 16px 18px 8px; }
+.checklist-summary { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 10px; padding: 16px 18px 8px; }
 .checklist-summary > div { min-width: 0; display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--cor-borda, #d9e2df); border-radius: 10px; background: rgba(127,145,138,.045); }
 .checklist-summary-icon { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; border-radius: 8px; }
 .checklist-summary-icon.is-progress { color: #087a58; background: #dff5ec; }
+.checklist-summary-icon.is-obrig { color: #c2410c; background: #ffedd5; }
 .checklist-summary-icon.is-pending { color: #936516; background: #fff1ce; }
 .checklist-summary-icon.is-danger { color: #b42318; background: #fee4e2; }
 .checklist-summary-icon.is-as { color: #8a1c13; background: #ffd5d2; }
@@ -556,6 +565,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 .checklist-category-metrics { display: flex; align-items: center; justify-content: flex-end; gap: 7px; flex-wrap: wrap; font-size: .72rem; font-weight: 700; }
 .checklist-category-metrics > span { padding: 4px 8px; border-radius: 999px; white-space: nowrap; }
 .category-progress { color: #276b58; background: #e5f5ef; }
+.category-obrig { color: #c2410c; background: #fff7ed; border: 1px solid #fed7aa; display: inline-flex; align-items: center; gap: 4px; }
+.category-obrig.is-concluido { color: #15803d; background: #f0fdf4; border-color: #bbf7d0; }
+.category-obrig.is-zero { color: #64748b; background: #f1f5f9; border-color: #e2e8f0; font-weight: 500; }
+.category-foto { color: #0369a1; background: #e0f2fe; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 4px; }
 .category-issues { color: #a52b22; background: #fee9e7; }
 .category-issues.is-zero { color: #64756f; background: #edf2f0; }
 .category-as { color: #fff; background: #b42318; }
@@ -1430,6 +1443,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
                 <div class="checklist-summary" aria-live="polite">
                     <div><span class="checklist-summary-icon is-progress"><i class="fas fa-list-check"></i></span><span><small>Respondidos</small><strong id="checklistRespondidos">0</strong></span></div>
+                    <div><span class="checklist-summary-icon is-obrig"><i class="fas fa-shield-halved"></i></span><span><small>Obrigatórios NORMAM</small><strong id="checklistObrigatorias">0</strong></span></div>
                     <div><span class="checklist-summary-icon is-pending"><i class="fas fa-clock"></i></span><span><small>Pendentes</small><strong id="checklistPendentes">0</strong></span></div>
                     <div><span class="checklist-summary-icon is-danger"><i class="fas fa-triangle-exclamation"></i></span><span><small>Não conformes</small><strong id="checklistNaoConformes">0</strong></span></div>
                     <div><span class="checklist-summary-icon is-as"><i class="fas fa-ban"></i></span><span><small>Exigências A/S</small><strong id="checklistAS">0</strong></span></div>
@@ -1443,11 +1457,25 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
                 <div id="checklist-container">
                     <?php foreach ($checklist_categorias as $cat): ?>
-                    <div class="checklist-section" data-cat="<?= $cat['id'] ?>" data-total="<?= count($cat['itens']) ?>">
+                    <div class="checklist-section" data-cat="<?= $cat['id'] ?>" data-total="<?= count($cat['itens']) ?>" data-total-obrig="<?= (int)($cat['total_obrigatorias'] ?? 0) ?>" data-total-foto="<?= (int)($cat['total_exige_foto'] ?? 0) ?>">
                         <button type="button" class="checklist-header" aria-expanded="false" aria-controls="cat_<?= $cat['id'] ?>" onclick="toggleSection('cat_<?= $cat['id'] ?>', this)">
                             <span class="checklist-category-name"><?= h($cat['nome']) ?></span>
                             <span class="checklist-category-metrics">
                                 <span class="category-progress"><b data-counter="respondidos">0</b>/<?= count($cat['itens']) ?> respondidos</span>
+                                <?php if (!empty($cat['total_obrigatorias'])): ?>
+                                    <span class="category-obrig" data-badge="obrigatorias" title="<?= (int)$cat['total_obrigatorias'] ?> exigência(s) com preenchimento obrigatório da NORMAM-202">
+                                        <i class="fa-solid fa-shield-halved"></i> <b data-counter="obrig-respondidas">0</b>/<?= (int)$cat['total_obrigatorias'] ?> obrigatórios
+                                    </span>
+                                <?php else: ?>
+                                    <span class="category-obrig is-zero" title="Nenhuma exigência obrigatória nesta categoria">
+                                        0 obrigatórios
+                                    </span>
+                                <?php endif; ?>
+                                <?php if (!empty($cat['total_exige_foto'])): ?>
+                                    <span class="category-foto" data-badge="fotos" title="<?= (int)$cat['total_exige_foto'] ?> exigência(s) com foto obrigatória">
+                                        <i class="fa-solid fa-camera"></i> <b data-counter="fotos-anexadas">0</b>/<?= (int)$cat['total_exige_foto'] ?> fotos
+                                    </span>
+                                <?php endif; ?>
                                 <span class="category-issues" data-badge="exigencias"><b data-counter="exigencias">0</b> exigências</span>
                                 <span class="category-as is-hidden" data-badge="as"><b data-counter="as">0</b> A/S</span>
                             </span>
@@ -1878,36 +1906,86 @@ atualizarCamposReescrita();
 
 function atualizarContadoresChecklist() {
     let total = 0, respondidos = 0, naoConformes = 0, totalAS = 0;
+    let totalObrigGeral = 0, respondidasObrigGeral = 0;
+
     document.querySelectorAll('.checklist-section').forEach(function(section) {
         let catRespondidos = 0, catExigencias = 0, catAS = 0;
+        let catTotalObrig = parseInt(section.dataset.totalObrig || '0', 10);
+        let catTotalFoto = parseInt(section.dataset.totalFoto || '0', 10);
+        let catRespondidasObrig = 0;
+        let catFotosAnexadas = 0;
+
+        totalObrigGeral += catTotalObrig;
+
         const itens = section.querySelectorAll('.checklist-item');
         total += itens.length;
         itens.forEach(function(item) {
+            const isObrig = item.dataset.obrigatoria === '1';
+            const exigeFoto = item.dataset.exigeFoto === '1';
             const status = document.getElementById('status_' + item.dataset.id)?.value || '';
-            if (status !== '') { respondidos++; catRespondidos++; }
+
+            if (status !== '') {
+                respondidos++;
+                catRespondidos++;
+                if (isObrig) {
+                    catRespondidasObrig++;
+                    respondidasObrigGeral++;
+                }
+            }
             if (status === 'NAO_CONFORME') {
-                naoConformes++; catExigencias++;
+                naoConformes++;
+                catExigencias++;
                 const semPrazo = document.getElementById('sem_prazo_' + item.dataset.id);
-                if (semPrazo?.value === '1') { totalAS++; catAS++; }
+                if (semPrazo?.value === '1') {
+                    totalAS++;
+                    catAS++;
+                }
+            }
+            if (exigeFoto) {
+                const fotoInput = document.getElementById('foto_input_' + item.dataset.id);
+                const jaTemFoto = fotoInput?.getAttribute('data-ja-tem-foto') === '1' || (fotoInput?.files && fotoInput.files.length > 0);
+                if (jaTemFoto) {
+                    catFotosAnexadas++;
+                }
             }
         });
+
         const contadorRespondidos = section.querySelector('[data-counter="respondidos"]');
         const contadorExigencias = section.querySelector('[data-counter="exigencias"]');
         const contadorAS = section.querySelector('[data-counter="as"]');
+        const contadorObrig = section.querySelector('[data-counter="obrig-respondidas"]');
+        const contadorFotos = section.querySelector('[data-counter="fotos-anexadas"]');
+
         if (contadorRespondidos) contadorRespondidos.textContent = String(catRespondidos);
         if (contadorExigencias) contadorExigencias.textContent = String(catExigencias);
         if (contadorAS) contadorAS.textContent = String(catAS);
+        if (contadorObrig) {
+            contadorObrig.textContent = String(catRespondidasObrig);
+            const badgeObrig = section.querySelector('[data-badge="obrigatorias"]');
+            if (badgeObrig) {
+                const completo = catTotalObrig > 0 && catRespondidasObrig >= catTotalObrig;
+                badgeObrig.classList.toggle('is-concluido', completo);
+            }
+        }
+        if (contadorFotos) {
+            contadorFotos.textContent = String(catFotosAnexadas);
+        }
+
         section.querySelector('[data-badge="exigencias"]')?.classList.toggle('is-zero', catExigencias === 0);
         section.querySelector('[data-badge="as"]')?.classList.toggle('is-hidden', catAS === 0);
     });
+
     const resumoRespondidos = document.getElementById('checklistRespondidos');
     const resumoPendentes = document.getElementById('checklistPendentes');
     const resumoNaoConformes = document.getElementById('checklistNaoConformes');
     const resumoAS = document.getElementById('checklistAS');
+    const resumoObrigatorias = document.getElementById('checklistObrigatorias');
+
     if (resumoRespondidos) resumoRespondidos.textContent = respondidos + ' / ' + total;
     if (resumoPendentes) resumoPendentes.textContent = String(Math.max(0, total - respondidos));
     if (resumoNaoConformes) resumoNaoConformes.textContent = String(naoConformes);
     if (resumoAS) resumoAS.textContent = String(totalAS);
+    if (resumoObrigatorias) resumoObrigatorias.textContent = respondidasObrigGeral + ' / ' + totalObrigGeral;
 }
 
 // Toggle Accordions
@@ -1976,11 +2054,13 @@ function previewFotoItem(itemId, input) {
         reader.onload = function(e) {
             previewDiv.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width:100%;height:100%;object-fit:cover;">`;
             previewDiv.style.display = 'block';
+            atualizarContadoresChecklist();
         };
         reader.readAsDataURL(input.files[0]);
     } else {
         previewDiv.style.display = 'none';
         previewDiv.innerHTML = '';
+        atualizarContadoresChecklist();
     }
 }
 
