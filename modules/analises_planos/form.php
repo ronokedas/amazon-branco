@@ -7,8 +7,150 @@ analisePlanosExigirAcesso();
 
 $id = trim($_GET['id'] ?? '');
 if ($id === '') {
-    setMensagem('error', 'Novas análises são criadas automaticamente por propostas assinadas.');
-    redirecionar(APP_URL . 'analises-planos');
+    $embarcacoes = $pdo->query("SELECT id, nome, registro, numero_inscricao, cliente_id, proprietario_id, tipo FROM embarcacoes WHERE ativo=1 ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $clientes = $pdo->query("SELECT id, nome, cpf_cnpj FROM clientes WHERE status='ATIVO' ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $analistas = $pdo->query("SELECT DISTINCT u.id,u.nome FROM usuarios u LEFT JOIN usuario_perfis p ON p.usuario_id=u.id WHERE u.ativo=1 AND u.excluido_em IS NULL AND (u.cargo='ANALISTA' OR p.perfil='ANALISTA') ORDER BY u.nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $usuarioIdAtual = (string)($_SESSION['usuario_id'] ?? '');
+
+    $titulo_page = 'Nova Análise de Planos - ERP Sistema';
+    require_once __DIR__ . '/../../includes/header.php';
+    ?>
+    <div class="conteudo-principal analise-planos-page">
+        <div class="form-container">
+            <div class="form-header">
+                <div>
+                    <h3><i class="fas fa-drafting-compass"></i> Nova Análise de Planos</h3>
+                    <small>Abertura de processo técnico naval para conferência de planos e documentos de projeto.</small>
+                </div>
+                <a class="btn btn-secondary btn-sm" href="<?= APP_URL ?>analises-planos"><i class="fas fa-arrow-left"></i> Voltar</a>
+            </div>
+
+            <form method="post" action="<?= APP_URL ?>analises-planos/actions" class="form-padrao" style="padding:20px 0">
+                <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
+                <input type="hidden" name="action" value="criar_analise">
+
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="embarcacao_id">Embarcação *</label>
+                        <select id="embarcacao_id" name="embarcacao_id" required onchange="aoMudarEmbarcacao(this)">
+                            <option value="">-- Selecione a embarcação --</option>
+                            <?php foreach ($embarcacoes as $emb): ?>
+                                <option value="<?= h($emb['id']) ?>" data-cliente="<?= h($emb['cliente_id'] ?: $emb['proprietario_id']) ?>">
+                                    <?= h($emb['nome']) ?> <?= !empty($emb['registro']) ? ' - ' . h($emb['registro']) : '' ?> (<?= h($emb['tipo'] ?: 'Naval') ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-6">
+                        <label for="solicitante_id">Solicitante / Cliente *</label>
+                        <select id="solicitante_id" name="solicitante_id" required>
+                            <option value="">-- Selecione o cliente/solicitante --</option>
+                            <?php foreach ($clientes as $cli): ?>
+                                <option value="<?= h($cli['id']) ?>"><?= h($cli['nome']) ?> (<?= h($cli['cpf_cnpj']) ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-4">
+                        <label for="tipo_processo">Tipo de Processo *</label>
+                        <select id="tipo_processo" name="tipo_processo" required>
+                            <option value="LC">LC - Licença de Construção</option>
+                            <option value="LA">LA - Licença de Alteração</option>
+                            <option value="LR">LR - Licença de Reclassificação</option>
+                            <option value="LCEC">LCEC - Construção Embarcação Classificada</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-4">
+                        <label for="enquadramento">Norma Aplicável *</label>
+                        <select id="enquadramento" name="enquadramento" required>
+                            <option value="NORMAM-202" selected>NORMAM-202/DPC (Navegação Interior)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-4">
+                        <label for="classe_certificacao">Classe de Certificação *</label>
+                        <select id="classe_certificacao" name="classe_certificacao" required>
+                            <option value="EC1">EC1 - Maior Porte / Complexidade Completa</option>
+                            <option value="EC2">EC2 - Porte Intermediário / Simplificado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="objeto">Objeto do Processo *</label>
+                        <input type="text" id="objeto" name="objeto" required placeholder="Ex: Análise de Planos de Construção e Estabilidade" value="Análise de Planos de Construção">
+                    </div>
+
+                    <div class="form-group col-3">
+                        <label for="analista_id">Analista Responsável *</label>
+                        <select id="analista_id" name="analista_id" required>
+                            <option value="">-- Selecione o analista --</option>
+                            <?php foreach ($analistas as $u): ?>
+                                <option value="<?= h($u['id']) ?>" <?= $usuarioIdAtual === $u['id'] ? 'selected' : '' ?>>
+                                    <?= h($u['nome']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-3">
+                        <label for="prazo_agendado_em">Prazo Previsto de Conclusão</label>
+                        <input type="datetime-local" id="prazo_agendado_em" name="prazo_agendado_em" value="<?= date('Y-m-d\T18:00', strtotime('+7 days')) ?>">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-4">
+                        <label for="estaleiro">Estaleiro Construtor</label>
+                        <input type="text" id="estaleiro" name="estaleiro" placeholder="Nome do estaleiro">
+                    </div>
+
+                    <div class="form-group col-2">
+                        <label for="numero_casco">Nº do Casco</label>
+                        <input type="text" id="numero_casco" name="numero_casco" placeholder="Nº do casco">
+                    </div>
+
+                    <div class="form-group col-3">
+                        <label for="responsavel_projeto_nome">Autor do Projeto (Engenheiro)</label>
+                        <input type="text" id="responsavel_projeto_nome" name="responsavel_projeto_nome" placeholder="Nome do engenheiro autor">
+                    </div>
+
+                    <div class="form-group col-3">
+                        <label for="art_numero">Nº da ART / CREA</label>
+                        <input type="text" id="art_numero" name="art_numero" placeholder="Ex: ART 2802... / CREA">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="observacoes">Observações Iniciais</label>
+                    <textarea id="observacoes" name="observacoes" rows="3" placeholder="Informações relevantes sobre o projeto, limitações geográficas da bacia, etc."></textarea>
+                </div>
+
+                <div class="form-actions" style="margin-top:20px;display:flex;gap:12px">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Abrir Processo de Análise</button>
+                    <a href="<?= APP_URL ?>analises-planos" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+    function aoMudarEmbarcacao(el) {
+        const opt = el.options[el.selectedIndex];
+        const cliId = opt.getAttribute('data-cliente');
+        if (cliId) {
+            const cliSelect = document.getElementById('solicitante_id');
+            if (cliSelect) cliSelect.value = cliId;
+        }
+    }
+    </script>
+    <?php
+    require_once __DIR__ . '/../../includes/footer.php';
+    exit;
 }
 try {
     $a = analisePlanosCarregar($pdo, $id);

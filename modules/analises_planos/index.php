@@ -65,7 +65,7 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 <div class="conteudo-principal">
  <div class="tabela-container">
-  <div class="tabela-header"><div><h3><i class="fas fa-drafting-compass"></i> Análise de Planos</h3><small>Agenda documental separada das vistorias e ordens de serviço.</small></div></div>
+  <div class="tabela-header"><div><h3><i class="fas fa-drafting-compass"></i> Análise de Planos</h3><small>Agenda documental separada das vistorias e ordens de serviço.</small></div><a class="btn btn-primary btn-sm" href="<?=APP_URL?>analises-planos/form"><i class="fas fa-plus"></i> Nova Análise</a></div>
   <div class="analise-metrics">
    <div><span>Aguardando agendamento</span><strong><?=$metricas['aguardando']?></strong></div>
    <div><span>Prazo hoje</span><strong><?=$metricas['hoje']?></strong></div>

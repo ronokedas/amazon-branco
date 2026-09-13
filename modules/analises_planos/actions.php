@@ -117,6 +117,102 @@ function analiseAcaoPersistirParecerPdf(PDO $pdo, string $parecerId, string $ana
 }
 
 try {
+    if ($acao === 'criar_analise') {
+        $embarcacaoId = trim($_POST['embarcacao_id'] ?? '');
+        $solicitanteId = trim($_POST['solicitante_id'] ?? '');
+        $tipoProcesso = trim($_POST['tipo_processo'] ?? 'LC');
+        $enquadramento = trim($_POST['enquadramento'] ?? 'NORMAM-202');
+        $classeCertificacao = trim($_POST['classe_certificacao'] ?? 'EC1');
+        $objeto = trim($_POST['objeto'] ?? '');
+        $analistaId = trim($_POST['analista_id'] ?? '') ?: null;
+        $prazoAgendadoEm = trim($_POST['prazo_agendado_em'] ?? '') ?: null;
+        $estaleiro = trim($_POST['estaleiro'] ?? '') ?: null;
+        $numeroCasco = trim($_POST['numero_casco'] ?? '') ?: null;
+        $responsavelProjetoNome = trim($_POST['responsavel_projeto_nome'] ?? '') ?: null;
+        $responsavelProjetoRegistro = trim($_POST['responsavel_projeto_registro'] ?? '') ?: null;
+        $artNumero = trim($_POST['art_numero'] ?? '') ?: null;
+        $observacoes = trim($_POST['observacoes'] ?? '') ?: null;
+
+        if ($embarcacaoId === '') {
+            throw new RuntimeException('Selecione a embarcação para a análise.');
+        }
+        if ($objeto === '') {
+            $objeto = 'Análise de planos ' . $tipoProcesso . ' (' . $classeCertificacao . ')';
+        }
+        if (!in_array($enquadramento, analisePlanosNormasPermitidas(), true)) {
+            $enquadramento = 'NORMAM-202';
+        }
+        if (!in_array($tipoProcesso, analisePlanosTiposPermitidos(), true)) {
+            $tipoProcesso = 'LC';
+        }
+        if (!in_array($classeCertificacao, ['EC1', 'EC2'], true)) {
+            $classeCertificacao = 'EC1';
+        }
+
+        if ($solicitanteId === '') {
+            $stmtEmb = $pdo->prepare("SELECT cliente_id, proprietario_id FROM embarcacoes WHERE id = :id");
+            $stmtEmb->execute([':id' => $embarcacaoId]);
+            $embRow = $stmtEmb->fetch(PDO::FETCH_ASSOC);
+            $solicitanteId = $embRow['cliente_id'] ?? $embRow['proprietario_id'] ?? null;
+        }
+
+        $novoId = gerarUUID();
+        $numero = gerarNumeroDocumento('RAP', 'AM-RAP');
+        $statusInicial = $analistaId ? 'AGENDADA' : 'AGUARDANDO_AGENDAMENTO';
+        $usuarioAtual = (string)($_SESSION['usuario_id'] ?? '');
+
+        $stmtInsert = $pdo->prepare("INSERT INTO analises_planos (
+            id, numero, embarcacao_id, solicitante_id, tipo_processo, enquadramento,
+            classe_certificacao, objeto, estaleiro, numero_casco,
+            responsavel_projeto_nome, responsavel_projeto_registro, art_numero,
+            analista_id, status, prazo_agendado_em, observacoes, criado_por
+        ) VALUES (
+            :id, :numero, :embarcacao, :solicitante, :tipo, :norma,
+            :classe, :objeto, :estaleiro, :casco,
+            :resp_nome, :resp_reg, :art,
+            :analista, :status, :prazo, :obs, :criado_por
+        )");
+        $stmtInsert->execute([
+            ':id' => $novoId,
+            ':numero' => $numero,
+            ':embarcacao' => $embarcacaoId,
+            ':solicitante' => $solicitanteId ?: null,
+            ':tipo' => $tipoProcesso,
+            ':norma' => $enquadramento,
+            ':classe' => $classeCertificacao,
+            ':objeto' => $objeto,
+            ':estaleiro' => $estaleiro,
+            ':casco' => $numeroCasco,
+            ':resp_nome' => $responsavelProjetoNome,
+            ':resp_reg' => $responsavelProjetoRegistro,
+            ':art' => $artNumero,
+            ':analista' => $analistaId,
+            ':status' => $statusInicial,
+            ':prazo' => $prazoAgendadoEm,
+            ':obs' => $observacoes,
+            ':criado_por' => $usuarioAtual,
+        ]);
+
+        analisePlanosSemearChecklist($pdo, $novoId, $tipoProcesso, $enquadramento, $classeCertificacao, $usuarioAtual);
+        analisePlanosHistorico($pdo, $novoId, 'CRIACAO_DIRETA', null, $statusInicial, 'Processo criado diretamente no sistema pelo usuário ' . ($_SESSION['usuario_nome'] ?? ''));
+
+        if ($analistaId && $prazoAgendadoEm) {
+            $stmtHistAg = $pdo->prepare("INSERT INTO analise_planos_agenda_historico (
+                analise_id, analista_anterior_id, analista_novo_id, prazo_anterior_em, prazo_novo_em, motivo, acao, criado_por
+            ) VALUES (:analise, NULL, :analista, NULL, :prazo, 'Agendamento inicial na abertura do processo', 'AGENDAMENTO', :criador)");
+            $stmtHistAg->execute([
+                ':analise' => $novoId,
+                ':analista' => $analistaId,
+                ':prazo' => $prazoAgendadoEm,
+                ':criador' => $usuarioAtual,
+            ]);
+            analisePlanosNotificar($pdo, $analistaId, 'ANALISE_AGENDADA', 'Nova Análise de Planos atribuída', "Você foi atribuído ao processo {$numero}.", $novoId, 'analises-planos/form?id=' . urlencode($novoId));
+        }
+
+        setMensagem('success', "Processo de Análise de Planos {$numero} criado com sucesso! O checklist normativo foi gerado.");
+        redirecionar(APP_URL . 'analises-planos/form?id=' . urlencode($novoId));
+    }
+
     if ($analiseId === '') throw new RuntimeException('Análise não informada.');
     $analise = analisePlanosCarregar($pdo, $analiseId, in_array($acao, ['agendar','iniciar','assinar_parecer','publicar'], true));
     $cargo = getCargo();

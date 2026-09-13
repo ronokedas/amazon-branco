@@ -128,10 +128,53 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
     }
 
     if ($cargo === 'ANALISTA') {
-        $base['fila'] = dashRows($pdo,"SELECT v.id,v.numero,v.agendamento_id,v.atualizado_em,e.nome embarcacao,COALESCE(u.nome,'Sem vistoriador vinculado') vistoriador,COUNT(DISTINCT va.id) fotos,COUNT(DISTINCT CASE WHEN ve.conforme='nao' THEN ve.id END) nao_conformes,TIMESTAMPDIFF(HOUR,v.atualizado_em,NOW()) horas FROM vistorias v JOIN embarcacoes e ON e.id=v.embarcacao_id LEFT JOIN agendamentos a ON a.id=v.agendamento_id LEFT JOIN usuarios u ON u.id=a.vistoriador_id LEFT JOIN vistoria_anexos va ON va.vistoria_id=v.id LEFT JOIN vistoria_exigencias ve ON ve.vistoria_id=v.id WHERE v.status='AGUARDANDO_APROVACAO' AND NOT EXISTS (SELECT 1 FROM vistorias vf WHERE vf.relatorio_anterior_id=v.id AND vf.status<>'CANCELADA') GROUP BY v.id,v.numero,v.agendamento_id,v.atualizado_em,e.nome,u.nome ORDER BY v.atualizado_em LIMIT 12");
-        $base['kpis'] = ['aguardando'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistorias v WHERE v.status='AGUARDANDO_APROVACAO' AND NOT EXISTS (SELECT 1 FROM vistorias vf WHERE vf.relatorio_anterior_id=v.id AND vf.status<>'CANCELADA')"),'mais_antigo'=>(int)($base['fila'][0]['horas']??0),'nao_conformes'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistoria_exigencias ve JOIN vistorias v ON v.id=ve.vistoria_id WHERE v.status='AGUARDANDO_APROVACAO' AND ve.conforme='nao' AND NOT EXISTS (SELECT 1 FROM vistorias vf WHERE vf.relatorio_anterior_id=v.id AND vf.status<>'CANCELADA')"),'concluidas_mes'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistorias WHERE aprovado_por=:uid AND data_aprovacao BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())",$params)];
-        $base['vencidas'] = count(array_filter($base['fila'],fn($r)=>(int)$r['horas']>=48));
-        $base['historico'] = dashRows($pdo,"SELECT v.numero,v.data_aprovacao,v.status,e.nome embarcacao FROM vistorias v JOIN embarcacoes e ON e.id=v.embarcacao_id WHERE v.aprovado_por=:uid ORDER BY v.data_aprovacao DESC LIMIT 8",$params);
+        $base['kpis'] = [
+            'atribuidas' => (int)dashScalar($pdo, "SELECT COUNT(*) FROM analises_planos WHERE analista_id = :uid AND status IN ('AGUARDANDO_AGENDAMENTO','AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS','AGUARDANDO_ASSINATURA_ANALISTA','AGUARDANDO_APROVACAO_ADMIN')", [':uid' => $usuarioId]),
+            'hoje' => (int)dashScalar($pdo, "SELECT COUNT(*) FROM analises_planos WHERE analista_id = :uid AND status IN ('AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS') AND DATE(prazo_agendado_em) = CURDATE()", [':uid' => $usuarioId]),
+            'atrasadas' => (int)dashScalar($pdo, "SELECT COUNT(*) FROM analises_planos WHERE analista_id = :uid AND status IN ('AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS') AND DATE(prazo_agendado_em) < CURDATE()", [':uid' => $usuarioId]),
+            'aguardando_docs' => (int)dashScalar($pdo, "SELECT COUNT(*) FROM analises_planos WHERE analista_id = :uid AND status = 'AGUARDANDO_DOCUMENTOS'", [':uid' => $usuarioId]),
+            'concluidas_mes' => (int)dashScalar($pdo, "SELECT COUNT(*) FROM analises_planos WHERE analista_id = :uid AND status = 'CONCLUIDA' AND atualizado_em BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())", [':uid' => $usuarioId]),
+        ];
+
+        $base['fila_planos'] = dashRows($pdo, "SELECT ap.id, ap.numero, ap.objeto, ap.tipo_processo, ap.enquadramento, ap.classe_certificacao, ap.status, ap.prazo_agendado_em, ap.iniciado_em,
+                     e.nome AS embarcacao_nome, c.nome AS solicitante_nome,
+                     (SELECT COUNT(*) FROM analise_planos_exigencias x WHERE x.analise_id=ap.id AND x.status NOT IN ('CUMPRIDA','TRANSCRITA')) AS exigencias_pendentes,
+                     (SELECT COUNT(*) FROM analise_planos_submissoes s WHERE s.analise_id=ap.id) AS total_revisoes
+              FROM analises_planos ap
+              INNER JOIN embarcacoes e ON e.id=ap.embarcacao_id
+              LEFT JOIN clientes c ON c.id=ap.solicitante_id
+              WHERE (ap.analista_id = :uid OR ap.analista_id IS NULL)
+                AND ap.status NOT IN ('CONCLUIDA','REPROVADA','CANCELADA')
+              ORDER BY ap.prazo_agendado_em IS NULL, ap.prazo_agendado_em ASC, ap.atualizado_em DESC
+              LIMIT 12", [':uid' => $usuarioId]);
+
+        $base['historico_pareceres'] = dashRows($pdo, "SELECT p.id, p.numero, p.finalidade, p.resultado, p.status, p.criado_em,
+                     ap.id AS analise_id, ap.numero AS processo_numero, e.nome AS embarcacao_nome
+              FROM analise_planos_pareceres p
+              INNER JOIN analises_planos ap ON ap.id=p.analise_id
+              INNER JOIN embarcacoes e ON e.id=ap.embarcacao_id
+              WHERE p.criado_por = :u1 OR ap.analista_id = :u2
+              ORDER BY p.criado_em DESC
+              LIMIT 8", [':u1' => $usuarioId, ':u2' => $usuarioId]);
+
+        // Fila auxiliar de vistorias caso também participe de aprovação
+        $base['fila_vistorias'] = dashRows($pdo, "SELECT v.id, v.numero, v.agendamento_id, v.atualizado_em, e.nome AS embarcacao,
+                     COALESCE(u.nome,'Sem vistoriador vinculado') AS vistoriador,
+                     COUNT(DISTINCT va.id) AS fotos,
+                     COUNT(DISTINCT CASE WHEN ve.conforme='nao' THEN ve.id END) AS nao_conformes,
+                     TIMESTAMPDIFF(HOUR,v.atualizado_em,NOW()) AS horas
+              FROM vistorias v
+              JOIN embarcacoes e ON e.id=v.embarcacao_id
+              LEFT JOIN agendamentos a ON a.id=v.agendamento_id
+              LEFT JOIN usuarios u ON u.id=a.vistoriador_id
+              LEFT JOIN vistoria_anexos va ON va.vistoria_id=v.id
+              LEFT JOIN vistoria_exigencias ve ON ve.vistoria_id=v.id
+              WHERE v.status='AGUARDANDO_APROVACAO'
+                AND NOT EXISTS (SELECT 1 FROM vistorias vf WHERE vf.relatorio_anterior_id=v.id AND vf.status<>'CANCELADA')
+              GROUP BY v.id, v.numero, v.agendamento_id, v.atualizado_em, e.nome, u.nome
+              ORDER BY v.atualizado_em
+              LIMIT 8");
+
         return $base;
     }
 
