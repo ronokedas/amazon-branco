@@ -319,9 +319,27 @@ require __DIR__ . '/../../includes/sidebar.php';
                                 <div class="text-secondary" style="font-size: 0.78rem;">
                                     <?= $d['protocolo_externo_em'] ? 'Atendimento: ' . formatarDataCompleta($d['protocolo_externo_em']) : 'Atendimento pendente' ?>
                                 </div>
-                                <?php if (!empty($d['protocolo_externo_validade'])): ?>
-                                    <div class="small <?= strtotime($d['protocolo_externo_validade']) <= strtotime('+15 days') ? 'text-warning fw-bold' : 'text-secondary' ?>" style="font-size: 0.75rem;">
-                                        <i class="fa-solid fa-calendar-check"></i> Validade: <?= date('d/m/Y', strtotime($d['protocolo_externo_validade'])) ?>
+                                <?php if (!empty($d['protocolo_externo_validade'])): 
+                                    $diasVal = (int)ceil((strtotime($d['protocolo_externo_validade']) - time()) / 86400);
+                                ?>
+                                    <div class="mt-1">
+                                        <?php if ($diasVal < 0): ?>
+                                            <span class="badge bg-danger text-white" style="font-size: 0.72rem;">
+                                                <i class="fa-solid fa-triangle-exclamation"></i> Prazo expirou há <?= abs($diasVal) ?>d
+                                            </span>
+                                        <?php elseif ($diasVal === 0): ?>
+                                            <span class="badge bg-danger text-white" style="font-size: 0.72rem;">
+                                                <i class="fa-solid fa-clock"></i> Prazo vence HOJE!
+                                            </span>
+                                        <?php elseif ($diasVal <= 7): ?>
+                                            <span class="badge bg-warning text-dark fw-bold" style="font-size: 0.72rem;">
+                                                <i class="fa-solid fa-hourglass-half"></i> Faltam <?= $diasVal ?> dia(s)
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-secondary" style="font-size: 0.75rem;">
+                                                <i class="fa-solid fa-calendar-check"></i> Prazo: <?= date('d/m/Y', strtotime($d['protocolo_externo_validade'])) ?> (<?= $diasVal ?>d)
+                                            </span>
+                                        <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
                             </td>
@@ -336,6 +354,13 @@ require __DIR__ . '/../../includes/sidebar.php';
                             </td>
 
                             <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
+                                <?php
+                                $procNum = $d['protocolo_externo_numero'] ?? '';
+                                $msgWhatsList = rawurlencode("Olá! Informamos que o processo da embarcação *" . $d['embarcacao_nome'] . "* (Dossiê " . $d['numero'] . ") está em andamento na " . ($d['unidade_nome'] ?: 'Capitania/Delegacia') . ".\nSituação: *" . ($labels[$d['status']] ?? $d['status']) . "*" . ($procNum ? "\nNº Oficial no Órgão: *" . $procNum . "*" : "") . "\n\nAmazon Certificadora");
+                                ?>
+                                <a class="btn btn-sm btn-success me-1" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text=<?= $msgWhatsList ?>" style="background: #25d366; border-color: #25d366; color: #fff;" title="Avisar cliente via WhatsApp">
+                                    <i class="fa-brands fa-whatsapp"></i>
+                                </a>
                                 <a class="btn btn-sm btn-secondary me-1" target="_blank" href="<?= APP_URL ?>protocolos/pdf-dossie?id=<?= urlencode($d['id']) ?>" title="Gerar PDF consolidado do dossiê">
                                     <i class="fa-solid fa-file-pdf"></i> PDF
                                 </a>

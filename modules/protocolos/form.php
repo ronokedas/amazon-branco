@@ -115,11 +115,19 @@ require __DIR__ . '/../../includes/sidebar.php';
             </h1>
             <p><?= $d ? h($d['assunto']) : 'Abra um novo processo para controlar custódia de documentos, envio à Capitania e devolução.' ?></p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <a class="btn btn-secondary" href="<?= APP_URL ?>protocolos">
                 <i class="fa-solid fa-arrow-left"></i> Voltar à Lista
             </a>
             <?php if ($d): ?>
+                <?php
+                $chaveProc = 'protocolo_externo_' . 'numero';
+                $procNum = $d[$chaveProc] ?? '';
+                $msgWhatsStatus = rawurlencode("Olá! Informamos que o processo da embarcação *" . $d['embarcacao_nome'] . "* (Dossiê " . $d['numero'] . ") está em andamento na " . ($d['unidade_nome'] ?: 'Capitania/Delegacia') . ".\nSituação atual: *" . ($labels[$d['status']] ?? $d['status']) . "*" . ($procNum ? "\nNº Oficial no Órgão: *" . $procNum . "*" : "") . "\n\nAmazon Certificadora Naval");
+                ?>
+                <a class="btn btn-success" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text=<?= $msgWhatsStatus ?>" style="background: #25d366; border-color: #25d366; color: #fff;" title="Avisar cliente/armador via WhatsApp">
+                    <i class="fa-brands fa-whatsapp"></i> Notificar Cliente
+                </a>
                 <a class="btn btn-primary" target="_blank" href="<?= APP_URL ?>protocolos/pdf-dossie?id=<?= urlencode($id) ?>">
                     <i class="fa-solid fa-file-pdf"></i> PDF Consolidado
                 </a>
@@ -331,10 +339,20 @@ require __DIR__ . '/../../includes/sidebar.php';
                     </div>
 
                     <div class="col-md-3 text-md-end">
-                        <?php if ($d['protocolo_externo_validade']): ?>
-                            <div class="badge bg-secondary p-2 mb-2 d-inline-block">
-                                <i class="fa-solid fa-calendar-check"></i> Validade do Protocolo: 
-                                <strong><?= date('d/m/Y', strtotime($d['protocolo_externo_validade'])) ?></strong>
+                        <?php if ($d['protocolo_externo_validade']): 
+                            $diasVal = (int)ceil((strtotime($d['protocolo_externo_validade']) - time()) / 86400);
+                            $badgeStyle = $diasVal < 0 ? 'background: #ef4444; color: #fff;' : ($diasVal <= 7 ? 'background: #f59e0b; color: #000;' : 'background: rgba(255,255,255,0.1); color: var(--text-primary);');
+                        ?>
+                            <div class="badge p-2 mb-2 d-inline-block text-start" style="<?= $badgeStyle ?> font-size: 0.82rem; border-radius: 8px;">
+                                <i class="fa-solid <?= $diasVal < 0 ? 'fa-triangle-exclamation' : ($diasVal <= 7 ? 'fa-hourglass-half' : 'fa-calendar-check') ?>"></i>
+                                Prazo no Órgão: <strong><?= date('d/m/Y', strtotime($d['protocolo_externo_validade'])) ?></strong>
+                                <?php if ($diasVal < 0): ?>
+                                    <div class="fw-bold mt-1">⚠️ Prazo expirou há <?= abs($diasVal) ?> dia(s)!</div>
+                                <?php elseif ($diasVal === 0): ?>
+                                    <div class="fw-bold mt-1">🚨 Prazo vence HOJE!</div>
+                                <?php elseif ($diasVal <= 7): ?>
+                                    <div class="fw-bold mt-1">⏳ Faltam <?= $diasVal ?> dia(s) para o limite</div>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
                         <?php if ($d['url_consulta']): ?>
@@ -348,6 +366,25 @@ require __DIR__ . '/../../includes/sidebar.php';
                 </div>
             </div>
         </section>
+
+        <?php if ($d['status'] === 'EM_EXIGENCIA'): ?>
+            <div class="prot-helper-box warning mb-4" style="border-left: 5px solid #f59e0b; background: rgba(245, 158, 11, 0.12); padding: 16px 20px; border-radius: 10px;">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="fa-solid fa-triangle-exclamation text-warning fs-5"></i>
+                            <strong style="color: #f59e0b; font-size: 1.05rem;">Processo em Exigência na Autoridade Marítima</strong>
+                        </div>
+                        <p class="mb-0 text-secondary small">A Capitania/Delegacia apontou pendências ou notas técnicas. Atente-se ao prazo limite para cumprimento para evitar cancelamento ou arquivamento do processo.</p>
+                    </div>
+                    <?php if (!$somenteLeitura): ?>
+                        <button type="button" class="btn btn-warning text-dark fw-bold" onclick="trocarAbaDossie('movimentacao'); document.getElementById('natureza').value='CUMPRIMENTO_EXIGENCIA'; carregarAjudaNatureza('CUMPRIMENTO_EXIGENCIA');">
+                            <i class="fa-solid fa-arrow-right"></i> Cumprir Exigência Agora
+                        </button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- Navegação em Abas do Dossiê -->
         <div class="prot-tabs-bar mb-4">
@@ -905,9 +942,16 @@ require __DIR__ . '/../../includes/sidebar.php';
         <div id="pane-custodia" class="prot-tab-pane <?= $abaAtiva === 'custodia' ? 'active' : '' ?>">
             <section class="card">
                 <div class="card-body">
-                    <h3 style="font-size: 1.15rem; color: var(--accent, #56e0ad);" class="mb-3">
-                        <i class="fa-solid fa-box-archive"></i> Controle de Custódia de Documentos Originais
-                    </h3>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <h3 style="font-size: 1.15rem; color: var(--accent, #56e0ad);" class="m-0">
+                            <i class="fa-solid fa-box-archive"></i> Controle de Custódia de Documentos Originais
+                        </h3>
+                        <?php if ($originais): ?>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="window.print()">
+                                <i class="fa-solid fa-print"></i> Imprimir Relação para Arquivo Físico
+                            </button>
+                        <?php endif; ?>
+                    </div>
                     <p class="text-secondary small">
                         Controle rigoroso de documentos físicos originais do cliente (ex.: escrituras públicas, notas fiscais originais dos motores, vias assinadas de plantas) que foram confiados à Amazon Certificadora e devem ser devolvidos após o protocolo ou encerramento.
                     </p>

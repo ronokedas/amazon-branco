@@ -13,3 +13,11 @@
   - Qualquer regra, auditoria, processo ou padronização exclusiva de conformidade ISO está **desconsiderada e separada** do núcleo do sistema.
   - Não misturar regras da Autoridade Marítima com auditorias de gestão da qualidade.
   - Foco integral na **simplicidade operacional**, **praticidade para o usuário** e **segurança da navegação**.
+
+## Padrão de Usabilidade e Design Autodidático
+- **Campos Autodidáticos**: Todos os formulários operacionais devem conter rótulos claros acompanhados de textos de auxílio explicativos (`<small class="text-muted">`), instruindo o usuário sobre o que preencher, referências regulamentares (NORMAM) e a finalidade daquele dado.
+- **Atalhos Rápidos de Assunto / Ação (Pills/Chips)**: Disponibilizar botões de preenchimento em 1 clique para os assuntos mais frequentes da rotina naval, minimizando digitação repetitiva e prevenindo erros cadastrais.
+- **Organização em Abas Especializadas**: Telas densas ou com múltiplos estágios (dossiês, propostas, relatórios de vistoria) devem ser organizadas em abas temáticas focadas (ex.: Linha do Tempo, Nova Ação Guiada, Trâmite Oficial/SISAP, Custódia, Anexos, Auditoria Criptográfica).
+- **Cards de Indicadores (KPIs) com Filtragem Instantânea**: Listagens devem exibir no topo métricas acionáveis (alertas de exigências, custódia de originais pendente, prazos) com abas de filtros de situação rápida.
+- **Vínculos Inteligentes Automáticos**: A seleção de uma entidade principal (ex.: Embarcação) deve atualizar ou pré-filtrar automaticamente entidades dependentes (Cliente/Armador, Processos de Análise abertos, Ordens de Vistoria).
+- **Ações Rápidas de Compartilhamento**: Manter links tokenizados e botões de compartilhamento direto via WhatsApp e cópia de link para validação ou aceite com clientes e despachantes.
