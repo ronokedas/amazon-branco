@@ -38,6 +38,8 @@ try {
                e.comprimento_total, e.boca_moldada, e.pontal_moldado,
                e.material_casco, e.arqueacao_bruta, e.possui_propulsao,
                e.numero_passageiros_n1, e.numero_passageiros_n2,
+               e.id AS embarcacao_id, e.foto_url, e.foto_chave, e.foto_atualizada_em,
+               e.numero_inscricao AS embarcacao_numero_inscricao,
                u.nome AS vistoriador_nome,
                arm.nome AS armador_nome,
                a.operador_nome AS agendamento_operador_nome,
@@ -730,6 +732,418 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     .admin-decision-steps { align-items: flex-start; flex-direction: column; }
     .admin-decision-steps > i { display: none; }
 }
+
+/* =========================================================
+   MODULO VISTORIA: FOTO OFICIAL & USABILIDADE DO VISTORIADOR
+   ========================================================= */
+.report-vessel-card {
+    margin: 16px 20px 0;
+    border: 1px solid var(--cor-borda, #d9e2df);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--cor-fundo-card, #fff);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+.vessel-card-body {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 24px;
+    padding: 20px;
+    align-items: start;
+}
+.vessel-photo-box {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.vessel-photo-frame {
+    position: relative;
+    width: 100%;
+    height: 230px;
+    background: #0f172a;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.vessel-photo-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.vessel-photo-frame .photo-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #94a3b8;
+    text-align: center;
+    padding: 20px;
+}
+.vessel-photo-frame .photo-placeholder i {
+    font-size: 48px;
+    color: #64748b;
+}
+.vessel-photo-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(8px);
+}
+.vessel-photo-badge.is-cadastrada {
+    background: rgba(16, 185, 129, 0.9);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(16,185,129,0.3);
+}
+.vessel-photo-badge.is-sem-foto {
+    background: rgba(100, 116, 139, 0.85);
+    color: #fff;
+}
+.vessel-photo-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.75);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    z-index: 10;
+}
+.vessel-photo-overlay.is-loading {
+    display: flex;
+}
+.vessel-photo-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.btn-photo-capture {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #059669;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+}
+.btn-photo-capture:hover {
+    background: #047857;
+    transform: translateY(-1px);
+}
+.btn-photo-upload {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.btn-photo-upload:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+.btn-photo-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: transparent;
+    color: #dc2626;
+    border: 1px dashed #f87171;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.btn-photo-remove:hover {
+    background: #fef2f2;
+    border-color: #ef4444;
+}
+.vessel-photo-hint {
+    font-size: 11.5px;
+    color: #64748b;
+    line-height: 1.4;
+    margin: 0;
+}
+.vessel-specs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.vessel-specs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.vessel-specs-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.vessel-specs-link {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0284c7;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.vessel-specs-link:hover {
+    text-decoration: underline;
+}
+.vessel-specs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+}
+.vessel-spec-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.vessel-spec-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 2px;
+}
+.vessel-spec-val {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #1e293b;
+    word-break: break-word;
+}
+.vessel-specs-normam-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12.5px;
+    color: #166534;
+    line-height: 1.45;
+}
+.vessel-specs-normam-box i {
+    font-size: 16px;
+    color: #15803d;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* Checklist Productivity Toolbar */
+.checklist-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 10px 18px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #fafcfb;
+}
+.checklist-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn-tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-tool:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+.checklist-filter-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.btn-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-filter-pill:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+.btn-filter-pill.active {
+    background: #0f172a;
+    color: #fff;
+    border-color: #0f172a;
+}
+.btn-filter-pill.is-pending.active {
+    background: #d97706;
+    color: #fff;
+    border-color: #d97706;
+}
+.btn-filter-pill.is-conforme.active {
+    background: #059669;
+    color: #fff;
+    border-color: #059669;
+}
+.btn-filter-pill.is-danger.active {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+}
+.pill-badge {
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(0,0,0,0.1);
+}
+.btn-filter-pill.active .pill-badge {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+}
+
+/* Floating / Sticky Quick Bar for Vistoriador */
+.sticky-vistoriador-bar {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 99;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid #cbd5e1;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 20px -20px -20px;
+}
+.sticky-vistoriador-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 13px;
+}
+.sticky-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #475569;
+}
+.sticky-stat strong {
+    color: #0f172a;
+}
+.sticky-stat.is-issues strong {
+    color: #dc2626;
+}
+.sticky-vistoriador-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.sticky-vistoriador-actions .btn {
+    margin: 0;
+    padding: 9px 18px;
+    font-weight: 700;
+    font-size: 13.5px;
+    border-radius: 8px;
+}
+
+@media (max-width: 900px) {
+    .vessel-card-body {
+        grid-template-columns: 1fr;
+    }
+    .vessel-photo-frame {
+        max-width: 440px;
+        margin: 0 auto;
+        height: 220px;
+    }
+    .vessel-photo-actions {
+        max-width: 440px;
+        margin: 0 auto;
+        width: 100%;
+    }
+    .sticky-vistoriador-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px 16px;
+    }
+    .sticky-vistoriador-info {
+        justify-content: space-between;
+        font-size: 12px;
+    }
+    .sticky-vistoriador-actions {
+        flex-direction: column;
+    }
+    .sticky-vistoriador-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
 </style>
 
 <!-- BOT?O ETAPA 2 (somente ADMIN, somente quando aprovado) -->
@@ -887,7 +1301,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
                 <div class="report-context-item">
                     <small class="text-muted"><i class="fas fa-ship"></i> Embarcação</small>
-                    <div style="font-weight: 600;"><?php echo h($ag['embarcacao_nome']); ?> <?php echo $ag['embarcacao_registro'] ? '(' . h($ag['embarcacao_registro']) . ')' : ''; ?></div>
+                    <div style="font-weight: 600; display:flex; align-items:center; gap:8px;">
+                        <img id="thumbFotoCabecalhoEmbarcacao" src="<?= !empty($ag['foto_url']) ? h($ag['foto_url']) : '' ?>" alt="Foto da Embarcação" style="width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid #cbd5e1;<?= empty($ag['foto_url']) ? 'display:none;' : '' ?>">
+                        <span><?php echo h($ag['embarcacao_nome']); ?> <?php echo $ag['embarcacao_registro'] ? '(' . h($ag['embarcacao_registro']) . ')' : ''; ?></span>
+                    </div>
                 </div>
                 <div class="report-context-item report-context-item--wide">
                     <small class="text-muted"><i class="fas fa-clipboard-check"></i> Tipo de Vistoria</small>
@@ -1383,6 +1800,139 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </small>
             </div>
 
+            <!-- ===== FOTO OFICIAL & IDENTIFICAÇÃO DA EMBARCAÇÃO ===== -->
+            <section class="report-vessel-card" id="secaoFotoOficialEmbarcacao">
+                <div class="report-section-heading">
+                    <div>
+                        <i class="fas fa-camera"></i>
+                        <span>
+                            <strong>Foto Oficial da Embarcação & Identificação Técnica</strong>
+                            <small>Capture em campo ou envie a foto canônica da embarcação para sincronização com Gerenciar Embarcações, dossiê e certificados.</small>
+                        </span>
+                    </div>
+                    <div>
+                        <a href="<?= APP_URL ?>embarcacoes" target="_blank" class="vessel-specs-link" title="Abrir Gerenciar Embarcações em nova aba">
+                            <i class="fas fa-arrow-up-right-from-square"></i> Ver em Embarcações
+                        </a>
+                    </div>
+                </div>
+                <div class="vessel-card-body">
+                    <!-- Coluna da Foto Oficial e Captura -->
+                    <div class="vessel-photo-box">
+                        <div class="vessel-photo-frame" id="vesselPhotoFrame">
+                            <div id="vesselPhotoOverlay" class="vessel-photo-overlay">
+                                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                <span id="vesselPhotoOverlayText">Atualizando foto oficial...</span>
+                            </div>
+                            <span id="vesselPhotoBadge" class="vessel-photo-badge <?= !empty($ag['foto_url']) ? 'is-cadastrada' : 'is-sem-foto' ?>">
+                                <i class="fas <?= !empty($ag['foto_url']) ? 'fa-circle-check' : 'fa-camera' ?>"></i>
+                                <?= !empty($ag['foto_url']) ? 'Foto Cadastrada' : 'Sem Foto Oficial' ?>
+                            </span>
+                            <img id="imgFotoOficialEmbarcacao" src="<?= !empty($ag['foto_url']) ? h($ag['foto_url']) : '' ?>" alt="Foto Oficial da Embarcação" style="<?= empty($ag['foto_url']) ? 'display:none;' : '' ?>">
+                            <div id="vesselPhotoPlaceholder" class="photo-placeholder" style="<?= !empty($ag['foto_url']) ? 'display:none;' : '' ?>">
+                                <i class="fas fa-ship"></i>
+                                <strong>Nenhuma foto oficial registrada</strong>
+                                <small>Tire uma foto direta em campo com a câmera ou escolha um arquivo da galeria.</small>
+                            </div>
+                        </div>
+
+                        <div class="vessel-photo-actions">
+                            <!-- Botao da Camera (com capture=environment para abrir camera traseira no celular/tablet) -->
+                            <button type="button" class="btn-photo-capture" onclick="document.getElementById('inputCameraEmbarcacao').click()">
+                                <i class="fas fa-camera"></i> Tirar Foto com a Câmera
+                            </button>
+                            <input type="file" id="inputCameraEmbarcacao" accept="image/*" capture="environment" style="display:none" onchange="uploadFotoEmbarcacaoAjax(this)">
+
+                            <!-- Botao da Galeria / Arquivo -->
+                            <button type="button" class="btn-photo-upload" onclick="document.getElementById('inputArquivoEmbarcacao').click()">
+                                <i class="fas fa-images"></i> Escolher da Galeria / Arquivo
+                            </button>
+                            <input type="file" id="inputArquivoEmbarcacao" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadFotoEmbarcacaoAjax(this)">
+
+                            <!-- Input backup para envio tradicional caso salve o form -->
+                            <input type="file" name="foto_oficial_embarcacao" id="inputFotoFormulario" accept="image/jpeg,image/png,image/webp" style="display:none">
+
+                            <!-- Botao para remover foto -->
+                            <button type="button" id="btnRemoverFotoOficial" class="btn-photo-remove" onclick="removerFotoEmbarcacaoAjax()" style="<?= empty($ag['foto_url']) ? 'display:none;' : '' ?>">
+                                <i class="fas fa-trash-can"></i> Remover Foto Oficial
+                            </button>
+                        </div>
+
+                        <div id="msgFotoOficialEmbarcacao" style="display:none; font-size: 12px; padding: 8px 12px; border-radius: 6px;"></div>
+
+                        <p class="vessel-photo-hint">
+                            <i class="fas fa-circle-check text-success"></i> A foto é salva instantaneamente no banco de dados e refletida no Gerenciar Embarcações, sem recarregar a página e sem perder as respostas do checklist.
+                        </p>
+                    </div>
+
+                    <!-- Coluna de Especificações Técnicas da Embarcação -->
+                    <div class="vessel-specs-container">
+                        <div class="vessel-specs-header">
+                            <span class="vessel-specs-title">
+                                <i class="fas fa-id-card-clip text-primary"></i>
+                                <?= h($ag['embarcacao_nome']) ?>
+                            </span>
+                            <span class="badge bg-secondary" style="font-size: 12px;">
+                                <?= h($ag['tipo_embarcacao'] ?: ($ag['tipo'] ?: 'Embarcação')) ?>
+                            </span>
+                        </div>
+
+                        <div class="vessel-specs-grid">
+                            <div class="vessel-spec-item">
+                                <span class="vessel-spec-label">Nº Inscrição / TIE</span>
+                                <span class="vessel-spec-val"><?= h($ag['embarcacao_numero_inscricao'] ?: ($ag['embarcacao_registro'] ?: 'Não informado')) ?></span>
+                            </div>
+                            <div class="vessel-spec-item">
+                                <span class="vessel-spec-label">Ano de Construção</span>
+                                <span class="vessel-spec-val"><?= h($ag['embarcacao_ano'] ?: 'Não informado') ?></span>
+                            </div>
+                            <div class="vessel-spec-item">
+                                <span class="vessel-spec-label">Material do Casco</span>
+                                <span class="vessel-spec-val"><?= h($ag['material_casco'] ?: 'Não informado') ?></span>
+                            </div>
+                            <div class="vessel-spec-item">
+                                <span class="vessel-spec-label">Arqueação Bruta (AB)</span>
+                                <span class="vessel-spec-val"><?= !empty($ag['arqueacao_bruta']) ? h($ag['arqueacao_bruta']) . ' AB' : 'Não informada' ?></span>
+                            </div>
+                            <div class="vessel-spec-item">
+                                <span class="vessel-spec-label">Comprimento (LOA)</span>
+                                <span class="vessel-spec-val"><?= !empty($ag['comprimento_total']) ? h($ag['comprimento_total']) . ' m' : 'Não informado' ?></span>
+                            </div>
+                            <div class="vessel-spec-item">
+                                <span class="vessel-spec-label">Boca Moldada</span>
+                                <span class="vessel-spec-val"><?= !empty($ag['boca_moldada']) ? h($ag['boca_moldada']) . ' m' : 'Não informada' ?></span>
+                            </div>
+                            <div class="vessel-spec-item">
+                                <span class="vessel-spec-label">Pontal Moldado</span>
+                                <span class="vessel-spec-val"><?= !empty($ag['pontal_moldado']) ? h($ag['pontal_moldado']) . ' m' : 'Não informado' ?></span>
+                            </div>
+                            <div class="vessel-spec-item">
+                                <span class="vessel-spec-label">Propulsão Naval</span>
+                                <span class="vessel-spec-val"><?= !empty($ag['possui_propulsao']) ? 'Com Propulsão' : 'Sem Propulsão' ?></span>
+                            </div>
+                            <div class="vessel-spec-item">
+                                <span class="vessel-spec-label">Lotação Passageiros</span>
+                                <span class="vessel-spec-val">
+                                    N1: <?= h($ag['numero_passageiros_n1'] ?? 0) ?> | N2: <?= h($ag['numero_passageiros_n2'] ?? 0) ?>
+                                </span>
+                            </div>
+                            <div class="vessel-spec-item">
+                                <span class="vessel-spec-label">Cliente Proprietário</span>
+                                <span class="vessel-spec-val"><?= h($ag['cliente_nome']) ?></span>
+                            </div>
+                        </div>
+
+                        <div class="vessel-specs-normam-box">
+                            <i class="fas fa-shield-halved"></i>
+                            <div>
+                                <strong>Padronização de Campo (NORMAM-DPC):</strong>
+                                A comprovação visual da embarcação em conjunto com os dados de arqueação, boca e casco é requisito essencial para relatórios periciais navais e auditorias da Capitania dos Portos.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- ===== DATA DA VISTORIA E ARMADOR ===== -->
             <section class="report-inspection-card">
                 <div class="report-section-heading">
@@ -1451,6 +2001,35 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <div><span class="checklist-summary-icon is-pending"><i class="fas fa-clock"></i></span><span><small>Pendentes</small><strong id="checklistPendentes">0</strong></span></div>
                     <div><span class="checklist-summary-icon is-danger"><i class="fas fa-triangle-exclamation"></i></span><span><small>Não conformes</small><strong id="checklistNaoConformes">0</strong></span></div>
                     <div><span class="checklist-summary-icon is-as"><i class="fas fa-ban"></i></span><span><small>Exigências A/S</small><strong id="checklistAS">0</strong></span></div>
+                </div>
+
+                <!-- Barra de Ferramentas e Filtros Rápidos do Vistoriador -->
+                <div class="checklist-toolbar">
+                    <div class="checklist-toolbar-left">
+                        <button type="button" class="btn-tool" onclick="expandirTodasCategorias()" title="Abrir todas as categorias do checklist">
+                            <i class="fas fa-angles-down"></i> Expandir Todas
+                        </button>
+                        <button type="button" class="btn-tool" onclick="recolherTodasCategorias()" title="Recolher todas as categorias do checklist">
+                            <i class="fas fa-angles-up"></i> Recolher Todas
+                        </button>
+                    </div>
+                    <div class="checklist-filter-pills" role="tablist" aria-label="Filtro rápido do checklist">
+                        <button type="button" class="btn-filter-pill active" data-filter="todos" onclick="filtrarChecklistStatus('todos', this)">
+                            <i class="fas fa-list-check"></i> Todos
+                        </button>
+                        <button type="button" class="btn-filter-pill is-pending" data-filter="pendentes" onclick="filtrarChecklistStatus('pendentes', this)">
+                            <i class="fas fa-clock"></i> Só Pendentes <span class="pill-badge" id="pillPendentes">0</span>
+                        </button>
+                        <button type="button" class="btn-filter-pill is-conforme" data-filter="conforme" onclick="filtrarChecklistStatus('conforme', this)">
+                            <i class="fas fa-circle-check"></i> Conformes <span class="pill-badge" id="pillConformes">0</span>
+                        </button>
+                        <button type="button" class="btn-filter-pill is-danger" data-filter="nao_conforme" onclick="filtrarChecklistStatus('nao_conforme', this)">
+                            <i class="fas fa-triangle-exclamation"></i> Exigências <span class="pill-badge" id="pillNaoConformes">0</span>
+                        </button>
+                        <button type="button" class="btn-filter-pill" data-filter="na" onclick="filtrarChecklistStatus('na', this)">
+                            <i class="fas fa-ban"></i> N/A <span class="pill-badge" id="pillNA">0</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="checklist-search">
@@ -1933,7 +2512,7 @@ document.getElementById('formRelatorio')?.addEventListener('submit', atualizarCa
 atualizarCamposReescrita();
 
 function atualizarContadoresChecklist() {
-    let total = 0, respondidos = 0, conformes = 0, naoConformes = 0, totalAS = 0;
+    let total = 0, respondidos = 0, conformes = 0, naoConformes = 0, totalAS = 0, naoSeAplica = 0;
 
     document.querySelectorAll('.checklist-section').forEach(function(section) {
         let catRespondidos = 0, catExigencias = 0, catAS = 0;
@@ -1948,6 +2527,8 @@ function atualizarContadoresChecklist() {
                 catRespondidos++;
                 if (status === 'CONFORME') {
                     conformes++;
+                } else if (status === 'NAO_SE_APLICA') {
+                    naoSeAplica++;
                 }
             }
             if (status === 'NAO_CONFORME') {
@@ -1979,11 +2560,23 @@ function atualizarContadoresChecklist() {
     const resumoNaoConformes = document.getElementById('checklistNaoConformes');
     const resumoAS = document.getElementById('checklistAS');
 
+    const pendentes = Math.max(0, total - respondidos);
+
     if (resumoRespondidos) resumoRespondidos.textContent = respondidos + ' / ' + total;
     if (resumoConformes) resumoConformes.textContent = String(conformes);
-    if (resumoPendentes) resumoPendentes.textContent = String(Math.max(0, total - respondidos));
+    if (resumoPendentes) resumoPendentes.textContent = String(pendentes);
     if (resumoNaoConformes) resumoNaoConformes.textContent = String(naoConformes);
     if (resumoAS) resumoAS.textContent = String(totalAS);
+
+    // Atualiza contadores nas abas de filtros rápidos (Pills)
+    const pillPendentes = document.getElementById('pillPendentes');
+    const pillConformes = document.getElementById('pillConformes');
+    const pillNaoConformes = document.getElementById('pillNaoConformes');
+    const pillNA = document.getElementById('pillNA');
+    if (pillPendentes) pillPendentes.textContent = String(pendentes);
+    if (pillConformes) pillConformes.textContent = String(conformes);
+    if (pillNaoConformes) pillNaoConformes.textContent = String(naoConformes);
+    if (pillNA) pillNA.textContent = String(naoSeAplica);
 }
 
 // Toggle Accordions
@@ -2221,10 +2814,50 @@ document.querySelectorAll('.checklist-sem-prazo').forEach(function(checkbox) {
     });
 });
 
-// Busca / Filtro do Checklist
-document.getElementById('buscaChecklist')?.addEventListener('input', function() {
-    const term = this.value.trim().toLowerCase();
+// ========================================================
+// CONTROLE DE PRODUTIVIDADE DO CHECKLIST (EXPANDIR / FILTROS)
+// ========================================================
+let filtroChecklistAtivo = 'todos';
+
+function expandirTodasCategorias() {
+    document.querySelectorAll('.checklist-section').forEach(section => {
+        const body = section.querySelector('.checklist-body');
+        const header = section.querySelector('.checklist-header');
+        const icon = header?.querySelector('.icone-toggle');
+        if (body) body.style.display = 'block';
+        if (header) header.setAttribute('aria-expanded', 'true');
+        if (icon) {
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-up');
+        }
+    });
+}
+
+function recolherTodasCategorias() {
+    document.querySelectorAll('.checklist-section').forEach(section => {
+        const body = section.querySelector('.checklist-body');
+        const header = section.querySelector('.checklist-header');
+        const icon = header?.querySelector('.icone-toggle');
+        if (body) body.style.display = 'none';
+        if (header) header.setAttribute('aria-expanded', 'false');
+        if (icon) {
+            icon.classList.remove('fa-chevron-up');
+            icon.classList.add('fa-chevron-down');
+        }
+    });
+}
+
+function filtrarChecklistStatus(filtro, btnPill) {
+    filtroChecklistAtivo = filtro;
+    document.querySelectorAll('.btn-filter-pill').forEach(btn => btn.classList.remove('active'));
+    if (btnPill) btnPill.classList.add('active');
+    aplicarFiltrosChecklist();
+}
+
+function aplicarFiltrosChecklist() {
+    const term = (document.getElementById('buscaChecklist')?.value || '').trim().toLowerCase();
     const sections = document.querySelectorAll('.checklist-section');
+    const filtro = filtroChecklistAtivo;
     let totalVisiveis = 0;
 
     sections.forEach(section => {
@@ -2235,8 +2868,24 @@ document.getElementById('buscaChecklist')?.addEventListener('input', function() 
         const icon = section.querySelector('.icone-toggle');
 
         items.forEach(item => {
-            const text = item.getAttribute('data-text');
-            if (term === '' || text.indexOf(term) > -1) {
+            const itemId = item.dataset.id;
+            const status = document.getElementById('status_' + itemId)?.value || '';
+            const text = item.getAttribute('data-text') || '';
+
+            let matchesFilter = true;
+            if (filtro === 'pendentes') {
+                matchesFilter = (status === '');
+            } else if (filtro === 'conforme') {
+                matchesFilter = (status === 'CONFORME');
+            } else if (filtro === 'nao_conforme') {
+                matchesFilter = (status === 'NAO_CONFORME');
+            } else if (filtro === 'na') {
+                matchesFilter = (status === 'NAO_SE_APLICA');
+            }
+
+            const matchesSearch = (term === '' || text.indexOf(term) > -1);
+
+            if (matchesFilter && matchesSearch) {
                 item.style.display = 'block';
                 hasVisible = true;
                 totalVisiveis++;
@@ -2247,31 +2896,191 @@ document.getElementById('buscaChecklist')?.addEventListener('input', function() 
 
         if (hasVisible) {
             section.style.display = 'block';
-            // Se está buscando algo, abre o accordion automaticamente
-            if (term !== '') {
-                if (section.dataset.searchActive !== '1') {
-                    section.dataset.searchWasOpen = body.style.display === 'block' ? '1' : '0';
-                    section.dataset.searchActive = '1';
+            // Se estiver filtrando ou pesquisando, abre o accordion automaticamente para agilidade de campo
+            if (filtro !== 'todos' || term !== '') {
+                if (body) body.style.display = 'block';
+                if (header) header.setAttribute('aria-expanded', 'true');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
                 }
-                body.style.display = 'block';
-                header.setAttribute('aria-expanded', 'true');
-                icon.classList.remove('fa-chevron-down');
-                icon.classList.add('fa-chevron-up');
-            } else if (section.dataset.searchActive === '1') {
-                const abrir = section.dataset.searchWasOpen === '1';
-                body.style.display = abrir ? 'block' : 'none';
-                header.setAttribute('aria-expanded', abrir ? 'true' : 'false');
-                icon.classList.toggle('fa-chevron-up', abrir);
-                icon.classList.toggle('fa-chevron-down', !abrir);
-                delete section.dataset.searchActive;
-                delete section.dataset.searchWasOpen;
             }
         } else {
-            section.style.display = 'none';
+            section.style.display = (filtro === 'todos' && term === '') ? 'block' : 'none';
         }
     });
+
     document.getElementById('checklistSemResultados')?.classList.toggle('is-hidden', totalVisiveis !== 0);
-});
+}
+
+document.getElementById('buscaChecklist')?.addEventListener('input', aplicarFiltrosChecklist);
+
+// ========================================================
+// GESTÃO DA FOTO OFICIAL DA EMBARCAÇÃO (AJAX INSTANTÂNEO)
+// ========================================================
+function uploadFotoEmbarcacaoAjax(inputElement) {
+    if (!inputElement || !inputElement.files || !inputElement.files[0]) return;
+
+    const file = inputElement.files[0];
+    const embarcacaoId = <?= json_encode($ag['embarcacao_id'] ?? '') ?>;
+    const vistoriaId = <?= json_encode($vistoria['id'] ?? '') ?>;
+    const csrfToken = <?= json_encode(gerarCSRF()) ?>;
+
+    if (!embarcacaoId) {
+        alert('Identificador da embarcação não encontrado.');
+        return;
+    }
+
+    const overlay = document.getElementById('vesselPhotoOverlay');
+    const overlayText = document.getElementById('vesselPhotoOverlayText');
+    const msgBox = document.getElementById('msgFotoOficialEmbarcacao');
+    const imgPreview = document.getElementById('imgFotoOficialEmbarcacao');
+    const placeholder = document.getElementById('vesselPhotoPlaceholder');
+    const badge = document.getElementById('vesselPhotoBadge');
+    const btnRemover = document.getElementById('btnRemoverFotoOficial');
+    const thumbCabecalho = document.getElementById('thumbFotoCabecalhoEmbarcacao');
+
+    if (overlay) overlay.classList.add('is-loading');
+    if (overlayText) overlayText.textContent = 'Enviando foto oficial (' + (file.size / 1024).toFixed(0) + ' KB)...';
+    if (msgBox) msgBox.style.display = 'none';
+
+    // Preenche também o input de arquivo do formulário caso o vistoriador salve depois
+    const inputForm = document.getElementById('inputFotoFormulario');
+    if (inputForm && inputElement !== inputForm) {
+        try {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            inputForm.files = dataTransfer.files;
+        } catch (e) {}
+    }
+
+    const formData = new FormData();
+    formData.append('foto_oficial_embarcacao', file);
+    formData.append('embarcacao_id', embarcacaoId);
+    if (vistoriaId) formData.append('vistoria_id', vistoriaId);
+    formData.append('csrf_token', csrfToken);
+
+    fetch('<?= APP_URL ?>vistorias/actions?action=salvar_foto_oficial_embarcacao', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (overlay) overlay.classList.remove('is-loading');
+        if (data.ok) {
+            if (imgPreview) {
+                imgPreview.src = data.foto_url;
+                imgPreview.style.display = 'block';
+            }
+            if (placeholder) placeholder.style.display = 'none';
+            if (badge) {
+                badge.className = 'vessel-photo-badge is-cadastrada';
+                badge.innerHTML = '<i class="fas fa-circle-check"></i> Foto Cadastrada';
+            }
+            if (btnRemover) btnRemover.style.display = 'flex';
+            if (thumbCabecalho) {
+                thumbCabecalho.src = data.foto_url;
+                thumbCabecalho.style.display = 'block';
+            }
+            if (msgBox) {
+                msgBox.style.display = 'block';
+                msgBox.style.background = '#ecfdf5';
+                msgBox.style.color = '#065f46';
+                msgBox.style.border = '1px solid #a7f3d0';
+                msgBox.innerHTML = '<i class="fas fa-circle-check"></i> ' + (data.mensagem || 'Foto oficial da embarcação atualizada e salva com sucesso!');
+            }
+        } else {
+            if (msgBox) {
+                msgBox.style.display = 'block';
+                msgBox.style.background = '#fef2f2';
+                msgBox.style.color = '#991b1b';
+                msgBox.style.border = '1px solid #fecaca';
+                msgBox.innerHTML = '<i class="fas fa-triangle-exclamation"></i> ' + (data.mensagem || 'Erro ao salvar foto oficial.');
+            }
+            alert(data.mensagem || 'Erro ao salvar foto oficial.');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        if (overlay) overlay.classList.remove('is-loading');
+        if (msgBox) {
+            msgBox.style.display = 'block';
+            msgBox.style.background = '#fef2f2';
+            msgBox.style.color = '#991b1b';
+            msgBox.style.border = '1px solid #fecaca';
+            msgBox.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Falha na comunicação com o servidor ao enviar a foto.';
+        }
+        alert('Falha na comunicação com o servidor ao enviar a foto.');
+    })
+    .finally(() => {
+        inputElement.value = '';
+    });
+}
+
+function removerFotoEmbarcacaoAjax() {
+    if (!confirm('Deseja realmente remover a foto oficial desta embarcação? Ela também será desvinculada do Gerenciar Embarcações.')) {
+        return;
+    }
+
+    const embarcacaoId = <?= json_encode($ag['embarcacao_id'] ?? '') ?>;
+    const csrfToken = <?= json_encode(gerarCSRF()) ?>;
+    const overlay = document.getElementById('vesselPhotoOverlay');
+    const overlayText = document.getElementById('vesselPhotoOverlayText');
+    const msgBox = document.getElementById('msgFotoOficialEmbarcacao');
+    const imgPreview = document.getElementById('imgFotoOficialEmbarcacao');
+    const placeholder = document.getElementById('vesselPhotoPlaceholder');
+    const badge = document.getElementById('vesselPhotoBadge');
+    const btnRemover = document.getElementById('btnRemoverFotoOficial');
+    const thumbCabecalho = document.getElementById('thumbFotoCabecalhoEmbarcacao');
+
+    if (overlay) overlay.classList.add('is-loading');
+    if (overlayText) overlayText.textContent = 'Removendo foto oficial...';
+
+    const formData = new FormData();
+    formData.append('embarcacao_id', embarcacaoId);
+    formData.append('csrf_token', csrfToken);
+
+    fetch('<?= APP_URL ?>vistorias/actions?action=remover_foto_oficial_embarcacao', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (overlay) overlay.classList.remove('is-loading');
+        if (data.ok) {
+            if (imgPreview) {
+                imgPreview.src = '';
+                imgPreview.style.display = 'none';
+            }
+            if (placeholder) placeholder.style.display = 'flex';
+            if (badge) {
+                badge.className = 'vessel-photo-badge is-sem-foto';
+                badge.innerHTML = '<i class="fas fa-camera"></i> Sem Foto Oficial';
+            }
+            if (btnRemover) btnRemover.style.display = 'none';
+            if (thumbCabecalho) {
+                thumbCabecalho.src = '';
+                thumbCabecalho.style.display = 'none';
+            }
+            if (msgBox) {
+                msgBox.style.display = 'block';
+                msgBox.style.background = '#f8fafc';
+                msgBox.style.color = '#334155';
+                msgBox.style.border = '1px solid #cbd5e1';
+                msgBox.innerHTML = '<i class="fas fa-info-circle"></i> Foto oficial removida com sucesso.';
+            }
+        } else {
+            alert(data.mensagem || 'Erro ao remover foto oficial.');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        if (overlay) overlay.classList.remove('is-loading');
+        alert('Erro ao conectar ao servidor para remover foto.');
+    });
+}
 
 atualizarContadoresChecklist();
 

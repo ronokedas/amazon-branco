@@ -84,6 +84,134 @@ function bloquearMutacaoRelatorioAuditavel(PDO $pdo, string $vistoriaId, string 
 switch ($action) {
 
     // ==============================
+    // SALVAR FOTO OFICIAL DA EMBARCAÇÃO
+    // ==============================
+    case 'salvar_foto_oficial_embarcacao':
+        $isAjax = (!empty($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+            || (!empty($_POST['ajax']) && $_POST['ajax'] === '1');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verificarCSRF($_POST['csrf_token'] ?? '')) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'mensagem' => 'Requisição inválida ou token CSRF expirado.']);
+                exit;
+            }
+            setMensagem('error', 'Requisição inválida ou token expirado.');
+            redirecionar(APP_URL . 'vistorias');
+        }
+
+        $embarcacaoId = trim((string)($_POST['embarcacao_id'] ?? ''));
+        $agendamentoId = trim((string)($_POST['agendamento_id'] ?? ''));
+        $vistoriaId = trim((string)($_POST['vistoria_id'] ?? ''));
+
+        if (empty($embarcacaoId)) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'mensagem' => 'Identificador da embarcação não informado.']);
+                exit;
+            }
+            setMensagem('error', 'Identificador da embarcação não informado.');
+            redirecionar(APP_URL . 'vistorias');
+        }
+
+        $upload = $_FILES['foto_oficial_embarcacao'] ?? $_FILES['foto'] ?? null;
+        if (!$upload || empty($upload['tmp_name']) || !is_uploaded_file($upload['tmp_name'])) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'mensagem' => 'Nenhum arquivo de foto foi selecionado.']);
+                exit;
+            }
+            setMensagem('error', 'Nenhum arquivo de foto foi selecionado.');
+            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamentoId));
+        }
+
+        require_once BASE_PATH . '/includes/embarcacao_foto.php';
+
+        try {
+            $resultado = embarcacaoFotoProcessarUpload(
+                $pdo,
+                $embarcacaoId,
+                $upload,
+                (string)$_SESSION['usuario_id'],
+                $vistoriaId ?: null
+            );
+
+            log_atividade('foto_oficial_embarcacao_atualizada', "Foto oficial da embarcação {$embarcacaoId} salva com sucesso na vistoria.");
+
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'ok'            => true,
+                    'foto_url'      => $resultado['foto_url'],
+                    'mensagem'      => 'Foto oficial da embarcação capturada e salva com sucesso!',
+                    'atualizada_em' => $resultado['atualizada_em'],
+                ]);
+                exit;
+            }
+
+            setMensagem('success', 'Foto oficial da embarcação capturada e salva com sucesso!');
+            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamentoId) . ($vistoriaId ? '&vistoria_id=' . urlencode($vistoriaId) : ''));
+        } catch (Throwable $e) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'mensagem' => $e->getMessage()]);
+                exit;
+            }
+            setMensagem('error', 'Erro ao salvar foto da embarcação: ' . $e->getMessage());
+            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamentoId) . ($vistoriaId ? '&vistoria_id=' . urlencode($vistoriaId) : ''));
+        }
+        break;
+
+    // ==============================
+    // REMOVER FOTO OFICIAL DA EMBARCAÇÃO
+    // ==============================
+    case 'remover_foto_oficial_embarcacao':
+        $isAjax = (!empty($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+            || (!empty($_POST['ajax']) && $_POST['ajax'] === '1');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verificarCSRF($_POST['csrf_token'] ?? '')) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'mensagem' => 'Requisição inválida ou token CSRF expirado.']);
+                exit;
+            }
+            setMensagem('error', 'Requisição inválida.');
+            redirecionar(APP_URL . 'vistorias');
+        }
+
+        $embarcacaoId = trim((string)($_POST['embarcacao_id'] ?? ''));
+        $agendamentoId = trim((string)($_POST['agendamento_id'] ?? ''));
+        $vistoriaId = trim((string)($_POST['vistoria_id'] ?? ''));
+
+        require_once BASE_PATH . '/includes/embarcacao_foto.php';
+
+        try {
+            embarcacaoFotoRemover($pdo, $embarcacaoId, (string)$_SESSION['usuario_id']);
+            log_atividade('foto_oficial_embarcacao_removida', "Foto oficial da embarcação {$embarcacaoId} removida.");
+
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'ok'       => true,
+                    'mensagem' => 'Foto oficial da embarcação removida com sucesso.',
+                ]);
+                exit;
+            }
+
+            setMensagem('success', 'Foto oficial da embarcação removida com sucesso.');
+            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamentoId) . ($vistoriaId ? '&vistoria_id=' . urlencode($vistoriaId) : ''));
+        } catch (Throwable $e) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'mensagem' => $e->getMessage()]);
+                exit;
+            }
+            setMensagem('error', 'Erro ao remover foto: ' . $e->getMessage());
+            redirecionar(APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agendamentoId));
+        }
+        break;
+
+    // ==============================
     // EXCLUIR FOTO DE EVIDENCIA DO CHECKLIST
     // ==============================
     case 'excluir_foto_checklist':
@@ -1048,6 +1176,21 @@ switch ($action) {
                 }
             }
 
+            // Processar foto oficial da embarcação se enviada no formulário
+            if (!empty($_FILES['foto_oficial_embarcacao']['tmp_name']) && is_uploaded_file($_FILES['foto_oficial_embarcacao']['tmp_name'])) {
+                require_once BASE_PATH . '/includes/embarcacao_foto.php';
+                try {
+                    embarcacaoFotoProcessarUpload(
+                        $pdo,
+                        (string)$ag['embarcacao_id'],
+                        $_FILES['foto_oficial_embarcacao'],
+                        (string)$_SESSION['usuario_id'],
+                        $vistoria_id ?: null
+                    );
+                } catch (Throwable $e) {
+                    error_log('Erro ao processar foto oficial da embarcação no relatório: ' . $e->getMessage());
+                }
+            }
 
             // REGRA: Se status for APROVADA ou REPROVADA, avancar OS para Executado
             if (in_array($status_vistoria, ['APROVADA', 'APROVADA_COM_EXIGENCIAS', 'REPROVADA'])) {
