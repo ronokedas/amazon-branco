@@ -19,8 +19,12 @@ if ($cargo === 'ANALISTA') {
     $params[':usuario'] = $usuarioId;
 }
 if ($busca !== '') {
-    $where[] = '(ap.numero LIKE :busca OR e.nome LIKE :busca OR ap.objeto LIKE :busca OR p.numero LIKE :busca)';
-    $params[':busca'] = '%' . $busca . '%';
+    $where[] = '(ap.numero LIKE :busca1 OR e.nome LIKE :busca2 OR ap.objeto LIKE :busca3 OR p.numero LIKE :busca4)';
+    $termoBusca = '%' . $busca . '%';
+    $params[':busca1'] = $termoBusca;
+    $params[':busca2'] = $termoBusca;
+    $params[':busca3'] = $termoBusca;
+    $params[':busca4'] = $termoBusca;
 }
 $statusLabels = [
     'AGUARDANDO_AGENDAMENTO' => 'Aguardando agendamento',

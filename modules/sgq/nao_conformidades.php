@@ -39,8 +39,11 @@ if ($filtroSeveridade !== '') {
     $params[':severidade'] = $filtroSeveridade;
 }
 if ($busca !== '') {
-    $whereSql .= " AND (r.numero_rnc LIKE :busca OR r.titulo LIKE :busca OR e.nome LIKE :busca)";
-    $params[':busca'] = '%' . $busca . '%';
+    $whereSql .= " AND (r.numero_rnc LIKE :busca1 OR r.titulo LIKE :busca2 OR e.nome LIKE :busca3)";
+    $termoBusca = '%' . $busca . '%';
+    $params[':busca1'] = $termoBusca;
+    $params[':busca2'] = $termoBusca;
+    $params[':busca3'] = $termoBusca;
 }
 
 // Consultar RNCs

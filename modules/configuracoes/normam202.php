@@ -48,8 +48,11 @@ if ($filtro_tipo === 'inativas') {
 }
 
 if (!empty($filtro_busca)) {
-    $where[] = "(e.codigo_interno LIKE :busca OR e.descricao LIKE :busca OR e.item_normam LIKE :busca)";
-    $params[':busca'] = '%' . $filtro_busca . '%';
+    $where[] = "(e.codigo_interno LIKE :busca1 OR e.descricao LIKE :busca2 OR e.item_normam LIKE :busca3)";
+    $termoBusca = '%' . $filtro_busca . '%';
+    $params[':busca1'] = $termoBusca;
+    $params[':busca2'] = $termoBusca;
+    $params[':busca3'] = $termoBusca;
 }
 
 if (!empty($filtro_categoria)) {
@@ -135,7 +138,7 @@ $exigencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 5px; text-transform: uppercase;">Buscar por Código ou Descrição</label>
                 <div style="position: relative;">
                     <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 11px; color: #94a3b8; font-size: 13px;"></i>
-                    <input type="text" name="busca" value="<?= h($filtro_busca) ?>" placeholder="Ex.: colete, extintor, EX-344, Cap. 04..." class="form-control form-control-sm" style="padding-left: 34px; height: 38px; border-radius: 6px;">
+                    <input type="text" name="busca" id="filtro_busca_input" value="<?= h($filtro_busca) ?>" placeholder="Digite código, palavra-chave (ex: prumo, colete, extintor)..." class="form-control form-control-sm" style="padding-left: 34px; height: 38px; border-radius: 6px;" autocomplete="off">
                 </div>
             </div>
 
@@ -184,7 +187,7 @@ $exigencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <!-- Tabela de Exigências -->
     <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
         <div style="padding: 14px 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 13px; font-weight: 700; color: #334155;">
+            <div style="font-size: 13px; font-weight: 700; color: #334155;" id="contador_encontradas">
                 Exibindo <?= count($exigencias) ?> exigência(s) encontrada(s)
             </div>
             <div style="font-size: 12px; color: #64748b;">
@@ -216,8 +219,16 @@ $exigencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </td>
                         </tr>
                     <?php else: ?>
-                        <?php foreach ($exigencias as $ex): ?>
-                            <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">
+                        <tr id="tr_nenhuma_encontrada" style="display: none;">
+                            <td colspan="8" style="padding: 40px 20px; text-align: center; color: #94a3b8;">
+                                <i class="fa-solid fa-magnifying-glass" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                                Nenhuma exigência encontrada para o termo pesquisado.
+                            </td>
+                        </tr>
+                        <?php foreach ($exigencias as $ex): 
+                            $textoBusca = mb_strtolower($ex['codigo_interno'] . ' ' . $ex['descricao'] . ' ' . ($ex['item_normam'] ?? '') . ' ' . ($ex['categoria_nome'] ?? ''));
+                        ?>
+                            <tr class="linha-exigencia" data-busca="<?= h($textoBusca) ?>" style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">
                                 <td style="padding: 12px 16px; font-weight: 700; color: #0f172a; font-family: monospace;">
                                     <?= h($ex['codigo_interno']) ?>
                                 </td>
@@ -588,6 +599,51 @@ function alternarAtivo(id, valor) {
         alert('Erro ao processar alteração.');
     });
 }
+
+// Filtro Dinâmico Instantâneo (Busca em Tempo Real conforme o usuário digita)
+document.addEventListener('DOMContentLoaded', function() {
+    const inputBusca = document.getElementById('filtro_busca_input');
+    const contador = document.getElementById('contador_encontradas');
+    const linhas = document.querySelectorAll('.linha-exigencia');
+    const trVazio = document.getElementById('tr_nenhuma_encontrada');
+    const totalInicial = linhas.length;
+
+    if (inputBusca && linhas.length > 0) {
+        const removerAcentos = (str) => {
+            return (str || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        };
+
+        const filtrarLinhas = () => {
+            const termo = removerAcentos(inputBusca.value);
+            let visiveis = 0;
+
+            linhas.forEach(linha => {
+                const buscaTexto = removerAcentos(linha.getAttribute('data-busca'));
+                if (termo === '' || buscaTexto.includes(termo)) {
+                    linha.style.display = '';
+                    visiveis++;
+                } else {
+                    linha.style.display = 'none';
+                }
+            });
+
+            if (contador) {
+                contador.innerText = 'Exibindo ' + visiveis + ' exigência(s) encontrada(s)';
+            }
+            if (trVazio) {
+                trVazio.style.display = (visiveis === 0) ? '' : 'none';
+            }
+        };
+
+        inputBusca.addEventListener('input', filtrarLinhas);
+        inputBusca.addEventListener('keyup', filtrarLinhas);
+
+        // Se já tiver termo vindo da URL (GET), aplica o filtro visual inicial também
+        if (inputBusca.value.trim() !== '') {
+            filtrarLinhas();
+        }
+    }
+});
 </script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

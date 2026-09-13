@@ -28,8 +28,11 @@ $sql = "SELECT c.*, cl.nome as cliente_nome, pr.numero as proposta_numero
 $params = [];
 
 if ($busca) {
-    $sql .= " AND (c.numero LIKE :busca OR cl.nome LIKE :busca OR pr.numero LIKE :busca)";
-    $params[':busca'] = "%{$busca}%";
+    $sql .= " AND (c.numero LIKE :busca1 OR cl.nome LIKE :busca2 OR pr.numero LIKE :busca3)";
+    $termoBusca = "%{$busca}%";
+    $params[':busca1'] = $termoBusca;
+    $params[':busca2'] = $termoBusca;
+    $params[':busca3'] = $termoBusca;
 }
 
 if ($status) {

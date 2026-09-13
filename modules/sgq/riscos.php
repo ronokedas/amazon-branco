@@ -32,8 +32,12 @@ if ($filtroStatus !== '') {
     $params[':status'] = $filtroStatus;
 }
 if ($busca !== '') {
-    $whereSql .= " AND (codigo_risco LIKE :busca OR descricao_risco LIKE :busca OR processo_setor LIKE :busca OR responsavel_nome LIKE :busca)";
-    $params[':busca'] = '%' . $busca . '%';
+    $whereSql .= " AND (codigo_risco LIKE :busca1 OR descricao_risco LIKE :busca2 OR processo_setor LIKE :busca3 OR responsavel_nome LIKE :busca4)";
+    $termoBusca = '%' . $busca . '%';
+    $params[':busca1'] = $termoBusca;
+    $params[':busca2'] = $termoBusca;
+    $params[':busca3'] = $termoBusca;
+    $params[':busca4'] = $termoBusca;
 }
 
 $stmt = $pdo->prepare("

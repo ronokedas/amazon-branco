@@ -28,8 +28,11 @@ if ($filtroAcao !== '') {
     $params[':acao'] = $filtroAcao;
 }
 if ($busca !== '') {
-    $whereSql .= " AND (usuario_nome LIKE :busca OR motivo_justificativa LIKE :busca OR entidade_id LIKE :busca)";
-    $params[':busca'] = '%' . $busca . '%';
+    $whereSql .= " AND (usuario_nome LIKE :busca1 OR motivo_justificativa LIKE :busca2 OR entidade_id LIKE :busca3)";
+    $termoBusca = '%' . $busca . '%';
+    $params[':busca1'] = $termoBusca;
+    $params[':busca2'] = $termoBusca;
+    $params[':busca3'] = $termoBusca;
 }
 
 $sql = "
