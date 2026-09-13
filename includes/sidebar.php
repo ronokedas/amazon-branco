@@ -68,8 +68,13 @@ if (!function_exists('isActive')) {
             </div>
         </div>
 
-        <?php if (podeAcessar('usuarios')): ?><a href="<?= APP_URL ?>usuarios" class="nav-item<?= isActive('usuarios',$pagina_atual) ?>" data-label="Usuários"><i class="fa-solid fa-users-gear"></i><span class="nav-text">Usuários</span></a><?php endif; ?>
-        <?php if (podeAcessar('configuracoes')): ?><a href="<?= APP_URL ?>configuracoes" class="nav-item<?= isActive('configuracoes',$pagina_atual) ?>" data-label="Configurações"><i class="fa-solid fa-sliders"></i><span class="nav-text">Configurações</span></a><?php endif; ?>
+        <?php if (podeAcessar('configuracoes') || podeAcessar('usuarios')): ?>
+            <div class="nav-group-label">CONFIGURAÇÕES</div>
+            <a href="<?= APP_URL ?>configuracoes" class="nav-item<?= (strpos($pagina_atual,'configuracoes')===0 || strpos($pagina_atual,'usuarios')===0) ? ' active' : '' ?>" data-label="Configurações">
+                <i class="fa-solid fa-sliders"></i>
+                <span class="nav-text">Configurações</span>
+            </a>
+        <?php endif; ?>
     </nav>
     <div class="sidebar-footer"><a href="<?= APP_URL ?>login?action=logout" class="sidebar-logout" title="Sair do Sistema" data-label="Sair"><i class="fa-solid fa-right-from-bracket"></i><span class="nav-text">Sair</span></a></div>
 </aside>

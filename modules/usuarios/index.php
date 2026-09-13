@@ -34,10 +34,15 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
 <div class="conteudo-principal">
     <div class="tabela-container">
-        <div class="tabela-header">
-            <h3><i class="fas fa-users"></i> Gerenciar Usuarios</h3>
-            <a href="<?php echo APP_URL; ?>usuarios/form" class="btn btn-primary btn-sm">
-                <i class="fas fa-plus"></i> Novo Usuario
+        <div class="tabela-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <a href="<?php echo APP_URL; ?>configuracoes" class="btn btn-secondary btn-sm" style="margin-bottom: 6px; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-arrow-left"></i> Voltar para Configurações
+                </a>
+                <h3 style="margin: 0;"><i class="fas fa-users"></i> Gerenciar Funcionários & Usuários</h3>
+            </div>
+            <a href="<?php echo APP_URL; ?>usuarios/form" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fas fa-user-plus"></i> Cadastrar Funcionário
             </a>
         </div>
 

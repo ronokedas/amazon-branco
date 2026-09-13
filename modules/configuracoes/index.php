@@ -10,7 +10,17 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
+if (!podeAcessar('configuracoes') && podeAcessar('usuarios')) {
+    redirecionar(APP_URL . 'usuarios');
+}
 exigirAcesso('configuracoes');
+
+// Contagem de usuários ativos
+try {
+    $totalUsuarios = (int)$pdo->query("SELECT COUNT(*) FROM usuarios WHERE ativo = 1 AND excluido_em IS NULL")->fetchColumn();
+} catch (Exception $e) {
+    $totalUsuarios = 0;
+}
 
 // Garantir que a tabela configuracoes existe
 try {
@@ -77,6 +87,35 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     </div>
 
     <div class="dashboard-cards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+
+        <!-- Card: Cadastrar Funcionários / Usuários do Sistema -->
+        <div class="card" style="height:100%;transition:transform .2s,box-shadow .2s;border-top:4px solid var(--cor-destaque, #56e0ad);" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 20px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='';">
+            <div class="card-body" style="text-align:center;padding:36px 20px;display:flex;flex-direction:column;justify-content:space-between;height:100%;">
+                <div>
+                    <span class="badge" style="background:rgba(86,224,173,0.15);color:var(--cor-destaque, #56e0ad);margin-bottom:12px;font-weight:700;padding:4px 10px;border-radius:6px;display:inline-block;">
+                        <i class="fas fa-id-badge"></i> EQUIPE & ACESSOS
+                    </span>
+                    <div>
+                        <i class="fas fa-user-plus" style="font-size:3rem;color:var(--cor-destaque, #56e0ad);margin-bottom:15px;display:inline-block;"></i>
+                    </div>
+                    <h3 style="margin-bottom:10px;color:var(--cor-texto);">Cadastrar Funcionários</h3>
+                    <p style="color:var(--cor-texto-secundario);font-size:.95rem;line-height:1.5;margin-bottom:15px;">
+                        Cadastre e gerencie a equipe da Amazon Certificadora: vistoriadores, analistas, despachantes e administradores. Defina cargos, escritórios e permissões de acesso.
+                    </p>
+                    <div style="font-size:0.85rem;color:var(--cor-texto-secundario);margin-bottom:20px;">
+                        <strong style="color:var(--cor-destaque, #56e0ad);font-size:1.05rem;"><?= $totalUsuarios ?></strong> colaboradores ativos cadastrados
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                    <a href="<?= APP_URL ?>usuarios/form" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:6px;">
+                        <i class="fas fa-plus"></i> Novo Funcionário
+                    </a>
+                    <a href="<?= APP_URL ?>usuarios" class="btn btn-secondary btn-sm" style="display:inline-flex;align-items:center;gap:6px;">
+                        <i class="fas fa-users"></i> Gerenciar Equipe
+                    </a>
+                </div>
+            </div>
+        </div>
 
         <a href="<?php echo APP_URL; ?>configuracoes/normam202" class="card-link" style="text-decoration:none;color:inherit;display:block;">
             <div class="card" style="height:100%;transition:transform .2s,box-shadow .2s;cursor:pointer;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 20px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='';">

@@ -61,11 +61,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
 <div class="conteudo-principal">
     <div class="card" style="max-width: 700px;">
-        <div class="card-header">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <h3 style="color: var(--cor-destaque); margin: 0;">
                 <i class="fas <?php echo $isEdicao ? 'fa-user-edit' : 'fa-user-plus'; ?>"></i>
-                <?php echo $isEdicao ? 'Editar Usuario' : 'Novo Usuario'; ?>
+                <?php echo $isEdicao ? 'Editar Funcionário / Usuário' : 'Cadastrar Novo Funcionário'; ?>
             </h3>
+            <a href="<?php echo APP_URL; ?>usuarios" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fas fa-arrow-left"></i> Voltar à Lista
+            </a>
         </div>
         <div class="card-body">
             <form method="POST" 
