@@ -1,0 +1,1632 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manual Operacional do Analista Naval - Amazon Certificadora</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    :root {
+      --ink: #0c1e1b;
+      --muted: #4e6561;
+      --light-muted: #738b87;
+      --soft: #f2f7f5;
+      --soft-card: #f8fbfa;
+      --paper: #ffffff;
+      --line: #d3e2dd;
+      --line-light: #e8f0ec;
+      
+      --navy-950: #021714;
+      --navy-900: #062c26;
+      --navy-850: #0a3d35;
+      --navy-800: #0f4e44;
+      --navy-700: #146b5d;
+      
+      --accent-mint: #2ad59d;
+      --accent-cyan: #22c7b8;
+      --accent-gold: #e6a229;
+      --accent-red: #d94343;
+      --accent-blue: #2475ba;
+      
+      --font-main: "Segoe UI", Inter, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #dde5e2;
+      color: var(--ink);
+      font-family: var(--font-main);
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    .sheet {
+      position: relative;
+      width: 210mm;
+      height: 297mm;
+      min-height: 297mm;
+      max-height: 297mm;
+      margin: 0 auto;
+      padding: 16mm 18mm 16mm;
+      overflow: hidden;
+      background: var(--paper);
+      page-break-after: always;
+      page-break-inside: avoid;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sheet:last-child {
+      page-break-after: auto;
+    }
+
+    /* Top Page Header Kicker */
+    .page-header-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 7px;
+      margin-bottom: 14px;
+    }
+
+    .page-header-strip .module-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--navy-900);
+      color: var(--accent-mint);
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .page-header-strip .chapter-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    /* Page Footer */
+    .page-footer-strip {
+      position: absolute;
+      bottom: 10mm;
+      left: 18mm;
+      right: 18mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      padding-top: 6px;
+      font-size: 9px;
+      color: var(--light-muted);
+      font-weight: 600;
+    }
+
+    .page-footer-strip .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .page-footer-strip .footer-left img {
+      height: 14px;
+      width: auto;
+    }
+
+    .page-footer-strip .page-num {
+      font-weight: 800;
+      color: var(--navy-850);
+      background: var(--soft);
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+    }
+
+    /* Typography */
+    h1, h2, h3, h4, p {
+      margin: 0;
+    }
+
+    h2.page-title {
+      font-size: 22px;
+      line-height: 1.15;
+      font-weight: 850;
+      color: var(--navy-950);
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    p.page-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+      margin-bottom: 14px;
+    }
+
+    h3.section-subtitle {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--navy-900);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 8px;
+    }
+
+    h3.section-subtitle::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 14px;
+      background: var(--accent-mint);
+      border-radius: 2px;
+    }
+
+    /* Callout & Alerts */
+    .callout {
+      background: var(--soft);
+      border-left: 4px solid var(--navy-800);
+      padding: 9px 12px;
+      border-radius: 0 6px 6px 0;
+      margin: 10px 0;
+      font-size: 10.5px;
+      line-height: 1.4;
+    }
+
+    .callout.warning {
+      background: #fdf8eb;
+      border-left-color: var(--accent-gold);
+      color: #744e05;
+    }
+
+    .callout.danger {
+      background: #fdf2f2;
+      border-left-color: var(--accent-red);
+      color: #7d1c1c;
+    }
+
+    .callout.success {
+      background: #edfcf5;
+      border-left-color: var(--accent-mint);
+      color: #0c563d;
+    }
+
+    /* Cards & UI Blocks */
+    .ui-panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(6, 44, 38, .04);
+      margin-bottom: 12px;
+    }
+
+    .ui-panel-header {
+      background: var(--soft);
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--navy-900);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .ui-panel-body {
+      padding: 10px 12px;
+    }
+
+    /* Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .grid-5 {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+
+    .badge-success { background: #dcfce7; color: #166534; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-danger { background: #fee2e2; color: #991b1b; }
+    .badge-info { background: #e0f2fe; color: #075985; }
+    .badge-neutral { background: #f1f5f9; color: #475569; }
+    .badge-navy { background: #072c26; color: #35f0b5; }
+
+    /* Tables */
+    .mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+
+    .mini-table th, .mini-table td {
+      padding: 6px 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--line-light);
+    }
+
+    .mini-table th {
+      background: var(--soft);
+      font-weight: 800;
+      color: var(--navy-900);
+      text-transform: uppercase;
+      font-size: 8.5px;
+      letter-spacing: .05em;
+    }
+
+    .mini-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Steps list */
+    .step-list {
+      display: grid;
+      gap: 8px;
+      margin: 8px 0;
+    }
+
+    .step-item {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 10px;
+      align-items: start;
+      background: var(--soft-card);
+      border: 1px solid var(--line-light);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+
+    .step-badge {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--navy-900);
+      color: var(--accent-mint);
+      font-size: 11px;
+      font-weight: 900;
+      display: grid;
+      place-items: center;
+    }
+
+    .step-content strong {
+      display: block;
+      color: var(--navy-950);
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+
+    .step-content p {
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    /* Screen Mockup Components */
+    .screen-mockup {
+      border: 1px solid #b8cdc7;
+      border-radius: 6px;
+      background: #ffffff;
+      overflow: hidden;
+      margin: 8px 0 12px;
+      box-shadow: 0 4px 14px rgba(3, 23, 20, .08);
+    }
+
+    .mockup-topbar {
+      background: #062b25;
+      color: #ffffff;
+      padding: 5px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .mockup-topbar .dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .mockup-topbar .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .3);
+    }
+
+    .mockup-body {
+      padding: 10px;
+      background: #f8faf9;
+    }
+
+    /* Cover Styling */
+    .sheet.cover {
+      background:
+        linear-gradient(135deg, rgba(2, 23, 20, 0.98) 0%, rgba(6, 44, 38, 0.94) 50%, rgba(10, 61, 53, 0.90) 100%),
+        url("../assets/img/portal-hero-ship.png") center center / cover no-repeat;
+      color: #ffffff;
+      padding: 24mm 20mm 20mm;
+      justify-content: space-between;
+    }
+
+    .cover-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .cover-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .cover-brand img {
+      width: 58px;
+      height: 58px;
+      object-fit: contain;
+      background: #ffffff;
+      border-radius: 50%;
+      padding: 6px;
+    }
+
+    .cover-brand-title {
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+
+    .cover-brand-sub {
+      font-size: 10px;
+      color: var(--accent-mint);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-top: 2px;
+    }
+
+    .cover-seal {
+      border: 1px solid rgba(42, 213, 157, .4);
+      background: rgba(4, 35, 30, .6);
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-align: right;
+      font-size: 9px;
+      color: #bce6dc;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .cover-main {
+      margin: auto 0;
+      max-width: 580px;
+    }
+
+    .cover-tag {
+      display: inline-block;
+      background: var(--accent-mint);
+      color: var(--navy-950);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+
+    .cover-main h1 {
+      font-size: 42px;
+      line-height: 1.05;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .cover-main p.lede {
+      font-size: 15px;
+      line-height: 1.48;
+      color: #d1e7e2;
+      margin-bottom: 24px;
+      font-weight: 500;
+    }
+
+    .cover-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .cover-kpi-card {
+      background: rgba(2, 23, 20, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .cover-kpi-card strong {
+      display: block;
+      font-size: 18px;
+      color: var(--accent-mint);
+      font-weight: 900;
+    }
+
+    .cover-kpi-card span {
+      display: block;
+      font-size: 9px;
+      color: #b2cfc8;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .cover-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      padding-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 9.5px;
+      color: #9ebdb6;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =================================================================== -->
+  <!-- PÁGINA 1: CAPA OFICIAL DO MANUAL                                    -->
+  <!-- =================================================================== -->
+  <section class="sheet cover">
+    <div class="cover-top">
+      <div class="cover-brand">
+        <img src="../img/logo-amazon-certificadora.svg" alt="Amazon Certificadora">
+        <div>
+          <div class="cover-brand-title">Amazon Certificadora</div>
+          <div class="cover-brand-sub">Mesa Técnica de Engenharia Naval</div>
+        </div>
+      </div>
+      <div class="cover-seal">
+        Autoridade Marítima Brasileira<br>
+        NORMAM-202 / NORMAM-201 · DPC
+      </div>
+    </div>
+
+    <div class="cover-main">
+      <span class="cover-tag">Manual Operacional de Treinamento</span>
+      <h1>MANUAL DO ANALISTA NAVAL</h1>
+      <p class="lede">
+        Guia prático e visual para operação completa da Mesa Técnica: Análise de Planos e Cálculos de Estabilidade, Homologação de Vistorias de Campo, Gestão de Protocolos SISAP e Assinaturas Digitais Criptográficas.
+      </p>
+
+      <div class="cover-kpis">
+        <div class="cover-kpi-card">
+          <strong>100%</strong>
+          <span>Fluxo Digital Conforme NORMAM</span>
+        </div>
+        <div class="cover-kpi-card">
+          <strong>LC / LA / LR</strong>
+          <span>Processos de Licença & Parecer</span>
+        </div>
+        <div class="cover-kpi-card">
+          <strong>SISAP</strong>
+          <span>Custódia & Tramitação Oficial</span>
+        </div>
+        <div class="cover-kpi-card">
+          <strong>SHA-256</strong>
+          <span>Assinatura Digital & QR Code</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cover-bottom">
+      <div>
+        <strong>Público-Alvo:</strong> Engenheiros Navais, Analistas Técnicos e Peritos Credenciados
+      </div>
+      <div>
+        Versão Operacional 2026 · Amazon Certificadora & Vistorias Navais
+      </div>
+    </div>
+  </section>
+
+  <!-- =================================================================== -->
+  <!-- PÁGINA 2: VISÃO GERAL & CENTRAL DO ANALISTA (DASHBOARD)             -->
+  <!-- =================================================================== -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Capítulo 1 · Mesa Operacional</span>
+      <span class="chapter-title">Visão Geral & Dashboard</span>
+    </div>
+
+    <h2 class="page-title">Mesa de Engenharia Naval: Central do Analista</h2>
+    <p class="page-subtitle">
+      O Analista é o responsável técnico pela auditoria documental, verificação de estabilidade, salvatagem e homologação de laudos. Esta tela organiza sua rotina diária em ordem rigorosa de prioridade.
+    </p>
+
+    <!-- Mockup da Tela do Dashboard -->
+    <div class="screen-mockup">
+      <div class="mockup-topbar">
+        <span>ERP AMAZON · MESA DO ANALISTA NAVAL (/dashboard)</span>
+        <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      </div>
+      <div class="mockup-body">
+        <!-- Banner de Urgência -->
+        <div style="background:#fff3cd; border:1px solid #ffeeba; border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div>
+            <span class="badge badge-danger">PRAZO HOJE</span>
+            <strong style="color:#856404; font-size:11px; margin-left:6px;">RAP-2026-0042 · B/M RIO NEGRO IV</strong>
+            <span style="font-size:9.5px; color:#666; margin-left:8px;">LC - Licença de Construção (EC1) · Prazo: 18:00h</span>
+          </div>
+          <button style="background:#072c26; color:#35f0b5; border:none; padding:4px 8px; border-radius:4px; font-weight:700; font-size:9px; cursor:pointer;">Analisar Agora</button>
+        </div>
+
+        <!-- KPIs 5 cards -->
+        <div class="grid-5" style="margin-bottom:8px;">
+          <div style="background:#fff; border:1px solid #d8e5e0; padding:6px; border-radius:5px; text-align:center;">
+            <div style="font-size:14px; font-weight:800; color:#062c26;">8</div>
+            <div style="font-size:8px; text-transform:uppercase; color:#666; font-weight:700;">Atribuídas</div>
+          </div>
+          <div style="background:#fff; border:1px solid #ffeeba; padding:6px; border-radius:5px; text-align:center;">
+            <div style="font-size:14px; font-weight:800; color:#d97706;">2</div>
+            <div style="font-size:8px; text-transform:uppercase; color:#666; font-weight:700;">Prazo Hoje</div>
+          </div>
+          <div style="background:#fff; border:1px solid #fecaca; padding:6px; border-radius:5px; text-align:center;">
+            <div style="font-size:14px; font-weight:800; color:#dc2626;">0</div>
+            <div style="font-size:8px; text-transform:uppercase; color:#666; font-weight:700;">Atrasadas</div>
+          </div>
+          <div style="background:#fff; border:1px solid #fed7aa; padding:6px; border-radius:5px; text-align:center;">
+            <div style="font-size:14px; font-weight:800; color:#ea580c;">3</div>
+            <div style="font-size:8px; text-transform:uppercase; color:#666; font-weight:700;">Aguard. Docs</div>
+          </div>
+          <div style="background:#fff; border:1px solid #bbf7d0; padding:6px; border-radius:5px; text-align:center;">
+            <div style="font-size:14px; font-weight:800; color:#16a34a;">14</div>
+            <div style="font-size:8px; text-transform:uppercase; color:#666; font-weight:700;">Aprovadas/Mês</div>
+          </div>
+        </div>
+
+        <!-- Fila de Planos Amostra -->
+        <table class="mini-table" style="background:#fff; border-radius:4px; overflow:hidden;">
+          <thead>
+            <tr>
+              <th>Processo / Embarcação</th>
+              <th>Tipo / Norma</th>
+              <th>Prazo Limite</th>
+              <th>Situação</th>
+              <th>Exigências</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>RAP-2026-0042</strong> · B/M RIO NEGRO IV</td>
+              <td><span class="badge badge-info">LC</span> <span class="badge badge-neutral">NORMAM-202</span></td>
+              <td><span class="badge badge-warning">Hoje 18:00</span></td>
+              <td><span class="badge badge-navy">Em Análise</span></td>
+              <td><span class="badge badge-warning">1 pendente</span></td>
+              <td><span style="color:#0f4e44; font-weight:800; font-size:9px;">[Analisar]</span></td>
+            </tr>
+            <tr>
+              <td><strong>RAP-2026-0039</strong> · EMB. TUPANA III</td>
+              <td><span class="badge badge-info">LA</span> <span class="badge badge-neutral">NORMAM-202</span></td>
+              <td>15/09 12:00</td>
+              <td><span class="badge badge-warning">Aguard. Docs</span></td>
+              <td><span class="badge badge-danger">2 pendentes</span></td>
+              <td><span style="color:#0f4e44; font-weight:800; font-size:9px;">[Ver Revisão]</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">Roteiro da Rotina Matinal do Analista (Checklist Diário)</h3>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-badge">1</div>
+        <div class="step-content">
+          <strong>Identifique Processos Críticos no Banner de Urgência</strong>
+          <p>Se houver processo com banner amarelo ou vermelho, esse processo tem precedência absoluta sobre novos cadastros. Verifique se o estaleiro já enviou as pranchas retificadas.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge">2</div>
+        <div class="step-content">
+          <strong>Confira a Fila de Vistorias em Homologação</strong>
+          <p>Localizada na coluna lateral do Dashboard: relatórios de vistoriadores de campo que realizaram a inspeção física e aguardam sua aprovação técnica para liberar a emissão dos certificados.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge">3</div>
+        <div class="step-content">
+          <strong>Acesse a Fila Geral de Análise de Planos</strong>
+          <p>Clique no botão <strong>"Analisar"</strong> do processo prioritário para abrir a área de trabalho com pranchas, cálculos e matriz normativa.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warning">
+      <strong>Atenção aos Prazos da Autoridade Marítima:</strong> Atrasos na análise de planos podem ensejar penalidades comerciais e paralisação da obra no estaleiro. Qualquer processo sem manifestação técnica há mais de 48 horas dispara alerta no painel da Diretoria.
+    </div>
+
+    <div class="page-footer-strip">
+      <div class="footer-left">
+        <img src="../img/logo-amazon-certificadora.svg" alt="Amazon">
+        <span>Amazon Certificadora · Manual Operacional do Analista Naval</span>
+      </div>
+      <span class="page-num">Página 2</span>
+    </div>
+  </section>
+
+  <!-- =================================================================== -->
+  <!-- PÁGINA 3: ENQUADRAMENTO E ABERTURA DE ANÁLISE DE PLANOS             -->
+  <!-- =================================================================== -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Capítulo 2 · Análise de Planos</span>
+      <span class="chapter-title">Abertura & Enquadramento Técnico</span>
+    </div>
+
+    <h2 class="page-title">Abertura e Enquadramento Técnico de Processos</h2>
+    <p class="page-subtitle">
+      Como iniciar um novo processo técnico naval no módulo <code>/analises-planos/form</code>. O correto enquadramento define automaticamente a matriz de checklist exigida pela NORMAM-202.
+    </p>
+
+    <!-- Mockup da Tela de Cadastro de Análise -->
+    <div class="ui-panel">
+      <div class="ui-panel-header">
+        <span>Formulário de Abertura de Análise Técnica (/analises-planos/form)</span>
+        <span class="badge badge-info">Campos Autodidáticos</span>
+      </div>
+      <div class="ui-panel-body">
+        <div class="grid-2" style="margin-bottom:8px;">
+          <div>
+            <label style="display:block; font-size:9px; font-weight:700; color:#333;">Embarcação *</label>
+            <div style="border:1px solid #b8cdc7; padding:5px 8px; border-radius:4px; font-size:10px; background:#fff;">
+              B/M RIO NEGRO IV - AM-0482 (Passageiro/Carga)
+            </div>
+            <small style="color:#666; font-size:8px;">Ao selecionar a embarcação, o Solicitante/Armador é vinculado automaticamente.</small>
+          </div>
+          <div>
+            <label style="display:block; font-size:9px; font-weight:700; color:#333;">Solicitante / Cliente Armador *</label>
+            <div style="border:1px solid #b8cdc7; padding:5px 8px; border-radius:4px; font-size:10px; background:#f0f4f2;">
+              NAVEGAÇÃO AMAZONAS LTDA (CNPJ 04.123.456/0001-89)
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-bottom:8px;">
+          <div>
+            <label style="display:block; font-size:9px; font-weight:700; color:#333;">Tipo de Processo *</label>
+            <div style="border:1px solid #b8cdc7; padding:5px 8px; border-radius:4px; font-size:10px; background:#fff; font-weight:700;">
+              LC - Licença de Construção
+            </div>
+            <small style="color:#666; font-size:8px;">LC (Construção), LA (Alteração), LR (Reclassificação), LCEC (Classificada)</small>
+          </div>
+          <div>
+            <label style="display:block; font-size:9px; font-weight:700; color:#333;">Norma Aplicável *</label>
+            <div style="border:1px solid #b8cdc7; padding:5px 8px; border-radius:4px; font-size:10px; background:#f0f4f2; font-weight:700; color:#0b4e42;">
+              NORMAM-202/DPC (Navegação Interior)
+            </div>
+            <small style="color:#666; font-size:8px;">Padrão obrigatório para bacias fluviais e lagos.</small>
+          </div>
+          <div>
+            <label style="display:block; font-size:9px; font-weight:700; color:#333;">Classe de Certificação *</label>
+            <div style="border:1px solid #b8cdc7; padding:5px 8px; border-radius:4px; font-size:10px; background:#fff; font-weight:700;">
+              EC1 - Grande Porte / Completo
+            </div>
+            <small style="color:#666; font-size:8px;">EC1 exige cálculo completo; EC2 porte simplificado.</small>
+          </div>
+        </div>
+
+        <div class="grid-4" style="background:#f4f8f6; padding:6px; border-radius:4px; border:1px solid #d0e0da;">
+          <div>
+            <span style="font-size:8px; text-transform:uppercase; color:#666;">Estaleiro Construtor</span>
+            <strong style="display:block; font-size:9.5px;">Estaleiro Rio Solimões</strong>
+          </div>
+          <div>
+            <span style="font-size:8px; text-transform:uppercase; color:#666;">Nº do Casco</span>
+            <strong style="display:block; font-size:9.5px;">CASCO-2026-08</strong>
+          </div>
+          <div>
+            <span style="font-size:8px; text-transform:uppercase; color:#666;">Engenheiro Autor</span>
+            <strong style="display:block; font-size:9.5px;">Eng. Lucas Silveira</strong>
+          </div>
+          <div>
+            <span style="font-size:8px; text-transform:uppercase; color:#666;">ART / CREA</span>
+            <strong style="display:block; font-size:9.5px;">ART 2802-AM / CREA 19842</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">Tabela de Tipos de Processos e Normas Permitidas</h3>
+    <table class="mini-table">
+      <thead>
+        <tr>
+          <th style="width:15%;">Sigla</th>
+          <th style="width:30%;">Nome do Processo</th>
+          <th style="width:25%;">Quando Utilizar?</th>
+          <th style="width:30%;">Documento Final Emitido</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-info">LC</span></td>
+          <td>Licença de Construção</td>
+          <td>Embarcações novas em início de fabricação ou casco batido.</td>
+          <td>Licença de Construção (LC) + Parecer Técnico</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-warning">LA</span></td>
+          <td>Licença de Alteração</td>
+          <td>Modificação de convés, motorização, passageiros ou calado.</td>
+          <td>Licença de Alteração (LA) + Parecer Técnico</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-neutral">LR</span></td>
+          <td>Licença de Reclassificação</td>
+          <td>Mudança de atividade (ex: Carga Geral para Passageiros).</td>
+          <td>Licença de Reclassificação (LR)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-navy">LCEC</span></td>
+          <td>Construção de Embarcação Classificada</td>
+          <td>Embarcações inspecionadas sob supervisão de Sociedade Classificadora.</td>
+          <td>Certificado LCEC sob convênio</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout danger" style="margin-top:12px;">
+      <strong>Regra Restritiva de Domínio Naval:</strong> Apenas a <strong>NORMAM-202</strong> é permitida para abertura de novos processos. Registros históricos NORMAM-201 são mantidos exclusivamente em modo de consulta auditável e não podem receber novos pareceres de aprovação direta.
+    </div>
+
+    <div class="page-footer-strip">
+      <div class="footer-left">
+        <img src="../img/logo-amazon-certificadora.svg" alt="Amazon">
+        <span>Amazon Certificadora · Manual Operacional do Analista Naval</span>
+      </div>
+      <span class="page-num">Página 3</span>
+    </div>
+  </section>
+
+  <!-- =================================================================== -->
+  <!-- PÁGINA 4: ARQUIVOS, REVISÕES E MATRIZ NORMATIVA                     -->
+  <!-- =================================================================== -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Capítulo 2 · Análise de Planos</span>
+      <span class="chapter-title">Revisões & Matriz Normativa</span>
+    </div>
+
+    <h2 class="page-title">Recepção de Pranchas e Matriz Normativa</h2>
+    <p class="page-subtitle">
+      O estaleiro ou projetista submete pranchas e memoriais. O analista audita cada documento, classifica os arquivos recebidos e preenche o checklist da NORMAM-202 item a item.
+    </p>
+
+    <!-- Bloco de Revisões e Classificação de Arquivos -->
+    <div class="ui-panel">
+      <div class="ui-panel-header">
+        <span>Revisões e Arquivos Recebidos (Seção 2 do Processo)</span>
+        <span class="badge badge-navy">Revisão 01 · 12/09/2026</span>
+      </div>
+      <div class="ui-panel-body">
+        <div style="font-size:10px; margin-bottom:6px; color:#555;">
+          Arquivos enviados pelo projetista para verificação. Para cada arquivo, defina sua classificação:
+        </div>
+        
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Arquivo / Prancha</th>
+              <th>Vínculo no Checklist</th>
+              <th>Status do Arquivo</th>
+              <th>Justificativa / Motivo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong style="color:#0f4e44;">[PDF]</strong> Arranjo_Geral_Rev01.pdf</td>
+              <td>Plano de Arranjo Geral (Anexo 3-F)</td>
+              <td><span class="badge badge-success">ACEITO</span></td>
+              <td>Conforme NORMAM-202, cotas e acessos legíveis.</td>
+            </tr>
+            <tr>
+              <td><strong style="color:#0f4e44;">[PDF]</strong> Estabilidade_Trim_V1.pdf</td>
+              <td>Folheto de Trim e Estabilidade</td>
+              <td><span class="badge badge-warning">SUBSTITUÍDO</span></td>
+              <td>Substituído pela versão com teste de inclinação anexo.</td>
+            </tr>
+            <tr>
+              <td><strong style="color:#0f4e44;">[DWG]</strong> Luzes_Navegacao_R0.dwg</td>
+              <td>Arranjo de Luzes (RIPEAM)</td>
+              <td><span class="badge badge-danger">REJEITADO</span></td>
+              <td>Setor de visibilidade da luz de alcançado em desconformidade.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Bloco da Matriz Normativa -->
+    <h3 class="section-subtitle">Matriz Normativa NORMAM-202 (Checklist Técnico do Projeto)</h3>
+    <div class="ui-panel">
+      <div class="ui-panel-header">
+        <span>Conferência Técnica dos Requisitos Navais</span>
+        <span class="badge badge-info">11 Itens Auditados</span>
+      </div>
+      <div class="ui-panel-body" style="padding:0;">
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th style="width:5%;">#</th>
+              <th style="width:35%;">Documento / Requisito Técnico</th>
+              <th style="width:20%;">Referência NORMAM</th>
+              <th style="width:15%;">Obrigatório?</th>
+              <th style="width:25%;">Resultado do Analista</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><strong>Requerimento do Interessado & ART</strong></td>
+              <td>Cap. 3 / CREA</td>
+              <td><span class="badge badge-neutral">Sim</span></td>
+              <td><span class="badge badge-success">CONFORME</span></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><strong>Memorial Descritivo da Embarcação</strong></td>
+              <td>Anexo 3-G</td>
+              <td><span class="badge badge-neutral">Sim</span></td>
+              <td><span class="badge badge-success">CONFORME</span></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><strong>Plano de Arranjo Geral</strong></td>
+              <td>Anexo 3-F</td>
+              <td><span class="badge badge-neutral">Sim</span></td>
+              <td><span class="badge badge-success">CONFORME</span></td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><strong>Plano de Linhas & Curvas Hidrostáticas</strong></td>
+              <td>Anexo 3-F</td>
+              <td><span class="badge badge-neutral">Sim (EC1)</span></td>
+              <td><span class="badge badge-success">CONFORME</span></td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td><strong>Plano de Segurança e Salvatagem</strong></td>
+              <td>Anexo 3-F / RIPEAM</td>
+              <td><span class="badge badge-neutral">Sim</span></td>
+              <td><span class="badge badge-warning">EXIGÊNCIA</span></td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td><strong>Folheto de Trim e Estabilidade</strong></td>
+              <td>Cap. 3</td>
+              <td><span class="badge badge-neutral">Sim</span></td>
+              <td><span class="badge badge-navy">PENDENTE</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="callout warning">
+      <strong>Como preencher cada resultado:</strong><br>
+      • <strong>CONFORME:</strong> Atende rigorosamente às especificações da NORMAM-202.<br>
+      • <strong>EXIGÊNCIA:</strong> Há divergência técnica ou omissão sanável. Obriga a abertura de item na aba de Exigências.<br>
+      • <strong>NÃO SE APLICA:</strong> Válido para embarcações sem propulsão ou classe EC2 dispensada pela regra da Autoridade Marítima.
+    </div>
+
+    <div class="page-footer-strip">
+      <div class="footer-left">
+        <img src="../img/logo-amazon-certificadora.svg" alt="Amazon">
+        <span>Amazon Certificadora · Manual Operacional do Analista Naval</span>
+      </div>
+      <span class="page-num">Página 4</span>
+    </div>
+  </section>
+
+  <!-- =================================================================== -->
+  <!-- PÁGINA 5: GESTÃO DE EXIGÊNCIAS E EMISSÃO DO PARECER TÉCNICO         -->
+  <!-- =================================================================== -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Capítulo 2 · Análise de Planos</span>
+      <span class="chapter-title">Exigências & Parecer Técnico</span>
+    </div>
+
+    <h2 class="page-title">Gestão de Exigências e Parecer Técnico Naval</h2>
+    <p class="page-subtitle">
+      A integridade técnica exige que nenhuma exigência seja baixada sem evidência. Conheça o fluxo formal de cadastro de exigências, manifestação técnica por ciclo e geração do Parecer PDF.
+    </p>
+
+    <!-- Regra de Ouro da Baixa de Exigências -->
+    <div class="callout danger" style="margin-top:0;">
+      <strong>REGRA MANDATÓRIA DE AUDITORIA NAVAL:</strong> O sistema NÃO permite a baixa manual de exigências por simples clique. A baixa de qualquer exigência ocorre <em>exclusivamente</em> através da emissão de um <strong>Relatório de Ciclo</strong> assinado digitalmente pelo Analista e validado pela Diretoria.
+    </div>
+
+    <!-- Mockup da Emissão do Relatório do Ciclo -->
+    <div class="ui-panel">
+      <div class="ui-panel-header">
+        <span>Emissão de Relatório Técnico / Parecer por Ciclo (#pareceres)</span>
+        <span class="badge badge-navy">Preparação do Laudo</span>
+      </div>
+      <div class="ui-panel-body">
+        <div class="grid-3" style="margin-bottom:8px;">
+          <div>
+            <label style="display:block; font-size:9px; font-weight:700;">Resultado do Ciclo *</label>
+            <div style="border:1px solid #b8cdc7; padding:5px 8px; border-radius:4px; font-size:10px; background:#fff; font-weight:700; color:#0b4e42;">
+              APROVADO (Saldo Zero)
+            </div>
+            <small style="color:#666; font-size:8px;">Opções: APROVADO, EXIGÊNCIAS PENDENTES, REPROVADO.</small>
+          </div>
+          <div>
+            <label style="display:block; font-size:9px; font-weight:700;">Revisão Analisada *</label>
+            <div style="border:1px solid #b8cdc7; padding:5px 8px; border-radius:4px; font-size:10px; background:#fff;">
+              Revisão 02 · 13/09/2026
+            </div>
+          </div>
+          <div>
+            <label style="display:block; font-size:9px; font-weight:700;">Número do Parecer</label>
+            <div style="border:1px solid #b8cdc7; padding:5px 8px; border-radius:4px; font-size:10px; background:#f0f4f2; font-weight:700;">
+              PAR-2026-0042-V2
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:8px;">
+          <label style="display:block; font-size:9px; font-weight:700;">Manifestação e Baixa de Exigências Cadastradas</label>
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th style="width:40%;">Exigência Pendente</th>
+                <th style="width:20%;">Resultado do Ciclo</th>
+                <th style="width:40%;">Manifestação Técnica do Analista</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Cálculo de estabilidade sem curva de braço restaurador (GZ).</td>
+                <td><span class="badge badge-success">CUMPRIDA</span></td>
+                <td>Apresentado memorial na Rev.02 com curvas GZ atendendo NORMAM-202 Cap. 3.</td>
+              </tr>
+              <tr>
+                <td>Dotação de coletes classe III insuficiente para passageiros N1.</td>
+                <td><span class="badge badge-success">CUMPRIDA</span></td>
+                <td>Prancha de segurança atualizada com dotação para 85 passageiros + 10% infantis.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:9px; font-weight:700;">Conclusão Técnica do Parecer</label>
+          <div style="border:1px solid #b8cdc7; padding:6px 8px; border-radius:4px; font-size:9.5px; background:#fafafa; color:#333;">
+            "Considerando a análise documental e estrutural das pranchas e cálculos apresentados na Revisão 02, concluímos que o projeto da embarcação B/M RIO NEGRO IV encontra-se em plena conformidade com a NORMAM-202/DPC, estando apta à emissão da Licença de Construção (LC)."
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Etapas para Publicação -->
+    <h3 class="section-subtitle">Fluxo de Assinatura e Publicação da Licença</h3>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-badge">1</div>
+        <div class="step-content">
+          <strong>Preparar Relatório e Clicar em "Assinar Tecnicamente"</strong>
+          <p>O parecer entra no status <code>AGUARDANDO_ASSINATURA_ANALISTA</code>. O analista confere a prévia em PDF e aplica sua rubrica digital com carimbo de tempo.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge">2</div>
+        <div class="step-content">
+          <strong>Validação pela Diretoria Técnica (Admin)</strong>
+          <p>O status passa para <code>AGUARDANDO_APROVACAO_ADMIN</code>. A diretoria revisa e clica em "Validar e Publicar". O parecer torna-se público no portal.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge">3</div>
+        <div class="step-content">
+          <strong>Emissão Automática da Licença de Construção (LC)</strong>
+          <p>Com saldo zero e parecer publicado, o sistema gera o registro oficial da LC em <code>/documentacao/lc</code> pronto para envio à Capitania dos Portos.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer-strip">
+      <div class="footer-left">
+        <img src="../img/logo-amazon-certificadora.svg" alt="Amazon">
+        <span>Amazon Certificadora · Manual Operacional do Analista Naval</span>
+      </div>
+      <span class="page-num">Página 5</span>
+    </div>
+  </section>
+
+  <!-- =================================================================== -->
+  <!-- PÁGINA 6: HOMOLOGAÇÃO DE RELATÓRIOS DE VISTORIA                     -->
+  <!-- =================================================================== -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Capítulo 3 · Vistorias de Campo</span>
+      <span class="chapter-title">Homologação de Relatórios</span>
+    </div>
+
+    <h2 class="page-title">Homologação de Relatórios de Vistoria de Campo</h2>
+    <p class="page-subtitle">
+      O Vistoriador inspeciona o barco in loco e preenche o checklist com fotos. O Analista recebe o relatório em <code>/documentacao/aprovacao_relatorios</code> para auditar antes de liberar certificados.
+    </p>
+
+    <!-- Mockup da Tela de Aprovação -->
+    <div class="screen-mockup">
+      <div class="mockup-topbar">
+        <span>FILA DE APROVAÇÃO DE LAUDOS NAVAIS (/documentacao/aprovacao_relatorios)</span>
+        <span class="badge badge-warning">2 aguardando homologação</span>
+      </div>
+      <div class="mockup-body">
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Embarcação</th>
+              <th>Vistoriador</th>
+              <th>Data Vistoria</th>
+              <th>Fotos Anexas</th>
+              <th>Não Conformes</th>
+              <th>Decisão</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>REL-2026-0118</strong></td>
+              <td>B/F TUPANÃ II <small style="color:#666;">(AM-0291)</small></td>
+              <td>Eng. Carlos Mendes</td>
+              <td>12/09/2026</td>
+              <td><span class="badge badge-info">14 fotos</span></td>
+              <td><span class="badge badge-success">0 não conformes</span></td>
+              <td><span style="color:#0b4e42; font-weight:800; font-size:9px;">[Revisar & Aprovar]</span></td>
+            </tr>
+            <tr>
+              <td><strong>REL-2026-0119</strong></td>
+              <td>EMP. PURUS I <small style="color:#666;">(PA-0914)</small></td>
+              <td>Cap. Marcos Silva</td>
+              <td>12/09/2026</td>
+              <td><span class="badge badge-info">9 fotos</span></td>
+              <td><span class="badge badge-danger">2 exigências</span></td>
+              <td><span style="color:#0b4e42; font-weight:800; font-size:9px;">[Revisar & Aprovar]</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">Os 4 Caminhos de Decisão Técnica do Analista</h3>
+    <div class="grid-2" style="margin-bottom:12px;">
+      <div style="border:1px solid #bbf7d0; background:#f0fdf4; border-radius:6px; padding:10px;">
+        <span class="badge badge-success" style="margin-bottom:4px;">1. APROVADA</span>
+        <strong style="display:block; color:#166534; font-size:11px;">Aprovação Integral (100% Conforme)</strong>
+        <p style="font-size:9.5px; color:#374151; margin-top:3px;">
+          Todos os itens inspecionados estão conformes. A Ordem de Serviço é avançada para <strong>EXECUTADA</strong> e o sistema libera a emissão de Certificados Provisórios, Condicionais e <strong>Definitivos</strong>.
+        </p>
+      </div>
+
+      <div style="border:1px solid #fef08a; background:#fefce8; border-radius:6px; padding:10px;">
+        <span class="badge badge-warning" style="margin-bottom:4px;">2. APROVADA COM EXIGÊNCIAS</span>
+        <strong style="display:block; color:#854d0e; font-size:11px;">Aprovação com Pendências Leves</strong>
+        <p style="font-size:9.5px; color:#374151; margin-top:3px;">
+          Exigências sanáveis a curto prazo (ex: plaqueta de capacidade gasta). Permite a emissão <strong>somente de Certificado Provisório ou Condicional</strong> com prazo para regularização.
+        </p>
+      </div>
+
+      <div style="border:1px solid #fed7aa; background:#fff7ed; border-radius:6px; padding:10px;">
+        <span class="badge badge-danger" style="margin-bottom:4px; background:#ea580c; color:#fff;">3. RETORNO ANTES DE SUSPENDER (RETORNO_AS)</span>
+        <strong style="display:block; color:#9a3412; font-size:11px;">Reinspeção Obrigatória a Bordo</strong>
+        <p style="font-size:9.5px; color:#374151; margin-top:3px;">
+          Não conformidades graves em itens críticos (salvatagem ou estanqueidade). Exige que o vistoriador retorne fisicamente à embarcação antes de qualquer liberação documental.
+        </p>
+      </div>
+
+      <div style="border:1px solid #fecaca; background:#fef2f2; border-radius:6px; padding:10px;">
+        <span class="badge badge-danger" style="margin-bottom:4px;">4. REPROVADA</span>
+        <strong style="display:block; color:#991b1b; font-size:11px;">Inconformidade Grave / Risco à Navegação</strong>
+        <p style="font-size:9.5px; color:#374151; margin-top:3px;">
+          Estrutura do casco comprometida, motor sem estanqueidade ou total ausência de equipamentos do RIPEAM. Impede qualquer atestado de navegabilidade.
+        </p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>O que auditar nas fotos da vistoria:</strong><br>
+      O analista deve verificar se as fotos anexadas contêm iluminação adequada, marcação de data/hora e comprovam visualmente a conformidade dos equipamentos (número de série da balsa, validade dos extintores, bombas de porão e luzes de navegação).
+    </div>
+
+    <div class="page-footer-strip">
+      <div class="footer-left">
+        <img src="../img/logo-amazon-certificadora.svg" alt="Amazon">
+        <span>Amazon Certificadora · Manual Operacional do Analista Naval</span>
+      </div>
+      <span class="page-num">Página 6</span>
+    </div>
+  </section>
+
+  <!-- =================================================================== -->
+  <!-- PÁGINA 7: PROTOCOLOS DOCUMENTAIS, SISAP E CUSTÓDIA                 -->
+  <!-- =================================================================== -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Capítulo 4 · Protocolos & Custódia</span>
+      <span class="chapter-title">SISAP & Trâmite Oficial</span>
+    </div>
+
+    <h2 class="page-title">Protocolos Documentais, SISAP e Custódia Naval</h2>
+    <p class="page-subtitle">
+      O módulo <code>/protocolos</code> controla a tramitação perante a Capitania dos Portos (SISAP/Marinha) e a custódia física de documentos originais (CRPG, TIE/TIEM) do armador.
+    </p>
+
+    <!-- Chips Rápidos -->
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <span class="badge badge-navy">TODOS (24)</span>
+      <span class="badge badge-warning">MINHA CUSTÓDIA (6)</span>
+      <span class="badge badge-info">AGUARDANDO CAPITANIA (11)</span>
+      <span class="badge badge-danger">COM EXIGÊNCIA (2)</span>
+      <span class="badge badge-success">CONCLUÍDOS (5)</span>
+    </div>
+
+    <!-- As 6 Abas do Dossiê -->
+    <div class="ui-panel">
+      <div class="ui-panel-header">
+        <span>Dossiê Operacional do Protocolo (/protocolos/form?id=...)</span>
+        <span class="badge badge-info">6 Abas Temáticas</span>
+      </div>
+      <div class="ui-panel-body" style="padding:8px 12px;">
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th style="width:25%;">Aba Especializada</th>
+              <th style="width:45%;">O que o Analista faz nesta Aba?</th>
+              <th style="width:30%;">Impacto no Processo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Linha do Tempo</strong></td>
+              <td>Visualiza o histórico cronológico de cada despacho, envio, protocolo e custódia.</td>
+              <td>Auditoria completa da tramitação naval.</td>
+            </tr>
+            <tr>
+              <td><strong>2. Nova Ação Guiada</strong></td>
+              <td>Usa os <strong>Chips de 1 Clique</strong>: "Dar Entrada na Capitania", "Registrar Exigência", "Cumprir Exigência" ou "Entregar ao Armador".</td>
+              <td>Preenche automaticamente os campos essenciais sem erro de digitação.</td>
+            </tr>
+            <tr>
+              <td><strong>3. Trâmite Oficial / SISAP</strong></td>
+              <td>Insere o Nº de Protocolo SISAP da Marinha, Capitania/Delegacia, data de entrada e prazo final concedido pela autoridade.</td>
+              <td>Monitora vencimentos e evita indeferimento sumário por decurso de prazo.</td>
+            </tr>
+            <tr>
+              <td><strong>4. Custódia Física</strong></td>
+              <td>Controla a posse física de originais: CRPG, TIE, TIEM, Termos de Entrega, indicando Armário e Pasta de arquivamento.</td>
+              <td>Garante segurança jurídica e previne perda de documentos originais do armador.</td>
+            </tr>
+            <tr>
+              <td><strong>5. Anexos & Ofícios</strong></td>
+              <td>Faz upload do ofício da Capitania, comprovantes de protocolo e notas de exigência.</td>
+              <td>Arquivo digital centralizado disponível para auditoria.</td>
+            </tr>
+            <tr>
+              <td><strong>6. Auditoria Criptográfica</strong></td>
+              <td>Gera o <strong>PDF do Dossiê Completo</strong> com selo criptográfico SHA-256 e código QR de verificação pública.</td>
+              <td>Documento formal para entrega ao cliente e despachante.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">Ações Rápidas de Notificação e Compartilhamento</h3>
+    <div class="grid-2">
+      <div style="border:1px solid #d0e0da; background:#f4f8f6; border-radius:6px; padding:10px;">
+        <strong style="display:block; color:#0b4e42; font-size:11px; margin-bottom:4px;">
+          Notificação Instantânea via WhatsApp
+        </strong>
+        <p style="font-size:9.5px; color:#555; line-height:1.4;">
+          Com apenas 1 clique no botão do WhatsApp, o sistema gera o texto formatado com o status atual do protocolo SISAP e envia diretamente para o celular do despachante ou proprietário da embarcação.
+        </p>
+      </div>
+
+      <div style="border:1px solid #d0e0da; background:#f4f8f6; border-radius:6px; padding:10px;">
+        <strong style="display:block; color:#0b4e42; font-size:11px; margin-bottom:4px;">
+          Link Tokenizado de Acompanhamento
+        </strong>
+        <p style="font-size:9.5px; color:#555; line-height:1.4;">
+          Cada protocolo possui um link protegido por token criptográfico. O cliente pode acompanhar as etapas do processo sem precisar de login ou senha, garantindo total transparência.
+        </p>
+      </div>
+    </div>
+
+    <div class="callout warning" style="margin-top:10px;">
+      <strong>Prazo de Exigência da Marinha:</strong> Quando a Capitania emite uma Nota de Exigência SISAP, o prazo padrão é de <strong>30 dias corridos</strong>. Registre imediatamente a ação para que os alertas automáticos entrem em vigor.
+    </div>
+
+    <div class="page-footer-strip">
+      <div class="footer-left">
+        <img src="../img/logo-amazon-certificadora.svg" alt="Amazon">
+        <span>Amazon Certificadora · Manual Operacional do Analista Naval</span>
+      </div>
+      <span class="page-num">Página 7</span>
+    </div>
+  </section>
+
+  <!-- =================================================================== -->
+  <!-- PÁGINA 8: EMISSÃO DE CERTIFICADOS NAVAIS                            -->
+  <!-- =================================================================== -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Capítulo 5 · Certificados Oficiais</span>
+      <span class="chapter-title">Emissão & Validação</span>
+    </div>
+
+    <h2 class="page-title">Emissão e Validação de Certificados Navais</h2>
+    <p class="page-subtitle">
+      Após a homologação técnica da vistoria e dos cálculos, o Analista emite os certificados estatutários previstos pela NORMAM através do Wizard guiado em <code>/certificados</code>.
+    </p>
+
+    <!-- Tabela de Certificados Oficiais -->
+    <h3 class="section-subtitle">Principais Certificados Estatutários sob NORMAM</h3>
+    <table class="mini-table" style="margin-bottom:12px;">
+      <thead>
+        <tr>
+          <th style="width:15%;">Certificado</th>
+          <th style="width:30%;">Nome Oficial</th>
+          <th style="width:30%;">Finalidade Técnica</th>
+          <th style="width:25%;">Validade Máxima</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-success">CSN</span></td>
+          <td>Certificado de Segurança da Navegação</td>
+          <td>Atesta condições de casco, máquinas, salvatagem e rádio.</td>
+          <td>5 anos (com vistorias anuais)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-info">CNBL</span></td>
+          <td>Certificado Nacional de Borda Livre</td>
+          <td>Fixa o calado máximo e a marcação da linha de carga.</td>
+          <td>5 anos (embarcações com L &ge; 20m)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-neutral">CNARQ</span></td>
+          <td>Certificado Nacional de Arqueação</td>
+          <td>Determina o volume total (AB) e os espaços úteis (AL).</td>
+          <td>Permanente (salvo alteração física)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-warning">CHT</span></td>
+          <td>Certificado de Homologação de Tanques</td>
+          <td>Testes de estanqueidade e pressão de tanques de carga/óleo.</td>
+          <td>Conforme periodicidade da NORMAM</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Wizard em 3 Etapas -->
+    <h3 class="section-subtitle">Wizard de Emissão em 3 Etapas Passo a Passo</h3>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-badge">1</div>
+        <div class="step-content">
+          <strong>Etapa 1: Vínculo com a Vistoria e Agendamento</strong>
+          <p>Selecione a vistoria homologada. O sistema importa os dados cadastrais da embarcação, cliente armador, tipo de navegação e equipamentos verificados em campo.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge">2</div>
+        <div class="step-content">
+          <strong>Etapa 2: Parâmetros Técnicos e Limites Operacionais</strong>
+          <p>Preencha comprimento de regra, boca, pontal, calado máximo permitido, arqueação bruta/líquida, potência propulsora (kW/HP) e limites de passageiros para áreas abrigadas e desabrigadas.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge">3</div>
+        <div class="step-content">
+          <strong>Etapa 3: Definição de Validade e Envio para Assinatura</strong>
+          <p>Selecione se o certificado é <strong>Definitivo</strong>, <strong>Condicional</strong> (caso haja exigência com prazo) ou <strong>Provisório</strong>. Gere a minuta e encaminhe para a mesa de assinatura digital.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ui-panel" style="margin-top:12px;">
+      <div class="ui-panel-header">
+        <span>Controle de Tipos de Validade do Certificado</span>
+      </div>
+      <div class="ui-panel-body">
+        <div class="grid-3">
+          <div>
+            <strong style="color:#166534; font-size:10.5px; display:block;">Definitivo (Verde)</strong>
+            <p style="font-size:9px; color:#555;">Emitido somente quando o laudo de vistoria estiver 100% Aprovado e sem nenhuma pendência documental.</p>
+          </div>
+          <div>
+            <strong style="color:#854d0e; font-size:10.5px; display:block;">Condicional (Amarelo)</strong>
+            <p style="font-size:9px; color:#555;">Emitido quando houver exigência com prazo de até 90 dias fixado pela comissão técnica para regularização.</p>
+          </div>
+          <div>
+            <strong style="color:#075985; font-size:10.5px; display:block;">Provisório (Azul)</strong>
+            <p style="font-size:9px; color:#555;">Validade curta (30 a 60 dias) enquanto a documentação oficial tramita fisicamente perante a Capitania dos Portos.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer-strip">
+      <div class="footer-left">
+        <img src="../img/logo-amazon-certificadora.svg" alt="Amazon">
+        <span>Amazon Certificadora · Manual Operacional do Analista Naval</span>
+      </div>
+      <span class="page-num">Página 8</span>
+    </div>
+  </section>
+
+  <!-- =================================================================== -->
+  <!-- PÁGINA 9: ASSINATURAS DIGITAIS & INTEGRIDADE CRIPTOGRÁFICA         -->
+  <!-- =================================================================== -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Capítulo 6 · Segurança & Assinaturas</span>
+      <span class="chapter-title">Mesa de Assinaturas Digitais</span>
+    </div>
+
+    <h2 class="page-title">Mesa de Assinaturas e Integridade Criptográfica</h2>
+    <p class="page-subtitle">
+      A assinatura digital em <code>/minhas-assinaturas</code> confere validade jurídica e fé pública aos laudos e certificados. Ela reúne carimbo de tempo, IP, coordenadas GPS e hash SHA-256.
+    </p>
+
+    <!-- Mockup da Tela Minhas Assinaturas -->
+    <div class="screen-mockup">
+      <div class="mockup-topbar">
+        <span>MINHAS ASSINATURAS PENDENTES (/minhas-assinaturas)</span>
+        <span class="badge badge-warning">1 documento aguardando rubrica</span>
+      </div>
+      <div class="mockup-body">
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Número</th>
+              <th>Embarcação</th>
+              <th>Data Emissão</th>
+              <th>Status</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-navy">PARECER_PLANOS</span></td>
+              <td>PAR-2026-0042-V2</td>
+              <td>B/M RIO NEGRO IV</td>
+              <td>13/09/2026</td>
+              <td><span class="badge badge-warning">Aguardando assinatura</span></td>
+              <td>
+                <button style="background:#16a34a; color:#fff; border:none; padding:3px 8px; border-radius:4px; font-weight:800; font-size:9px; cursor:pointer;">
+                  <i class="fas fa-pen-nib"></i> Assinar Digitalmente
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal de Confirmação com Geolocalização -->
+    <div class="ui-panel" style="background:#f4f8f6; border:1px solid #c0d8d0;">
+      <div class="ui-panel-header" style="background:#072c26; color:#ffffff;">
+        <span>Modal de Confirmação Criptográfica da Assinatura</span>
+      </div>
+      <div class="ui-panel-body">
+        <div style="font-size:10px; color:#333; line-height:1.45; margin-bottom:8px;">
+          Ao clicar em <strong>"Permitir localização e assinar"</strong>, o navegador captura com precisão militar:
+        </div>
+        <div class="grid-4" style="text-align:center;">
+          <div style="background:#fff; border:1px solid #d0e0da; padding:6px; border-radius:4px;">
+            <span style="font-size:8px; text-transform:uppercase; color:#666; font-weight:700;">Assinatura Manuscrita</span>
+            <strong style="display:block; font-size:10px; color:#0b4e42;">Traço Vetorial Pessoal</strong>
+          </div>
+          <div style="background:#fff; border:1px solid #d0e0da; padding:6px; border-radius:4px;">
+            <span style="font-size:8px; text-transform:uppercase; color:#666; font-weight:700;">Geolocalização</span>
+            <strong style="display:block; font-size:10px; color:#0b4e42;">Lat / Long / Precisão (m)</strong>
+          </div>
+          <div style="background:#fff; border:1px solid #d0e0da; padding:6px; border-radius:4px;">
+            <span style="font-size:8px; text-transform:uppercase; color:#666; font-weight:700;">Carimbo de Tempo</span>
+            <strong style="display:block; font-size:10px; color:#0b4e42;">UTC / Timestamp Servidor</strong>
+          </div>
+          <div style="background:#fff; border:1px solid #d0e0da; padding:6px; border-radius:4px;">
+            <span style="font-size:8px; text-transform:uppercase; color:#666; font-weight:700;">Hash Criptográfico</span>
+            <strong style="display:block; font-size:10px; color:#0b4e42;">SHA-256 Imutável</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verificação por QR Code -->
+    <h3 class="section-subtitle">Selo e Validação Pública por QR Code no Rodapé</h3>
+    <div style="display:flex; gap:12px; align-items:center; background:#fff; border:1px solid var(--line); border-radius:6px; padding:10px;">
+      <div style="width:54px; height:54px; background:#072c26; color:#35f0b5; display:grid; place-items:center; font-size:9px; font-weight:800; border-radius:4px; text-align:center;">
+        [QR CODE]
+      </div>
+      <div style="font-size:9.5px; color:#444; line-height:1.4;">
+        <strong>Conferência Pública de Autenticidade:</strong> Todos os relatórios técnicos, pareceres e certificados gerados possuem um QR Code no rodapé. Qualquer autoridade da Marinha ou cliente pode apontar a câmera do smartphone para conferir a versão original no banco de dados e confirmar que o laudo não foi fraudado.
+      </div>
+    </div>
+
+    <div class="callout danger" style="margin-top:10px;">
+      <strong>Responsabilidade Profissional:</strong> A aplicação de sua assinatura técnica é pessoal e intransferível, vinculada ao seu registro de classe (CREA). Nunca compartilhe sua senha de acesso.
+    </div>
+
+    <div class="page-footer-strip">
+      <div class="footer-left">
+        <img src="../img/logo-amazon-certificadora.svg" alt="Amazon">
+        <span>Amazon Certificadora · Manual Operacional do Analista Naval</span>
+      </div>
+      <span class="page-num">Página 9</span>
+    </div>
+  </section>
+
+  <!-- =================================================================== -->
+  <!-- PÁGINA 10: TABELA DE DECISÃO RÁPIDA & CONTATOS                     -->
+  <!-- =================================================================== -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Capítulo 7 · Guia Rápido</span>
+      <span class="chapter-title">Resolução de Problemas & Prazos</span>
+    </div>
+
+    <h2 class="page-title">Tabela de Decisão Rápida e Boas Práticas</h2>
+    <p class="page-subtitle">
+      Consulte este guia rápido diante de dúvidas operacionais frequentes durante a conferência de projetos ou fiscalização de processos.
+    </p>
+
+    <!-- O Que Fazer Quando -->
+    <h3 class="section-subtitle">O Que Fazer Quando... (Guia de Solução Imediata)</h3>
+    <table class="mini-table" style="margin-bottom:12px;">
+      <thead>
+        <tr>
+          <th style="width:30%;">Situação Encontrada</th>
+          <th style="width:40%;">Ação Correta do Analista</th>
+          <th style="width:30%;">Procedimento no Sistema</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>O estaleiro enviou arquivos DWG sem prancha PDF assinada</strong></td>
+          <td>Rejeite temporariamente na classificação de arquivos. Exija prancha PDF vetorizada com selo CREA/ART.</td>
+          <td>Seção de Revisões &rarr; Arquivo &rarr; Selecionar <code>REJEITADO</code> com justificativa.</td>
+        </tr>
+        <tr>
+          <td><strong>A Capitania emitiu Notificação de Exigência SISAP</strong></td>
+          <td>Abra o dossiê do protocolo, registre a exigência oficial e anexe a certidão da Marinha para alertar o cliente.</td>
+          <td>Módulo <code>/protocolos</code> &rarr; Aba "Nova Ação" &rarr; Chip "Registrar Exigência".</td>
+        </tr>
+        <tr>
+          <td><strong>Falta teste de inclinação no folheto de trim</strong></td>
+          <td>Se o barco for classe EC1, não aprove. Registre item de exigência com base na NORMAM-202 Cap. 3.</td>
+          <td>Matriz Normativa &rarr; Folheto de Trim &rarr; Selecionar <code>EXIGÊNCIA</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>O relatório de vistoria aponta coletes vencidos</strong></td>
+          <td>Não conceda aprovação integral. Emita parecer de aprovação com exigências ou retorno obrigatório a bordo.</td>
+          <td>Módulo <code>/aprovacao_relatorios</code> &rarr; Selecionar <code>APROVADA COM EXIGÊNCIAS</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>O parecer foi devolvido pela Diretoria Técnica</strong></td>
+          <td>Leia a observação no histórico, saneie a divergência apontada e refaça a assinatura digital.</td>
+          <td>Seção #pareceres &rarr; Visualizar motivo da devolução &rarr; Corrigir e reassinar.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Matriz de Prazos -->
+    <h3 class="section-subtitle">Matriz de Prazos Operacionais da Mesa Técnica</h3>
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div style="background:#f4f8f6; border:1px solid #d0e0da; padding:8px; border-radius:6px;">
+        <span style="font-size:8.5px; text-transform:uppercase; color:#666; font-weight:700;">Análise de Planos (LC/LA)</span>
+        <strong style="display:block; font-size:12px; color:#0b4e42;">Máximo 5 dias úteis</strong>
+        <small style="font-size:8px; color:#555;">Da recepção da revisão até o relatório de ciclo.</small>
+      </div>
+
+      <div style="background:#f4f8f6; border:1px solid #d0e0da; padding:8px; border-radius:6px;">
+        <span style="font-size:8.5px; text-transform:uppercase; color:#666; font-weight:700;">Homologação de Vistoria</span>
+        <strong style="display:block; font-size:12px; color:#0b4e42;">Máximo 24 a 48 horas</strong>
+        <small style="font-size:8px; color:#555;">Do envio do vistoriador até a decisão do analista.</small>
+      </div>
+
+      <div style="background:#f4f8f6; border:1px solid #d0e0da; padding:8px; border-radius:6px;">
+        <span style="font-size:8.5px; text-transform:uppercase; color:#666; font-weight:700;">Exigência da Capitania</span>
+        <strong style="display:block; font-size:12px; color:#c0392b;">Prazo Fatal 30 dias</strong>
+        <small style="font-size:8px; color:#555;">Contados da emissão do ofício da Marinha.</small>
+      </div>
+    </div>
+
+    <!-- Canais de Apoio Técnico -->
+    <div class="ui-panel" style="background:#072c26; color:#ffffff;">
+      <div class="ui-panel-body" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong style="font-size:11.5px; color:#35f0b5;">Dúvidas Regulamentares ou Suporte Operacional ao Analista</strong>
+          <p style="font-size:9.5px; color:#bce6dc; margin-top:2px;">
+            Consulte a Coordenação Técnica Naval ou acesse as normativas completas no portal da DPC.
+          </p>
+        </div>
+        <div style="text-align:right; font-size:9.5px; color:#bce6dc;">
+          <strong>Suporte Técnico Interno:</strong><br>
+          suporte@amazoncertificadora.com.br · Ramal 204
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer-strip">
+      <div class="footer-left">
+        <img src="../img/logo-amazon-certificadora.svg" alt="Amazon">
+        <span>Amazon Certificadora · Manual Operacional do Analista Naval</span>
+      </div>
+      <span class="page-num">Página 10</span>
+    </div>
+  </section>
+
+</body>
+</html>
