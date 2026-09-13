@@ -6821,3 +6821,268 @@ button.btn.btn-icon-action i {
     background: #fff !important;
     color: var(--accent) !important;
 }
+
+/* ============================================================
+   MÓDULO DE PROTOCOLOS DOCUMENTAIS NAVAIS (AMAZON CERTIFICADORA)
+   ============================================================ */
+.prot-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.prot-page-title h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.prot-page-title p {
+    margin: 4px 0 0;
+    color: var(--text-secondary, #8b949e);
+    font-size: 0.88rem;
+}
+
+/* KPIs de Protocolo */
+.prot-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+.prot-kpi-card {
+    background: var(--bg-surface, #071f1b);
+    border: 1px solid var(--border, rgba(255,255,255,0.08));
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.prot-kpi-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent, #56e0ad);
+}
+.prot-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+.prot-kpi-icon.primary { background: rgba(86, 224, 173, 0.12); color: #56e0ad; }
+.prot-kpi-icon.warning { background: rgba(234, 179, 8, 0.12); color: #eab308; }
+.prot-kpi-icon.danger { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+.prot-kpi-icon.info { background: rgba(56, 189, 248, 0.12); color: #38bdf8; }
+.prot-kpi-val {
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+.prot-kpi-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #8b949e);
+    margin-top: 2px;
+}
+
+/* Abas de Navegação Rápidas */
+.prot-tabs-bar {
+    display: flex;
+    gap: 6px;
+    border-bottom: 1px solid var(--border, rgba(255,255,255,0.1));
+    margin-bottom: 20px;
+    overflow-x: auto;
+    padding-bottom: 1px;
+}
+.prot-tab-btn {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary, #8b949e);
+    padding: 10px 16px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.prot-tab-btn:hover {
+    color: var(--text-primary, #e6edf3);
+    background: rgba(255,255,255,0.03);
+}
+.prot-tab-btn.active {
+    color: var(--accent, #56e0ad);
+    border-bottom-color: var(--accent, #56e0ad);
+    background: rgba(86, 224, 173, 0.08);
+}
+.prot-tab-btn .badge {
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border-radius: 12px;
+}
+
+/* Painel de Conteúdo de Aba */
+.prot-tab-pane {
+    display: none;
+}
+.prot-tab-pane.active {
+    display: block;
+    animation: fadeIn 0.2s ease-in-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Badges Semânticas Navais de Status */
+.prot-badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.prot-badge-status.EM_PREPARACAO { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+.prot-badge-status.ENVIADO_AO_ORGAO { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+.prot-badge-status.PROTOCOLADO { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+.prot-badge-status.EM_ANALISE_NO_ORGAO { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
+.prot-badge-status.EM_EXIGENCIA { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); font-weight: 800; }
+.prot-badge-status.A_DISPOSICAO { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.prot-badge-status.RETIRADO { background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.3); }
+.prot-badge-status.ENTREGUE_AO_CLIENTE { background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); }
+.prot-badge-status.ENCERRADO { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+.prot-badge-status.CANCELADO { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+/* Caixas Educativas / Autodidáticas */
+.prot-helper-box {
+    background: rgba(86, 224, 173, 0.05);
+    border: 1px solid rgba(86, 224, 173, 0.2);
+    border-left: 4px solid var(--accent, #56e0ad);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    font-size: 0.85rem;
+    color: var(--text-primary, #e6edf3);
+}
+.prot-helper-box.warning {
+    background: rgba(245, 158, 11, 0.06);
+    border-color: rgba(245, 158, 11, 0.25);
+    border-left-color: #f59e0b;
+}
+.prot-helper-box.info {
+    background: rgba(56, 189, 248, 0.06);
+    border-color: rgba(56, 189, 248, 0.25);
+    border-left-color: #38bdf8;
+}
+
+/* Pílulas de Atalho Rápido para Assunto */
+.prot-shortcuts-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+    margin-bottom: 14px;
+}
+.prot-shortcut-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border, rgba(255,255,255,0.12));
+    border-radius: 16px;
+    padding: 4px 10px;
+    font-size: 0.76rem;
+    color: var(--text-secondary, #8b949e);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.prot-shortcut-btn:hover {
+    background: var(--accent, #56e0ad);
+    color: #031412;
+    border-color: var(--accent, #56e0ad);
+    font-weight: 600;
+}
+
+/* Linha do Tempo de Movimentações */
+.prot-timeline-list {
+    position: relative;
+    padding-left: 28px;
+    margin: 16px 0;
+}
+.prot-timeline-list::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    left: 10px;
+    width: 2px;
+    background: rgba(86, 224, 173, 0.25);
+}
+.prot-timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+.prot-timeline-dot {
+    position: absolute;
+    left: -28px;
+    top: 14px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--bg-surface, #071f1b);
+    border: 3px solid var(--accent, #56e0ad);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: var(--accent, #56e0ad);
+    font-weight: 700;
+}
+.prot-timeline-card {
+    background: var(--bg-surface, #071f1b);
+    border: 1px solid var(--border, rgba(255,255,255,0.08));
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.prot-timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+/* Linhas de Itens / Documentos no Formulário */
+.prot-doc-item-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border, rgba(255,255,255,0.08));
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+    display: grid;
+    grid-template-columns: 2.2fr 1fr 1fr 0.6fr 1.2fr auto;
+    gap: 10px;
+    align-items: center;
+}
+@media (max-width: 900px) {
+    .prot-doc-item-card {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}
+

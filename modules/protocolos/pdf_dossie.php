@@ -127,8 +127,9 @@ $html=$css.'<h1>'.$e($d['numero']).'</h1><div class="sub">Relatório consolidado
 </table>';
 
 $html.='<h2>Registro no órgão</h2>';
-if($d['protocolo_externo_em']){
-    $html.='<table class="table" width="100%"><thead><tr><th width="48%">Unidade</th><th width="27%">Data e hora</th><th width="25%">Validade indicada</th></tr></thead><tbody><tr nobr="true"><td>'.$e($d['unidade_nome']?:'Não informada').'</td><td>'.$e($data($d['protocolo_externo_em'])).'</td><td>'.$e($data($d['protocolo_externo_validade'],false)).'</td></tr></tbody></table>';
+if($d['protocolo_externo_em'] || !empty($d['protocolo_externo_numero'])){
+    $numProc = !empty($d['protocolo_externo_numero']) ? $e($d['protocolo_externo_numero']) : 'Não registrado';
+    $html.='<table class="table" width="100%"><thead><tr><th width="35%">Unidade Marítima</th><th width="25%">Nº Processo / SISAP</th><th width="20%">Data do Atendimento</th><th width="20%">Validade do Protocolo</th></tr></thead><tbody><tr nobr="true"><td>'.$e($d['unidade_nome']?:'Não informada').'</td><td><b>'.$numProc.'</b></td><td>'.$e($data($d['protocolo_externo_em'])).'</td><td>'.$e($data($d['protocolo_externo_validade'],false)).'</td></tr></tbody></table>';
 }else $html.='<div class="note">Atendimento no órgão ainda não registrado.</div>';
 
 $html.='<h2>Linha do tempo e documentos apresentados</h2>';

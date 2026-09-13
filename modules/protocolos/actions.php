@@ -11,6 +11,19 @@ try{
  if($acao==='criar'){
  $emb=trim($_POST['embarcacao_id']??'');$assunto=trim($_POST['assunto']??'');if(!$emb||!$assunto)throw new InvalidArgumentException('Informe embarcação e assunto.');
   $q=$pdo->prepare('SELECT COALESCE(cliente_id,proprietario_id) FROM embarcacoes WHERE id=:id');$q->execute([':id'=>$emb]);$cliente=$q->fetchColumn();if($cliente===false)throw new RuntimeException('Embarcação inválida.');
+<?php
+require_once __DIR__.'/../../config.php';
+require_once __DIR__.'/../../includes/functions.php';
+require_once __DIR__.'/../../includes/auth.php';
+require_once __DIR__.'/../../includes/protocolos.php';
+protocoloExigirAcesso();
+if($_SERVER['REQUEST_METHOD']!=='POST'||!verificarCSRF($_POST['csrf_token']??'')){setMensagem('error','Sessão expirada.');redirecionar(APP_URL.'protocolos');}
+$acao=trim($_POST['action']??'');$id=trim($_POST['id']??$_POST['dossie_id']??'');
+$voltar=fn(?string $x=null)=>APP_URL.($x?'protocolos/form?id='.urlencode($x):'protocolos');
+try{
+ if($acao==='criar'){
+ $emb=trim($_POST['embarcacao_id']??'');$assunto=trim($_POST['assunto']??'');if(!$emb||!$assunto)throw new InvalidArgumentException('Informe embarcação e assunto.');
+  $q=$pdo->prepare('SELECT COALESCE(cliente_id,proprietario_id) FROM embarcacoes WHERE id=:id');$q->execute([':id'=>$emb]);$cliente=$q->fetchColumn();if($cliente===false)throw new RuntimeException('Embarcação inválida.');
   $proposta=trim($_POST['proposta_id']??'')?:null;$analise=trim($_POST['analise_id']??'')?:null;$vistoria=trim($_POST['vistoria_id']??'')?:null;
   if(getCargo()!=='ADMIN'){
    $permitido=false;$uid=(string)$_SESSION['usuario_id'];
@@ -19,13 +32,27 @@ try{
    if(!$permitido&&$vistoria){$q=$pdo->prepare('SELECT 1 FROM vistorias v JOIN agendamentos a ON a.id=v.agendamento_id WHERE v.id=:id AND v.embarcacao_id=:emb AND (a.vistoriador_id=:u OR a.vendedor_id=:u)');$q->execute([':id'=>$vistoria,':emb'=>$emb,':u'=>$uid]);$permitido=(bool)$q->fetchColumn();}
    if(!$permitido)throw new RuntimeException('Vincule um processo ao qual você já possui acesso.');
   }
+  $unidade=trim($_POST['unidade_maritima_id']??'')?:null;
   $pdo->beginTransaction();$numero=gerarNumeroDocumento('PROTOCOLO','AM-PROT');$id=gerarUUID();
-  $q=$pdo->prepare("INSERT INTO protocolo_dossies(id,numero,embarcacao_id,cliente_id,assunto,servico_id,proposta_id,analise_id,vistoria_id,certificado_tipo,certificado_id,criado_por)VALUES(:id,:numero,:emb,:cliente,:assunto,:servico,:proposta,:analise,:vistoria,:ctipo,:cid,:usuario)");
-  $q->execute([':id'=>$id,':numero'=>$numero,':emb'=>$emb,':cliente'=>$cliente?:null,':assunto'=>$assunto,':servico'=>trim($_POST['servico_id']??'')?:null,':proposta'=>$proposta,':analise'=>$analise,':vistoria'=>$vistoria,':ctipo'=>trim($_POST['certificado_tipo']??'')?:null,':cid'=>trim($_POST['certificado_id']??'')?:null,':usuario'=>$_SESSION['usuario_id']]);
-  protocoloAuditar($pdo,$id,null,'DOSSIE_CRIADO',null,'EM_PREPARACAO',$numero);$pdo->commit();setMensagem('success','Dossiê '.$numero.' criado.');redirecionar($voltar($id));
+  $q=$pdo->prepare("INSERT INTO protocolo_dossies(id,numero,embarcacao_id,cliente_id,assunto,servico_id,proposta_id,analise_id,vistoria_id,certificado_tipo,certificado_id,unidade_maritima_id,criado_por)VALUES(:id,:numero,:emb,:cliente,:assunto,:servico,:proposta,:analise,:vistoria,:ctipo,:cid,:unidade,:usuario)");
+  $q->execute([':id'=>$id,':numero'=>$numero,':emb'=>$emb,':cliente'=>$cliente?:null,':assunto'=>$assunto,':servico'=>trim($_POST['servico_id']??'')?:null,':proposta'=>$proposta,':analise'=>$analise,':vistoria'=>$vistoria,':ctipo'=>trim($_POST['certificado_tipo']??'')?:null,':cid'=>trim($_POST['certificado_id']??'')?:null,':unidade'=>$unidade,':usuario'=>$_SESSION['usuario_id']]);
+  protocoloAuditar($pdo,$id,null,'DOSSIE_CRIADO',null,'EM_PREPARACAO',$numero);$pdo->commit();setMensagem('success','Dossiê '.$numero.' criado com sucesso.');redirecionar($voltar($id));
  }
- if($id==='')throw new RuntimeException('Dossiê não informado.');$d=protocoloCarregar($pdo,$id,in_array($acao,['adicionar_movimentacao','confirmar','registro_orgao','encerrar','cancelar'],true));
+ if($id==='')throw new RuntimeException('Dossiê não informado.');$d=protocoloCarregar($pdo,$id,in_array($acao,['adicionar_movimentacao','confirmar','registro_orgao','encerrar','cancelar','editar_dossie'],true));
  if(in_array($d['status'],['ENCERRADO','CANCELADO'],true)&&!in_array($acao,['criar_aceite'],true))throw new RuntimeException('Dossiê encerrado ou cancelado é somente leitura.');
+ if($acao==='editar_dossie'){
+  $assunto=trim($_POST['assunto']??'');if(!$assunto)throw new InvalidArgumentException('Informe o assunto.');
+  $cliente=trim($_POST['cliente_id']??'')?:null;
+  $unidade=trim($_POST['unidade_maritima_id']??'')?:null;
+  $analise=trim($_POST['analise_id']??'')?:null;
+  $vistoria=trim($_POST['vistoria_id']??'')?:null;
+  $pdo->beginTransaction();
+  $pdo->prepare("UPDATE protocolo_dossies SET assunto=:assunto, cliente_id=:cliente, unidade_maritima_id=:unidade, analise_id=:analise, vistoria_id=:vistoria WHERE id=:id")->execute([
+      ':assunto'=>$assunto,':cliente'=>$cliente,':unidade'=>$unidade,':analise'=>$analise,':vistoria'=>$vistoria,':id'=>$id
+  ]);
+  protocoloAuditar($pdo,$id,null,'DOSSIE_EDITADO',null,null,'Dados e vínculos atualizados.');$pdo->commit();
+  setMensagem('success','Dados do dossiê atualizados.');redirecionar($voltar($id));
+ }
  if($acao==='adicionar_movimentacao'){
   $tipo=trim($_POST['tipo']??'');$nat=trim($_POST['natureza']??'');$tipos=['ENTRADA','SAIDA'];$nats=['RECEBIMENTO_CLIENTE','ENVIO_ORGAO','RETORNO_ORGAO','CUMPRIMENTO_EXIGENCIA','RETIRADA_ORGAO','ENTREGA_CLIENTE','TRANSFERENCIA_INTERNA','OUTRA'];
   if(!in_array($tipo,$tipos,true)||!in_array($nat,$nats,true))throw new InvalidArgumentException('Tipo ou natureza inválidos.');
@@ -54,14 +81,20 @@ try{
   $pdo->prepare('UPDATE protocolo_dossies SET status=:status,unidade_maritima_id=COALESCE(:unidade,unidade_maritima_id) WHERE id=:id')->execute([':status'=>$novo,':unidade'=>$m['unidade_maritima_id'],':id'=>$id]);protocoloAuditar($pdo,$id,$mov,'MOVIMENTACAO_CONFIRMADA',$d['status'],$novo,'Evento '.str_pad((string)$m['sequencia'],2,'0',STR_PAD_LEFT),$hash);$pdo->commit();protocoloNotificarAdmins($pdo,'PROTOCOLO_MOVIMENTADO','Protocolo movimentado',$d['numero'].' recebeu um evento '.$m['tipo'].'.',$id);setMensagem('success','Movimentação confirmada e PDF congelado.');redirecionar($voltar($id));
  }
  if($acao==='registro_orgao'){
-  $data=trim($_POST['protocolo_externo_em']??'');$unidade=trim($_POST['unidade_maritima_id']??'');if(!$data||!$unidade)throw new InvalidArgumentException('Informe a unidade e a data do atendimento no órgão.');
+  $data=trim($_POST['protocolo_externo_em']??'');$unidade=trim($_POST['unidade_maritima_id']??'');$numeroExt=trim($_POST['numero_processo_orgao']??$_POST['protocolo_externo_numero']??'');
+  if(!$data||!$unidade)throw new InvalidArgumentException('Informe a unidade e a data do atendimento no órgão.');
   $q=$pdo->prepare('SELECT 1 FROM protocolo_unidades_maritimas WHERE id=:id AND ativo=1');$q->execute([':id'=>$unidade]);if(!$q->fetchColumn())throw new InvalidArgumentException('Unidade marítima inválida.');
-  $pdo->beginTransaction();$pdo->prepare("UPDATE protocolo_dossies SET protocolo_externo_em=:data,protocolo_externo_validade=:validade,unidade_maritima_id=:unidade,status='PROTOCOLADO' WHERE id=:id")->execute([':data'=>str_replace('T',' ',$data),':validade'=>trim($_POST['validade']??'')?:null,':unidade'=>$unidade,':id'=>$id]);
-  protocoloAuditar($pdo,$id,null,'REGISTRO_ORGAO',$d['status'],'PROTOCOLADO','Atendimento registrado em '.str_replace('T',' ',$data));$pdo->commit();setMensagem('success','Atendimento no órgão registrado.');redirecionar($voltar($id));
+  $pdo->beginTransaction();
+  $pdo->prepare("UPDATE protocolo_dossies SET protocolo_externo_numero=:num_ext,protocolo_externo_em=:data,protocolo_externo_validade=:validade,unidade_maritima_id=:unidade,status='PROTOCOLADO' WHERE id=:id")->execute([
+      ':num_ext'=>$numeroExt?:null,':data'=>str_replace('T',' ',$data),':validade'=>trim($_POST['validade']??'')?:null,':unidade'=>$unidade,':id'=>$id
+  ]);
+  protocoloAuditar($pdo,$id,null,'REGISTRO_ORGAO',$d['status'],'PROTOCOLADO','Atendimento registrado em '.str_replace('T',' ',$data).($numeroExt?' (Nº '.$numeroExt.')':''));$pdo->commit();
+  setMensagem('success','Atendimento no órgão registrado com sucesso.');redirecionar($voltar($id));
  }
  if($acao==='criar_aceite'){
   $mov=trim($_POST['movimentacao_id']??'');$q=$pdo->prepare("SELECT 1 FROM protocolo_movimentacoes WHERE id=:id AND dossie_id=:dossie AND status='CONFIRMADA'");$q->execute([':id'=>$mov,':dossie'=>$id]);if(!$q->fetchColumn())throw new RuntimeException('Movimentação confirmada não encontrada.');$token=bin2hex(random_bytes(32));$hash=hash('sha256',$token);
-  $pdo->prepare("INSERT INTO protocolo_aceites(id,movimentacao_id,token_hash,expira_em,criado_por)VALUES(UUID(),:mov,:hash,DATE_ADD(NOW(),INTERVAL 15 DAY),:usuario) ON DUPLICATE KEY UPDATE token_hash=VALUES(token_hash),expira_em=VALUES(expira_em),criado_por=VALUES(criado_por),nome=NULL,documento_mascarado=NULL,termo_aceito=0,ip=NULL,aceito_em=NULL")->execute([':mov'=>$mov,':hash'=>$hash,':usuario'=>$_SESSION['usuario_id']]);protocoloAuditar($pdo,$id,$mov,'ACEITE_CRIADO',null,'PENDENTE');setMensagem('success','Link de aceite: '.APP_URL.'protocolo-aceite/'.$token);redirecionar($voltar($id));
+  $pdo->prepare("INSERT INTO protocolo_aceites(id,movimentacao_id,token_hash,expira_em,criado_por)VALUES(UUID(),:mov,:hash,DATE_ADD(NOW(),INTERVAL 15 DAY),:usuario) ON DUPLICATE KEY UPDATE token_hash=VALUES(token_hash),expira_em=VALUES(expira_em),criado_por=VALUES(criado_por),nome=NULL,documento_mascarado=NULL,termo_aceito=0,ip=NULL,aceito_em=NULL")->execute([':mov'=>$mov,':hash'=>$hash,':usuario'=>$_SESSION['usuario_id']]);protocoloAuditar($pdo,$id,$mov,'ACEITE_CRIADO',null,'PENDENTE');
+  setMensagem('success','Link de aceite gerado: '.APP_URL.'protocolo-aceite/'.$token);redirecionar($voltar($id).'&aceite_token='.urlencode($token).'&aceite_mov='.urlencode($mov).'#mov-'.$mov);
  }
  if($acao==='anexar_documentos'){
   $mov=trim($_POST['movimentacao_id']??'')?:null;
