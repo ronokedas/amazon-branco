@@ -3375,6 +3375,9 @@ tbody tr:last-child td {
     font-size: 0.7rem;
     transition: transform 0.3s ease, color 0.16s ease;
 }
+.nav-chevron.rotated {
+    transform: rotate(180deg);
+}
 
 .nav-submenu {
     display: none;

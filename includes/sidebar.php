@@ -46,15 +46,27 @@ if (!function_exists('isActive')) {
         <?php if (podeAcessar('portal_clientes')): ?><a href="<?= APP_URL ?>portal-clientes" class="nav-item<?= isActive('portal-clientes',$pagina_atual) ?>" data-label="Portal do Cliente"><i class="fa-solid fa-user-shield"></i><span class="nav-text">Portal do Cliente</span></a><?php endif; ?>
         <a href="<?= APP_URL ?>feedback" class="nav-item<?= strpos($pagina_atual,'feedback')===0?' active':'' ?>" data-label="Central de Feedback"><i class="fa-regular fa-comments"></i><span class="nav-text">Feedback</span></a>
 
-        <div class="nav-group-label">QUALIDADE (SGQ)</div>
-        <a href="<?= APP_URL ?>sgq/manual" class="nav-item<?= strpos($pagina_atual,'sgq/manual')===0?' active':'' ?>" data-label="Manual da Qualidade"><i class="fa-solid fa-book-bookmark"></i><span class="nav-text">Manual & Política SGQ</span></a>
-        <a href="<?= APP_URL ?>sgq/apresentacao" target="_blank" class="nav-item<?= strpos($pagina_atual,'sgq/apresentacao')===0?' active':'' ?>" data-label="Apresentação em Slides PDF"><i class="fa-solid fa-file-pdf"></i><span class="nav-text">Apresentação SGQ (PDF)</span></a>
-        <a href="<?= APP_URL ?>sgq/indicadores" class="nav-item<?= strpos($pagina_atual,'sgq/indicadores')===0?' active':'' ?>" data-label="Indicadores SGQ"><i class="fa-solid fa-chart-pie"></i><span class="nav-text">Indicadores SGQ</span></a>
-        <a href="<?= APP_URL ?>sgq/nao-conformidades" class="nav-item<?= strpos($pagina_atual,'sgq/nao-conformidades')===0 && empty($_GET['origem'])?' active':'' ?>" data-label="Não Conformidades"><i class="fa-solid fa-triangle-exclamation"></i><span class="nav-text">Não Conformidades (RNC)</span></a>
-        <a href="<?= APP_URL ?>sgq/nao-conformidades?origem=RECLAMACAO_CLIENTE" class="nav-item<?= strpos($pagina_atual,'sgq/nao-conformidades')===0 && ($_GET['origem'] ?? '')==='RECLAMACAO_CLIENTE'?' active':'' ?>" data-label="Reclamações de Clientes"><i class="fa-solid fa-headset"></i><span class="nav-text">Reclamações / Ouvidoria</span></a>
-        <a href="<?= APP_URL ?>sgq/riscos" class="nav-item<?= strpos($pagina_atual,'sgq/riscos')===0?' active':'' ?>" data-label="Gestão de Riscos"><i class="fa-solid fa-shield-virus"></i><span class="nav-text">Gestão de Riscos (ISO 6.1)</span></a>
-        <a href="<?= APP_URL ?>configuracoes/normam202" class="nav-item<?= strpos($pagina_atual,'configuracoes/normam202')===0?' active':'' ?>" data-label="Exigências NORMAM-202"><i class="fa-solid fa-list-check"></i><span class="nav-text">Exigências NORMAM-202</span></a>
-        <a href="<?= APP_URL ?>sgq/auditoria" class="nav-item<?= strpos($pagina_atual,'sgq/auditoria')===0?' active':'' ?>" data-label="Trilha de Auditoria"><i class="fa-solid fa-clock-rotate-left"></i><span class="nav-text">Trilha de Auditoria</span></a>
+        <div class="nav-group-label">QUALIDADE</div>
+        <div class="nav-group">
+            <?php 
+            $sgqAtivo = strpos($pagina_atual, 'sgq') === 0 || strpos($pagina_atual, 'configuracoes/normam202') === 0;
+            ?>
+            <a href="#" class="nav-item<?= $sgqAtivo ? ' active' : '' ?>" data-label="Qualidade (SGQ)" onclick="this.parentElement.querySelector('.nav-submenu').classList.toggle('open');this.querySelector('.nav-chevron')?.classList.toggle('rotated');return false;">
+                <i class="fa-solid fa-award"></i>
+                <span class="nav-text">Qualidade (SGQ)</span>
+                <i class="fa-solid fa-chevron-down nav-chevron<?= $sgqAtivo ? ' rotated' : '' ?>"></i>
+            </a>
+            <div class="nav-submenu<?= $sgqAtivo ? ' open' : '' ?>">
+                <a href="<?= APP_URL ?>sgq/manual" class="nav-item nav-subitem<?= isActive('sgq/manual', $pagina_atual) ?>">Manual & Política SGQ</a>
+                <a href="<?= APP_URL ?>sgq/apresentacao" target="_blank" class="nav-item nav-subitem<?= isActive('sgq/apresentacao', $pagina_atual) ?>">Apresentação SGQ (PDF)</a>
+                <a href="<?= APP_URL ?>sgq/indicadores" class="nav-item nav-subitem<?= isActive('sgq/indicadores', $pagina_atual) ?>">Indicadores SGQ</a>
+                <a href="<?= APP_URL ?>sgq/nao-conformidades" class="nav-item nav-subitem<?= ($pagina_atual === 'sgq/nao-conformidades' && empty($_GET['origem'])) ? ' active' : '' ?>">Não Conformidades (RNC)</a>
+                <a href="<?= APP_URL ?>sgq/nao-conformidades?origem=RECLAMACAO_CLIENTE" class="nav-item nav-subitem<?= ($pagina_atual === 'sgq/nao-conformidades' && ($_GET['origem'] ?? '') === 'RECLAMACAO_CLIENTE') ? ' active' : '' ?>">Reclamações / Ouvidoria</a>
+                <a href="<?= APP_URL ?>sgq/riscos" class="nav-item nav-subitem<?= isActive('sgq/riscos', $pagina_atual) ?>">Gestão de Riscos (ISO 6.1)</a>
+                <a href="<?= APP_URL ?>configuracoes/normam202" class="nav-item nav-subitem<?= strpos($pagina_atual, 'configuracoes/normam202') === 0 ? ' active' : '' ?>">Exigências NORMAM-202</a>
+                <a href="<?= APP_URL ?>sgq/auditoria" class="nav-item nav-subitem<?= isActive('sgq/auditoria', $pagina_atual) ?>">Trilha de Auditoria</a>
+            </div>
+        </div>
 
         <?php if (podeAcessar('usuarios')): ?><a href="<?= APP_URL ?>usuarios" class="nav-item<?= isActive('usuarios',$pagina_atual) ?>" data-label="Usuários"><i class="fa-solid fa-users-gear"></i><span class="nav-text">Usuários</span></a><?php endif; ?>
         <?php if (podeAcessar('configuracoes')): ?><a href="<?= APP_URL ?>configuracoes" class="nav-item<?= isActive('configuracoes',$pagina_atual) ?>" data-label="Configurações"><i class="fa-solid fa-sliders"></i><span class="nav-text">Configurações</span></a><?php endif; ?>
