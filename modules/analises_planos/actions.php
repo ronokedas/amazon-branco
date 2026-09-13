@@ -17,8 +17,8 @@ function analiseAcaoExigirTecnico(array $analise): void
 {
     $cargo = getCargo();
     $usuario = (string)($_SESSION['usuario_id'] ?? '');
-    if (!($cargo === 'ANALISTA' && $analise['analista_id'] === $usuario)) {
-        throw new RuntimeException('Somente o analista atribuído pode executar esta ação técnica.');
+    if (!($cargo === 'ANALISTA' && $analise['analista_id'] === $usuario) && $cargo !== 'ADMIN') {
+        throw new RuntimeException('Somente o analista atribuído ou Administrador pode executar esta ação técnica.');
     }
     if (analisePlanosEhLegadoForaEscopo($analise)) {
         throw new RuntimeException('Processo NORMAM-201 legado: conteúdo preservado somente para consulta.');
@@ -235,7 +235,7 @@ try {
 
     if ($acao === 'agendar') {
         if (in_array($analise['status'], ['CONCLUIDA','REPROVADA','CANCELADA'], true)) throw new RuntimeException('Processo finalizado não pode ser agendado.');
-        if (empty($analise['proposta_id']) || empty($analise['servico_id']) || empty($analise['vendedor_origem_id'])) {
+        if (!empty($analise['legado_sem_proposta']) && (empty($analise['proposta_id']) || empty($analise['servico_id']) || empty($analise['vendedor_origem_id']))) {
             throw new RuntimeException('Processo legado: o admin deve vincular proposta, serviço e vendedor de origem antes de agendar.');
         }
         $primeiro = empty($analise['prazo_agendado_em']);
@@ -404,7 +404,9 @@ try {
         if($parecer['resultado']==='APROVADO')analisePlanosValidarConclusao($pdo,$analiseId);
         $pdo->prepare("UPDATE analise_planos_pareceres SET status='PUBLICADO',publicado_em=NOW(),validado_em=NOW(),validado_por=:usuario WHERE id=:id")->execute([':usuario'=>$usuario,':id'=>$parecerId]);
         if($parecer['resultado']==='APROVADO'){
-            if(empty($analise['proposta_id'])||empty($analise['servico_id'])||empty($analise['vendedor_origem_id']))throw new RuntimeException('Vincule a origem comercial do processo legado antes de publicar uma nova licença.');
+            if(!empty($analise['legado_sem_proposta']) && (empty($analise['proposta_id'])||empty($analise['servico_id'])||empty($analise['vendedor_origem_id']))) {
+                throw new RuntimeException('Vincule a origem comercial do processo legado antes de publicar uma nova licença.');
+            }
             analiseAcaoCriarLicenca($pdo,$analise,$responsavel);
         }
         $pdo->prepare('UPDATE analises_planos SET status=:status WHERE id=:id')->execute([':status'=>$novoStatus,':id'=>$analiseId]);analisePlanosHistorico($pdo,$analiseId,'RELATORIO_CICLO_PUBLICADO','AGUARDANDO_APROVACAO_ADMIN',$novoStatus,$parecer['numero'].' publicado pelo admin.');analisePlanosAuditarNorma($pdo,$analiseId,'RELATORIO_CICLO_PUBLICADO','AGUARDANDO_APROVACAO_ADMIN',$novoStatus,$parecer['numero']);

@@ -177,35 +177,46 @@ $q=$pdo->prepare('SELECT ah.*,ua.nome analista_anterior_nome,un.nome analista_no
 $q=$pdo->prepare('SELECT id,numero_lc,tipo_licenca,status,assinado FROM certificados_lc WHERE analise_id=:id LIMIT 1');$q->execute([':id'=>$id]);$licenca=$q->fetch(PDO::FETCH_ASSOC);
 $analistas=$pdo->query("SELECT DISTINCT u.id,u.nome FROM usuarios u LEFT JOIN usuario_perfis p ON p.usuario_id=u.id WHERE u.ativo=1 AND u.excluido_em IS NULL AND (u.cargo='ANALISTA' OR p.perfil='ANALISTA') ORDER BY u.nome")->fetchAll(PDO::FETCH_ASSOC);
 $propostasLegado=[];$servicosLegado=[];$vendedoresLegado=[];
-if(getCargo()==='ADMIN'&&(empty($a['proposta_id'])||empty($a['servico_id'])||empty($a['vendedor_origem_id']))){
- $q=$pdo->prepare("SELECT id,numero FROM propostas WHERE cliente_id=:cliente AND status='assinada' ORDER BY data_emissao DESC,numero DESC LIMIT 100");$q->execute([':cliente'=>$a['solicitante_id']]);$propostasLegado=$q->fetchAll(PDO::FETCH_ASSOC);
- $servicosLegado=$pdo->query("SELECT id,nome,codigo_operacional FROM servicos WHERE ativo=1 AND codigo_operacional IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') ORDER BY nome")->fetchAll(PDO::FETCH_ASSOC);
- $vendedoresLegado=$pdo->query("SELECT id,nome FROM usuarios WHERE ativo=1 AND excluido_em IS NULL AND cargo='VENDEDOR' ORDER BY nome")->fetchAll(PDO::FETCH_ASSOC);
+$isLegadoBloqueado = !empty($a['legado_sem_proposta']) && (empty($a['proposta_id']) || empty($a['servico_id']) || empty($a['vendedor_origem_id']));
+if (getCargo() === 'ADMIN' && $isLegadoBloqueado) {
+    $q = $pdo->prepare("SELECT id,numero FROM propostas WHERE cliente_id=:cliente AND status='assinada' ORDER BY data_emissao DESC,numero DESC LIMIT 100");
+    $q->execute([':cliente' => $a['solicitante_id']]);
+    $propostasLegado = $q->fetchAll(PDO::FETCH_ASSOC);
+    $servicosLegado = $pdo->query("SELECT id,nome,codigo_operacional FROM servicos WHERE ativo=1 AND codigo_operacional IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') ORDER BY nome")->fetchAll(PDO::FETCH_ASSOC);
+    $vendedoresLegado = $pdo->query("SELECT id,nome FROM usuarios WHERE ativo=1 AND excluido_em IS NULL AND cargo='VENDEDOR' ORDER BY nome")->fetchAll(PDO::FETCH_ASSOC);
 }
 
-$cargo=getCargo();$usuario=(string)($_SESSION['usuario_id']??'');
-$podeTecnico=$cargo==='ANALISTA'&&$a['analista_id']===$usuario;
-$origemComercialCompleta=!empty($a['proposta_id'])&&!empty($a['servico_id'])&&!empty($a['vendedor_origem_id']);
-$podeAgenda=($cargo==='ADMIN'||($cargo==='VENDEDOR'&&$a['vendedor_origem_id']===$usuario)||($cargo==='ANALISTA'&&$a['analista_id']===$usuario))&&$origemComercialCompleta;
-$iniciada=!empty($a['iniciado_em'])||in_array($a['status'],['EM_ANALISE','AGUARDANDO_DOCUMENTOS','AGUARDANDO_ASSINATURA_ANALISTA','AGUARDANDO_APROVACAO_ADMIN','CONCLUIDA'],true);
-$tecnicoEditavel=$podeTecnico&&in_array($a['status'],['AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true);
-$analiseAberta=$podeTecnico&&in_array($a['status'],['EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true);
-$statusLabels=['AGUARDANDO_AGENDAMENTO'=>'Aguardando agendamento','AGENDADA'=>'Agendada','EM_ANALISE'=>'Em análise','AGUARDANDO_DOCUMENTOS'=>'Aguardando documentos','AGUARDANDO_ASSINATURA_ANALISTA'=>'Aguardando assinatura do analista','AGUARDANDO_APROVACAO_ADMIN'=>'Aguardando admin','CONCLUIDA'=>'Concluída','REPROVADA'=>'Reprovada','CANCELADA'=>'Cancelada'];
-$protocolos=[];if(podeAcessar('protocolos_documentais')){try{$q=$pdo->prepare('SELECT id,numero,assunto,status FROM protocolo_dossies WHERE analise_id=:id ORDER BY criado_em');$q->execute([':id'=>$id]);$protocolos=$q->fetchAll(PDO::FETCH_ASSOC);}catch(Throwable $e){}}
-$titulo_page=$a['numero'].' - Análise de Planos';
+$cargo = getCargo();
+$usuario = (string)($_SESSION['usuario_id'] ?? '');
+$podeTecnico = ($cargo === 'ANALISTA' && $a['analista_id'] === $usuario) || $cargo === 'ADMIN';
+$origemComercialCompleta = !empty($a['proposta_id']) && !empty($a['servico_id']) && !empty($a['vendedor_origem_id']);
+$podeAgenda = ($cargo === 'ADMIN' || ($cargo === 'VENDEDOR' && $a['vendedor_origem_id'] === $usuario) || ($cargo === 'ANALISTA' && $a['analista_id'] === $usuario)) && !$isLegadoBloqueado;
+$iniciada = !empty($a['iniciado_em']) || in_array($a['status'], ['EM_ANALISE','AGUARDANDO_DOCUMENTOS','AGUARDANDO_ASSINATURA_ANALISTA','AGUARDANDO_APROVACAO_ADMIN','CONCLUIDA'], true);
+$tecnicoEditavel = $podeTecnico && in_array($a['status'], ['AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS'], true);
+$analiseAberta = $podeTecnico && in_array($a['status'], ['EM_ANALISE','AGUARDANDO_DOCUMENTOS'], true);
+$statusLabels = ['AGUARDANDO_AGENDAMENTO'=>'Aguardando agendamento','AGENDADA'=>'Agendada','EM_ANALISE'=>'Em análise','AGUARDANDO_DOCUMENTOS'=>'Aguardando documentos','AGUARDANDO_ASSINATURA_ANALISTA'=>'Aguardando assinatura do analista','AGUARDANDO_APROVACAO_ADMIN'=>'Aguardando admin','CONCLUIDA'=>'Concluída','REPROVADA'=>'Reprovada','CANCELADA'=>'Cancelada'];
+$protocolos = [];
+if (podeAcessar('protocolos_documentais')) {
+    try {
+        $q = $pdo->prepare('SELECT id,numero,assunto,status FROM protocolo_dossies WHERE analise_id=:id ORDER BY criado_em');
+        $q->execute([':id'=>$id]);
+        $protocolos = $q->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {}
+}
+$titulo_page = $a['numero'] . ' - Análise de Planos';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 <div class="conteudo-principal analise-planos-page">
  <div class="form-container">
   <div class="form-header"><div><h3><i class="fas fa-drafting-compass"></i> <?=h($a['numero'])?></h3><small><?=h($a['proposta_numero'] ?: 'Processo histórico sem proposta')?> · <?=h($a['servico_nome'] ?: 'Serviço não vinculado')?></small></div><a class="btn btn-secondary btn-sm" href="<?=APP_URL?>analises-planos"><i class="fas fa-arrow-left"></i> Voltar</a></div>
-  <div class="analise-summary"><span><b>Situação</b><?=h($statusLabels[$a['status']]??$a['status'])?></span><span><b>Embarcação</b><?=h($a['embarcacao_nome'])?></span><span><b>Vendedor de origem</b><?=h($a['vendedor_origem_nome'] ?: 'Legado')?></span><span><b>Analista</b><?=h($a['analista_nome'] ?: 'Não atribuído')?></span><span><b>Prazo</b><?=!empty($a['prazo_agendado_em'])?formatarDataCompleta($a['prazo_agendado_em']):'Não agendado'?></span></div>
+  <div class="analise-summary"><span><b>Situação</b><?=h($statusLabels[$a['status']]??$a['status'])?></span><span><b>Embarcação</b><?=h($a['embarcacao_nome'])?></span><span><b>Vendedor de origem</b><?=h($a['vendedor_origem_nome'] ?: 'Legado / Direto')?></span><span><b>Analista</b><?=h($a['analista_nome'] ?: 'Não atribuído')?></span><span><b>Prazo</b><?=!empty($a['prazo_agendado_em'])?formatarDataCompleta($a['prazo_agendado_em']):'Não agendado'?></span></div>
  </div>
 
  <?php if(podeAcessar('protocolos_documentais')): ?><section class="analise-card"><h3><i class="fas fa-arrow-right-arrow-left"></i> Tramitação documental</h3><p>O protocolo registra custódia e envio; a baixa técnica das exigências continua sendo feita somente pelos relatórios de ciclo.</p><?php foreach($protocolos as $prot): ?><p><a href="<?= APP_URL ?>protocolos/form?id=<?= urlencode($prot['id']) ?>"><strong><?= h($prot['numero']) ?></strong> · <?= h($prot['assunto']) ?></a> <span class="badge"><?= h($prot['status']) ?></span></p><?php endforeach; ?><?php if(!$protocolos): ?><p class="text-muted">Nenhum dossiê vinculado.</p><?php endif; ?><a class="btn btn-secondary btn-sm" href="<?= APP_URL ?>protocolos/form?analise_id=<?= urlencode($id) ?>&embarcacao_id=<?= urlencode($a['embarcacao_id']) ?>"><i class="fas fa-plus"></i> Abrir protocolo deste processo</a></section><?php endif; ?>
 
- <?php if($cargo==='ADMIN'&&!$origemComercialCompleta):?>
+ <?php if($cargo==='ADMIN'&&$isLegadoBloqueado):?>
  <section class="analise-card"><h3><i class="fas fa-link"></i> Vincular origem do processo legado</h3>
-  <p class="alert alert-warning">Este processo foi preservado, mas não poderá ser agendado nem gerar uma nova licença até receber os vínculos comerciais.</p>
+  <p class="alert alert-warning">Este processo foi preservado da migração anterior, mas requer vínculo comercial antes de agendar ou gerar nova licença.</p>
   <form method="post" action="<?=APP_URL?>analises-planos/actions" class="analise-inline-form">
    <input type="hidden" name="csrf_token" value="<?=gerarCSRF()?>"><input type="hidden" name="action" value="vincular_legado"><input type="hidden" name="analise_id" value="<?=h($id)?>">
    <div><label>Proposta assinada *</label><select name="proposta_id" required><option value="">Selecione</option><?php foreach($propostasLegado as $p):?><option value="<?=h($p['id'])?>"><?=h($p['numero'])?></option><?php endforeach?></select></div>
