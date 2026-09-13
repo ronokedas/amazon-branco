@@ -46,27 +46,29 @@ if (!function_exists('isActive')) {
         <?php if (podeAcessar('portal_clientes')): ?><a href="<?= APP_URL ?>portal-clientes" class="nav-item<?= isActive('portal-clientes',$pagina_atual) ?>" data-label="Portal do Cliente"><i class="fa-solid fa-user-shield"></i><span class="nav-text">Portal do Cliente</span></a><?php endif; ?>
         <a href="<?= APP_URL ?>feedback" class="nav-item<?= strpos($pagina_atual,'feedback')===0?' active':'' ?>" data-label="Central de Feedback"><i class="fa-regular fa-comments"></i><span class="nav-text">Feedback</span></a>
 
-        <div class="nav-group-label">QUALIDADE</div>
-        <div class="nav-group">
-            <?php 
-            $sgqAtivo = strpos($pagina_atual, 'sgq') === 0 || strpos($pagina_atual, 'configuracoes/normam202') === 0;
-            ?>
-            <a href="#" class="nav-item<?= $sgqAtivo ? ' active' : '' ?>" data-label="Qualidade (SGQ)" onclick="this.parentElement.querySelector('.nav-submenu').classList.toggle('open');this.querySelector('.nav-chevron')?.classList.toggle('rotated');return false;">
-                <i class="fa-solid fa-award"></i>
-                <span class="nav-text">Qualidade (SGQ)</span>
-                <i class="fa-solid fa-chevron-down nav-chevron<?= $sgqAtivo ? ' rotated' : '' ?>"></i>
-            </a>
-            <div class="nav-submenu<?= $sgqAtivo ? ' open' : '' ?>">
-                <a href="<?= APP_URL ?>sgq/manual" class="nav-item nav-subitem<?= isActive('sgq/manual', $pagina_atual) ?>">Manual & Política SGQ</a>
-                <a href="<?= APP_URL ?>sgq/apresentacao" target="_blank" class="nav-item nav-subitem<?= isActive('sgq/apresentacao', $pagina_atual) ?>">Apresentação SGQ (PDF)</a>
-                <a href="<?= APP_URL ?>sgq/indicadores" class="nav-item nav-subitem<?= isActive('sgq/indicadores', $pagina_atual) ?>">Indicadores SGQ</a>
-                <a href="<?= APP_URL ?>sgq/nao-conformidades" class="nav-item nav-subitem<?= ($pagina_atual === 'sgq/nao-conformidades' && empty($_GET['origem'])) ? ' active' : '' ?>">Não Conformidades (RNC)</a>
-                <a href="<?= APP_URL ?>sgq/nao-conformidades?origem=RECLAMACAO_CLIENTE" class="nav-item nav-subitem<?= ($pagina_atual === 'sgq/nao-conformidades' && ($_GET['origem'] ?? '') === 'RECLAMACAO_CLIENTE') ? ' active' : '' ?>">Reclamações / Ouvidoria</a>
-                <a href="<?= APP_URL ?>sgq/riscos" class="nav-item nav-subitem<?= isActive('sgq/riscos', $pagina_atual) ?>">Gestão de Riscos (ISO 6.1)</a>
-                <a href="<?= APP_URL ?>configuracoes/normam202" class="nav-item nav-subitem<?= strpos($pagina_atual, 'configuracoes/normam202') === 0 ? ' active' : '' ?>">Exigências NORMAM-202</a>
-                <a href="<?= APP_URL ?>sgq/auditoria" class="nav-item nav-subitem<?= isActive('sgq/auditoria', $pagina_atual) ?>">Trilha de Auditoria</a>
+        <?php if (podeAcessar('sgq')): ?>
+            <div class="nav-group-label">QUALIDADE</div>
+            <div class="nav-group">
+                <?php 
+                $sgqAtivo = strpos($pagina_atual, 'sgq') === 0 || strpos($pagina_atual, 'configuracoes/normam202') === 0;
+                ?>
+                <a href="#" class="nav-item<?= $sgqAtivo ? ' active' : '' ?>" data-label="Qualidade (SGQ)" onclick="this.parentElement.querySelector('.nav-submenu').classList.toggle('open');this.querySelector('.nav-chevron')?.classList.toggle('rotated');return false;">
+                    <i class="fa-solid fa-award"></i>
+                    <span class="nav-text">Qualidade (SGQ)</span>
+                    <i class="fa-solid fa-chevron-down nav-chevron<?= $sgqAtivo ? ' rotated' : '' ?>"></i>
+                </a>
+                <div class="nav-submenu<?= $sgqAtivo ? ' open' : '' ?>">
+                    <a href="<?= APP_URL ?>sgq/manual" class="nav-item nav-subitem<?= isActive('sgq/manual', $pagina_atual) ?>">Manual & Política SGQ</a>
+                    <a href="<?= APP_URL ?>sgq/apresentacao" target="_blank" class="nav-item nav-subitem<?= isActive('sgq/apresentacao', $pagina_atual) ?>">Apresentação SGQ (PDF)</a>
+                    <a href="<?= APP_URL ?>sgq/indicadores" class="nav-item nav-subitem<?= isActive('sgq/indicadores', $pagina_atual) ?>">Indicadores SGQ</a>
+                    <a href="<?= APP_URL ?>sgq/nao-conformidades" class="nav-item nav-subitem<?= ($pagina_atual === 'sgq/nao-conformidades' && empty($_GET['origem'])) ? ' active' : '' ?>">Não Conformidades (RNC)</a>
+                    <a href="<?= APP_URL ?>sgq/nao-conformidades?origem=RECLAMACAO_CLIENTE" class="nav-item nav-subitem<?= ($pagina_atual === 'sgq/nao-conformidades' && ($_GET['origem'] ?? '') === 'RECLAMACAO_CLIENTE') ? ' active' : '' ?>">Reclamações / Ouvidoria</a>
+                    <a href="<?= APP_URL ?>sgq/riscos" class="nav-item nav-subitem<?= isActive('sgq/riscos', $pagina_atual) ?>">Gestão de Riscos (ISO 6.1)</a>
+                    <a href="<?= APP_URL ?>configuracoes/normam202" class="nav-item nav-subitem<?= strpos($pagina_atual, 'configuracoes/normam202') === 0 ? ' active' : '' ?>">Exigências NORMAM-202</a>
+                    <a href="<?= APP_URL ?>sgq/auditoria" class="nav-item nav-subitem<?= isActive('sgq/auditoria', $pagina_atual) ?>">Trilha de Auditoria</a>
+                </div>
             </div>
-        </div>
+        <?php endif; ?>
 
         <?php if (podeAcessar('configuracoes') || podeAcessar('usuarios')): ?>
             <div class="nav-group-label">CONFIGURAÇÕES</div>

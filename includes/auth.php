@@ -41,22 +41,56 @@ function temPerfil(string $perfil, ?string $usuarioId = null): bool {
     return in_array('ADMIN', $perfis, true) || in_array($perfil, $perfis, true);
 }
 
-/** Módulos iniciais recomendados para cada cargo. O administrador pode personalizar depois. */
+/** Lista canônica de todas as permissões granulares do sistema */
+function todasPermissoesSistema(): array {
+    return [
+        'dashboard',
+        'vistorias',
+        'agendamentos',
+        'analise_planos',
+        'relatorios_aprovacao',
+        'protocolos_documentais',
+        'certificados',
+        'documentacao',
+        'embarcacoes',
+        'armadores',
+        'proprietarios',
+        'despachantes',
+        'comercial',
+        'servicos',
+        'financeiro',
+        'emails',
+        'portal_clientes',
+        'relatorios',
+        'sgq',
+        'usuarios',
+        'configuracoes',
+        'responsaveis_assinatura',
+    ];
+}
+
+/** Módulos iniciais mínimos e essenciais para cada cargo naval. O administrador pode personalizar depois. */
 function permissoesPadraoCargo(string $cargo): array {
     return match ($cargo) {
-        'VENDEDOR' => ['dashboard', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'vistorias', 'agendamentos', 'analise_planos', 'comercial', 'servicos', 'emails'],
-        'VISTORIADOR' => ['dashboard', 'vistorias', 'embarcacoes', 'certificados', 'documentacao'],
-        'ANALISTA' => ['dashboard', 'vistorias', 'analise_planos'],
-        default => [],
+        'VISTORIADOR' => ['dashboard', 'vistorias', 'agendamentos', 'embarcacoes', 'documentacao'],
+        'ANALISTA' => ['dashboard', 'analise_planos', 'relatorios_aprovacao', 'protocolos_documentais', 'embarcacoes', 'armadores', 'proprietarios', 'vistorias', 'certificados', 'documentacao'],
+        'VENDEDOR' => ['dashboard', 'comercial', 'servicos', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails'],
+        'ADMIN' => todasPermissoesSistema(),
+        default => ['dashboard'],
     };
 }
 
-/** Ativa os padrões sem remover liberações adicionais feitas pelo administrador. */
+/** Inicializa as permissões no banco para o novo usuário com 1 para o padrão do cargo e 0 para os demais */
 function aplicarPermissoesPadraoUsuario(PDO $pdo, string $usuarioId, string $cargo): void {
     if ($cargo === 'ADMIN') return;
-    $stmt = $pdo->prepare('INSERT INTO usuario_permissoes (usuario_id, permissao, permitido) VALUES (:usuario_id, :permissao, 1) ON DUPLICATE KEY UPDATE permitido = 1');
-    foreach (permissoesPadraoCargo($cargo) as $permissao) {
-        $stmt->execute([':usuario_id' => $usuarioId, ':permissao' => $permissao]);
+    $padrao = permissoesPadraoCargo($cargo);
+    $stmt = $pdo->prepare('INSERT INTO usuario_permissoes (usuario_id, permissao, permitido) VALUES (:usuario_id, :permissao, :permitido) ON DUPLICATE KEY UPDATE permitido = VALUES(permitido)');
+    foreach (todasPermissoesSistema() as $permissao) {
+        $stmt->execute([
+            ':usuario_id' => $usuarioId,
+            ':permissao' => $permissao,
+            ':permitido' => in_array($permissao, $padrao, true) ? 1 : 0
+        ]);
     }
 }
 
