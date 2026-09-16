@@ -11,7 +11,14 @@ require_once __DIR__ . '/../../includes/auth.php';
 verificar_sessao();
 exigirAcesso('sgq');
 
-$action = trim((string)($_GET['action'] ?? ''));
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verificarCSRF($_POST['csrf_token'] ?? '')) {
+        setMensagem('error', 'Token de segurança inválido.');
+        redirecionar(APP_URL . 'sgq/riscos');
+    }
+}
+
+$action = trim((string)($_GET['action'] ?? ($_POST['action'] ?? '')));
 
 if (!function_exists('calcularNivelRisco')) {
     function calcularNivelRisco(int $prob, int $impacto): string {

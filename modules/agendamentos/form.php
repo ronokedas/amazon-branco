@@ -88,6 +88,18 @@ if (!$editando && $relatorioOrigemId !== '') {
     ]);
 }
 
+if (!$editando && empty($relatorioOrigemId)) {
+    if (!empty($_GET['cliente_id'])) {
+        $agendamento['cliente_id'] = trim((string)$_GET['cliente_id']);
+    }
+    if (!empty($_GET['embarcacao_id'])) {
+        $agendamento['embarcacao_id'] = trim((string)$_GET['embarcacao_id']);
+    }
+    if (!empty($_GET['tipo_vistoria'])) {
+        $agendamento['tipo_vistoria'] = trim((string)$_GET['tipo_vistoria']);
+    }
+}
+
 if ($editando) {
     if ($cargo === 'VISTORIADOR') {
         setMensagem('error', 'Acesso negado. Vistoriadores não podem editar agendamentos.');

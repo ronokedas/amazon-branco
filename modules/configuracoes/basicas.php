@@ -25,6 +25,7 @@ $categoriasPermissoes = [
             'relatorios_aprovacao' => ['Relatórios em Aprovação', 'Pareceres técnicos de vistorias pendentes'],
             'protocolos_documentais' => ['Protocolos Documentais', 'Dossiês, custódia e trâmite na Capitania'],
             'certificados' => ['Certificados', 'Consulta e emissão de certificados navais'],
+            'vencimentos_certificados' => ['Vencimentos Navais', 'Monitoramento e alerta de certificados a vencer'],
             'documentacao' => ['Documentação', 'Workspace de laudos, plantas e arquivos'],
         ]
     ],

@@ -225,6 +225,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <i class="fas fa-edit"></i>
                             </button>
                             <form method="POST" action="<?= APP_URL ?>sgq/riscos/actions?action=excluir" style="display: inline;" onsubmit="return confirm('Deseja realmente remover este risco da matriz?');">
+                                <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                                 <input type="hidden" name="id" value="<?= h($r['id']) ?>">
                                 <button type="submit" class="btn btn-sm btn-outline text-danger" title="Excluir">
                                     <i class="fas fa-trash"></i>
@@ -250,6 +251,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <button type="button" onclick="fecharModalRisco()" style="background: none; border: none; font-size: 1.4rem; color: var(--cor-texto-secundario); cursor: pointer;">&times;</button>
         </div>
         <form method="POST" action="<?= APP_URL ?>sgq/riscos/actions?action=salvar" style="padding: 20px;">
+            <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
             <input type="hidden" id="risco_id" name="id" value="">
 
             <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">

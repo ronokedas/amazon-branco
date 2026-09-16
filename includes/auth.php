@@ -51,6 +51,7 @@ function todasPermissoesSistema(): array {
         'relatorios_aprovacao',
         'protocolos_documentais',
         'certificados',
+        'vencimentos_certificados',
         'documentacao',
         'clientes',
         'embarcacoes',
@@ -98,9 +99,9 @@ function exigirAcessoOuSub(string $moduloPai, string $subModulo, string $destino
 /** Módulos iniciais mínimos e essenciais para cada cargo naval. O administrador pode personalizar depois. */
 function permissoesPadraoCargo(string $cargo): array {
     return match ($cargo) {
-        'VISTORIADOR' => ['dashboard', 'vistorias', 'agendamentos', 'clientes', 'embarcacoes', 'documentacao', 'configuracoes_normam202'],
-        'ANALISTA' => ['dashboard', 'analise_planos', 'relatorios_aprovacao', 'protocolos_documentais', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'vistorias', 'certificados', 'documentacao', 'configuracoes_normam202'],
-        'VENDEDOR' => ['dashboard', 'comercial', 'servicos', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails'],
+        'VISTORIADOR' => ['dashboard', 'vistorias', 'agendamentos', 'clientes', 'embarcacoes', 'documentacao', 'configuracoes_normam202', 'vencimentos_certificados'],
+        'ANALISTA' => ['dashboard', 'analise_planos', 'relatorios_aprovacao', 'protocolos_documentais', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'vistorias', 'certificados', 'vencimentos_certificados', 'documentacao', 'configuracoes_normam202'],
+        'VENDEDOR' => ['dashboard', 'comercial', 'servicos', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails', 'vencimentos_certificados'],
         'ADMIN' => todasPermissoesSistema(),
         default => ['dashboard'],
     };

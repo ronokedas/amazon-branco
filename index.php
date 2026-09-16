@@ -173,6 +173,7 @@ $rotas = [
     'documentacao/novo_certificado'     => 'modules/documentacao/novo_certificado.php',
     'documentacao/baixa_exigencias'     => 'modules/documentacao/baixa_exigencias.php',
     'certificados'                  => 'modules/certificados/index.php',
+    'certificados/vencimentos'      => 'modules/certificados/vencimentos.php',
     'certificados/wizard'           => 'modules/certificados/wizard.php',
     'certificados/wizard_step2'     => 'modules/certificados/wizard_step2.php',
     'servicos'                      => 'modules/servicos/index.php',
@@ -295,13 +296,16 @@ if (strpos($path, 'api/campo/v1') === 0) {
         'autenticidade' => 'documentacao', 'autenticidade/aprovar' => 'documentacao', 'autenticidade/cancelar' => 'documentacao',
         'documentacao' => 'documentacao', 'documentacao/aprovacao_relatorios' => 'relatorios_aprovacao',
         'certificados' => 'certificados',
+        'certificados/vencimentos' => 'vencimentos_certificados',
         'sgq/manual' => 'sgq', 'sgq/apresentacao' => 'sgq', 'sgq/indicadores' => 'sgq',
         'sgq/nao-conformidades' => 'sgq', 'sgq/nao-conformidades/actions' => 'sgq',
         'sgq/auditoria' => 'sgq', 'sgq/riscos' => 'sgq', 'sgq/riscos/actions' => 'sgq',
     ];
     $permissao_rota = $permissoes_rota[$path] ?? null;
     if (strpos($path, 'documentacao/') === 0 && $path !== 'documentacao/aprovacao_relatorios') $permissao_rota = 'documentacao';
-    if (strpos($path, 'certificados/') === 0) $permissao_rota = 'certificados';
+    if (strpos($path, 'certificados/') === 0) {
+        $permissao_rota = ($path === 'certificados/vencimentos') ? 'vencimentos_certificados' : 'certificados';
+    }
     if (strpos($path, 'sgq') === 0) $permissao_rota = 'sgq';
     if ($permissao_rota !== null && !podeAcessar($permissao_rota)) {
         setMensagem('error', 'Acesso negado para este módulo.');

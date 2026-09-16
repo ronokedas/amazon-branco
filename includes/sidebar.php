@@ -122,6 +122,12 @@ if (!function_exists('isActive')) {
                     <span class="nav-text">Certificados</span>
                 </a>
             <?php endif; ?>
+            <?php if (podeAcessar('vencimentos_certificados')): ?>
+                <a href="<?= APP_URL ?>certificados/vencimentos" class="nav-item<?= isActive('certificados/vencimentos',$pagina_atual) ?>" data-label="Vencimentos Navais">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span class="nav-text">Vencimentos Navais</span>
+                </a>
+            <?php endif; ?>
             <?php if (podeAcessar('documentacao')): ?>
                 <div class="nav-group">
                     <a href="#" class="nav-item<?= (strpos($pagina_atual,'documentacao')===0 && strpos($pagina_atual,'documentacao/aprovacao_relatorios')===false) ? ' active' : '' ?>" data-label="Modelos Estatutários" onclick="this.parentElement.querySelector('.nav-submenu').classList.toggle('open');this.querySelector('.nav-chevron')?.classList.toggle('rotated');return false;">
