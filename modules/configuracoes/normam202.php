@@ -16,6 +16,70 @@ $titulo_page = 'Catálogo de Exigências NORMAM-202 - Configurações';
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 
+// =========================================================================
+// AUTO-HEALING: Garantir estrutura e colunas para VPS e produção
+// =========================================================================
+try {
+    // 1. Tabela de categorias
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `exigencias_categorias` (
+      `id` char(36) NOT NULL,
+      `nome` varchar(100) NOT NULL,
+      `descricao` text,
+      `ativo` tinyint(1) DEFAULT '1',
+      `criado_em` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    $totalCat = (int)$pdo->query("SELECT COUNT(*) FROM exigencias_categorias")->fetchColumn();
+    if ($totalCat === 0) {
+        $pdo->exec("INSERT IGNORE INTO `exigencias_categorias` (`id`, `nome`) VALUES 
+            ('65bf89f0-f44d-4746-89f7-f530c9aa990d', 'Praça de Máquinas'),
+            ('71c05e83-0d67-4137-b2b7-478c4241a057', 'Casco, Estrutura e Porão'),
+            ('9755fe45-1e6f-4fa7-b589-942d8a6f07d2', 'Habitabilidade e Cozinha'),
+            ('9e81f468-422b-40e4-8bf8-40b60a027a36', 'Sistemas de Propulsão e Governo'),
+            ('a5f25230-91c9-4e14-aa33-e83524d5d943', 'Combate a Incêndio'),
+            ('aa4a7f0d-004d-4a60-924e-693335fdd69b', 'Documentação e Certificados'),
+            ('b2aca3e2-50a9-4086-a7bf-aea8bbfd9a0d', 'Salvatagem e Segurança'),
+            ('b8ed9a31-9fa3-492f-904e-b8158a06d0da', 'Setor Elétrico'),
+            ('e70f7906-4e9d-4367-b10a-2ad2a007817a', 'Sistemas de Navegação e Comando'),
+            ('f299c8c7-4402-4efa-89c6-d5add1fa60d5', 'Rádio e Comunicações');");
+    }
+
+    // 2. Tabela principal de catálogo
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `exigencias_catalogo` (
+      `id` char(36) NOT NULL DEFAULT (uuid()),
+      `codigo_interno` varchar(50) DEFAULT NULL,
+      `categoria_id` char(36) DEFAULT NULL,
+      `descricao` text NOT NULL,
+      `item_normam` varchar(200) DEFAULT NULL,
+      `bloco_vistoria` enum('seco','flutuando','borda_livre','arqueacao') DEFAULT NULL,
+      `tipo_vistoria` enum('seco','flutuando','borda_livre','arqueacao') DEFAULT NULL,
+      `prazo_padrao_dias` int DEFAULT NULL,
+      `ativo` tinyint(1) NOT NULL DEFAULT '1',
+      `obrigatoria` tinyint(1) NOT NULL DEFAULT '0',
+      `exige_foto` tinyint(1) NOT NULL DEFAULT '0',
+      `ordem_exibicao` int NOT NULL DEFAULT '0',
+      `criado_em` datetime DEFAULT CURRENT_TIMESTAMP,
+      `atualizado_em` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (`id`),
+      UNIQUE KEY `uk_exigencias_codigo_interno` (`codigo_interno`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    // 3. Garantir colunas adicionais na tabela existente (migration 094)
+    $colunasExistentes = $pdo->query("SHOW COLUMNS FROM exigencias_catalogo")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('obrigatoria', $colunasExistentes)) {
+        $pdo->exec("ALTER TABLE `exigencias_catalogo` ADD COLUMN `obrigatoria` TINYINT(1) NOT NULL DEFAULT 0 AFTER `ativo`");
+    }
+    if (!in_array('exige_foto', $colunasExistentes)) {
+        $pdo->exec("ALTER TABLE `exigencias_catalogo` ADD COLUMN `exige_foto` TINYINT(1) NOT NULL DEFAULT 0 AFTER `obrigatoria`");
+    }
+    if (!in_array('ordem_exibicao', $colunasExistentes)) {
+        $pdo->exec("ALTER TABLE `exigencias_catalogo` ADD COLUMN `ordem_exibicao` INT NOT NULL DEFAULT 0 AFTER `exige_foto`");
+    }
+} catch (Throwable $eAuto) {
+    error_log("Aviso Auto-healing NORMAM-202: " . $eAuto->getMessage());
+}
+
 // Filtros da consulta
 $filtro_busca = trim($_GET['busca'] ?? '');
 $filtro_categoria = trim($_GET['categoria_id'] ?? '');
@@ -23,14 +87,24 @@ $filtro_bloco = trim($_GET['bloco'] ?? '');
 $filtro_tipo = trim($_GET['tipo'] ?? ''); // 'todas', 'obrigatorias', 'fotos', 'inativas'
 
 // Obter categorias para os filtros e modal
-$stmtCategorias = $pdo->query("SELECT id, nome FROM exigencias_categorias ORDER BY nome ASC");
-$categorias = $stmtCategorias->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmtCategorias = $pdo->query("SELECT id, nome FROM exigencias_categorias ORDER BY nome ASC");
+    $categorias = $stmtCategorias ? $stmtCategorias->fetchAll(PDO::FETCH_ASSOC) : [];
+} catch (Throwable $eCat) {
+    error_log("Erro categorias NORMAM: " . $eCat->getMessage());
+    $categorias = [];
+}
 
 // Métricas do Topo
-$totalGeral = (int)$pdo->query("SELECT COUNT(*) FROM exigencias_catalogo")->fetchColumn();
-$totalAtivas = (int)$pdo->query("SELECT COUNT(*) FROM exigencias_catalogo WHERE ativo = 1")->fetchColumn();
-$totalObrigatorias = (int)$pdo->query("SELECT COUNT(*) FROM exigencias_catalogo WHERE ativo = 1 AND obrigatoria = 1")->fetchColumn();
-$totalExigeFoto = (int)$pdo->query("SELECT COUNT(*) FROM exigencias_catalogo WHERE ativo = 1 AND exige_foto = 1")->fetchColumn();
+try {
+    $totalGeral = (int)$pdo->query("SELECT COUNT(*) FROM exigencias_catalogo")->fetchColumn();
+    $totalAtivas = (int)$pdo->query("SELECT COUNT(*) FROM exigencias_catalogo WHERE ativo = 1")->fetchColumn();
+    $totalObrigatorias = (int)$pdo->query("SELECT COUNT(*) FROM exigencias_catalogo WHERE ativo = 1 AND obrigatoria = 1")->fetchColumn();
+    $totalExigeFoto = (int)$pdo->query("SELECT COUNT(*) FROM exigencias_catalogo WHERE ativo = 1 AND exige_foto = 1")->fetchColumn();
+} catch (Throwable $eMetricas) {
+    error_log("Erro métricas NORMAM: " . $eMetricas->getMessage());
+    $totalGeral = $totalAtivas = $totalObrigatorias = $totalExigeFoto = 0;
+}
 
 // Montar Query de Busca
 $where = ["1 = 1"];
@@ -65,18 +139,38 @@ if (!empty($filtro_bloco)) {
     $params[':bloco'] = $filtro_bloco;
 }
 
-$sql = "SELECT e.*, c.nome AS categoria_nome 
-        FROM exigencias_catalogo e
-        LEFT JOIN exigencias_categorias c ON e.categoria_id = c.id
-        WHERE " . implode(" AND ", $where) . "
-        ORDER BY e.obrigatoria DESC, e.exige_foto DESC, e.codigo_interno ASC";
+$erroConsulta = null;
+try {
+    $sql = "SELECT e.*, c.nome AS categoria_nome 
+            FROM exigencias_catalogo e
+            LEFT JOIN exigencias_categorias c ON e.categoria_id = c.id
+            WHERE " . implode(" AND ", $where) . "
+            ORDER BY e.obrigatoria DESC, e.exige_foto DESC, e.codigo_interno ASC";
 
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$exigencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $exigencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $eQuery) {
+    error_log("Erro consulta exigencias NORMAM: " . $eQuery->getMessage());
+    $erroConsulta = $eQuery->getMessage();
+    // Fallback simples sem ordenação por colunas extras se ainda der erro
+    try {
+        $sqlFallback = "SELECT e.*, '' AS categoria_nome FROM exigencias_catalogo e LIMIT 50";
+        $exigencias = $pdo->query($sqlFallback)->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $eFb) {
+        $exigencias = [];
+    }
+}
 ?>
 
 <div class="conteudo-principal" style="padding: 24px; max-width: 1400px; margin: 0 auto;">
+
+    <?php if (!empty($erroConsulta)): ?>
+    <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 14px 18px; border-radius: 8px; margin-bottom: 20px; font-size: 0.88rem; display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span><strong>Aviso de Sincronização:</strong> Houve uma divergência nas colunas do banco (<?= h($erroConsulta) ?>). O sistema aplicou a auto-recuperação de tabelas e colunas. Recarregue a página se os dados não aparecerem imediatamente.</span>
+    </div>
+    <?php endif; ?>
 
     <!-- Cabeçalho Principal -->
     <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
