@@ -8,9 +8,11 @@ FROM protocolo_movimentacoes m JOIN protocolo_dossies d ON d.id=m.dossie_id JOIN
 $q->execute([':id'=>$movId]);$m=$q->fetch(PDO::FETCH_ASSOC);if(!$m)throw new RuntimeException('Movimentação não encontrada.');
 if(!$interno&&!protocoloUsuarioPodeAcessar($pdo,$m)){http_response_code(403);exit('Acesso negado.');}
 if(!$interno&&!in_array($m['status'],['CONFIRMADA','RETIFICADA'],true)){http_response_code(409);exit('O PDF somente existe após a confirmação.');}
-if(!$interno&&$m['pdf_caminho']){
- $f=dirname(__DIR__,2).'/'.$m['pdf_caminho'];if(is_file($f)&&$m['pdf_hash']&&hash_equals($m['pdf_hash'],hash_file('sha256',$f))){header('Content-Type: application/pdf');header('Content-Length: '.filesize($f));header('Content-Disposition: inline; filename="'.$m['dossie_numero'].'-'.str_pad((string)$m['sequencia'],2,'0',STR_PAD_LEFT).'.pdf"');readfile($f);exit;}
- http_response_code(410);exit('PDF congelado indisponível ou com integridade inválida.');
+if(!$interno&&!empty($m['pdf_caminho'])){
+ $f=dirname(__DIR__,2).'/'.$m['pdf_caminho'];
+ if(@is_file($f)&&@is_readable($f)&&!empty($m['pdf_hash'])&&@hash_equals($m['pdf_hash'],(string)@hash_file('sha256',$f))){
+  header('Content-Type: application/pdf');header('Content-Length: '.filesize($f));header('Content-Disposition: inline; filename="'.$m['dossie_numero'].'-'.str_pad((string)$m['sequencia'],2,'0',STR_PAD_LEFT).'.pdf"');readfile($f);exit;
+ }
 }
 $itens=protocoloSnapshot($pdo,$movId);$codigo=strtoupper(substr(hash('sha256',$m['dossie_numero'].'|'.$m['sequencia'].'|'.json_encode($itens)),0,20));
 require_once __DIR__.'/../../vendor/autoload.php';
@@ -29,5 +31,18 @@ $html='<style>body{font-family:helvetica;color:#173b32;font-size:9.5pt}h1{font-s
 <table class="sign" width="100%"><tr><td width="45%">Responsável pela entrega</td><td width="10%"></td><td width="45%">Responsável pelo recebimento</td></tr></table>
 <p class="code">Código de validação: '.$codigo.'<br>Documento gerado pelo sistema Amazon Naval. Após a confirmação, conteúdo, relação documental e hash ficam imutáveis.</p>';
 $pdf->writeHTML($html,true,false,true,false,'');
-if($interno){$pdf->Output($salvar_pdf_caminho,'F');return;}
+if($interno){
+ $pdf->Output($salvar_pdf_caminho,'F');
+ @chmod($salvar_pdf_caminho, 0666);
+ return;
+}
+if(!empty($m['pdf_caminho'])){
+ $f=dirname(__DIR__,2).'/'.$m['pdf_caminho'];
+ $dir=dirname($f);
+ if(!is_dir($dir)){@mkdir($dir,0777,true);@chmod($dir,0777);}
+ if(is_dir($dir)&&is_writable($dir)){
+  @$pdf->Output($f,'F');
+  @chmod($f,0666);
+ }
+}
 $pdf->Output($m['dossie_numero'].'-'.str_pad((string)$m['sequencia'],2,'0',STR_PAD_LEFT).'.pdf','I');exit;

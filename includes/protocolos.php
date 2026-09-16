@@ -129,7 +129,7 @@ function protocoloValidarArquivo(array $arquivo):array
 function protocoloGuardarArquivo(array $arquivo,array $meta,string $dossieId):string
 {
     $rel='storage/protocolos/'.date('Y').'/'.$dossieId.'/'.bin2hex(random_bytes(16)).'.'.$meta['ext'];
-    $abs=dirname(__DIR__).'/'.$rel;if(!is_dir(dirname($abs))&&!mkdir(dirname($abs),0750,true)&&!is_dir(dirname($abs)))throw new RuntimeException('Não foi possível preparar o armazenamento.');
+    $abs=dirname(__DIR__).'/'.$rel;if(!is_dir(dirname($abs))){@mkdir(dirname($abs),0777,true);@chmod(dirname($abs),0777);}
     if(!move_uploaded_file($arquivo['tmp_name'],$abs))throw new RuntimeException('Não foi possível guardar o documento.');
     return $rel;
 }
