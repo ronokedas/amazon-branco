@@ -53,28 +53,28 @@ if (!class_exists('ComprovanteProtocoloPdf')) {
         public function Header(): void
         {
             if ($this->logoPath !== '' && is_file($this->logoPath)) {
-                $this->Image($this->logoPath, 14, 8, 20, 0, 'PNG', '', '', true, 200);
+                $this->Image($this->logoPath, 14, 6.5, 17.5, 0, 'PNG', '', '', true, 200);
             }
             $this->SetTextColor(8, 118, 83);
             $this->SetFont('helvetica', 'B', 12);
-            $this->SetXY(37, 9);
+            $this->SetXY(35, 7.0);
             $this->Cell(100, 5, 'AMAZON NAVAL', 0, 1, 'L');
             $this->SetTextColor(50, 75, 68);
             $this->SetFont('helvetica', '', 7.5);
-            $this->SetX(37);
+            $this->SetX(35);
             $this->Cell(100, 4, 'SERVIÇOS DE ENGENHARIA NAVAL & CONSULTORIA', 0, 1, 'L');
             $this->SetFont('helvetica', 'I', 7);
             $this->SetTextColor(85, 110, 102);
-            $this->SetX(37);
+            $this->SetX(35);
             $this->Cell(100, 3.5, 'Controle de Tramitação Documental e Custódia Naval', 0, 1, 'L');
 
             // Badge no canto direito
-            $this->SetXY(138, 8);
+            $this->SetXY(138, 6.5);
             $this->SetFillColor(240, 247, 244);
             $this->SetDrawColor(184, 217, 204);
             $this->SetLineWidth(0.3);
-            $this->RoundedRect(138, 8, 58, 15, 1.5, '1111', 'DF');
-            $this->SetXY(138, 9);
+            $this->RoundedRect(138, 6.5, 58, 16, 1.5, '1111', 'DF');
+            $this->SetXY(138, 7.5);
             $this->SetFont('helvetica', 'B', 6.5);
             $this->SetTextColor(8, 118, 83);
             $this->Cell(58, 3.5, 'COMPROVANTE OFICIAL · EVENTO #' . $this->sequenciaFormatada, 0, 1, 'C');
@@ -90,7 +90,7 @@ if (!class_exists('ComprovanteProtocoloPdf')) {
             // Linha verde inferior do cabeçalho
             $this->SetDrawColor(8, 118, 83);
             $this->SetLineWidth(0.6);
-            $this->Line(14, 26, 196, 26);
+            $this->Line(14, 26.5, 196, 26.5);
         }
 
         public function Footer(): void
@@ -119,7 +119,7 @@ $pdf->sequenciaFormatada = $seqFormatada;
 $pdf->codigoValida = $codigo;
 $pdf->logoPath = $logoPath;
 
-$pdf->SetMargins(14, 30, 14);
+$pdf->SetMargins(14, 30.5, 14);
 $pdf->SetHeaderMargin(6);
 $pdf->SetFooterMargin(10);
 $pdf->SetAutoPageBreak(true, 18);
