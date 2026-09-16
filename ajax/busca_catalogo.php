@@ -14,8 +14,13 @@ if (strlen($termo) < 2) {
 }
 
 try {
-    $sql = "SELECT id, titulo, descricao, item_normam FROM exigencias_catalogo WHERE (titulo LIKE :q OR descricao LIKE :q OR item_normam LIKE :q)";
-    $params = [':q' => '%' . $termo . '%'];
+    $sql = "SELECT id, titulo, descricao, item_normam FROM exigencias_catalogo WHERE (titulo LIKE :q1 OR descricao LIKE :q2 OR item_normam LIKE :q3)";
+    $busca = '%' . $termo . '%';
+    $params = [
+        ':q1' => $busca,
+        ':q2' => $busca,
+        ':q3' => $busca,
+    ];
     
     if (!empty($bloco)) {
         $sql .= " AND bloco_vistoria = :bloco";

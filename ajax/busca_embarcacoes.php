@@ -21,13 +21,17 @@ try {
                 LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND ce.status='ATIVO'
                 WHERE e.ativo = 1
                   AND (
-                    ce.cliente_id = :cliente_id
-                    OR e.cliente_id = :cliente_id
-                    OR e.proprietario_id = :cliente_id
+                    ce.cliente_id = :cliente_id1
+                    OR e.cliente_id = :cliente_id2
+                    OR e.proprietario_id = :cliente_id3
                   )
                 ORDER BY e.nome ASC";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([':cliente_id' => $cliente_id]);
+        $stmt->execute([
+            ':cliente_id1' => $cliente_id,
+            ':cliente_id2' => $cliente_id,
+            ':cliente_id3' => $cliente_id,
+        ]);
     } else {
         $sql = "SELECT id, nome, registro
                 FROM embarcacoes

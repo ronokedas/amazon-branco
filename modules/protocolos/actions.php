@@ -15,8 +15,8 @@ try{
   if(getCargo()!=='ADMIN'){
    $permitido=false;$uid=(string)$_SESSION['usuario_id'];
    if($proposta){$q=$pdo->prepare('SELECT 1 FROM propostas p JOIN propostas_embarcacoes pe ON pe.proposta_id=p.id WHERE p.id=:id AND pe.embarcacao_id=:emb AND p.criado_por=:u');$q->execute([':id'=>$proposta,':emb'=>$emb,':u'=>$uid]);$permitido=(bool)$q->fetchColumn();}
-   if(!$permitido&&$analise){$q=$pdo->prepare('SELECT 1 FROM analises_planos WHERE id=:id AND embarcacao_id=:emb AND (analista_id=:u OR vendedor_origem_id=:u)');$q->execute([':id'=>$analise,':emb'=>$emb,':u'=>$uid]);$permitido=(bool)$q->fetchColumn();}
-   if(!$permitido&&$vistoria){$q=$pdo->prepare('SELECT 1 FROM vistorias v JOIN agendamentos a ON a.id=v.agendamento_id WHERE v.id=:id AND v.embarcacao_id=:emb AND (a.vistoriador_id=:u OR a.vendedor_id=:u)');$q->execute([':id'=>$vistoria,':emb'=>$emb,':u'=>$uid]);$permitido=(bool)$q->fetchColumn();}
+   if(!$permitido&&$analise){$q=$pdo->prepare('SELECT 1 FROM analises_planos WHERE id=:id AND embarcacao_id=:emb AND (analista_id=:u1 OR vendedor_origem_id=:u2)');$q->execute([':id'=>$analise,':emb'=>$emb,':u1'=>$uid,':u2'=>$uid]);$permitido=(bool)$q->fetchColumn();}
+   if(!$permitido&&$vistoria){$q=$pdo->prepare('SELECT 1 FROM vistorias v JOIN agendamentos a ON a.id=v.agendamento_id WHERE v.id=:id AND v.embarcacao_id=:emb AND (a.vistoriador_id=:u1 OR a.vendedor_id=:u2)');$q->execute([':id'=>$vistoria,':emb'=>$emb,':u1'=>$uid,':u2'=>$uid]);$permitido=(bool)$q->fetchColumn();}
    if(!$permitido)throw new RuntimeException('Vincule um processo ao qual você já possui acesso.');
   }
   $unidade=trim($_POST['unidade_maritima_id']??'')?:null;

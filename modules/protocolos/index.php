@@ -23,13 +23,21 @@ $p = [];
 $uid = (string)($_SESSION['usuario_id'] ?? '');
 
 if (getCargo() !== 'ADMIN') {
-    $where[] = '(d.criado_por=:uid OR EXISTS(SELECT 1 FROM propostas px WHERE px.id=d.proposta_id AND px.criado_por=:uid) OR EXISTS(SELECT 1 FROM analises_planos ax WHERE ax.id=d.analise_id AND ax.analista_id=:uid) OR EXISTS(SELECT 1 FROM vistorias vx JOIN agendamentos gx ON gx.id=vx.agendamento_id WHERE vx.id=d.vistoria_id AND gx.vistoriador_id=:uid))';
-    $p[':uid'] = $uid;
+    $where[] = '(d.criado_por = :uid1 OR EXISTS(SELECT 1 FROM propostas px WHERE px.id=d.proposta_id AND px.criado_por = :uid2) OR EXISTS(SELECT 1 FROM analises_planos ax WHERE ax.id=d.analise_id AND ax.analista_id = :uid3) OR EXISTS(SELECT 1 FROM vistorias vx JOIN agendamentos gx ON gx.id=vx.agendamento_id WHERE vx.id=d.vistoria_id AND gx.vistoriador_id = :uid4))';
+    $p[':uid1'] = $uid;
+    $p[':uid2'] = $uid;
+    $p[':uid3'] = $uid;
+    $p[':uid4'] = $uid;
 }
 
 if ($f['busca'] !== '') {
-    $where[] = '(d.numero LIKE :b OR d.assunto LIKE :b OR d.protocolo_externo_numero LIKE :b OR e.nome LIKE :b OR c.nome LIKE :b)';
-    $p[':b'] = '%' . $f['busca'] . '%';
+    $where[] = '(d.numero LIKE :b1 OR d.assunto LIKE :b2 OR d.protocolo_externo_numero LIKE :b3 OR e.nome LIKE :b4 OR c.nome LIKE :b5)';
+    $termoBusca = '%' . $f['busca'] . '%';
+    $p[':b1'] = $termoBusca;
+    $p[':b2'] = $termoBusca;
+    $p[':b3'] = $termoBusca;
+    $p[':b4'] = $termoBusca;
+    $p[':b5'] = $termoBusca;
 }
 
 $labels = protocoloRotulosStatus();

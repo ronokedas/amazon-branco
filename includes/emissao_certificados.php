@@ -174,8 +174,9 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
     $clienteId = $dados['cliente_id'] ?? $dadosEmb['cliente_id'] ?? $dadosEmb['proprietario_id'] ?? null;
 
     if (empty($embarcacaoId) && !empty($dados['numero_inscricao'])) {
-        $stmtInsc = $pdo->prepare("SELECT id, proprietario_id FROM embarcacoes WHERE numero_inscricao = :insc OR registro = :insc LIMIT 1");
-        $stmtInsc->execute([':insc' => trim((string)$dados['numero_inscricao'])]);
+        $stmtInsc = $pdo->prepare("SELECT id, proprietario_id FROM embarcacoes WHERE numero_inscricao = :insc1 OR registro = :insc2 LIMIT 1");
+        $inscVal = trim((string)$dados['numero_inscricao']);
+        $stmtInsc->execute([':insc1' => $inscVal, ':insc2' => $inscVal]);
         $rowInsc = $stmtInsc->fetch(PDO::FETCH_ASSOC);
         if ($rowInsc) {
             $embarcacaoId = $rowInsc['id'];

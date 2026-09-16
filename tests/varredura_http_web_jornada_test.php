@@ -14,13 +14,15 @@ function httpReq(string $metodo, string $path, array $dados = [], bool $limparSe
         $cookieSessao = '';
     }
 
-    $url = str_starts_with($path, 'http') ? $path : ('http://localhost' . $path);
+    $url = str_starts_with($path, 'http') ? $path : ('http://127.0.0.1' . $path);
+    $url = str_replace('localhost:8082', '127.0.0.1', $url);
     $url = str_replace(':8082', '', $url);
 
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+    curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
     curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     curl_setopt($ch, CURLOPT_HEADER, true);
 
@@ -34,11 +36,12 @@ function httpReq(string $metodo, string $path, array $dados = [], bool $limparSe
     }
 
     $response = curl_exec($ch);
+    $curlErr = curl_error($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 
-    $headers = substr($response, 0, $headerSize);
-    $body = substr($response, $headerSize);
+    $headers = substr((string)$response, 0, $headerSize);
+    $body = substr((string)$response, $headerSize);
     curl_close($ch);
 
     // Capturar novo cookie se emitido
@@ -63,13 +66,15 @@ function httpReq(string $metodo, string $path, array $dados = [], bool $limparSe
 }
 
 function httpReqSemSessao(string $metodo, string $path, array $dados = []): array {
-    $url = str_starts_with($path, 'http') ? $path : ('http://localhost' . $path);
+    $url = str_starts_with($path, 'http') ? $path : ('http://127.0.0.1' . $path);
+    $url = str_replace('localhost:8082', '127.0.0.1', $url);
     $url = str_replace(':8082', '', $url);
 
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
     curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     curl_setopt($ch, CURLOPT_HEADER, true);
 

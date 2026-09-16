@@ -153,8 +153,8 @@ if ($action === 'salvar') {
         }
     }
     if (empty($embarcacao_id) && !empty($numero_inscricao)) {
-        $stmtEmbInsc = $pdo->prepare("SELECT id, proprietario_id FROM embarcacoes WHERE numero_inscricao = :insc OR registro = :insc LIMIT 1");
-        $stmtEmbInsc->execute([':insc' => $numero_inscricao]);
+        $stmtEmbInsc = $pdo->prepare("SELECT id, proprietario_id FROM embarcacoes WHERE numero_inscricao = :insc1 OR registro = :insc2 LIMIT 1");
+        $stmtEmbInsc->execute([':insc1' => $numero_inscricao, ':insc2' => $numero_inscricao]);
         $rowEmbInsc = $stmtEmbInsc->fetch(PDO::FETCH_ASSOC);
         if ($rowEmbInsc) {
             $embarcacao_id = $rowEmbInsc['id'];
