@@ -105,6 +105,105 @@ $titulo_page = 'Protocolos documentais - ERP';
 require __DIR__ . '/../../includes/header.php';
 require __DIR__ . '/../../includes/sidebar.php';
 ?>
+<style>
+/* Ações da Tabela de Protocolos */
+.prot-table-actions {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    white-space: nowrap !important;
+}
+
+#tabela-protocolos td:last-child .prot-btn-action,
+.prot-table-actions .prot-btn-action {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    width: auto !important;
+    min-width: auto !important;
+    padding: 0 14px !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
+    transition: all 0.18s ease-in-out !important;
+    box-shadow: none !important;
+}
+
+/* WhatsApp: botão oficial verde */
+#tabela-protocolos td:last-child .prot-btn-whatsapp,
+.prot-table-actions .prot-btn-whatsapp {
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    background: #25d366 !important;
+    border: 1px solid #20ba5a !important;
+    color: #ffffff !important;
+    font-size: 1.15rem !important;
+    box-shadow: 0 2px 6px rgba(37, 211, 102, 0.25) !important;
+}
+#tabela-protocolos td:last-child .prot-btn-whatsapp:hover,
+.prot-table-actions .prot-btn-whatsapp:hover {
+    background: #1eb857 !important;
+    border-color: #1eb857 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.45) !important;
+}
+
+/* PDF Consolidado: botão limpo com ícone clássico de PDF */
+#tabela-protocolos td:last-child .prot-btn-pdf,
+.prot-table-actions .prot-btn-pdf {
+    background: rgba(148, 163, 184, 0.14) !important;
+    border: 1px solid rgba(148, 163, 184, 0.35) !important;
+    color: var(--text-primary, #334155) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+#tabela-protocolos td:last-child .prot-btn-pdf i,
+.prot-table-actions .prot-btn-pdf i {
+    color: #e11d48 !important;
+    font-size: 0.95rem !important;
+}
+#tabela-protocolos td:last-child .prot-btn-pdf:hover,
+.prot-table-actions .prot-btn-pdf:hover {
+    background: rgba(148, 163, 184, 0.25) !important;
+    border-color: rgba(148, 163, 184, 0.5) !important;
+    color: var(--text-primary, #0f172a) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Abrir Dossiê: botão primário verde naval */
+#tabela-protocolos td:last-child .prot-btn-abrir,
+.prot-table-actions .prot-btn-abrir {
+    background: #087653 !important;
+    border: 1px solid #087653 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(8, 118, 83, 0.25) !important;
+}
+#tabela-protocolos td:last-child .prot-btn-abrir i,
+.prot-table-actions .prot-btn-abrir i {
+    color: #ffffff !important;
+}
+#tabela-protocolos td:last-child .prot-btn-abrir:hover,
+.prot-table-actions .prot-btn-abrir:hover {
+    background: #065b40 !important;
+    border-color: #065b40 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(8, 118, 83, 0.4) !important;
+}
+</style>
 <main class="conteudo-principal">
     <!-- Cabeçalho da Página -->
     <div class="prot-page-header">
@@ -266,7 +365,7 @@ require __DIR__ . '/../../includes/sidebar.php';
                         <th style="padding: 14px 16px;">Situação Atual</th>
                         <th style="padding: 14px 16px;">Destino & Processo Marinha</th>
                         <th style="padding: 14px 16px;">Responsável & Data</th>
-                        <th style="padding: 14px 16px; text-align: right;">Ações</th>
+                        <th style="padding: 14px 16px; text-align: right; min-width: 220px; width: 220px;">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -353,20 +452,22 @@ require __DIR__ . '/../../includes/sidebar.php';
                                 </div>
                             </td>
 
-                            <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
+                            <td style="padding: 12px 16px; text-align: right; white-space: nowrap;">
                                 <?php
                                 $procNum = $d['protocolo_externo_numero'] ?? '';
                                 $msgWhatsList = rawurlencode("Olá! Informamos que o processo da embarcação *" . $d['embarcacao_nome'] . "* (Dossiê " . $d['numero'] . ") está em andamento na " . ($d['unidade_nome'] ?: 'Capitania/Delegacia') . ".\nSituação: *" . ($labels[$d['status']] ?? $d['status']) . "*" . ($procNum ? "\nNº Oficial no Órgão: *" . $procNum . "*" : "") . "\n\nAmazon Certificadora");
                                 ?>
-                                <a class="btn btn-sm btn-success me-1" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text=<?= $msgWhatsList ?>" style="background: #25d366; border-color: #25d366; color: #fff;" title="Avisar cliente via WhatsApp">
-                                    <i class="fa-brands fa-whatsapp"></i>
-                                </a>
-                                <a class="btn btn-sm btn-secondary me-1" target="_blank" href="<?= APP_URL ?>protocolos/pdf-dossie?id=<?= urlencode($d['id']) ?>" title="Gerar PDF consolidado do dossiê">
-                                    <i class="fa-solid fa-file-pdf"></i> PDF
-                                </a>
-                                <a class="btn btn-sm btn-primary" href="<?= APP_URL ?>protocolos/form?id=<?= urlencode($d['id']) ?>" title="Abrir tramitação e eventos">
-                                    <i class="fa-solid fa-folder-open"></i> Abrir
-                                </a>
+                                <div class="prot-table-actions">
+                                    <a class="prot-btn-action prot-btn-whatsapp" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text=<?= $msgWhatsList ?>" title="Avisar cliente via WhatsApp">
+                                        <i class="fa-brands fa-whatsapp"></i>
+                                    </a>
+                                    <a class="prot-btn-action prot-btn-pdf" target="_blank" href="<?= APP_URL ?>protocolos/pdf-dossie?id=<?= urlencode($d['id']) ?>" title="Gerar PDF consolidado do dossiê">
+                                        <i class="fa-solid fa-file-pdf"></i> <span>PDF</span>
+                                    </a>
+                                    <a class="prot-btn-action prot-btn-abrir" href="<?= APP_URL ?>protocolos/form?id=<?= urlencode($d['id']) ?>" title="Abrir tramitação e eventos">
+                                        <i class="fa-solid fa-folder-open"></i> <span>Abrir</span>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

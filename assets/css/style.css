@@ -3980,10 +3980,10 @@ td:last-child form,
     margin: 0;
 }
 
-td:last-child .btn-sm,
-.td-actions .btn-sm,
-.action-buttons .btn-sm,
-.acoes .btn-sm {
+td:last-child .btn-sm:not(.prot-btn-action),
+.td-actions .btn-sm:not(.prot-btn-action),
+.action-buttons .btn-sm:not(.prot-btn-action),
+.acoes .btn-sm:not(.prot-btn-action) {
     width: 34px;
     min-width: 34px;
     height: 34px;
