@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-exigirAcesso('configuracoes');
+exigirAcessoOuSub('configuracoes', 'configuracoes_normam202');
 
 $titulo_page = 'Catálogo de Exigências NORMAM-202 - Configurações';
 require_once __DIR__ . '/../../includes/header.php';

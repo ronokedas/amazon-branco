@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-exigirAcesso('dashboard');
+exigirAcesso('sgq');
 
 $titulo_page = 'Manual da Qualidade & Política SGQ (ISO 9001:2015) - Amazon Certificadora';
 require_once __DIR__ . '/../../includes/header.php';

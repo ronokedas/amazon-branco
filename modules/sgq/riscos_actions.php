@@ -9,16 +9,14 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-exigirAcesso('dashboard');
+exigirAcesso('sgq');
 
 $action = trim((string)($_GET['action'] ?? ''));
 
-function calcularNivelRisco(int $prob, int $impacto): string {
-    $score = $prob * $impacto;
-    if ($score >= 16) return 'CRITICO';
-    if ($score >= 10) return 'ALTO';
-    if ($score >= 5)  return 'MEDIO';
-    return 'BAIXO';
+if (!function_exists('calcularNivelRisco')) {
+    function calcularNivelRisco(int $prob, int $impacto): string {
+        return sgqCalcularNivelRisco($prob, $impacto);
+    }
 }
 
 if ($action === 'salvar') {

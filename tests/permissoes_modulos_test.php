@@ -47,17 +47,16 @@ if ($negada) {
 
 $guardasEsperadas = [
     'modules/agendamentos/index.php' => 'agendamentos',
-    'modules/armadores/index.php' => 'armadores',
+    'modules/clientes/index.php' => 'clientes',
     'modules/comercial/index.php' => 'comercial',
-    'modules/comercial/servicos/index.php' => 'servicos',
+    'modules/servicos/index.php' => 'servicos',
     'modules/certificados/index.php' => 'certificados',
     'modules/configuracoes/index.php' => 'configuracoes',
-    'modules/despachantes/index.php' => 'despachantes',
     'modules/documentacao/index.php' => 'documentacao',
     'modules/emails/index.php' => 'emails',
     'modules/embarcacoes/index.php' => 'embarcacoes',
+    'modules/gestao_acessos_portal/index.php' => 'gestao_acessos_portal',
     'modules/portal_clientes/index.php' => 'portal_clientes',
-    'modules/proprietarios/index.php' => 'proprietarios',
     'modules/relatorios/index.php' => 'relatorios',
     'modules/vistorias/relatorio.php' => 'vistorias',
     'modules/vistorias/relatorio_pdf.php' => 'vistorias',
@@ -72,6 +71,9 @@ foreach ($guardasEsperadas as $arquivo => $modulo) {
 }
 
 $novaProposta = file_get_contents(__DIR__ . '/../modules/comercial/nova.php');
+foreach (glob(__DIR__ . '/../modules/comercial/components/*.php') as $comp) {
+    $novaProposta .= "\n" . file_get_contents($comp);
+}
 if ($novaProposta === false) {
     throw new RuntimeException('Nao foi possivel verificar o formulario de nova proposta.');
 }

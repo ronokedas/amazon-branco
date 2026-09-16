@@ -7,7 +7,8 @@ function assertChecklistAS(bool $condicao, string $mensagem): void
     if (!$condicao) throw new RuntimeException($mensagem);
 }
 
-$formulario = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio.php');
+require_once __DIR__ . '/helpers_relatorio.php';
+$formulario = carregarRelatorioParaTeste();
 $acoes = file_get_contents(__DIR__ . '/../modules/vistorias/actions.php');
 assertChecklistAS($formulario !== false && $acoes !== false, 'Nao foi possivel ler o fluxo web da vistoria.');
 assertChecklistAS(

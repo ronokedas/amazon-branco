@@ -145,6 +145,9 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
         <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
         <?php if ($editando): ?>
             <input type="hidden" name="id" value="<?php echo h($licenca['id']); ?>">
+            <input type="hidden" name="embarcacao_id" value="<?php echo h($licenca['embarcacao_id'] ?? ''); ?>">
+            <input type="hidden" name="cliente_id" value="<?php echo h($licenca['cliente_id'] ?? ''); ?>">
+            <input type="hidden" name="vistoria_id" value="<?php echo h($licenca['vistoria_id'] ?? ''); ?>">
         <?php endif; ?>
 
         <!-- SEÇÃO 1: Identificação da Licença -->
@@ -227,7 +230,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                 <!-- Select de embarcação para puxar dados automaticamente -->
                 <div class="form-group">
                     <label for="embarcacao_id"><i class="fas fa-search"></i> Selecionar Embarcação do Cadastro</label>
-                    <select id="embarcacao_id" class="form-control" onchange="carregarDadosEmbarcacao(this.value)">
+                    <select id="embarcacao_id" name="embarcacao_id" class="form-control" onchange="carregarDadosEmbarcacao(this.value)" required>
                         <option value="">-- Selecione uma embarcação --</option>
                         <?php foreach ($embarcacoes as $emb): ?>
                              <option value="<?php echo h($emb['id']); ?>"

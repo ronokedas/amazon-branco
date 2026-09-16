@@ -128,7 +128,8 @@ try {
         throw new Exception("Foto não foi desvinculada após embarcacaoFotoRemover!");
     }
     // 6. Validar estrutura visual e comportamental no arquivo relatorio.php
-    $relatorioHtml = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio.php');
+    require_once __DIR__ . '/helpers_relatorio.php';
+    $relatorioHtml = carregarRelatorioParaTeste();
     if (!$relatorioHtml) {
         throw new Exception("Não foi possível ler modules/vistorias/relatorio.php");
     }

@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config.php'; require_once __DIR__ . '/../../includes/functions.php'; require_once __DIR__ . '/../../includes/auth.php'; require_once __DIR__ . '/../../includes/exportacoes_documentos.php';
-verificar_sessao(); exigirAcesso('configuracoes');
+verificar_sessao(); exigirAcessoOuSub('configuracoes', 'configuracoes_exportacoes');
 if(($_SERVER['REQUEST_METHOD']??'')!=='POST'||!verificarCSRF($_POST['csrf_token']??'')){setMensagem('error','Solicitação inválida.');redirecionar(APP_URL.'configuracoes/exportacoes');}
 $action = (string)($_POST['action'] ?? 'criar');
 if ($action === 'excluir') {

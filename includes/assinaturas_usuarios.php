@@ -22,6 +22,19 @@ function assinaturaResponsavelUsuario(PDO $pdo, string $usuarioId, bool $complet
     return $row?:null;
 }
 
+function obterResponsavelAssinaturaPorId(PDO $pdo, int|string $idOuUuid): ?array
+{
+    $isUuid = is_string($idOuUuid) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $idOuUuid);
+    $campo = $isUuid ? 'ra.uuid' : 'ra.id';
+    $stmt = $pdo->prepare("SELECT ra.*, u.nome usuario_nome, u.cargo usuario_cargo, u.email usuario_email, u.ativo usuario_ativo, u.excluido_em
+        FROM responsaveis_assinatura ra 
+        JOIN usuarios u ON u.id = ra.usuario_id 
+        WHERE {$campo} = :identificador AND ra.ativo = 1 AND u.ativo = 1 AND u.excluido_em IS NULL LIMIT 1");
+    $stmt->execute([':identificador' => $idOuUuid]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+}
+
 function assinaturaResponsavelValidoParaDocumento(PDO $pdo, int $responsavelId, string $criadorId = ''): array
 {
     $stmt=$pdo->prepare("SELECT ra.*,u.cargo usuario_cargo,u.ativo usuario_ativo,u.excluido_em

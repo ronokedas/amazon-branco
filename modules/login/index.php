@@ -33,36 +33,49 @@ if (($_GET['return_to'] ?? '') === 'campo') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $ip       = obterIpCliente();
     $email    = sanitize($_POST['email'] ?? '');
     $senha    = $_POST['senha'] ?? '';
-    
-    // Validar campos
-    if (empty($email) || empty($senha)) {
+    $csrf     = $_POST['csrf_token'] ?? '';
+
+    // 1. Validar protecao contra envio forjado (CSRF)
+    if (!verificarCSRF($csrf)) {
+        $erro_msg = 'Envio de formulário inválido ou token de segurança expirado. Por favor, recarregue a página e tente novamente.';
+    } elseif (empty($email) || empty($senha)) {
         $erro_msg = 'Preencha todos os campos.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $erro_msg = 'Email invalido.';
     } else {
-        // Buscar usuario no banco
-        try {
-            $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = :email AND ativo = 1 LIMIT 1");
-            $stmt->execute([':email' => $email]);
-            $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($usuario && password_verify($senha, $usuario['senha_hash'])) {
-                // Login bem-sucedido - usar funcao do auth.php
-                login($usuario);
-                
-                $retorno = (string)($_SESSION['login_return_to'] ?? '');
-                unset($_SESSION['login_return_to']);
-                $destino = $retorno === 'campo' || str_starts_with($retorno, 'minhas-assinaturas') ? $retorno : 'dashboard';
-                header('Location: ' . APP_URL . $destino);
-                exit;
-            } else {
-                $erro_msg = 'Email ou senha incorretos.';
+        // 2. Protecao contra tentativas ilimitadas de login (Rate Limiting)
+        $bloqueio = loginVerificarRateLimit($pdo, $email, $ip);
+        if ($bloqueio !== null) {
+            $erro_msg = $bloqueio;
+        } else {
+            // 3. Buscar usuario ativo e nao excluido no banco
+            try {
+                $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = :email AND ativo = 1 AND excluido_em IS NULL LIMIT 1");
+                $stmt->execute([':email' => $email]);
+                $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($usuario && password_verify($senha, $usuario['senha_hash'])) {
+                    // Login bem-sucedido: registra sucesso (limpa tentativas falhas do IP/email)
+                    loginRegistrarTentativa($pdo, $email, $ip, true);
+                    login($usuario);
+
+                    $retorno = (string)($_SESSION['login_return_to'] ?? '');
+                    unset($_SESSION['login_return_to']);
+                    $destino = $retorno === 'campo' || str_starts_with($retorno, 'minhas-assinaturas') ? $retorno : 'dashboard';
+                    header('Location: ' . APP_URL . $destino);
+                    exit;
+                } else {
+                    // Credencial incorreta: registra tentativa falha
+                    loginRegistrarTentativa($pdo, $email, $ip, false);
+                    $erro_msg = 'Email ou senha incorretos.';
+                }
+            } catch (Exception $e) {
+                $erro_msg = 'Erro de conexao. Tente novamente.';
+                error_log('Erro no login: ' . $e->getMessage());
             }
-        } catch (Exception $e) {
-            $erro_msg = 'Erro de conexao. Tente novamente.';
-            error_log('Erro no login: ' . $e->getMessage());
         }
     }
 }
@@ -90,6 +103,8 @@ require_once __DIR__ . '/../../includes/header.php';
         <?php endif; ?>
 
         <form method="POST" action="" class="login-form">
+            <input type="hidden" name="csrf_token" value="<?php echo h(gerarCSRF()); ?>">
+
             <div class="form-group">
                 <label for="email">
                     <i class="fas fa-envelope"></i> Email

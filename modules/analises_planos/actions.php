@@ -69,16 +69,17 @@ function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel): 
     $stmt->execute([':cliente'=>$analise['solicitante_id'], ':embarcacao'=>$analise['embarcacao_id']]);
     $dados = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     $insert = $pdo->prepare("INSERT INTO certificados_lc
-        (id,numero_lc,embarcacao_id,token_assinatura,tipo_licenca,nome_embarcacao,tipo_embarcacao,
+        (id,numero_lc,embarcacao_id,cliente_id,token_assinatura,tipo_licenca,nome_embarcacao,tipo_embarcacao,
          numero_casco,material_casco,porte_bruto,numero_passageiros,tipo_navegacao,propulsao,
          proprietario_nome,proprietario_cpf_cnpj,proprietario_endereco,estaleiro_nome,
          data_emissao,local_emissao,relatorio_numero,responsavel_assinatura_id,status,ativo,criado_por,
          vistoria_id,analise_id,dados_json)
-        VALUES (:id,:numero,:embarcacao,:token,:tipo,:nome,:tipo_embarcacao,:casco,:material,:porte,
+        VALUES (:id,:numero,:embarcacao,:cliente,:token,:tipo,:nome,:tipo_embarcacao,:casco,:material,:porte,
                 :passageiros,:navegacao,:propulsao,:proprietario,:documento,:endereco,:estaleiro,
                 CURDATE(),'Belém-PA',:relatorio,:responsavel,'emitido',1,:usuario,NULL,:analise,:dados)");
     $insert->execute([
         ':id'=>$id, ':numero'=>$numero, ':embarcacao'=>$analise['embarcacao_id'],
+        ':cliente'=>$analise['solicitante_id'] ?? null,
         ':token'=>bin2hex(random_bytes(32)), ':tipo'=>$tipo,
         ':nome'=>$dados['nome'] ?? $analise['embarcacao_nome'], ':tipo_embarcacao'=>$dados['tipo'] ?? null,
         ':casco'=>$analise['numero_casco'] ?: ($dados['numero_casco'] ?? null),

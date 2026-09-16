@@ -46,7 +46,7 @@ $categoriasPermissoes = [
             'servicos' => ['Serviços & Catálogo', 'Tabelas de preços e catálogo de serviços'],
             'financeiro' => ['Financeiro', 'Lançamentos de contas a pagar e receber'],
             'emails' => ['E-mails', 'Central de disparos e histórico de mensagens'],
-            'portal_clientes' => ['Portal de Clientes', 'Gestão de acessos dos clientes externos'],
+            'gestao_acessos_portal' => ['Gestão de Acessos ao Portal', 'Gestão administrativa de credenciais dos clientes externos'],
             'relatorios' => ['Relatórios Gerenciais', 'Consultas consolidadas e métricas do sistema'],
         ]
     ],
@@ -56,8 +56,19 @@ $categoriasPermissoes = [
         'itens' => [
             'sgq' => ['Qualidade (SGQ)', 'Manual, RNCs, ouvidoria e auditoria ISO'],
             'usuarios' => ['Usuários & Equipe', 'Gestão de colaboradores e senhas'],
-            'configuracoes' => ['Configurações Gerais', 'Parâmetros do sistema e banco de dados'],
+            'configuracoes' => ['Configurações Gerais (Completo)', 'Acesso total a todas as telas de configuração'],
             'responsaveis_assinatura' => ['Responsáveis por Assinatura', 'Credenciais para certificados navais'],
+        ]
+    ],
+    'CONFIGURACOES_SUB' => [
+        'titulo' => 'Configurações — Acesso Granular por Tela',
+        'icone' => 'fa-solid fa-puzzle-piece',
+        'itens' => [
+            'configuracoes_normam202' => ['NORMAM-202 / Catálogo de Exigências', 'Consulta e gestão do catálogo de exigências normativas'],
+            'configuracoes_basicas' => ['Permissões de Usuários', 'Controle de acesso e matriz de permissões'],
+            'configuracoes_financeiro' => ['Config. Financeiro', 'Metas, escritórios e parâmetros financeiros'],
+            'configuracoes_backup' => ['Backup & Limpeza', 'Backup do banco e limpeza de registros antigos'],
+            'configuracoes_exportacoes' => ['Exportações de Documentos', 'Exportação em lote de certificados e documentos'],
         ]
     ]
 ];
@@ -83,6 +94,25 @@ try {
 } catch (Throwable $e) {
     setMensagem('error', 'Não foi possível preparar o controle de permissões.');
     redirecionar(APP_URL . 'configuracoes');
+}
+
+// Auto-sync: garantir que novas permissões adicionadas ao catálogo existam para todos os usuários
+try {
+    $todosUsuarios = $pdo->query("SELECT id, cargo FROM usuarios WHERE cargo != 'ADMIN' AND excluido_em IS NULL")->fetchAll(PDO::FETCH_ASSOC);
+    $todasChaves = array_keys($permissoes);
+    $upsert = $pdo->prepare('INSERT IGNORE INTO usuario_permissoes (usuario_id, permissao, permitido) VALUES (:uid, :perm, :val)');
+    foreach ($todosUsuarios as $usr) {
+        $padrao = permissoesPadraoCargo($usr['cargo']);
+        foreach ($todasChaves as $chave) {
+            $upsert->execute([
+                ':uid' => $usr['id'],
+                ':perm' => $chave,
+                ':val' => in_array($chave, $padrao, true) ? 1 : 0,
+            ]);
+        }
+    }
+} catch (Throwable $e) {
+    // Silently continue — the sync is non-critical
 }
 
 // Processar formulário de atualização de permissões
@@ -112,6 +142,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             }
         }
+
+        // Invalida sessoes ativas dos usuarios com permissoes alteradas
+        $pdo->exec("UPDATE usuarios SET versao_sessao = versao_sessao + 1 WHERE cargo != 'ADMIN' AND excluido_em IS NULL");
 
         $pdo->commit();
         setMensagem('success', 'Permissões de todos os funcionários atualizadas com sucesso!');
@@ -175,20 +208,39 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </ul>
     </div>
 
-    <!-- Filtro de Busca de Colaboradores -->
+    <!-- Filtro e Seletor de Colaboradores -->
     <div class="card mb-4" style="background: var(--bg-surface, #071f1b); border: 1px solid var(--border, rgba(255,255,255,0.1));">
         <div class="card-body" style="padding: 16px 20px;">
             <div class="row align-items-center g-3">
-                <div class="col-md-6">
+                <div class="col-md-5">
+                    <label style="font-size: 0.82rem; color: var(--cor-texto-secundario); margin-bottom: 4px; display: block; font-weight: 600;">
+                        <i class="fa-solid fa-user-gear text-accent"></i> Selecionar Funcionário para Editar:
+                    </label>
+                    <select id="select-colaborador" class="form-select" onchange="selecionarEExpandirColaborador(this.value)" style="background: rgba(255,255,255,0.05); color: var(--cor-texto); border: 1px solid var(--border, rgba(255,255,255,0.15));">
+                        <option value="">-- Clique aqui para escolher um funcionário --</option>
+                        <?php foreach ($usuarios as $u): ?>
+                            <option value="<?= h($u['id']) ?>"><?= h($u['nome']) ?> (<?= h($u['cargo']) ?>) - <?= h($u['email']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label style="font-size: 0.82rem; color: var(--cor-texto-secundario); margin-bottom: 4px; display: block; font-weight: 600;">
+                        <i class="fa-solid fa-magnifying-glass"></i> Filtrar por Nome, E-mail ou Cargo:
+                    </label>
                     <div style="position: relative;">
                         <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 12px; color: var(--cor-texto-secundario);"></i>
-                        <input type="text" id="filtro-colaborador" class="form-control" style="padding-left: 40px;" placeholder="Buscar colaborador por nome, e-mail ou cargo..." onkeyup="filtrarFuncionarios(this.value)">
+                        <input type="text" id="filtro-colaborador" class="form-control" style="padding-left: 40px;" placeholder="Digite para filtrar..." onkeyup="filtrarFuncionarios(this.value)">
                     </div>
                 </div>
-                <div class="col-md-6 text-md-end">
-                    <small class="text-muted">
-                        Total de colaboradores operacionais: <strong><?= count($usuarios) ?></strong>
-                    </small>
+                <div class="col-md-3 text-md-end pt-md-3">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary" onclick="expandirTodos(true)" title="Expandir todos os funcionários">
+                            <i class="fa-solid fa-folder-open"></i> Abrir Todos
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="expandirTodos(false)" title="Recolher todos os funcionários">
+                            <i class="fa-solid fa-folder"></i> Recolher
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -223,18 +275,18 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             $buscaString = strtolower($usuario['nome'] . ' ' . $usuario['email'] . ' ' . $uCargo);
             ?>
 
-            <section class="card mb-4 funcionario-card" data-busca="<?= h($buscaString) ?>" style="border: 1px solid var(--border, rgba(255,255,255,0.1)); border-radius: 12px; overflow: hidden;">
-                <!-- Cabeçalho do Colaborador -->
-                <div class="card-header" style="background: rgba(255,255,255,0.03); padding: 16px 20px; border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));">
+            <section class="card mb-3 funcionario-card" id="card-<?= h($uId) ?>" data-busca="<?= h($buscaString) ?>" style="border: 1px solid var(--border, rgba(255,255,255,0.1)); border-radius: 12px; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s;">
+                <!-- Cabeçalho do Colaborador (Clicável para expandir/recolher) -->
+                <div class="card-header funcionario-header" onclick="toggleFuncionario('<?= h($uId) ?>', event)" style="background: rgba(255,255,255,0.03); padding: 14px 20px; cursor: pointer; border-bottom: 1px solid var(--border, rgba(255,255,255,0.08)); user-select: none;">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(86,224,173,0.15); color: var(--cor-destaque, #56e0ad); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold;">
+                            <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(86,224,173,0.15); color: var(--cor-destaque, #56e0ad); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: bold;">
                                 <?= strtoupper(substr($usuario['nome'], 0, 1)) ?>
                             </div>
                             <div>
-                                <h3 style="margin: 0; font-size: 1.15rem; color: var(--cor-texto);">
+                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--cor-texto); display: flex; align-items: center; gap: 8px;">
                                     <?= h($usuario['nome']) ?>
-                                    <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--cor-texto); font-weight: 600; font-size: 0.78rem; margin-left: 6px;">
+                                    <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--cor-texto); font-weight: 600; font-size: 0.78rem;">
                                         <?= h($uCargo) ?>
                                     </span>
                                     <?php if (!$usuario['ativo']): ?>
@@ -245,8 +297,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             </div>
                         </div>
 
-                        <!-- Ações Rápidas de Marcação -->
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <!-- Ações Rápidas e Botão Selecionar -->
+                        <div class="d-flex align-items-center gap-2 flex-wrap" onclick="event.stopPropagation()">
                             <span class="badge" id="count-<?= h($uId) ?>" style="background: rgba(86,224,173,0.15); color: var(--cor-destaque, #56e0ad); padding: 6px 12px; font-size: 0.85rem; border-radius: 6px;">
                                 <?= $totalLiberados ?> liberados
                             </span>
@@ -262,12 +314,16 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <button type="button" class="btn btn-sm btn-secondary" onclick="marcarTodos('<?= h($uId) ?>', false)" title="Desmarcar todos os módulos">
                                 <i class="fa-solid fa-xmark"></i> Limpar
                             </button>
+
+                            <button type="button" class="btn btn-sm btn-primary ms-1" onclick="toggleFuncionario('<?= h($uId) ?>', event)" style="min-width: 150px; font-weight: 600;">
+                                <span id="lbl-toggle-<?= h($uId) ?>"><i class="fa-solid fa-chevron-down me-1"></i> Selecionar Opções</span>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Corpo de Permissões Agrupadas por Categoria -->
-                <div class="card-body" style="padding: 20px;">
+                <!-- Corpo de Permissões Agrupadas por Categoria (Oculto por padrão) -->
+                <div class="card-body funcionario-body" id="body-<?= h($uId) ?>" style="padding: 20px; display: none;">
                     <div class="row g-4">
                         <?php foreach ($categoriasPermissoes as $catKey => $cat): ?>
                             <div class="col-lg-6">
@@ -327,16 +383,82 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
 <script>
 const padroesCargos = {
-    'VISTORIADOR': ['dashboard', 'vistorias', 'agendamentos', 'embarcacoes', 'documentacao'],
-    'ANALISTA': ['dashboard', 'analise_planos', 'relatorios_aprovacao', 'protocolos_documentais', 'embarcacoes', 'armadores', 'proprietarios', 'vistorias', 'certificados', 'documentacao'],
+    'VISTORIADOR': ['dashboard', 'vistorias', 'agendamentos', 'embarcacoes', 'documentacao', 'configuracoes_normam202'],
+    'ANALISTA': ['dashboard', 'analise_planos', 'relatorios_aprovacao', 'protocolos_documentais', 'embarcacoes', 'armadores', 'proprietarios', 'vistorias', 'certificados', 'documentacao', 'configuracoes_normam202'],
     'VENDEDOR': ['dashboard', 'comercial', 'servicos', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails'],
     'ADMIN': [
         'dashboard', 'vistorias', 'agendamentos', 'analise_planos', 'relatorios_aprovacao',
         'protocolos_documentais', 'certificados', 'documentacao', 'embarcacoes', 'armadores',
         'proprietarios', 'despachantes', 'comercial', 'servicos', 'financeiro', 'emails',
-        'portal_clientes', 'relatorios', 'sgq', 'usuarios', 'configuracoes', 'responsaveis_assinatura'
+        'portal_clientes', 'gestao_acessos_portal', 'relatorios', 'sgq', 'usuarios', 'configuracoes', 'responsaveis_assinatura',
+        'configuracoes_normam202', 'configuracoes_basicas', 'configuracoes_financeiro', 'configuracoes_backup', 'configuracoes_exportacoes'
     ]
 };
+
+function toggleFuncionario(usuarioId, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    const body = document.getElementById('body-' + usuarioId);
+    const card = document.getElementById('card-' + usuarioId);
+    const lbl = document.getElementById('lbl-toggle-' + usuarioId);
+
+    if (!body) return;
+
+    const estaAberto = body.style.display !== 'none';
+
+    if (estaAberto) {
+        body.style.display = 'none';
+        if (card) {
+            card.style.borderColor = 'var(--border, rgba(255,255,255,0.1))';
+            card.style.boxShadow = 'none';
+        }
+        if (lbl) {
+            lbl.innerHTML = '<i class="fa-solid fa-chevron-down me-1"></i> Selecionar Opções';
+        }
+    } else {
+        body.style.display = 'block';
+        if (card) {
+            card.style.borderColor = 'var(--cor-destaque, #56e0ad)';
+            card.style.boxShadow = '0 6px 20px rgba(86,224,173,0.12)';
+        }
+        if (lbl) {
+            lbl.innerHTML = '<i class="fa-solid fa-chevron-up me-1"></i> Ocultar Opções';
+        }
+        // Atualizar o select do topo se diferente
+        const sel = document.getElementById('select-colaborador');
+        if (sel && sel.value !== usuarioId) {
+            sel.value = usuarioId;
+        }
+    }
+}
+
+function selecionarEExpandirColaborador(usuarioId) {
+    if (!usuarioId) return;
+    // Recolher todos primeiro para manter limpo
+    expandirTodos(false);
+    // Expandir o selecionado
+    toggleFuncionario(usuarioId);
+    // Rolar suavemente até o elemento
+    const card = document.getElementById('card-' + usuarioId);
+    if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function expandirTodos(expandir) {
+    document.querySelectorAll('.funcionario-card').forEach(card => {
+        const id = card.id.replace('card-', '');
+        const body = document.getElementById('body-' + id);
+        if (body) {
+            if (expandir) {
+                if (body.style.display === 'none') toggleFuncionario(id);
+            } else {
+                if (body.style.display !== 'none') toggleFuncionario(id);
+            }
+        }
+    });
+}
 
 function aplicarPadraoCargo(usuarioId, cargo) {
     const padrao = padroesCargos[cargo] || ['dashboard'];
@@ -367,7 +489,19 @@ function filtrarFuncionarios(termo) {
     termo = (termo || '').toLowerCase().trim();
     document.querySelectorAll('.funcionario-card').forEach(card => {
         const busca = card.getAttribute('data-busca') || '';
-        card.style.display = (!termo || busca.includes(termo)) ? '' : 'none';
+        const id = card.id.replace('card-', '');
+        if (!termo) {
+            card.style.display = '';
+        } else if (busca.includes(termo)) {
+            card.style.display = '';
+            // Auto expandir se houver busca ativa
+            const body = document.getElementById('body-' + id);
+            if (body && body.style.display === 'none') {
+                toggleFuncionario(id);
+            }
+        } else {
+            card.style.display = 'none';
+        }
     });
 }
 </script>

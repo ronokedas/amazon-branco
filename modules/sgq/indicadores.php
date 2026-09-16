@@ -8,9 +8,10 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/sgq.php';
 
 verificar_sessao();
-exigirAcesso('dashboard');
+exigirAcesso('sgq');
 
 // Período de análise
 $dataInicio = trim((string)($_GET['data_inicio'] ?? date('Y-01-01')));

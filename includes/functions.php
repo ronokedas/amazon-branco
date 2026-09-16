@@ -416,7 +416,7 @@ function validarCNPJ($cnpj) {
     // Validar dígitos verificadores
     for ($t = 12; $t < 14; $t++) {
         $d = 0;
-        $m = 5;
+        $m = ($t === 12) ? 5 : 6;
         for ($i = 0; $i < $t; $i++) {
             $d += $cnpj[$i] * $m;
             $m = ($m == 2) ? 9 : $m - 1;

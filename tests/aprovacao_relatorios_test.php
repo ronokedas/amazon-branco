@@ -60,20 +60,21 @@ assertAprovacaoFalha(
     'deve ser encaminhado para Retorno A/S'
 );
 
-$actions = file_get_contents(__DIR__ . '/../modules/vistorias/actions.php');
-$relatorio = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio.php');
-$endpoint = file_get_contents(__DIR__ . '/../modules/documentos/aprovar.php');
-$approvalDomain = file_get_contents(__DIR__ . '/../includes/aprovacao_documentos.php');
-$approvalUi = file_get_contents(__DIR__ . '/../includes/aprovacao_ui.php');
-$detalhe = file_get_contents(__DIR__ . '/../modules/vistorias/detalhe.php');
-$certificados = file_get_contents(__DIR__ . '/../modules/documentacao/certificados/index.php');
-$wizard = file_get_contents(__DIR__ . '/../modules/certificados/wizard.php');
-$wizardStep2 = file_get_contents(__DIR__ . '/../modules/certificados/wizard_step2.php');
-$funcoes = file_get_contents(__DIR__ . '/../includes/functions.php');
-$assinaturas = file_get_contents(__DIR__ . '/../includes/assinaturas_usuarios.php');
-$selecaoCertificado = file_get_contents(__DIR__ . '/../modules/documentacao/novo_certificado.php');
-$pdfAssinatura = file_get_contents(__DIR__ . '/../includes/aprovacao_pdf.php');
-$validacaoAssinatura = file_get_contents(__DIR__ . '/../modules/documentos/validar_assinatura.php');
+$actions = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../modules/vistorias/actions.php'));
+require_once __DIR__ . '/helpers_relatorio.php';
+$relatorio = str_replace("\r\n", "\n", carregarRelatorioParaTeste());
+$endpoint = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../modules/documentos/aprovar.php'));
+$approvalDomain = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../includes/aprovacao_documentos.php'));
+$approvalUi = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../includes/aprovacao_ui.php'));
+$detalhe = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../modules/vistorias/detalhe.php'));
+$certificados = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../modules/documentacao/certificados/index.php'));
+$wizard = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../modules/certificados/wizard.php'));
+$wizardStep2 = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../modules/certificados/wizard_step2.php'));
+$funcoes = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../includes/functions.php'));
+$assinaturas = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../includes/assinaturas_usuarios.php'));
+$selecaoCertificado = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../modules/documentacao/novo_certificado.php'));
+$pdfAssinatura = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../includes/aprovacao_pdf.php'));
+$validacaoAssinatura = str_replace("\r\n", "\n", (string)file_get_contents(__DIR__ . '/../modules/documentos/validar_assinatura.php'));
 
 foreach ([$actions, $relatorio, $endpoint, $approvalDomain, $approvalUi, $detalhe, $certificados, $wizard, $wizardStep2, $funcoes, $assinaturas, $selecaoCertificado, $pdfAssinatura, $validacaoAssinatura] as $codigo) {
     assertAprovacao($codigo !== false, 'Nao foi possivel ler um dos arquivos do fluxo.');

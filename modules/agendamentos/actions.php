@@ -7,7 +7,6 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
-require_once __DIR__ . '/../../includes/sgq.php';
 
 verificar_sessao();
 $cargo = getCargo();
@@ -223,28 +222,27 @@ switch ($action) {
             if (empty($vistoriador_id)) {
                 $errosCampos['vistoriador_id'] = 'Selecione o vistoriador responsável.';
             } else {
-                if (function_exists('vistoriadorElegivelParaAgendamento')) {
-                    $chequeCompetencia = vistoriadorElegivelParaAgendamento($pdo, $vistoriador_id, $data_vistoria, $tipo_vistoria);
-                    if (!$chequeCompetencia['elegivel']) {
-                        $errosCampos['vistoriador_id'] = $chequeCompetencia['motivo'];
-                        $isApi = isAjax() || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') || str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') || isset($_GET['api']);
-                        if ($isApi) {
-                            http_response_code(400);
-                            header('Content-Type: application/json; charset=utf-8');
-                            echo json_encode([
-                                'sucesso' => false,
-                                'codigo' => 'COMPETENCIA_SGQ_INVALIDA',
-                                'erro' => 'O profissional não está qualificado para a ISO 9001 / NORMAM.',
-                                'mensagem' => $chequeCompetencia['motivo'],
-                                'detalhes' => $chequeCompetencia,
-                            ], JSON_UNESCAPED_UNICODE);
-                            exit;
-                        }
+                $stmtCheckVist = $pdo->prepare("SELECT id, ativo, nome FROM usuarios WHERE id = :id LIMIT 1");
+                $stmtCheckVist->execute([':id' => $vistoriador_id]);
+                $uVist = $stmtCheckVist->fetch(PDO::FETCH_ASSOC);
+                if (!$uVist || (int)$uVist['ativo'] !== 1) {
+                    $errosCampos['vistoriador_id'] = 'O vistoriador selecionado não foi encontrado ou está inativo.';
+                    $isApi = isAjax() || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') || str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') || isset($_GET['api']);
+                    if ($isApi) {
+                        http_response_code(400);
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode([
+                            'sucesso' => false,
+                            'codigo' => 'VISTORIADOR_INVALIDO',
+                            'erro' => 'O vistoriador selecionado não está ativo no sistema.',
+                            'mensagem' => $errosCampos['vistoriador_id'],
+                        ], JSON_UNESCAPED_UNICODE);
+                        exit;
                     }
                 }
             }
             if (!empty($errosCampos)) {
-                setMensagem('error', 'Bloqueio de Competência SGQ (ISO 7.2 / NORMAM): ' . implode(' ', $errosCampos), $errosCampos);
+                setMensagem('error', 'Erro no agendamento: ' . implode(' ', $errosCampos), $errosCampos);
                 redirecionar(APP_URL . 'agendamentos/form');
             }
 
@@ -450,29 +448,28 @@ switch ($action) {
             if (empty($vistoriador_id)) {
                 $errosCampos['vistoriador_id'] = 'Selecione o vistoriador responsável.';
             } else {
-                if (function_exists('vistoriadorElegivelParaAgendamento')) {
-                    $chequeCompetencia = vistoriadorElegivelParaAgendamento($pdo, $vistoriador_id, $data_vistoria, $tipo_vistoria);
-                    if (!$chequeCompetencia['elegivel']) {
-                        $errosCampos['vistoriador_id'] = $chequeCompetencia['motivo'];
-                        $isApi = isAjax() || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') || str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') || isset($_GET['api']);
-                        if ($isApi) {
-                            http_response_code(400);
-                            header('Content-Type: application/json; charset=utf-8');
-                            echo json_encode([
-                                'sucesso' => false,
-                                'codigo' => 'COMPETENCIA_SGQ_INVALIDA',
-                                'erro' => 'O profissional não está qualificado para a ISO 9001 / NORMAM.',
-                                'mensagem' => $chequeCompetencia['motivo'],
-                                'detalhes' => $chequeCompetencia,
-                            ], JSON_UNESCAPED_UNICODE);
-                            exit;
-                        }
+                $stmtCheckVist = $pdo->prepare("SELECT id, ativo, nome FROM usuarios WHERE id = :id LIMIT 1");
+                $stmtCheckVist->execute([':id' => $vistoriador_id]);
+                $uVist = $stmtCheckVist->fetch(PDO::FETCH_ASSOC);
+                if (!$uVist || (int)$uVist['ativo'] !== 1) {
+                    $errosCampos['vistoriador_id'] = 'O vistoriador selecionado não foi encontrado ou está inativo.';
+                    $isApi = isAjax() || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') || str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') || isset($_GET['api']);
+                    if ($isApi) {
+                        http_response_code(400);
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode([
+                            'sucesso' => false,
+                            'codigo' => 'VISTORIADOR_INVALIDO',
+                            'erro' => 'O vistoriador selecionado não está ativo no sistema.',
+                            'mensagem' => $errosCampos['vistoriador_id'],
+                        ], JSON_UNESCAPED_UNICODE);
+                        exit;
                     }
                 }
             }
 
             if (!empty($errosCampos)) {
-                setMensagem('error', 'Bloqueio de Competência SGQ (ISO 7.2 / NORMAM): ' . implode(' ', $errosCampos), $errosCampos);
+                setMensagem('error', 'Erro no agendamento: ' . implode(' ', $errosCampos), $errosCampos);
                 $destino = !empty($id)
                     ? $destinoFormulario
                     : APP_URL . 'agendamentos';

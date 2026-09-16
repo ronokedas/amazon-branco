@@ -10,8 +10,13 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-if (!podeAcessar('configuracoes') && podeAcessar('usuarios')) {
-    redirecionar(APP_URL . 'usuarios');
+if (!podeAcessar('configuracoes')) {
+    if (podeAcessar('configuracoes_normam202')) {
+        redirecionar(APP_URL . 'configuracoes/normam202');
+    }
+    if (podeAcessar('usuarios')) {
+        redirecionar(APP_URL . 'usuarios');
+    }
 }
 exigirAcesso('configuracoes');
 

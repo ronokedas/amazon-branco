@@ -8,7 +8,8 @@ function assertRetornoExigencias(bool $condicao, string $mensagem): void
 $migration = file_get_contents(__DIR__ . '/../migrations/098_retornos_exigencias_reescrita.sql');
 $functions = file_get_contents(__DIR__ . '/../includes/functions.php');
 $vistoriasActions = file_get_contents(__DIR__ . '/../modules/vistorias/actions.php');
-$relatorio = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio.php');
+require_once __DIR__ . '/helpers_relatorio.php';
+$relatorio = carregarRelatorioParaTeste();
 $pdf = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio_pdf.php');
 $agenda = file_get_contents(__DIR__ . '/../modules/agendamentos/index.php');
 $dashboardData = file_get_contents(__DIR__ . '/../modules/dashboard/data.php');

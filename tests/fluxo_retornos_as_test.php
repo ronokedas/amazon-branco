@@ -12,7 +12,8 @@ $functions = str_replace("\r\n", "\n", file_get_contents(__DIR__ . '/../includes
 $vistorias = file_get_contents(__DIR__ . '/../modules/vistorias/actions.php');
 $agendamentos = file_get_contents(__DIR__ . '/../modules/agendamentos/actions.php');
 $formAgendamento = file_get_contents(__DIR__ . '/../modules/agendamentos/form.php');
-$relatorio = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio.php');
+require_once __DIR__ . '/helpers_relatorio.php';
+$relatorio = carregarRelatorioParaTeste();
 $certificados = file_get_contents(__DIR__ . '/../modules/certificados/wizard_step2.php');
 $dashboard = file_get_contents(__DIR__ . '/../modules/dashboard/data.php');
 $dashboardView = file_get_contents(__DIR__ . '/../modules/dashboard/views/admin.php');

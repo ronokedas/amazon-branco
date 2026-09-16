@@ -6,6 +6,9 @@ $migration097=file_get_contents(__DIR__.'/../migrations/097_protocolos_documento
 $helper=file_get_contents(__DIR__.'/../includes/protocolos.php');
 $actions=file_get_contents(__DIR__.'/../modules/protocolos/actions.php');
 $form=file_get_contents(__DIR__.'/../modules/protocolos/form.php');
+foreach (glob(__DIR__ . '/../modules/protocolos/components/*.php') as $comp) {
+    $form .= "\n" . file_get_contents($comp);
+}
 $pdf=file_get_contents(__DIR__.'/../modules/protocolos/pdf.php');
 $pdfDossie=file_get_contents(__DIR__.'/../modules/protocolos/pdf_dossie.php');
 $router=file_get_contents(__DIR__.'/../index.php');

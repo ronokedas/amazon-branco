@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/financeiro_escritorios.php';
 
 verificar_sessao();
-exigirAcesso('configuracoes');
+exigirAcessoOuSub('configuracoes', 'configuracoes_financeiro');
 
 $competencia = financeiroCompetencia($_GET['competencia'] ?? $_POST['competencia'] ?? date('Y-m'));
 

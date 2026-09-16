@@ -247,6 +247,8 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
             <input type="hidden" name="id" value="<?php echo h($certificado['id']); ?>">
             <input type="hidden" name="vistoria_id" value="<?php echo h($certificado['vistoria_id'] ?? ''); ?>">
             <input type="hidden" name="despachante_id" value="<?php echo h($certificado['despachante_id'] ?? ''); ?>">
+            <input type="hidden" name="embarcacao_id" value="<?php echo h($certificado['embarcacao_id'] ?? ''); ?>">
+            <input type="hidden" name="cliente_id" value="<?php echo h($certificado['cliente_id'] ?? ''); ?>">
         <?php endif; ?>
 
         <!-- SEÇÃO 1: Identificação do Certificado -->

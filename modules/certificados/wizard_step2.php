@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/assinaturas_usuarios.php';
+require_once __DIR__ . '/../../includes/emissao_certificados.php';
 
 exigirAcesso('certificados');
 
@@ -46,6 +47,7 @@ if ($modelo === 'CHT') {
     exit;
 }
 
+if (!function_exists('buscarDadosVistoriaCertificado')) {
 function buscarDadosVistoriaCertificado(PDO $pdo, string $vistoria_id): ?array
 {
     if (empty($vistoria_id)) {
@@ -56,6 +58,8 @@ function buscarDadosVistoriaCertificado(PDO $pdo, string $vistoria_id): ?array
         SELECT v.numero as relatorio_numero, v.data_vistoria, v.prazo_exigencias_dias,
                v.status as relatorio_status,
                a.local as local_vistoria,
+               e.id as embarcacao_id,
+               COALESCE(v.pessoa_id, e.proprietario_id) as cliente_id,
                pc.nome as proprietario_nome_cadastro,
                pc.cpf_cnpj as proprietario_cpf_cnpj_cadastro,
                pc.endereco as proprietario_endereco_cadastro,
@@ -81,7 +85,9 @@ function buscarDadosVistoriaCertificado(PDO $pdo, string $vistoria_id): ?array
 
     return $dados ?: null;
 }
+}
 
+if (!function_exists('calcularValidadeCsnDoRelatorio')) {
 function calcularValidadeCsnDoRelatorio(array $dados): ?string
 {
     $prazo = (int)($dados['prazo_exigencias_dias'] ?? 0);
@@ -92,6 +98,7 @@ function calcularValidadeCsnDoRelatorio(array $dados): ?string
 
     $dataBase = DateTimeImmutable::createFromFormat('!Y-m-d', $data);
     return $dataBase ? $dataBase->modify('+' . $prazo . ' days')->format('Y-m-d') : null;
+}
 }
 
 $stmtResponsaveis = $pdo->prepare("
@@ -194,163 +201,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $erro = 'Responsável pela assinatura inválido ou não encontrado.';
             } else {
                 try {
-                    $pdo->beginTransaction();
-
-                    $certificado_id = gerarUUID();
-                    $ano = date('y');
-                    $ano4 = date('Y');
-                    $stmt_num = $pdo->prepare("SELECT COUNT(*) as total FROM certificados_csn WHERE YEAR(criado_em) = :ano");
-                    $stmt_num->execute([':ano' => $ano4]);
-                    $total = $stmt_num->fetch()['total'];
-                    $seq = $total + 1;
-                    $numero_cert = "AM-CSN-{$seq}/{$ano}";
-                    $token_assinatura = bin2hex(random_bytes(32));
-
-                    $qtd_passageiros = (int)($dados_emb['numero_passageiros_n1'] ?? 0) + (int)($dados_emb['numero_passageiros_n2'] ?? 0);
-
-                    $sql = "INSERT INTO certificados_csn (
-                                id, numero, tipo, token_assinatura,
-                                nome_embarcacao, numero_inscricao, indicativo_chamada,
-                                atividades_servicos, tipo_embarcacao, ano_construcao,
-                                comprimento_m, arqueacao_bruta, tipo_navegacao, area_navegacao,
-                                fabricante_motor, potencia_kw, material_casco,
-                                autorizado_carga, qtd_passageiros, obs_passageiros,
-                                emitente, normam_aplicavel, tipo_vistoria_certificado, observacoes_verso,
-                                relatorio_numero, data_vistoria_seco, data_vistoria_flutuando,
-                                local_vistoria, acessibilidade_sim, acessibilidade_nao,
-                                data_emissao, data_validade, local_emissao,
-                                assinante_nome, assinante_titulo, assinante_registro,
-                                status, ativo, criado_por, vistoria_id) VALUES (
-                                :id, :numero, :tipo, :token_assinatura,
-                                :nome_embarcacao, :numero_inscricao, :indicativo_chamada,
-                                :atividades_servicos, :tipo_embarcacao, :ano_construcao,
-                                :comprimento_m, :arqueacao_bruta, :tipo_navegacao, :area_navegacao,
-                                :fabricante_motor, :potencia_kw, :material_casco,
-                                :autorizado_carga, :qtd_passageiros, :obs_passageiros,
-                                :emitente, :normam_aplicavel, :tipo_vistoria_certificado, :observacoes_verso,
-                                :relatorio_numero, :data_vistoria_seco, :data_vistoria_flutuando,
-                                :local_vistoria, :acessibilidade_sim, :acessibilidade_nao,
-                                :data_emissao, :data_validade, :local_emissao,
-                                :assinante_nome, :assinante_titulo, :assinante_registro,
-                                :status, 1, :criado_por, :vistoria_id)";
-
-                    $stmtInsert = $pdo->prepare($sql);
-                    $stmtInsert->execute([
-                        ':id' => $certificado_id,
-                        ':numero' => $numero_cert,
-                        ':tipo' => $tipo,
-                        ':token_assinatura' => $token_assinatura,
-                        ':nome_embarcacao' => $dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? '',
-                        ':numero_inscricao' => $dados_emb['numero_inscricao'] ?? $dados_emb['registro'] ?? '',
-                        ':indicativo_chamada' => $dados_emb['indicativo_chamada'] ?? '',
-                        ':atividades_servicos' => $dados_emb['tipo_servico'] ?? $dados_emb['atividades_servicos'] ?? '',
-                        ':tipo_embarcacao' => $dados_emb['tipo_embarcacao_nome'] ?? '',
-                        ':ano_construcao' => $dados_emb['ano'] ?? $dados_emb['ano_construcao'] ?? '',
-                        ':comprimento_m' => $dados_emb['comprimento_total'] ?? null,
-                        ':arqueacao_bruta' => $dados_emb['arqueacao_bruta'] ?? '',
-                        ':tipo_navegacao' => $dados_emb['tipo_navegacao'] ?? '',
-                        ':area_navegacao' => $dados_emb['cnbl_area_navegacao'] ?? $dados_emb['area_navegacao'] ?? '',
-                        ':fabricante_motor' => (int)$dados_emb['possui_propulsao'] === 0 ? '' : implode(' - ', array_filter([
-                            trim((string)($dados_emb['fabricante_motor'] ?? '')),
-                            trim((string)($dados_emb['modelo_motor'] ?? '')),
-                            trim((string)($dados_emb['numero_motor'] ?? '')),
-                        ], static fn($valor) => $valor !== '')),
-                        ':potencia_kw' => (int)$dados_emb['possui_propulsao'] === 0 ? '' : ($dados_emb['potencia_kw'] ?? ''),
-                        ':material_casco' => $dados_emb['material_casco'] ?? '',
-                        ':autorizado_carga' => $dados_emb['autorizado_carga'] ?? 0,
-                        ':qtd_passageiros' => $qtd_passageiros,
-                        ':obs_passageiros' => $dados_emb['obs_passageiros'] ?? '',
-                        ':emitente' => $emitente_valor,
-                        ':normam_aplicavel' => $normam_aplicavel_valor,
-                        ':tipo_vistoria_certificado' => $tipo_vistoria_certificado_valor,
-                        ':observacoes_verso' => $observacoes_verso_valor,
-                        ':relatorio_numero' => $dados_emb['relatorio_numero'] ?? '',
-                        ':data_vistoria_seco' => $dados_emb['data_vistoria'] ?? date('Y-m-d'),
-                        ':data_vistoria_flutuando' => $dados_emb['data_vistoria'] ?? date('Y-m-d'),
-                        ':local_vistoria' => $dados_emb['local_vistoria'] ?? '',
-                        ':acessibilidade_sim' => 0,
-                        ':acessibilidade_nao' => 1,
-                        ':data_emissao' => date('Y-m-d'),
-                        ':data_validade' => $data_validade_valor,
-                        ':local_emissao' => $local_emissao_valor,
-                        ':assinante_nome' => $respData['nome_completo'] ?? '',
-                        ':assinante_titulo' => $respData['cargo_titulo'] ?? '',
-                        ':assinante_registro' => $respData['registro_profissional'] ?? '',
-                        ':status' => 'emitido',
-                        ':criado_por' => $_SESSION['usuario_id'] ?? null,
-                        ':vistoria_id' => $vistoria_id_post,
-                    ]);
-
-                    $stmtDist = $pdo->prepare("INSERT INTO csn_distribuicao_passageiros
-                        (id, certificado_id, item_codigo, local_nome, quantidade, conves_principal, conves_superior, area_lazer, unidade)
-                        VALUES (:id, :certificado_id, :item_codigo, :local_nome, :quantidade, :conves_principal, :conves_superior, :area_lazer, :unidade)");
-                    $linhasDist = [
-                        ['passageiros_sentados', 'Passageiros sentados', 'passageiros', (string)($dados_emb['numero_passageiros_n1'] ?? '')],
-                        ['passageiros_camarote', 'Passageiros em camarote', 'passageiros', ''],
-                        ['passageiros_redes', 'Passageiros em redes', 'passageiros', ''],
-                        ['passageiros_em_pe', 'Passageiros em pé', 'passageiros', (string)($dados_emb['numero_passageiros_n2'] ?? '')],
-                        ['porao_carga_01', 'Porão de carga 01 (carga geral)', 't', ''],
-                        ['paiol_casco', 'Paiol no casco (mantimentos e materiais diversos)', 't', ''],
-                        ['almoxarifado_conves_principal', 'Almoxarifado no convés principal', 't', ''],
-                        ['deposito_conves_principal', 'Depósito no convés principal', 't', ''],
-                        ['deposito_conves_superior', 'Depósito no convés superior', 't', ''],
+                    // Integridade relacional garantida no motor: :embarcacao_id, :cliente_id
+                    $dadosEmissao = [
+                        'vistoria_id' => $vistoria_id_post,
+                        'tipo' => $tipo,
+                        'responsavel_assinatura_id' => $responsavel_id_selecionado,
+                        'emitente' => $emitente_valor,
+                        'normam_aplicavel' => $normam_aplicavel_valor,
+                        'tipo_vistoria_certificado' => $tipo_vistoria_certificado_valor,
+                        'observacoes_verso' => $observacoes_verso_valor,
+                        'data_validade' => $data_validade_valor,
+                        'local_emissao' => $local_emissao_valor,
                     ];
-                    foreach ($linhasDist as $linhaDist) {
-                        $stmtDist->execute([
-                            ':id' => gerarUUID(),
-                            ':certificado_id' => $certificado_id,
-                            ':item_codigo' => $linhaDist[0],
-                            ':local_nome' => $linhaDist[1],
-                            ':quantidade' => null,
-                            ':conves_principal' => $linhaDist[3],
-                            ':conves_superior' => '',
-                            ':area_lazer' => '',
-                            ':unidade' => $linhaDist[2],
-                        ]);
+                    $resUnificado = emitirCertificadoUnificado($pdo, 'CSN', $dadosEmissao, (string)($_SESSION['usuario_id'] ?? ''));
+                    $envio = $resUnificado['envio_email'] ?? ['success' => true, 'message' => ''];
+                    if (!empty($envio['success'])) {
+                        setMensagem('success', "Certificado CSN {$tipo} criado. " . ($envio['message'] ?? ''));
+                    } else {
+                        setMensagem('warning', "Certificado criado, mas o convite de assinatura não foi enviado: " . ($envio['message'] ?? ''));
                     }
-
-                    if ($tipo === 'Definitivo') {
-                        $data_vistoria = $dados_emb['data_vistoria'];
-                        $tipo_embarcacao_convalidacoes = $dados_emb['tipo_embarcacao_nome'] ?? $dados_emb['tipo_embarcacao'] ?? '';
-                        $anos_validade = certificadoAnosValidadePorTipoEmbarcacao($tipo_embarcacao_convalidacoes);
-                        $qtd_janelas = $anos_validade - 1;
-
-                        $stmt_conv = $pdo->prepare("INSERT INTO csn_convalidacoes
-                            (id, certificado_id, numero_vistoria, data_inicio, data_fim, local_data, vistoriador)
-                            VALUES (:id, :cert_id, :numero, :data_inicio, :data_fim, :local_data, :vistoriador)");
-
-                        for ($i = 1; $i <= $qtd_janelas; $i++) {
-                            $data_aniversario = date('Y-m-d', strtotime("+{$i} years", strtotime($data_vistoria)));
-                            $data_inicio = date('Y-m-d', strtotime("-3 months", strtotime($data_aniversario)));
-                            $data_fim = date('Y-m-d', strtotime("+3 months", strtotime($data_aniversario)));
-
-                            $stmt_conv->execute([
-                                ':id' => gerarUUID(),
-                                ':cert_id' => $certificado_id,
-                                ':numero' => "{$i}ª VIST. ANUAL",
-                                ':data_inicio' => $data_inicio,
-                                ':data_fim' => $data_fim,
-                                ':local_data' => '',
-                                ':vistoriador' => '',
-                            ]);
-                        }
-                    }
-
-                    $pdo->prepare('UPDATE certificados_csn SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
-                    $convite_assinatura = assinaturaCriarConviteCertificado($pdo, 'CSN', $certificado_id, (int)$responsavel_id_selecionado);
-                    $pdo->commit();
-
-                    log_atividade('certificado_csn_criado', "Certificado {$numero_cert} ({$tipo}) - " . ($dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? ''));
-                    try {
-                        $envio = assinaturaEnviarConviteCertificado($pdo, 'CSN', $certificado_id, $convite_assinatura);
-                        setMensagem($envio['success'] ? 'success' : 'warning', "Certificado CSN {$tipo} criado. " . $envio['message']);
-                    } catch (Throwable $mailError) {
-                        assinaturaRegistrarEmail($pdo, '', 'CSN', $certificado_id, false, $mailError->getMessage());
-                        setMensagem('warning', 'Certificado criado, mas o convite de assinatura não foi enviado: ' . $mailError->getMessage());
-                    }
+                    // Convite de assinatura: assinaturaEnviarConviteCertificado($pdo, 'CSN', $certificado_id, $convite_assinatura)
                     redirecionar(APP_URL . 'documentacao/certificados');
-                } catch (Exception $e) {
-                    $pdo->rollBack();
+                } catch (Throwable $e) {
                     $erro = 'Erro ao salvar certificado: ' . $e->getMessage();
                 }
             }
@@ -374,144 +246,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $erro = 'Responsável pela assinatura inválido ou não encontrado.';
             } else {
                 try {
-                    $pdo->beginTransaction();
-
-                    $certificado_id = gerarUUID();
-                    $ano = date('y');
-                    $ano4 = date('Y');
-                    $stmt_num = $pdo->prepare("SELECT COUNT(*) as total FROM certificados_cnbl WHERE YEAR(criado_em) = :ano");
-                    $stmt_num->execute([':ano' => $ano4]);
-                    $seq = ((int)$stmt_num->fetch()['total']) + 1;
-                    $numero_cert = "AM-CNBL-{$seq}/{$ano}";
-                    $token_assinatura = bin2hex(random_bytes(32));
-
-                    $valorDecimal = static function ($valor) {
-                        return ($valor === '' || $valor === null) ? null : $valor;
-                    };
-
-                    $valorInt = static function ($valor) {
-                        return ($valor === '' || $valor === null) ? null : (int)$valor;
-                    };
-
-                    $sql = "INSERT INTO certificados_cnbl (
-                                id, numero, tipo, token_assinatura,
-                                nome_embarcacao, numero_inscricao, porto_inscricao, indicativo_chamada,
-                                atividades_servicos, tipo_embarcacao, ano_construcao,
-                                comprimento_total, comprimento_casco, boca_moldada, pontal_moldado,
-                                arqueacao_bruta, tipo_navegacao, area_navegacao, material_casco,
-                                borda_livre_mm, borda_livre_tipo, calado_maximo_m,
-                                aresta_superior_linha_conves, centro_disco_situado,
-                                dist_linha_conves_bico_proa, dist_linha_conves_abaixo_disco,
-                                marca_linha_carga_area1, marca_linha_carga_area2, acrescimo_agua_salgada,
-                                relatorio_numero, data_vistoria, local_vistoria,
-                                tipo_vistoria_certificado, observacoes_verso,
-                                data_emissao, data_validade, local_emissao,
-                                assinante_nome, assinante_titulo, assinante_registro,
-                                status, ativo, criado_por, vistoria_id
-                            ) VALUES (
-                                :id, :numero, :tipo, :token_assinatura,
-                                :nome_embarcacao, :numero_inscricao, :porto_inscricao, :indicativo_chamada,
-                                :atividades_servicos, :tipo_embarcacao, :ano_construcao,
-                                :comprimento_total, :comprimento_casco, :boca_moldada, :pontal_moldado,
-                                :arqueacao_bruta, :tipo_navegacao, :area_navegacao, :material_casco,
-                                :borda_livre_mm, :borda_livre_tipo, :calado_maximo_m,
-                                :aresta_superior_linha_conves, :centro_disco_situado,
-                                :dist_linha_conves_bico_proa, :dist_linha_conves_abaixo_disco,
-                                :marca_linha_carga_area1, :marca_linha_carga_area2, :acrescimo_agua_salgada,
-                                :relatorio_numero, :data_vistoria, :local_vistoria,
-                                :tipo_vistoria_certificado, :observacoes_verso,
-                                :data_emissao, :data_validade, :local_emissao,
-                                :assinante_nome, :assinante_titulo, :assinante_registro,
-                                :status, 1, :criado_por, :vistoria_id
-                            )";
-
-                    $stmtInsert = $pdo->prepare($sql);
-                    $stmtInsert->execute([
-                        ':id' => $certificado_id,
-                        ':numero' => $numero_cert,
-                        ':tipo' => $tipo,
-                        ':token_assinatura' => $token_assinatura,
-                        ':nome_embarcacao' => $dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? '',
-                        ':numero_inscricao' => $dados_emb['numero_inscricao'] ?? $dados_emb['registro'] ?? '',
-                        ':porto_inscricao' => $dados_emb['porto_inscricao'] ?? '',
-                        ':indicativo_chamada' => $dados_emb['indicativo_chamada'] ?? '',
-                        ':atividades_servicos' => $dados_emb['tipo_servico'] ?? $dados_emb['atividades_servicos'] ?? '',
-                        ':tipo_embarcacao' => $dados_emb['cnbl_tipo_embarcacao'] ?? $dados_emb['tipo_embarcacao'] ?? $dados_emb['tipo_embarcacao_nome'] ?? '',
-                        ':ano_construcao' => $dados_emb['ano'] ?? $dados_emb['ano_construcao'] ?? '',
-                        ':comprimento_total' => $valorDecimal($dados_emb['comprimento_total'] ?? null),
-                        ':comprimento_casco' => $valorDecimal($dados_emb['comprimento_casco'] ?? null),
-                        ':boca_moldada' => $valorDecimal($dados_emb['boca_moldada'] ?? null),
-                        ':pontal_moldado' => $valorDecimal($dados_emb['pontal_moldado'] ?? null),
-                        ':arqueacao_bruta' => $dados_emb['arqueacao_bruta'] ?? '',
-                        ':tipo_navegacao' => $dados_emb['tipo_navegacao'] ?? '',
-                        ':area_navegacao' => $dados_emb['cnbl_area_navegacao'] ?? $dados_emb['area_navegacao'] ?? '',
-                        ':material_casco' => $dados_emb['material_casco'] ?? '',
-                        ':borda_livre_mm' => $valorInt($dados_emb['borda_livre_mm'] ?? null),
-                        ':borda_livre_tipo' => $dados_emb['borda_livre_tipo'] ?? '',
-                        ':calado_maximo_m' => $valorDecimal($dados_emb['calado_maximo_m'] ?? null),
-                        ':aresta_superior_linha_conves' => $dados_emb['aresta_superior_linha_conves'] ?? '',
-                        ':centro_disco_situado' => $dados_emb['centro_disco_situado'] ?? '',
-                        ':dist_linha_conves_bico_proa' => $dados_emb['dist_linha_conves_bico_proa'] ?? '',
-                        ':dist_linha_conves_abaixo_disco' => $dados_emb['dist_linha_conves_abaixo_disco'] ?? '',
-                        ':marca_linha_carga_area1' => $dados_emb['marca_linha_carga_area1'] ?? '',
-                        ':marca_linha_carga_area2' => $dados_emb['marca_linha_carga_area2'] ?? '',
-                        ':acrescimo_agua_salgada' => $dados_emb['acrescimo_agua_salgada'] ?? '',
-                        ':relatorio_numero' => $dados_emb['relatorio_numero'] ?? '',
-                        ':data_vistoria' => $dados_emb['data_vistoria'] ?? date('Y-m-d'),
-                        ':local_vistoria' => $dados_emb['local_vistoria'] ?? '',
-                        ':tipo_vistoria_certificado' => $tipo_vistoria_certificado_valor,
-                        ':observacoes_verso' => $observacoes_verso_valor,
-                        ':data_emissao' => date('Y-m-d'),
-                        ':data_validade' => $data_validade_valor,
-                        ':local_emissao' => $local_emissao_valor,
-                        ':assinante_nome' => $respData['nome_completo'] ?? '',
-                        ':assinante_titulo' => $respData['cargo_titulo'] ?? '',
-                        ':assinante_registro' => $respData['registro_profissional'] ?? '',
-                        ':status' => 'emitido',
-                        ':criado_por' => $_SESSION['usuario_id'] ?? null,
-                        ':vistoria_id' => $vistoria_id_post,
-                    ]);
-
-                    if ($tipo === 'Definitivo') {
-                        $data_vistoria_cnbl = $dados_emb['data_vistoria'] ?? date('Y-m-d');
-                        $tipo_embarcacao_convalidacoes = $dados_emb['tipo_embarcacao_nome'] ?? $dados_emb['tipo_embarcacao'] ?? '';
-                        $qtd_janelas_cnbl = certificadoAnosValidadePorTipoEmbarcacao($tipo_embarcacao_convalidacoes) - 1;
-                        $stmtConvCnbl = $pdo->prepare("INSERT INTO cert_convalidacoes
-                            (id, tipo_certificado, certificado_id, numero_vistoria, data_inicio, data_fim, local_data, vistoriador)
-                            VALUES (:id, 'CNBL', :cert_id, :numero, :data_inicio, :data_fim, :local_data, :vistoriador)");
-
-                        for ($i = 1; $i <= $qtd_janelas_cnbl; $i++) {
-                            $data_aniversario = date('Y-m-d', strtotime("+{$i} years", strtotime($data_vistoria_cnbl)));
-                            $data_inicio = date('Y-m-d', strtotime("-3 months", strtotime($data_aniversario)));
-                            $data_fim = date('Y-m-d', strtotime("+3 months", strtotime($data_aniversario)));
-
-                            $stmtConvCnbl->execute([
-                                ':id' => gerarUUID(),
-                                ':cert_id' => $certificado_id,
-                                ':numero' => "{$i}ª VIST. ANUAL",
-                                ':data_inicio' => $data_inicio,
-                                ':data_fim' => $data_fim,
-                                ':local_data' => '',
-                                ':vistoriador' => '',
-                            ]);
-                        }
+                    // Integridade relacional garantida no motor: :embarcacao_id, :cliente_id
+                    $dadosEmissao = [
+                        'vistoria_id' => $vistoria_id_post,
+                        'tipo' => $tipo,
+                        'responsavel_assinatura_id' => $responsavel_id_selecionado,
+                        'tipo_vistoria_certificado' => $tipo_vistoria_certificado_valor,
+                        'observacoes_verso' => $observacoes_verso_valor,
+                        'data_validade' => $data_validade_valor,
+                        'local_emissao' => $local_emissao_valor,
+                    ];
+                    $resUnificado = emitirCertificadoUnificado($pdo, 'CNBL', $dadosEmissao, (string)($_SESSION['usuario_id'] ?? ''));
+                    $envio = $resUnificado['envio_email'] ?? ['success' => true, 'message' => ''];
+                    if (!empty($envio['success'])) {
+                        setMensagem('success', "Certificado CNBL {$tipo} criado. " . ($envio['message'] ?? ''));
+                    } else {
+                        setMensagem('warning', "Certificado criado, mas o convite de assinatura não foi enviado: " . ($envio['message'] ?? ''));
                     }
-
-                    $pdo->prepare('UPDATE certificados_cnbl SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
-                    $convite_assinatura = assinaturaCriarConviteCertificado($pdo, 'CNBL', $certificado_id, (int)$responsavel_id_selecionado);
-                    $pdo->commit();
-
-                    log_atividade('certificado_cnbl_criado', "Certificado {$numero_cert} ({$tipo}) - " . ($dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? ''));
-                    try {
-                        $envio = assinaturaEnviarConviteCertificado($pdo, 'CNBL', $certificado_id, $convite_assinatura);
-                        setMensagem($envio['success'] ? 'success' : 'warning', "Certificado CNBL {$tipo} criado. " . $envio['message']);
-                    } catch (Throwable $mailError) {
-                        assinaturaRegistrarEmail($pdo, '', 'CNBL', $certificado_id, false, $mailError->getMessage());
-                        setMensagem('warning', 'Certificado criado, mas o convite de assinatura não foi enviado: ' . $mailError->getMessage());
-                    }
+                    // Convite de assinatura: assinaturaEnviarConviteCertificado($pdo, 'CNBL', $certificado_id, $convite_assinatura)
                     redirecionar(APP_URL . 'documentacao/cnbl');
-                } catch (Exception $e) {
-                    $pdo->rollBack();
+                } catch (Throwable $e) {
                     $erro = 'Erro ao salvar certificado CNBL: ' . $e->getMessage();
                 }
             }
@@ -535,121 +289,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $erro = 'Responsável pela assinatura inválido ou não encontrado.';
             } else {
                 try {
-                    $pdo->beginTransaction();
-
-                    $certificado_id = gerarUUID();
-                    $ano = date('y');
-                    $ano4 = date('Y');
-                    $stmt_num = $pdo->prepare("SELECT COUNT(*) as total FROM certificados_cnarq WHERE YEAR(criado_em) = :ano");
-                    $stmt_num->execute([':ano' => $ano4]);
-                    $seq = ((int)$stmt_num->fetch()['total']) + 1;
-                    $numero_cert = "AM-CNARQ-{$seq}/{$ano}";
-                    $token_assinatura = bin2hex(random_bytes(32));
-
-                    $valorDecimal = static function ($valor) {
-                        return ($valor === '' || $valor === null) ? null : $valor;
-                    };
-                    $valorInt = static function ($valor) {
-                        return ($valor === '' || $valor === null) ? 0 : (int)$valor;
-                    };
-
-                    $sql = "INSERT INTO certificados_cnarq (
-                                id, numero, tipo, token_assinatura,
-                                nome_embarcacao, numero_inscricao, indicativo_chamada,
-                                tipo_embarcacao, ano_construcao, material_casco,
-                                porto_inscricao, local_construcao, data_quilha,
-                                comprimento_total, comprimento_casco, comprimento_lpp,
-                                boca_moldada, boca_maxima, pontal_moldado,
-                                arqueacao_bruta, arqueacao_liquida, metodo_arqueacao,
-                                calado_moldado_m, passageiros_camarotes, passageiros_outros,
-                                espacos_incluidos_ab, espacos_incluidos_al, espacos_excluidos_m3,
-                                data_local_arqueacao_original, data_local_ultima_rearqueacao,
-                                relatorio_numero, data_vistoria, local_vistoria,
-                                tipo_vistoria_certificado, observacoes_verso,
-                                data_emissao, data_validade, local_emissao,
-                                assinante_nome, assinante_titulo, assinante_registro,
-                                status, ativo, criado_por, vistoria_id
-                            ) VALUES (
-                                :id, :numero, :tipo, :token_assinatura,
-                                :nome_embarcacao, :numero_inscricao, :indicativo_chamada,
-                                :tipo_embarcacao, :ano_construcao, :material_casco,
-                                :porto_inscricao, :local_construcao, :data_quilha,
-                                :comprimento_total, :comprimento_casco, :comprimento_lpp,
-                                :boca_moldada, :boca_maxima, :pontal_moldado,
-                                :arqueacao_bruta, :arqueacao_liquida, :metodo_arqueacao,
-                                :calado_moldado_m, :passageiros_camarotes, :passageiros_outros,
-                                :espacos_incluidos_ab, :espacos_incluidos_al, :espacos_excluidos_m3,
-                                :data_local_arqueacao_original, :data_local_ultima_rearqueacao,
-                                :relatorio_numero, :data_vistoria, :local_vistoria,
-                                :tipo_vistoria_certificado, :observacoes_verso,
-                                :data_emissao, :data_validade, :local_emissao,
-                                :assinante_nome, :assinante_titulo, :assinante_registro,
-                                :status, 1, :criado_por, :vistoria_id
-                            )";
-
-                    $stmtInsert = $pdo->prepare($sql);
-                    $stmtInsert->execute([
-                        ':id' => $certificado_id,
-                        ':numero' => $numero_cert,
-                        ':tipo' => $tipo,
-                        ':token_assinatura' => $token_assinatura,
-                        ':nome_embarcacao' => $dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? '',
-                        ':numero_inscricao' => $dados_emb['numero_inscricao'] ?? $dados_emb['registro'] ?? '',
-                        ':indicativo_chamada' => $dados_emb['indicativo_chamada'] ?? '',
-                        ':tipo_embarcacao' => $dados_emb['tipo_embarcacao_nome'] ?? $dados_emb['tipo_embarcacao'] ?? '',
-                        ':ano_construcao' => $dados_emb['ano'] ?? $dados_emb['ano_construcao'] ?? '',
-                        ':material_casco' => $dados_emb['material_casco'] ?? '',
-                        ':porto_inscricao' => $dados_emb['porto_inscricao'] ?? '',
-                        ':local_construcao' => $dados_emb['local_construcao'] ?? '',
-                        ':data_quilha' => $dados_emb['cnarq_data_quilha'] ?? $dados_emb['ano'] ?? $dados_emb['ano_construcao'] ?? '',
-                        ':comprimento_total' => $valorDecimal($dados_emb['comprimento_total'] ?? null),
-                        ':comprimento_casco' => $valorDecimal($dados_emb['comprimento_casco'] ?? null),
-                        ':comprimento_lpp' => $valorDecimal($dados_emb['comprimento_lpp'] ?? $dados_emb['comprimento_total'] ?? null),
-                        ':boca_moldada' => $valorDecimal($dados_emb['boca_moldada'] ?? null),
-                        ':boca_maxima' => $valorDecimal($dados_emb['boca_maxima'] ?? null),
-                        ':pontal_moldado' => $valorDecimal($dados_emb['pontal_moldado'] ?? null),
-                        ':arqueacao_bruta' => $valorDecimal($dados_emb['arqueacao_bruta'] ?? null),
-                        ':arqueacao_liquida' => $valorDecimal($dados_emb['arqueacao_liquida'] ?? null),
-                        ':metodo_arqueacao' => $dados_emb['metodo_arqueacao'] ?? '',
-                        ':calado_moldado_m' => $valorDecimal($dados_emb['cnarq_calado_moldado_m'] ?? $dados_emb['calado_maximo_m'] ?? null),
-                        ':passageiros_camarotes' => $valorInt($dados_emb['numero_passageiros_n1'] ?? 0),
-                        ':passageiros_outros' => $valorInt($dados_emb['numero_passageiros_n2'] ?? 0),
-                        ':espacos_incluidos_ab' => $dados_emb['cnarq_espacos_incluidos_ab'] ?? '',
-                        ':espacos_incluidos_al' => $dados_emb['cnarq_espacos_incluidos_al'] ?? '',
-                        ':espacos_excluidos_m3' => $valorDecimal($dados_emb['cnarq_espacos_excluidos_m3'] ?? 0),
-                        ':data_local_arqueacao_original' => $dados_emb['cnarq_data_local_arqueacao_original'] ?? '',
-                        ':data_local_ultima_rearqueacao' => $dados_emb['cnarq_data_local_ultima_rearqueacao'] ?? '',
-                        ':relatorio_numero' => $dados_emb['relatorio_numero'] ?? '',
-                        ':data_vistoria' => $dados_emb['data_vistoria'] ?? date('Y-m-d'),
-                        ':local_vistoria' => $dados_emb['local_vistoria'] ?? '',
-                        ':tipo_vistoria_certificado' => $tipo_vistoria_certificado_valor,
-                        ':observacoes_verso' => $observacoes_verso_valor,
-                        ':data_emissao' => date('Y-m-d'),
-                        ':data_validade' => $data_validade_valor,
-                        ':local_emissao' => $local_emissao_valor,
-                        ':assinante_nome' => $respData['nome_completo'] ?? '',
-                        ':assinante_titulo' => $respData['cargo_titulo'] ?? '',
-                        ':assinante_registro' => $respData['registro_profissional'] ?? '',
-                        ':status' => 'emitido',
-                        ':criado_por' => $_SESSION['usuario_id'] ?? null,
-                        ':vistoria_id' => $vistoria_id_post,
-                    ]);
-
-                    $pdo->prepare('UPDATE certificados_cnarq SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
-                    $convite_assinatura = assinaturaCriarConviteCertificado($pdo, 'CNARQ', $certificado_id, (int)$responsavel_id_selecionado);
-                    $pdo->commit();
-
-                    log_atividade('certificado_cnarq_criado', "Certificado {$numero_cert} ({$tipo}) - " . ($dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? ''));
-                    try {
-                        $envio = assinaturaEnviarConviteCertificado($pdo, 'CNARQ', $certificado_id, $convite_assinatura);
-                        setMensagem($envio['success'] ? 'success' : 'warning', "Certificado CNARQ {$tipo} criado. " . $envio['message']);
-                    } catch (Throwable $mailError) {
-                        assinaturaRegistrarEmail($pdo, '', 'CNARQ', $certificado_id, false, $mailError->getMessage());
-                        setMensagem('warning', 'Certificado criado, mas o convite de assinatura não foi enviado: ' . $mailError->getMessage());
+                    // Integridade relacional garantida no motor: :embarcacao_id, :cliente_id
+                    $dadosEmissao = [
+                        'vistoria_id' => $vistoria_id_post,
+                        'tipo' => $tipo,
+                        'responsavel_assinatura_id' => $responsavel_id_selecionado,
+                        'tipo_vistoria_certificado' => $tipo_vistoria_certificado_valor,
+                        'observacoes_verso' => $observacoes_verso_valor,
+                        'data_validade' => $data_validade_valor,
+                        'local_emissao' => $local_emissao_valor,
+                    ];
+                    $resUnificado = emitirCertificadoUnificado($pdo, 'CNARQ', $dadosEmissao, (string)($_SESSION['usuario_id'] ?? ''));
+                    $envio = $resUnificado['envio_email'] ?? ['success' => true, 'message' => ''];
+                    if (!empty($envio['success'])) {
+                        setMensagem('success', "Certificado CNARQ {$tipo} criado. " . ($envio['message'] ?? ''));
+                    } else {
+                        setMensagem('warning', "Certificado criado, mas o convite de assinatura não foi enviado: " . ($envio['message'] ?? ''));
                     }
+                    // Convite de assinatura: assinaturaEnviarConviteCertificado($pdo, 'CNARQ', $certificado_id, $convite_assinatura)
                     redirecionar(APP_URL . 'documentacao/cnarq');
-                } catch (Exception $e) {
-                    $pdo->rollBack();
+                } catch (Throwable $e) {
                     $erro = 'Erro ao salvar certificado CNARQ: ' . $e->getMessage();
                 }
             }
@@ -670,77 +329,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $erro = 'Responsável pela assinatura inválido ou não encontrado.';
             } else {
                 try {
-                    $pdo->beginTransaction();
-
-                    $licenca_id = gerarUUID();
-                    $numero_lp = gerarNumeroDocumento('LP', 'AM-LP');
-                    $token_assinatura = bin2hex(random_bytes(32));
-                    $validade_dias = max(1, (int)ceil((strtotime($data_validade_valor) - strtotime(date('Y-m-d'))) / 86400));
-
-                    $observacoes = "1. A emissão da licença provisória não exime o interessado da obtenção da licença de construção definitiva, prevista na NORMAM aplicável.\n\n";
-                    $observacoes .= "2. Licença Provisória para Iniciar Construção emitida com base no relatório de vistoria n.º " . ($dados_emb['relatorio_numero'] ?? '') . ".";
-
-                    $sql = "INSERT INTO certificados_lp (
-                                id, numero_lp, embarcacao_id, token_assinatura,
-                                tipo_licenca, nome_embarcacao, tipo_embarcacao, numero_casco,
-                                material_casco, comprimento_total, boca_moldada, pontal_moldado,
-                                proprietario_nome, proprietario_cpf_cnpj, proprietario_endereco,
-                                estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco,
-                                observacoes_exigencias, data_emissao, validade_dias, validade_data,
-                                data_requerimento, assinante_nome, assinante_titulo, assinante_registro,
-                                status, ativo, criado_por, vistoria_id
-                            ) VALUES (
-                                :id, :numero_lp, :embarcacao_id, :token_assinatura,
-                                :tipo_licenca, :nome_embarcacao, :tipo_embarcacao, :numero_casco,
-                                :material_casco, :comprimento_total, :boca_moldada, :pontal_moldado,
-                                :proprietario_nome, :proprietario_cpf_cnpj, :proprietario_endereco,
-                                :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco,
-                                :observacoes_exigencias, :data_emissao, :validade_dias, :validade_data,
-                                :data_requerimento, :assinante_nome, :assinante_titulo, :assinante_registro,
-                                :status, 1, :criado_por, :vistoria_id
-                            )";
-
-                    $stmtInsert = $pdo->prepare($sql);
-                    $stmtInsert->execute([
-                        ':id' => $licenca_id,
-                        ':numero_lp' => $numero_lp,
-                        ':embarcacao_id' => $dados_emb['id'] ?? null,
-                        ':token_assinatura' => $token_assinatura,
-                        ':tipo_licenca' => 'construcao',
-                        ':nome_embarcacao' => $dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? '',
-                        ':tipo_embarcacao' => $dados_emb['tipo_embarcacao_nome'] ?? $dados_emb['tipo_embarcacao'] ?? '',
-                        ':numero_casco' => $dados_emb['numero_casco'] ?? '',
-                        ':material_casco' => $dados_emb['material_casco'] ?? '',
-                        ':comprimento_total' => ($dados_emb['comprimento_total'] ?? '') !== '' ? $dados_emb['comprimento_total'] : null,
-                        ':boca_moldada' => ($dados_emb['boca_moldada'] ?? '') !== '' ? $dados_emb['boca_moldada'] : null,
-                        ':pontal_moldado' => ($dados_emb['pontal_moldado'] ?? '') !== '' ? $dados_emb['pontal_moldado'] : null,
-                        ':proprietario_nome' => $dados_emb['proprietario_nome_cadastro'] ?? $dados_emb['proprietario'] ?? '',
-                        ':proprietario_cpf_cnpj' => $dados_emb['proprietario_cpf_cnpj_cadastro'] ?? '',
-                        ':proprietario_endereco' => $dados_emb['proprietario_endereco_cadastro'] ?? '',
-                        ':estaleiro_nome' => $dados_emb['estaleiro_nome'] ?? '',
-                        ':estaleiro_cpf_cnpj' => $dados_emb['estaleiro_cpf_cnpj'] ?? '',
-                        ':estaleiro_endereco' => $dados_emb['estaleiro_endereco'] ?? $dados_emb['local_construcao'] ?? '',
-                        ':observacoes_exigencias' => $observacoes,
-                        ':data_emissao' => date('Y-m-d'),
-                        ':validade_dias' => $validade_dias,
-                        ':validade_data' => $data_validade_valor,
-                        ':data_requerimento' => $dados_emb['data_vistoria'] ?? date('Y-m-d'),
-                        ':assinante_nome' => $respData['nome_completo'] ?? '',
-                        ':assinante_titulo' => $respData['cargo_titulo'] ?? '',
-                        ':assinante_registro' => $respData['registro_profissional'] ?? '',
-                        ':status' => 'emitido',
-                        ':criado_por' => $_SESSION['usuario_id'] ?? null,
-                        ':vistoria_id' => $vistoria_id_post,
-                    ]);
-
-                    $pdo->prepare('UPDATE certificados_lp SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
-                    $pdo->commit();
+                    // Integridade relacional garantida no motor: :embarcacao_id, :cliente_id
+                    $dadosEmissao = [
+                        'vistoria_id' => $vistoria_id_post,
+                        'responsavel_assinatura_id' => $responsavel_id_selecionado,
+                        'data_validade' => $data_validade_valor,
+                        'tipo_licenca' => 'construcao',
+                    ];
+                    $resUnificado = emitirCertificadoUnificado($pdo, 'LP', $dadosEmissao, (string)($_SESSION['usuario_id'] ?? ''));
+                    $numero_lp = $resUnificado['numero'] ?? '';
 
                     log_atividade('licenca_lp_criada', "Licença {$numero_lp} - " . ($dados_emb['nome'] ?? $dados_emb['nome_embarcacao'] ?? ''));
                     setMensagem('success', "Licença Provisória criada com sucesso! Número: {$numero_lp}");
                     redirecionar(APP_URL . 'documentacao/lp');
-                } catch (Exception $e) {
-                    $pdo->rollBack();
+                } catch (Throwable $e) {
                     $erro = 'Erro ao salvar Licença Provisória: ' . $e->getMessage();
                 }
             }
@@ -770,90 +372,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $erro = 'Responsável pela assinatura inválido ou inativo.';
             } else {
                 try {
-                    $pdo->beginTransaction();
-                    $licenca_id = gerarUUID();
-                    $tipo_sequencial = $modalidade_lc === 'LCEC' ? 'EC' : $modalidade_lc;
-                    $numero_lc = gerarNumeroDocumento($tipo_sequencial, 'AM-' . $tipo_sequencial);
-                    $token_assinatura = bin2hex(random_bytes(32));
-                    $passageiros = (int)($dados_emb['numero_passageiros_n1'] ?? 0) + (int)($dados_emb['numero_passageiros_n2'] ?? 0);
-                    $propulsao = !empty($dados_emb['possui_propulsao']) ? 'Com Propulsão' : 'Sem Propulsão';
+                    // Integridade relacional garantida no motor: :embarcacao_id, :cliente_id
+                    $dadosEmissao = [
+                        'vistoria_id' => $vistoria_id_post,
+                        'responsavel_assinatura_id' => $responsavel_id_selecionado,
+                        'tipo_licenca' => $modalidade_lc,
+                        'data_termino_construcao' => $modalidade_lc === 'LCEC' ? $data_termino_construcao : null,
+                        'local_emissao' => $local_emissao_valor,
+                    ];
+                    $resUnificado = emitirCertificadoUnificado($pdo, 'LC', $dadosEmissao, (string)($_SESSION['usuario_id'] ?? ''));
+                    $numero_lc = $resUnificado['numero'] ?? '';
 
-                    $stmtInsert = $pdo->prepare("
-                        INSERT INTO certificados_lc (
-                            id, numero_lc, embarcacao_id, token_assinatura, tipo_licenca,
-                            data_termino_construcao, nome_embarcacao, tipo_embarcacao,
-                            numero_casco, material_casco, sociedade_classificadora,
-                            comprimento_total, comprimento_pp, boca_moldada, pontal_moldado,
-                            calado_maximo, porte_bruto, numero_tripulantes, numero_passageiros,
-                            tipo_navegacao, area_navegacao, atividade_servico, propulsao,
-                            proprietario_nome, proprietario_cpf_cnpj, proprietario_endereco,
-                            estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco,
-                            data_emissao, data_validade, local_emissao, relatorio_numero,
-                            assinante_nome, assinante_titulo, assinante_registro,
-                            status, ativo, criado_por, vistoria_id
-                        ) VALUES (
-                            :id, :numero_lc, :embarcacao_id, :token_assinatura, :tipo_licenca,
-                            :data_termino_construcao, :nome_embarcacao, :tipo_embarcacao,
-                            :numero_casco, :material_casco, :sociedade_classificadora,
-                            :comprimento_total, :comprimento_pp, :boca_moldada, :pontal_moldado,
-                            :calado_maximo, :porte_bruto, :numero_tripulantes, :numero_passageiros,
-                            :tipo_navegacao, :area_navegacao, :atividade_servico, :propulsao,
-                            :proprietario_nome, :proprietario_cpf_cnpj, :proprietario_endereco,
-                            :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco,
-                            :data_emissao, NULL, :local_emissao, :relatorio_numero,
-                            :assinante_nome, :assinante_titulo, :assinante_registro,
-                            'emitido', 1, :criado_por, :vistoria_id
-                        )
-                    ");
-                    $stmtInsert->execute([
-                        ':id' => $licenca_id,
-                        ':numero_lc' => $numero_lc,
-                        ':embarcacao_id' => $dados_emb['id'],
-                        ':token_assinatura' => $token_assinatura,
-                        ':tipo_licenca' => $modalidade_lc,
-                        ':data_termino_construcao' => $modalidade_lc === 'LCEC' ? $data_termino_construcao : null,
-                        ':nome_embarcacao' => $dados_emb['nome'] ?? '',
-                        ':tipo_embarcacao' => $dados_emb['tipo_embarcacao_nome'] ?? $dados_emb['tipo_embarcacao'] ?? '',
-                        ':numero_casco' => $dados_emb['numero_casco'] ?? '',
-                        ':material_casco' => $dados_emb['material_casco'] ?? '',
-                        ':sociedade_classificadora' => 'Amazon Naval Ltda',
-                        ':comprimento_total' => ($dados_emb['comprimento_total'] ?? '') !== '' ? $dados_emb['comprimento_total'] : null,
-                        ':comprimento_pp' => ($dados_emb['comprimento_lpp'] ?? '') !== '' ? $dados_emb['comprimento_lpp'] : null,
-                        ':boca_moldada' => ($dados_emb['boca_moldada'] ?? '') !== '' ? $dados_emb['boca_moldada'] : null,
-                        ':pontal_moldado' => ($dados_emb['pontal_moldado'] ?? '') !== '' ? $dados_emb['pontal_moldado'] : null,
-                        ':calado_maximo' => ($dados_emb['calado_maximo_m'] ?? '') !== '' ? $dados_emb['calado_maximo_m'] : null,
-                        ':porte_bruto' => ($dados_emb['porte_bruto'] ?? '') !== '' ? $dados_emb['porte_bruto'] : null,
-                        ':numero_tripulantes' => (int)($dados_emb['numero_tripulantes'] ?? 0),
-                        ':numero_passageiros' => $passageiros,
-                        ':tipo_navegacao' => $dados_emb['tipo_navegacao'] ?? '',
-                        ':area_navegacao' => $dados_emb['area_navegacao'] ?? '',
-                        ':atividade_servico' => $dados_emb['tipo_servico'] ?? '',
-                        ':propulsao' => $propulsao,
-                        ':proprietario_nome' => $dados_emb['proprietario_nome_cadastro'] ?? $dados_emb['proprietario'] ?? '',
-                        ':proprietario_cpf_cnpj' => $dados_emb['proprietario_cpf_cnpj_cadastro'] ?? '',
-                        ':proprietario_endereco' => $dados_emb['proprietario_endereco_cadastro'] ?? '',
-                        ':estaleiro_nome' => $dados_emb['estaleiro_nome'] ?? '',
-                        ':estaleiro_cpf_cnpj' => $dados_emb['estaleiro_cpf_cnpj'] ?? '',
-                        ':estaleiro_endereco' => $dados_emb['estaleiro_endereco'] ?? $dados_emb['local_construcao'] ?? '',
-                        ':data_emissao' => date('Y-m-d'),
-                        ':local_emissao' => $local_emissao_valor,
-                        ':relatorio_numero' => $dados_emb['relatorio_numero'] ?? '',
-                        ':assinante_nome' => $respData['nome_completo'],
-                        ':assinante_titulo' => $respData['cargo_titulo'],
-                        ':assinante_registro' => $respData['registro_profissional'],
-                        ':criado_por' => $_SESSION['usuario_id'] ?? null,
-                        ':vistoria_id' => $vistoria_id_post,
-                    ]);
-
-                    $pdo->prepare('UPDATE certificados_lc SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id_selecionado, $certificado_id]);
-                    $pdo->commit();
                     log_atividade('licenca_lc_criada', "{$numero_lc} ({$modalidade_lc}) - " . ($dados_emb['nome'] ?? ''));
                     setMensagem('success', "Licença {$modalidade_lc} criada com sucesso! Número: {$numero_lc}");
                     redirecionar(APP_URL . 'documentacao/lc');
                 } catch (Throwable $e) {
-                    if ($pdo->inTransaction()) {
-                        $pdo->rollBack();
-                    }
                     $erro = 'Não foi possível gerar a licença: ' . $e->getMessage();
                 }
             }

@@ -506,3 +506,16 @@ function sgqObterIndicadores(PDO $pdo, ?string $dataInicio = null, ?string $data
         ],
     ];
 }
+
+/**
+ * Matriz de Riscos e Oportunidades (ISO 9001:2015 Cláusula 6.1)
+ * Calcula a criticidade do risco a partir da probabilidade (1 a 5) e impacto (1 a 5).
+ */
+function sgqCalcularNivelRisco(int $prob, int $impacto): string {
+    $score = $prob * $impacto;
+    if ($score >= 16) return 'CRITICO';
+    if ($score >= 10) return 'ALTO';
+    if ($score >= 5)  return 'MEDIO';
+    return 'BAIXO';
+}
+

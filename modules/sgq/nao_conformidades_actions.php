@@ -8,9 +8,10 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/sgq.php';
 
 verificar_sessao();
-exigirAcesso('dashboard');
+exigirAcesso('sgq');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['csrf_token']) || !verificarCSRF($_POST['csrf_token'])) {

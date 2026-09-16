@@ -5,8 +5,9 @@ function assertRelatorioLayout(bool $condicao, string $mensagem): void
     if (!$condicao) throw new RuntimeException($mensagem);
 }
 
-$arquivo = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio.php');
-assertRelatorioLayout($arquivo !== false, 'Não foi possível ler a tela do relatório.');
+require_once __DIR__ . '/helpers_relatorio.php';
+$arquivo = carregarRelatorioParaTeste();
+assertRelatorioLayout($arquivo !== '', 'Não foi possível ler a tela do relatório.');
 
 $posData = strpos($arquivo, 'id="data_vistoria"');
 $posPrazo = strpos($arquivo, 'id="prazo_exigencias_dias"');

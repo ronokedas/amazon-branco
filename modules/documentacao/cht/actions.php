@@ -50,6 +50,22 @@ if ($action === 'salvar') {
     $despachante_id = $_POST['despachante_id'] ?? null;
     if(empty($despachante_id)) $despachante_id = null;
 
+    $cliente_id = $_POST['cliente_id'] ?? null;
+    if(empty($cliente_id)) $cliente_id = null;
+    $embarcacao_id = $_POST['embarcacao_id'] ?? null;
+    if(empty($embarcacao_id)) $embarcacao_id = null;
+
+    if (empty($cliente_id) && !empty($cpf_cnpj)) {
+        $stmtCli = $pdo->prepare("SELECT id FROM clientes WHERE REPLACE(REPLACE(REPLACE(cpf_cnpj, '.', ''), '-', ''), '/', '') = REPLACE(REPLACE(REPLACE(:doc, '.', ''), '-', ''), '/', '') LIMIT 1");
+        $stmtCli->execute([':doc' => $cpf_cnpj]);
+        $cliente_id = $stmtCli->fetchColumn() ?: null;
+    }
+    if (empty($cliente_id) && !empty($profissional_empresa)) {
+        $stmtCli = $pdo->prepare("SELECT id FROM clientes WHERE LOWER(TRIM(nome)) = LOWER(TRIM(:nome)) LIMIT 1");
+        $stmtCli->execute([':nome' => $profissional_empresa]);
+        $cliente_id = $stmtCli->fetchColumn() ?: null;
+    }
+
     $status = $_POST['status'] ?? 'rascunho';
     if (!in_array($status,['rascunho','emitido','cancelado'])) $status='rascunho';
 
@@ -61,10 +77,36 @@ if ($action === 'salvar') {
     if (empty($data_emissao)) { setMensagem('error','Data de emissão é obrigatória.'); redirecionar(APP_URL.'documentacao/cht/form'.($editando?"?id={$id}":'')); }
     if (empty($data_validade)) { setMensagem('error','Data de validade é obrigatória.'); redirecionar(APP_URL.'documentacao/cht/form'.($editando?"?id={$id}":'')); }
     if (empty($local_emissao)) { setMensagem('error','Local de emissão é obrigatório.'); redirecionar(APP_URL.'documentacao/cht/form'.($editando?"?id={$id}":'')); }
+
+    if (!$editando) {
+        try {
+            require_once __DIR__ . '/../../../includes/emissao_certificados.php';
+            // Integridade relacional garantida no motor: :embarcacao_id, :cliente_id
+            $dadosEmissao = array_merge($_POST, [
+                'embarcacao_id' => $embarcacao_id,
+                'cliente_id' => $cliente_id,
+                'profissional_empresa' => $profissional_empresa,
+                'cpf_cnpj' => $cpf_cnpj,
+                'email_destinatario' => $email_destinatario,
+                'atividade_homologada' => $atividade_homologada,
+                'relatorio_homologacao_numero' => $relatorio_homologacao_numero,
+                'data_validade' => $data_validade,
+                'local_emissao' => $local_emissao,
+                'observacoes' => $observacoes,
+            ]);
+            $res = emitirCertificadoUnificado($pdo, 'CHT', $dadosEmissao, (string)($_SESSION['usuario_id'] ?? ''));
+            $num = $res['numero'];
+            setMensagem('success', 'CHT criado com sucesso. Número: ' . $num);
+            redirecionar(APP_URL . 'documentacao/cht');
+        } catch (Throwable $e) {
+            setMensagem('error', 'Erro: ' . $e->getMessage());
+            redirecionar(APP_URL . 'documentacao/cht/form');
+        }
+    }
     
     try {
         if ($editando) {
-            $sql = "UPDATE certificados_cht SET profissional_empresa=:profissional_empresa, cpf_cnpj=:cpf_cnpj, email_destinatario=:email_destinatario, atividade_homologada=:atividade_homologada, relatorio_homologacao_numero=:relatorio_homologacao_numero, numero_relatorio_ht=:numero_relatorio_ht, observacoes=:observacoes, data_emissao=:data_emissao, data_validade=:data_validade, local_emissao=:local_emissao, assinante_nome=:assinante_nome, assinante_titulo=:assinante_titulo, assinante_registro=:assinante_registro, status=:status, despachante_id=:despachante_id WHERE id=:id";
+            $sql = "UPDATE certificados_cht SET profissional_empresa=:profissional_empresa, cpf_cnpj=:cpf_cnpj, email_destinatario=:email_destinatario, atividade_homologada=:atividade_homologada, relatorio_homologacao_numero=:relatorio_homologacao_numero, numero_relatorio_ht=:numero_relatorio_ht, observacoes=:observacoes, data_emissao=:data_emissao, data_validade=:data_validade, local_emissao=:local_emissao, assinante_nome=:assinante_nome, assinante_titulo=:assinante_titulo, assinante_registro=:assinante_registro, status=:status, despachante_id=:despachante_id, cliente_id=:cliente_id, embarcacao_id=:embarcacao_id WHERE id=:id";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 ':profissional_empresa' => $profissional_empresa,
@@ -82,6 +124,8 @@ if ($action === 'salvar') {
                 ':assinante_registro' => $assinante_registro,
                 ':status' => $status,
                 ':despachante_id' => $despachante_id,
+                ':cliente_id' => $cliente_id,
+                ':embarcacao_id' => $embarcacao_id,
                 ':id' => $id
             ]);
             $numero = $pdo->prepare("SELECT numero_relatorio_ht FROM certificados_cht WHERE id=:id");
@@ -90,7 +134,7 @@ if ($action === 'salvar') {
             $num = gerarNumeroDocumento('CHT', 'AM-CHT');
             $token = bin2hex(random_bytes(32));
             $id = gerarUUID();
-            $sql = "INSERT INTO certificados_cht (id, numero_certificado, numero_relatorio_ht, token_assinatura, profissional_empresa, cpf_cnpj, email_destinatario, atividade_homologada, relatorio_homologacao_numero, observacoes, data_emissao, data_validade, local_emissao, assinante_nome, assinante_titulo, assinante_registro, status, criado_por, despachante_id) VALUES (:id, :numero_certificado, :numero_relatorio_ht, :token_assinatura, :profissional_empresa, :cpf_cnpj, :email_destinatario, :atividade_homologada, :relatorio_homologacao_numero, :observacoes, :data_emissao, :data_validade, :local_emissao, :assinante_nome, :assinante_titulo, :assinante_registro, :status, :criado_por, :despachante_id)";
+            $sql = "INSERT INTO certificados_cht (id, numero_certificado, numero_relatorio_ht, token_assinatura, profissional_empresa, cpf_cnpj, email_destinatario, atividade_homologada, relatorio_homologacao_numero, observacoes, data_emissao, data_validade, local_emissao, assinante_nome, assinante_titulo, assinante_registro, status, criado_por, despachante_id, cliente_id, embarcacao_id) VALUES (:id, :numero_certificado, :numero_relatorio_ht, :token_assinatura, :profissional_empresa, :cpf_cnpj, :email_destinatario, :atividade_homologada, :relatorio_homologacao_numero, :observacoes, :data_emissao, :data_validade, :local_emissao, :assinante_nome, :assinante_titulo, :assinante_registro, :status, :criado_por, :despachante_id, :cliente_id, :embarcacao_id)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 ':id' => $id,
@@ -111,7 +155,9 @@ if ($action === 'salvar') {
                 ':assinante_registro' => $assinante_registro,
                 ':status' => $status,
                 ':despachante_id' => $despachante_id,
-                ':criado_por' => $_SESSION['usuario_id'] ?? null
+                ':criado_por' => $_SESSION['usuario_id'] ?? null,
+                ':cliente_id' => $cliente_id,
+                ':embarcacao_id' => $embarcacao_id
             ]);
         }
 

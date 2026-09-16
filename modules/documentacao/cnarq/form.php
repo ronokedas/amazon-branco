@@ -154,6 +154,8 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
         <?php if ($editando): ?>
             <input type="hidden" name="id" value="<?php echo h($certificado['id']); ?>">
             <input type="hidden" name="vistoria_id" value="<?php echo h($certificado['vistoria_id'] ?? ''); ?>">
+            <input type="hidden" name="embarcacao_id" value="<?php echo h($certificado['embarcacao_id'] ?? ''); ?>">
+            <input type="hidden" name="cliente_id" value="<?php echo h($certificado['cliente_id'] ?? ''); ?>">
         <?php endif; ?>
 
         <!-- SEÇÃO 1: Identificação do Certificado -->
@@ -213,7 +215,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                 <!-- Select de embarcação para puxar dados automaticamente -->
                 <div class="form-group">
                     <label for="embarcacao_id"><i class="fas fa-search"></i> Selecionar Embarcação do Cadastro</label>
-                     <select id="embarcacao_id" class="form-control" onchange="carregarDadosEmbarcacao(this.value)">
+                     <select id="embarcacao_id" name="embarcacao_id" class="form-control" onchange="carregarDadosEmbarcacao(this.value)">
                         <option value="">-- Selecione uma embarcação --</option>
                         <?php foreach ($embarcacoes as $emb): ?>
                             <option value="<?php echo h($emb['id']); ?>"

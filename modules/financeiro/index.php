@@ -340,6 +340,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <i class="fas fa-info-circle"></i> 
                 Total: <?php echo count($lancamentos); ?> lancamento(s) | 
                 Receitas pagas: <?php echo formatarMoeda($totalReceitas); ?> |
+            <small class="text-muted">
+                <i class="fas fa-info-circle"></i> 
+                Total: <?php echo count($lancamentos); ?> lancamento(s) | 
+                Receitas pagas: <?php echo formatarMoeda($totalReceitas); ?> |
                 A receber: <?php echo formatarMoeda($totalAReceber); ?> |
                 Despesas: <?php echo formatarMoeda($totalDespesas); ?> | 
                 Saldo: <strong style="color: <?php echo $saldo >= 0 ? 'var(--cor-sucesso)' : 'var(--cor-erro)'; ?>;"><?php echo formatarMoeda($saldo); ?></strong>
@@ -352,40 +356,67 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     <div class="financeiro-modal__backdrop" data-fechar-baixa></div>
     <section class="financeiro-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="tituloModalBaixa">
         <header class="financeiro-modal__header">
-            <div>
-                <small id="subtituloModalBaixa" class="text-muted">Registrar movimentação</small>
-                <h3 id="tituloModalBaixa" style="margin:3px 0 0;"><i class="fas fa-check-circle"></i> Baixar lançamento</h3>
+            <div class="financeiro-modal__title-area">
+                <span id="subtituloModalBaixa" class="financeiro-modal__eyebrow">Registrar movimentação</span>
+                <h3 id="tituloModalBaixa" class="financeiro-modal__title">
+                    <i class="fas fa-check-circle text-success"></i> Baixar lançamento
+                </h3>
             </div>
-            <button type="button" class="financeiro-modal__close" data-fechar-baixa aria-label="Fechar"><i class="fas fa-times"></i></button>
+            <button type="button" class="financeiro-modal__close" data-fechar-baixa aria-label="Fechar" title="Fechar janela">
+                <i class="fas fa-times"></i>
+            </button>
         </header>
         <form method="POST" action="<?php echo APP_URL; ?>financeiro/actions?action=baixar" id="formBaixa" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>">
             <input type="hidden" name="escritorio_id" value="<?= h($filtro_escritorio) ?>">
             <input type="hidden" name="lancamento_id" id="baixaLancamentoId">
             <div class="financeiro-modal__body">
+                <!-- Card de Resumo do Lançamento em Fundo Claro e Nítido -->
                 <div class="baixa-resumo">
-                    <span class="text-muted">Lançamento</span>
-                    <strong id="baixaDescricao"></strong>
-                    <span class="text-muted" style="margin-top:10px;">Saldo devedor atual</span>
-                    <strong id="baixaSaldo" style="font-size:1.35rem;color:var(--cor-destaque);"></strong>
+                    <div class="baixa-resumo__item">
+                        <span class="baixa-resumo__label"><i class="fas fa-file-invoice text-muted"></i> Lançamento</span>
+                        <strong id="baixaDescricao" class="baixa-resumo__desc"></strong>
+                    </div>
+                    <div class="baixa-resumo__item" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                        <span class="baixa-resumo__label"><i class="fas fa-wallet text-muted"></i> Saldo devedor atual</span>
+                        <strong id="baixaSaldo" class="baixa-resumo__saldo"></strong>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="baixaValor"><i class="fas fa-dollar-sign"></i> <span id="baixaValorLabel">Valor a pagar/receber</span> *</label>
-                    <input type="text" id="baixaValor" name="valor_pago" inputmode="decimal" required maxlength="15">
-                    <small class="text-muted">Digite exatamente o valor que entrou ou saiu do caixa.</small>
+
+                <!-- Campo de Valor a Baixar -->
+                <div class="form-group mb-3">
+                    <label for="baixaValor" class="financeiro-form-label">
+                        <i class="fas fa-money-bill-wave text-success"></i> 
+                        <span id="baixaValorLabel">Valor a pagar/receber</span> <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-money-container">
+                        <span class="input-money-symbol">R$</span>
+                        <input type="text" id="baixaValor" name="valor_pago" class="input-money-field" inputmode="decimal" required maxlength="15" placeholder="0,00">
+                    </div>
+                    <small class="financeiro-help-text">Digite exatamente o valor que entrou ou saiu do caixa.</small>
+                    
+                    <!-- Previsão do Saldo Restante -->
                     <div id="baixaSaldoRestante" class="baixa-saldo-restante" aria-live="polite">
-                        <span>Após esta baixa, ficará faltando</span>
-                        <strong id="baixaSaldoRestanteValor"></strong>
+                        <span class="baixa-saldo-restante__text">
+                            <i class="fas fa-calculator mr-1"></i> Após esta baixa, ficará faltando:
+                        </span>
+                        <strong id="baixaSaldoRestanteValor" class="baixa-saldo-restante__val">R$ 0,00</strong>
                     </div>
                 </div>
-                <div class="grid-2">
+
+                <!-- Grid de Data e Forma de Pagamento -->
+                <div class="financeiro-grid-2">
                     <div class="form-group">
-                        <label for="baixaData"><i class="fas fa-calendar-check"></i> Data do pagamento *</label>
-                        <input type="date" id="baixaData" name="data_pagamento" value="<?php echo date('Y-m-d'); ?>" required>
+                        <label for="baixaData" class="financeiro-form-label">
+                            <i class="fas fa-calendar-check text-primary"></i> Data do pagamento <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" id="baixaData" name="data_pagamento" class="financeiro-control" value="<?php echo date('Y-m-d'); ?>" required>
                     </div>
                     <div class="form-group">
-                        <label for="baixaFormaPagamento"><i class="fas fa-credit-card"></i> Forma de pagamento *</label>
-                        <select id="baixaFormaPagamento" name="forma_pagamento" required>
+                        <label for="baixaFormaPagamento" class="financeiro-form-label">
+                            <i class="fas fa-credit-card text-primary"></i> Forma de pagamento <span class="text-danger">*</span>
+                        </label>
+                        <select id="baixaFormaPagamento" name="forma_pagamento" class="financeiro-control" required>
                             <option value="">Selecione...</option>
                             <?php foreach ($formasPagamento as $valorForma => $nomeForma): ?>
                                 <option value="<?php echo h($valorForma); ?>"><?php echo h($nomeForma); ?></option>
@@ -393,20 +424,29 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="baixaComprovantes"><i class="fas fa-paperclip"></i> Comprovante</label>
-                    <input type="file"
-                           id="baixaComprovantes"
-                           name="comprovantes[]"
-                           accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
-                           multiple>
-                    <small class="text-muted">PDF ou imagem, até 10MB por arquivo. O anexo ficará disponível no lápis deste lançamento.</small>
+
+                <!-- Upload de Comprovante -->
+                <div class="form-group mb-0">
+                    <label for="baixaComprovantes" class="financeiro-form-label">
+                        <i class="fas fa-paperclip text-muted"></i> Comprovante de Pagamento
+                    </label>
+                    <div class="financeiro-upload-wrapper">
+                        <input type="file"
+                               id="baixaComprovantes"
+                               name="comprovantes[]"
+                               class="financeiro-file-input"
+                               accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+                               multiple>
+                    </div>
+                    <small class="financeiro-help-text">PDF ou imagem, até 10MB por arquivo. O anexo ficará disponível no histórico deste lançamento.</small>
                     <div id="baixaArquivosSelecionados" class="baixa-arquivos" hidden></div>
                 </div>
             </div>
             <footer class="financeiro-modal__footer">
-                <button type="button" class="btn btn-secondary" data-fechar-baixa>Cancelar</button>
-                <button type="submit" class="btn btn-success" id="confirmarBaixa"><i class="fas fa-check"></i> Confirmar baixa</button>
+                <button type="button" class="btn-modal-cancelar" data-fechar-baixa>Cancelar</button>
+                <button type="submit" class="btn-modal-confirmar" id="confirmarBaixa">
+                    <i class="fas fa-check"></i> Confirmar baixa
+                </button>
             </footer>
         </form>
     </section>
@@ -446,10 +486,376 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 @media (min-width:769px) and (max-width:1400px) { .finance-scroll-hint{display:block} }
 @media (max-width:768px) { .finance-page{overflow:visible!important}.finance-summary-grid{grid-template-columns:1fr;margin:12px}.finance-summary-card{padding:15px}.finance-filter-form{margin:0 12px 14px}.finance-filter-fields{grid-template-columns:1fr}.finance-filter-office{grid-column:auto}.finance-filter-actions .btn{width:100%}.finance-table-scroll{overflow:visible}.finance-transactions-table,.finance-transactions-table tbody,.finance-transactions-table tr,.finance-transactions-table td{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important}.finance-transactions-table thead{display:none!important}.finance-transactions-table{background:transparent!important}.finance-transactions-table tbody{background:transparent!important}.finance-transactions-table tbody tr{margin:0 12px 12px;padding:12px 14px;overflow:hidden;border:1px solid var(--cor-borda)!important;border-radius:12px;background:var(--cor-painel);box-shadow:0 2px 10px rgba(14,52,43,.035)}.finance-transactions-table td{min-height:38px;padding:8px 0!important;display:grid!important;grid-template-columns:minmax(96px,38%) minmax(0,1fr);align-items:start;gap:12px;border:0!important;border-bottom:1px solid var(--cor-borda)!important;background:transparent!important;text-align:left!important;white-space:normal!important;overflow-wrap:anywhere!important}.finance-transactions-table td:last-child{border-bottom:0!important}.finance-transactions-table td::before{content:attr(data-label);color:var(--cor-texto-secundario);font-size:10px;font-weight:800;letter-spacing:.045em;text-transform:uppercase}.finance-transactions-table td[data-label="Acoes"],.finance-transactions-table td[data-label="Ações"]{grid-template-columns:1fr}.finance-action-buttons{display:flex;gap:8px}.finance-action-buttons .btn{min-width:42px;min-height:42px}.finance-page-footer{padding:12px}.finance-page-footer small{display:block;line-height:1.65} }
 @media (max-width:390px) { .finance-transactions-table td{grid-template-columns:1fr;gap:4px}.finance-transactions-table td::before{margin-bottom:2px} }
-.baixa-saldo-restante{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid rgba(88,166,255,.35);border-radius:9px;background:rgba(88,166,255,.08)}.baixa-saldo-restante strong{font-size:1.15rem;color:var(--cor-destaque)}.baixa-saldo-restante.is-error{border-color:var(--cor-erro);background:rgba(231,76,60,.08)}.baixa-saldo-restante.is-error strong{color:var(--cor-erro)}.baixa-arquivos{margin-top:8px;padding:10px 12px;border:1px solid var(--cor-borda);border-radius:8px;color:var(--cor-texto-secundario);font-size:.85rem}.baixa-arquivos div+div{margin-top:4px}
-.financeiro-modal__header{position:sticky;top:0;z-index:2;background:var(--cor-painel,#161b22)}.financeiro-modal__footer{position:sticky;bottom:0;z-index:2;background:var(--cor-painel,#161b22)}
-.financeiro-modal{display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;padding:18px}.financeiro-modal.is-open{display:flex}.financeiro-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(2px)}.financeiro-modal__dialog{position:relative;width:min(560px,100%);max-height:calc(100vh - 36px);overflow:auto;background:var(--cor-painel,#161b22);border:1px solid var(--cor-borda,#30363d);border-radius:14px;box-shadow:0 20px 55px rgba(0,0,0,.45)}.financeiro-modal__header,.financeiro-modal__footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--cor-borda,#30363d)}.financeiro-modal__footer{justify-content:flex-end;border-top:1px solid var(--cor-borda,#30363d);border-bottom:0}.financeiro-modal__body{padding:20px}.financeiro-modal__close{border:0;background:transparent;color:var(--cor-texto-secundario,#8b949e);cursor:pointer;font-size:1.1rem;padding:8px}.baixa-resumo{display:flex;flex-direction:column;padding:15px;margin-bottom:18px;border:1px solid var(--cor-borda,#30363d);border-radius:10px;background:rgba(88,166,255,.06)}
-@media(max-width:520px){.financeiro-modal{padding:12px}.financeiro-modal__header,.financeiro-modal__footer{padding:14px}.financeiro-modal__footer{align-items:stretch;flex-direction:column-reverse}.financeiro-modal__footer .btn{width:100%;justify-content:center}.financeiro-modal__body{padding:14px}.baixa-saldo-restante{align-items:flex-start;flex-direction:column}}
+
+/* ==============================================================
+   DESIGN DO MODAL DE BAIXA FINANCEIRA (TEMA CLARO & ALTO CONTRASTE)
+   ============================================================== */
+.financeiro-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.financeiro-modal.is-open {
+    display: flex;
+}
+.financeiro-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    animation: modalFadeBackdrop 0.2s ease-out;
+}
+@keyframes modalFadeBackdrop {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.financeiro-modal__dialog {
+    position: relative;
+    width: min(540px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    background: #ffffff !important;
+    color: #1e293b !important;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+}
+@keyframes modalPopIn {
+    from { opacity: 0; transform: scale(0.96) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.financeiro-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    background: #ffffff !important;
+    border-bottom: 1px solid #f1f5f9;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+.financeiro-modal__title-area {
+    display: flex;
+    flex-direction: column;
+}
+.financeiro-modal__eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #059669 !important;
+    margin-bottom: 3px;
+}
+.financeiro-modal__title {
+    margin: 0 !important;
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.financeiro-modal__close {
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+    border-radius: 8px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.financeiro-modal__close:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
+    transform: rotate(90deg);
+}
+.financeiro-modal__body {
+    padding: 24px;
+    background: #ffffff !important;
+    color: #1e293b !important;
+}
+
+/* Card de Resumo do Lançamento */
+.baixa-resumo {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.baixa-resumo__item {
+    display: flex;
+    flex-direction: column;
+}
+.baixa-resumo__label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+.baixa-resumo__desc {
+    color: #0f172a !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    line-height: 1.45;
+}
+.baixa-resumo__saldo {
+    font-size: 1.5rem !important;
+    font-weight: 800 !important;
+    color: #047857 !important;
+    letter-spacing: -0.02em;
+}
+
+/* Rótulos e Campos de Formulário */
+.financeiro-form-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    color: #334155 !important;
+    margin-bottom: 6px;
+}
+.financeiro-help-text {
+    display: block;
+    margin-top: 4px;
+    color: #64748b !important;
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+/* Campo de Valor com Prefixo R$ em Destaque */
+.input-money-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+.input-money-symbol {
+    position: absolute;
+    left: 14px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #059669;
+    pointer-events: none;
+}
+.input-money-field {
+    width: 100% !important;
+    min-height: 48px !important;
+    padding: 8px 14px 8px 46px !important;
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    border: 2px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    outline: none !important;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+}
+.input-money-field:focus {
+    border-color: #059669 !important;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15) !important;
+}
+
+/* Card de Previsão de Saldo Restante */
+.baixa-saldo-restante {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+    padding: 12px 16px;
+    border: 1px solid #bbf7d0 !important;
+    border-radius: 10px;
+    background: #f0fdf4 !important;
+    transition: all 0.2s ease;
+}
+.baixa-saldo-restante__text {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #166534 !important;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.baixa-saldo-restante__val {
+    font-size: 1.2rem !important;
+    font-weight: 800 !important;
+    color: #047857 !important;
+}
+.baixa-saldo-restante.is-error {
+    border-color: #fecaca !important;
+    background: #fef2f2 !important;
+}
+.baixa-saldo-restante.is-error .baixa-saldo-restante__text {
+    color: #991b1b !important;
+}
+.baixa-saldo-restante.is-error .baixa-saldo-restante__val {
+    color: #dc2626 !important;
+}
+
+/* Grid com Data e Forma de Pagamento */
+.financeiro-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+.financeiro-control {
+    width: 100% !important;
+    min-height: 42px !important;
+    padding: 8px 12px !important;
+    font-size: 0.92rem !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    outline: none !important;
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+}
+.financeiro-control:focus {
+    border-color: #059669 !important;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12) !important;
+}
+
+/* Upload de Comprovante */
+.financeiro-upload-wrapper {
+    margin-top: 4px;
+}
+.financeiro-file-input {
+    width: 100% !important;
+    min-height: 40px !important;
+    padding: 7px 10px !important;
+    font-size: 0.85rem !important;
+    color: #475569 !important;
+    background: #f8fafc !important;
+    border: 1px dashed #94a3b8 !important;
+    border-radius: 8px !important;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+.financeiro-file-input:hover {
+    background: #f1f5f9 !important;
+    border-color: #059669 !important;
+}
+.baixa-arquivos {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 0.85rem;
+}
+.baixa-arquivos div + div {
+    margin-top: 4px;
+}
+
+/* Rodapé do Modal */
+.financeiro-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 18px 24px;
+    background: #f8fafc !important;
+    border-top: 1px solid #f1f5f9;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+}
+.btn-modal-cancelar {
+    min-height: 42px;
+    padding: 0 20px;
+    background: #ffffff !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-modal-cancelar:hover {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+    border-color: #94a3b8 !important;
+}
+.btn-modal-confirmar {
+    min-height: 42px;
+    padding: 0 22px;
+    background: #059669 !important;
+    color: #ffffff !important;
+    border: 1px solid #047857 !important;
+    border-radius: 8px !important;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+    transition: all 0.15s ease;
+}
+.btn-modal-confirmar:hover:not(:disabled) {
+    background: #047857 !important;
+    box-shadow: 0 4px 8px rgba(5, 150, 105, 0.28);
+    transform: translateY(-1px);
+}
+.btn-modal-confirmar:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+@media (max-width: 540px) {
+    .financeiro-modal { padding: 12px; }
+    .financeiro-modal__header, .financeiro-modal__body { padding: 16px; }
+    .financeiro-grid-2 { grid-template-columns: 1fr; gap: 10px; }
+    .financeiro-modal__footer {
+        padding: 14px 16px;
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+    .btn-modal-cancelar, .btn-modal-confirmar {
+        width: 100%;
+        justify-content: center;
+    }
+    .baixa-saldo-restante {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+}
 </style>
 
 <script>

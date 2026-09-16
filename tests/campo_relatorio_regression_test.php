@@ -31,7 +31,8 @@ assertCampoRelatorio(
     'O PDF deixou de respeitar os blocos previstos quando nao ha exigencias adicionais.'
 );
 
-$relatorio = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio.php');
+require_once __DIR__ . '/helpers_relatorio.php';
+$relatorio = carregarRelatorioParaTeste();
 $actions = file_get_contents(__DIR__ . '/../modules/vistorias/actions.php');
 $checklistCampo = file_get_contents(__DIR__ . '/../pwa-campo/src/screens/ChecklistScreen.jsx');
 $pdf = file_get_contents(__DIR__ . '/../modules/vistorias/relatorio_pdf.php');

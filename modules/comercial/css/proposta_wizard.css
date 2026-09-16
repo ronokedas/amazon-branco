@@ -1,0 +1,270 @@
+/**
+ * Estilos do Wizard de Nova Proposta Comercial
+ * ERP Sistema Certificadora Amazon
+ */
+
+.wizard-step.active .step-label { color: var(--cor-destaque) !important; font-weight: 600 !important; }
+.cliente-card:hover { border-color: var(--cor-destaque) !important; }
+.cliente-card.is-selected {
+    border-color: #56e0ad !important;
+    background: rgba(46,204,113,0.15) !important;
+    box-shadow: inset 4px 0 0 #56e0ad, 0 0 0 3px rgba(86,224,173,0.16);
+}
+.cliente-check-indicator {
+    min-width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 8px;
+    color: transparent;
+    background: transparent;
+    border: 2px solid rgba(199,244,231,0.22);
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+.cliente-card.is-selected .cliente-check-indicator {
+    color: #021210;
+    background: #56e0ad;
+    border-color: #56e0ad;
+}
+.cliente-check-indicator em {
+    display: none;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 800;
+}
+.cliente-card.is-selected .cliente-check-indicator em {
+    display: inline;
+}
+.wizard-helper,
+.wizard-warning,
+.armador-box {
+    border: 1px solid var(--cor-borda);
+    border-radius: 10px;
+    background: rgba(46,204,113,0.06);
+    padding: 12px 14px;
+}
+.wizard-helper,
+.wizard-warning {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    color: var(--cor-texto-secundario);
+}
+.wizard-helper i {
+    color: var(--cor-destaque);
+    margin-top: 2px;
+}
+.wizard-warning {
+    background: rgba(255,193,7,0.08);
+}
+.wizard-warning i {
+    color: #ffc107;
+    margin-top: 2px;
+}
+.armador-box {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(260px, 1.2fr);
+    gap: 14px;
+    align-items: center;
+}
+.armador-box label,
+.armador-box small {
+    display: block;
+}
+.armador-box small {
+    color: var(--cor-texto-secundario);
+    margin-top: 4px;
+}
+.armador-box select {
+    width: 100%;
+}
+.discount-card {
+    text-align: center;
+    padding: 12px;
+    background: var(--cor-fundo);
+    border-radius: 8px;
+    border: 1px solid var(--cor-borda);
+}
+.discount-card > small:first-child {
+    display: block;
+    margin-bottom: 8px;
+}
+.discount-hidden-select {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+.discount-control {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+}
+.discount-mode {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--cor-borda);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--cor-sidebar);
+    padding: 3px;
+    gap: 3px;
+}
+.discount-mode-btn {
+    min-width: 0;
+    height: 40px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--cor-texto-secundario);
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s, border-color 0.18s, box-shadow 0.18s;
+}
+.discount-mode-btn:hover {
+    color: var(--cor-texto);
+    border-color: rgba(86,224,173,0.35);
+}
+.discount-mode-btn.is-active {
+    background: #56e0ad;
+    border-color: #56e0ad;
+    box-shadow: 0 0 0 2px rgba(86,224,173,0.22);
+    color: #021210;
+}
+.discount-input-wrap {
+    min-width: 0;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--cor-borda);
+    border-radius: 8px;
+    background: var(--cor-sidebar);
+    overflow: hidden;
+}
+.discount-card,
+.entry-card {
+    min-width: 0;
+}
+.discount-mode {
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
+}
+.discount-input-wrap span {
+    min-width: 44px;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    color: var(--cor-destaque);
+    font-weight: 800;
+    border-right: 1px solid var(--cor-borda);
+}
+.discount-input-wrap input {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--cor-texto);
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 800;
+}
+.discount-feedback {
+    display: block;
+    margin-top: 8px;
+    color: var(--cor-texto-secundario);
+}
+.discount-input-wrap.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12);
+}
+.discount-input-wrap input[aria-invalid="true"] {
+    color: #b4232d !important;
+}
+.discount-error {
+    display: block;
+    margin-top: 7px;
+    color: #b4232d;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.discount-error[hidden] {
+    display: none;
+}
+.servico-linha:hover { background: rgba(46,204,113,0.03) !important; }
+.emb-body table { font-size: 0.9rem; }
+.embarcacao-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+}
+.embarcacao-select-card {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+    min-height: 74px;
+    padding: 12px 14px;
+    border: 1px solid var(--cor-borda);
+    border-radius: 10px;
+    background: var(--cor-fundo);
+    color: var(--cor-texto);
+    text-align: left;
+    cursor: pointer;
+}
+.embarcacao-select-card:hover,
+.embarcacao-select-card.is-selected {
+    border-color: var(--cor-destaque);
+    background: rgba(46,204,113,0.08);
+}
+.embarcacao-select-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    color: var(--cor-destaque);
+    background: rgba(46,204,113,0.12);
+}
+.embarcacao-select-main strong,
+.embarcacao-select-main small,
+.embarcacao-select-summary b,
+.embarcacao-select-summary small {
+    display: block;
+}
+.embarcacao-select-main strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.embarcacao-select-main small,
+.embarcacao-select-summary small {
+    color: var(--cor-texto-secundario);
+}
+.embarcacao-select-summary {
+    text-align: right;
+}
+.embarcacao-select-summary b {
+    color: var(--cor-destaque);
+}
+@media (max-width: 720px) {
+    .armador-box {
+        grid-template-columns: 1fr;
+    }
+}

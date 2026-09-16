@@ -41,10 +41,48 @@ if ($path === 'configuracoes/geral') {
     exit;
 }
 
+// Redirecionamentos transparentes 301 (Etapa 2 - Unificacao dos Cadastros Mestres Navais)
+$qsParams = !empty($_SERVER['QUERY_STRING']) ? '&' . $_SERVER['QUERY_STRING'] : '';
+if ($path === 'armadores') {
+    header('Location: ' . APP_URL . 'clientes?perfil=armador' . $qsParams, true, 301);
+    exit;
+}
+if ($path === 'armadores/form') {
+    header('Location: ' . APP_URL . 'clientes/form?perfil=armador' . $qsParams, true, 301);
+    exit;
+}
+if ($path === 'proprietarios') {
+    header('Location: ' . APP_URL . 'clientes?perfil=proprietario' . $qsParams, true, 301);
+    exit;
+}
+if ($path === 'proprietarios/form') {
+    header('Location: ' . APP_URL . 'clientes/form?perfil=proprietario' . $qsParams, true, 301);
+    exit;
+}
+if ($path === 'despachantes') {
+    header('Location: ' . APP_URL . 'clientes?perfil=despachante' . $qsParams, true, 301);
+    exit;
+}
+if ($path === 'despachantes/form') {
+    header('Location: ' . APP_URL . 'clientes/form?perfil=despachante' . $qsParams, true, 301);
+    exit;
+}
+
+// Redirecionamentos transparentes 301 (Etapa 3 - Desacoplamento do Catalogo de Servicos)
+if ($path === 'comercial/servicos') {
+    header('Location: ' . APP_URL . 'servicos' . $qsParams, true, 301);
+    exit;
+}
+if ($path === 'comercial/servicos/form') {
+    header('Location: ' . APP_URL . 'servicos/form' . $qsParams, true, 301);
+    exit;
+}
+
 // Mapeamento de rotas para modulos
 $rotas = [
     ''              => 'modules/login/index.php',
     'login'         => 'modules/login/index.php',
+    'logout'        => 'modules/login/logout.php',
     'portal/login'  => 'modules/portal/login.php',
     'portal/logout' => 'modules/portal/logout.php',
     'portal/recuperar-senha' => 'modules/portal/recuperar_senha.php',
@@ -59,6 +97,7 @@ $rotas = [
     'portal/ouvidoria' => 'modules/portal/ouvidoria.php',
     'portal/ouvidoria/actions' => 'modules/portal/ouvidoria_actions.php',
     'portal/satisfacao/actions' => 'modules/portal/satisfacao_actions.php',
+    'sgq' => 'modules/sgq/manual.php',
     'sgq/manual' => 'modules/sgq/manual.php',
     'sgq/apresentacao' => 'modules/sgq/apresentacao.php',
     'sgq/indicadores' => 'modules/sgq/indicadores.php',
@@ -68,15 +107,12 @@ $rotas = [
     'sgq/riscos' => 'modules/sgq/riscos.php',
     'sgq/riscos/actions' => 'modules/sgq/riscos_actions.php',
     'dashboard'     => 'modules/dashboard/index.php',
-    'armadores'          => 'modules/armadores/index.php',
-    'armadores/form'     => 'modules/armadores/form.php',
-    'armadores/actions'  => 'modules/armadores/actions.php',
-    'proprietarios'          => 'modules/proprietarios/index.php',
-    'proprietarios/form'     => 'modules/proprietarios/form.php',
-    'proprietarios/actions'  => 'modules/proprietarios/actions.php',
-    'despachantes'          => 'modules/despachantes/index.php',
-    'despachantes/form'     => 'modules/despachantes/form.php',
-    'despachantes/actions'  => 'modules/despachantes/actions.php',
+    'clientes'          => 'modules/clientes/index.php',
+    'clientes/form'     => 'modules/clientes/form.php',
+    'clientes/actions'  => 'modules/clientes/actions.php',
+    'armadores/actions' => 'modules/clientes/actions.php',
+    'proprietarios/actions' => 'modules/clientes/actions.php',
+    'despachantes/actions' => 'modules/clientes/actions.php',
     'embarcacoes'          => 'modules/embarcacoes/index.php',
     'embarcacoes/form'     => 'modules/embarcacoes/form.php',
     'embarcacoes/actions'  => 'modules/embarcacoes/actions.php',
@@ -139,10 +175,13 @@ $rotas = [
     'certificados'                  => 'modules/certificados/index.php',
     'certificados/wizard'           => 'modules/certificados/wizard.php',
     'certificados/wizard_step2'     => 'modules/certificados/wizard_step2.php',
+    'servicos'                      => 'modules/servicos/index.php',
+    'servicos/form'                 => 'modules/servicos/form.php',
+    'servicos/actions'              => 'modules/servicos/actions.php',
     'comercial'                     => 'modules/comercial/index.php',
-    'comercial/servicos'            => 'modules/comercial/servicos/index.php',
-    'comercial/servicos/form'       => 'modules/comercial/servicos/form.php',
-    'comercial/servicos/actions'    => 'modules/comercial/servicos/actions.php',
+    'comercial/servicos'            => 'modules/servicos/index.php',
+    'comercial/servicos/form'       => 'modules/servicos/form.php',
+    'comercial/servicos/actions'    => 'modules/servicos/actions.php',
     'comercial/nova'                => 'modules/comercial/nova.php',
     'comercial/pdf'                 => 'modules/comercial/pdf.php',
     'comercial/propostas'           => 'modules/comercial/propostas/index.php',
@@ -153,8 +192,10 @@ $rotas = [
     'agendamentos/actions'  => 'modules/agendamentos/actions.php',
     'agendamentos/os'       => 'modules/agendamentos/os.php',
     'emails'                => 'modules/emails/index.php',
-    'portal-clientes'       => 'modules/portal_clientes/index.php',
-    'portal-clientes/actions' => 'modules/portal_clientes/actions.php',
+    'gestao-acessos-portal' => 'modules/gestao_acessos_portal/index.php',
+    'gestao-acessos-portal/actions' => 'modules/gestao_acessos_portal/actions.php',
+    'portal-clientes'       => 'modules/gestao_acessos_portal/index.php',
+    'portal-clientes/actions' => 'modules/gestao_acessos_portal/actions.php',
     'configuracoes'             => 'modules/configuracoes/index.php',
     'configuracoes/basicas'     => 'modules/configuracoes/basicas.php',
     'configuracoes/financeiro'  => 'modules/configuracoes/financeiro.php',
@@ -172,8 +213,11 @@ $rotas = [
     'responsaveis_assinatura/assinatura' => 'modules/responsaveis_assinatura/assinatura.php',
     'minhas-assinaturas'                => 'modules/minhas_assinaturas/index.php',
     'minhas-assinaturas/actions'        => 'modules/minhas_assinaturas/actions.php',
-    'documentos/aprovar'             => 'modules/documentos/aprovar.php',
-    'documentos/cancelar'            => 'modules/documentos/cancelar.php',
+    'autenticidade'                     => 'modules/autenticidade/index.php',
+    'autenticidade/aprovar'             => 'modules/autenticidade/aprovar.php',
+    'autenticidade/cancelar'            => 'modules/autenticidade/cancelar.php',
+    'documentos/aprovar'             => 'modules/autenticidade/aprovar.php',
+    'documentos/cancelar'            => 'modules/autenticidade/cancelar.php',
     'busca-global'              => 'ajax/busca_global.php',
     'ajax/busca_cidades.php'    => 'ajax/busca_cidades.php',
     'perfil'                    => 'modules/perfil/index.php',
@@ -240,11 +284,15 @@ if (strpos($path, 'api/campo/v1') === 0) {
         'usuarios' => 'usuarios', 'usuarios/form' => 'usuarios', 'usuarios/actions' => 'usuarios',
         'agendamentos' => 'agendamentos', 'agendamentos/form' => 'agendamentos', 'agendamentos/actions' => 'agendamentos', 'agendamentos/os' => 'agendamentos',
         'comercial' => 'comercial', 'comercial/nova' => 'comercial', 'comercial/pdf' => 'comercial', 'comercial/propostas' => 'comercial', 'comercial/propostas/actions' => 'comercial',
+        'servicos' => 'servicos', 'servicos/form' => 'servicos', 'servicos/actions' => 'servicos',
         'comercial/servicos' => 'servicos', 'comercial/servicos/form' => 'servicos', 'comercial/servicos/actions' => 'servicos',
-        'relatorios' => 'relatorios', 'emails' => 'emails', 'portal-clientes' => 'portal_clientes', 'portal-clientes/actions' => 'portal_clientes',
-        'configuracoes' => 'configuracoes', 'configuracoes/basicas' => 'configuracoes', 'configuracoes/financeiro' => 'configuracoes', 'configuracoes/normam202' => 'configuracoes', 'configuracoes/normam202/actions' => 'configuracoes', 'configuracoes/backup' => 'configuracoes', 'configuracoes/exportacoes' => 'configuracoes', 'configuracoes/exportacoes_actions' => 'configuracoes', 'configuracoes/exportacoes_download' => 'configuracoes', 'configuracoes/actions' => 'configuracoes',
+        'relatorios' => 'relatorios', 'emails' => 'emails',
+        'gestao-acessos-portal' => 'gestao_acessos_portal', 'gestao-acessos-portal/actions' => 'gestao_acessos_portal',
+        'portal-clientes' => 'portal_clientes', 'portal-clientes/actions' => 'portal_clientes',
+        'configuracoes' => 'configuracoes', 'configuracoes/basicas' => 'configuracoes_basicas', 'configuracoes/financeiro' => 'configuracoes_financeiro', 'configuracoes/normam202' => 'configuracoes_normam202', 'configuracoes/normam202/actions' => 'configuracoes_normam202', 'configuracoes/backup' => 'configuracoes_backup', 'configuracoes/exportacoes' => 'configuracoes_exportacoes', 'configuracoes/exportacoes_actions' => 'configuracoes_exportacoes', 'configuracoes/exportacoes_download' => 'configuracoes_exportacoes', 'configuracoes/actions' => 'configuracoes',
         'responsaveis_assinatura' => 'responsaveis_assinatura', 'responsaveis_assinatura/form' => 'responsaveis_assinatura', 'responsaveis_assinatura/actions' => 'responsaveis_assinatura', 'responsaveis_assinatura/assinatura' => 'responsaveis_assinatura',
         'documentos/aprovar' => 'documentacao', 'documentos/cancelar' => 'documentacao',
+        'autenticidade' => 'documentacao', 'autenticidade/aprovar' => 'documentacao', 'autenticidade/cancelar' => 'documentacao',
         'documentacao' => 'documentacao', 'documentacao/aprovacao_relatorios' => 'relatorios_aprovacao',
         'certificados' => 'certificados',
         'sgq/manual' => 'sgq', 'sgq/apresentacao' => 'sgq', 'sgq/indicadores' => 'sgq',
@@ -266,11 +314,11 @@ if (strpos($path, 'api/campo/v1') === 0) {
     exit;
 } elseif (strpos($path, 'validar/') === 0) {
     $_GET['token'] = substr($path, 8);
-    require_once __DIR__ . '/modules/documentos/validar.php';
+    require_once __DIR__ . '/modules/autenticidade/validar.php';
     exit;
 } elseif (strpos($path, 'validar-assinatura/') === 0) {
     $_GET['token'] = substr($path, 19);
-    require_once __DIR__ . '/modules/documentos/validar_assinatura.php';
+    require_once __DIR__ . '/modules/autenticidade/validar_assinatura.php';
     exit;
 } elseif (strpos($path, 'assinatura-certificado/') === 0) {
     $partesAssinatura = explode('/', substr($path, 23));
@@ -296,48 +344,10 @@ if (strpos($path, 'api/campo/v1') === 0) {
     // O fluxo publico de assinatura permanece exclusivo das propostas.
     // Certificados tecnicos agora sao aprovados por administradores autenticados.
     http_response_code(410);
-    require_once __DIR__ . '/modules/documentos/assinatura_publica_desativada.php';
+    ?>
+    <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fluxo de assinatura atualizado</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#eef4f1;font-family:Arial,sans-serif;color:#173d32}.box{max-width:560px;margin:20px;background:#fff;border:1px solid #d7e3de;border-radius:14px;padding:34px;box-shadow:0 12px 35px rgba(0,50,38,.1)}h1{font-size:24px}p{line-height:1.6;color:#5d7069}</style></head><body><main class="box"><h1>Fluxo publico desativado</h1><p>Os documentos tecnicos da Amazon Naval agora sao aprovados e assinados eletronicamente dentro da area administrativa do ERP. Este link antigo nao aceita mais assinaturas.</p></main></body></html>
+    <?php
     exit;
-
-    /* Fluxo legado mantido abaixo apenas como referencia historica.
-    // Verificar se o token pertence ao CHT, LC, LP, CNBL, CNARQ ou CSN
-    $stmt_check_cht = $pdo->prepare("SELECT COUNT(*) as total FROM certificados_cht WHERE token_assinatura = :token AND ativo = 1");
-    $stmt_check_cht->execute([':token' => $_GET['token']]);
-    $check_cht = $stmt_check_cht->fetch(PDO::FETCH_ASSOC);
-    if ($check_cht && $check_cht['total'] > 0) {
-        require_once __DIR__ . '/modules/documentacao/cht/assinar.php';
-    } else {
-        $stmt_check_lc = $pdo->prepare("SELECT COUNT(*) as total FROM certificados_lc WHERE token_assinatura = :token AND ativo = 1");
-        $stmt_check_lc->execute([':token' => $_GET['token']]);
-        $check_lc = $stmt_check_lc->fetch(PDO::FETCH_ASSOC);
-        if ($check_lc && $check_lc['total'] > 0) {
-            require_once __DIR__ . '/modules/documentacao/lc/assinar.php';
-        } else {
-            $stmt_check_lp = $pdo->prepare("SELECT COUNT(*) as total FROM certificados_lp WHERE token_assinatura = :token AND ativo = 1");
-            $stmt_check_lp->execute([':token' => $_GET['token']]);
-            $check_lp = $stmt_check_lp->fetch(PDO::FETCH_ASSOC);
-            if ($check_lp && $check_lp['total'] > 0) {
-                require_once __DIR__ . '/modules/documentacao/lp/assinar.php';
-            } else {
-                $stmt_check_cnbl = $pdo->prepare("SELECT COUNT(*) as total FROM certificados_cnbl WHERE token_assinatura = :token AND ativo = 1");
-                $stmt_check_cnbl->execute([':token' => $_GET['token']]);
-                $check_cnbl = $stmt_check_cnbl->fetch(PDO::FETCH_ASSOC);
-                if ($check_cnbl && $check_cnbl['total'] > 0) {
-                    require_once __DIR__ . '/modules/documentacao/cnbl/assinar.php';
-                } else {
-                    $stmt_check_cnarq = $pdo->prepare("SELECT COUNT(*) as total FROM certificados_cnarq WHERE token_assinatura = :token AND ativo = 1");
-                    $stmt_check_cnarq->execute([':token' => $_GET['token']]);
-                    $check_cnarq = $stmt_check_cnarq->fetch(PDO::FETCH_ASSOC);
-                    if ($check_cnarq && $check_cnarq['total'] > 0) {
-                        require_once __DIR__ . '/modules/documentacao/cnarq/assinar.php';
-                    } else {
-                        require_once __DIR__ . '/modules/documentacao/certificados/assinar.php';
-                    }
-                }
-            }
-        }
-    }
-    */
 } else {
     // 404 - Pagina nao encontrada
     http_response_code(404);

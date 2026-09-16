@@ -9,7 +9,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-exigirAcesso('dashboard');
+exigirAcesso('sgq');
 
 $filtroTipo   = trim((string)($_GET['tipo'] ?? ''));
 $filtroNivel  = trim((string)($_GET['nivel'] ?? ''));

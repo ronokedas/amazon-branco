@@ -217,7 +217,7 @@ switch ($action) {
                     $paramsUpdate[':senha'] = password_hash($senha, PASSWORD_DEFAULT);
                     $sqlUpd = "UPDATE usuarios 
                                SET nome = :nome, email = :email, cargo = :cargo, senha_hash = :senha, 
-                                   ativo = :ativo, gestor_id = :gestor, escritorio_id = :escritorio,
+                                   ativo = :ativo, versao_sessao = versao_sessao + 1, gestor_id = :gestor, escritorio_id = :escritorio,
                                    status_sgq = :status_sgq, registro_conselho_tipo = :conselho_tipo,
                                    registro_conselho_numero = :conselho_numero, registro_conselho_validade = :conselho_validade,
                                    credencial_marinha_numero = :marinha_numero, credencial_marinha_validade = :marinha_validade,
@@ -226,7 +226,7 @@ switch ($action) {
                 } else {
                     $sqlUpd = "UPDATE usuarios 
                                SET nome = :nome, email = :email, cargo = :cargo, 
-                                   ativo = :ativo, gestor_id = :gestor, escritorio_id = :escritorio,
+                                   ativo = :ativo, versao_sessao = versao_sessao + 1, gestor_id = :gestor, escritorio_id = :escritorio,
                                    status_sgq = :status_sgq, registro_conselho_tipo = :conselho_tipo,
                                    registro_conselho_numero = :conselho_numero, registro_conselho_validade = :conselho_validade,
                                    credencial_marinha_numero = :marinha_numero, credencial_marinha_validade = :marinha_validade,
@@ -364,7 +364,7 @@ switch ($action) {
             }
 
             $novoStatus = $usuario['ativo'] ? 0 : 1;
-            $stmt = $pdo->prepare("UPDATE usuarios SET ativo = :ativo WHERE id = :id");
+            $stmt = $pdo->prepare("UPDATE usuarios SET ativo = :ativo, versao_sessao = versao_sessao + 1 WHERE id = :id");
             $stmt->execute([':ativo' => $novoStatus, ':id' => $id]);
 
             $msgStatus = $novoStatus ? 'ativado' : 'desativado';
@@ -439,6 +439,7 @@ switch ($action) {
                  SET ativo = 0,
                      email = :email,
                      senha_hash = :senha,
+                     versao_sessao = versao_sessao + 1,
                      excluido_em = NOW()
                  WHERE id = :id"
             );

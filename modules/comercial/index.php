@@ -256,7 +256,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <a href="<?php echo APP_URL; ?>comercial/nova" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Nova Proposta
             </a>
-            <a href="<?php echo APP_URL; ?>comercial/servicos" class="btn btn-secondary">
+            <a href="<?php echo APP_URL; ?>servicos" class="btn btn-secondary">
                 <i class="fas fa-cogs"></i> Serviços
             </a>
         </div>

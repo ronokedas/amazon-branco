@@ -57,15 +57,14 @@ assertBusca(!str_contains($analisesCode, 'ap.numero LIKE :busca OR e.nome LIKE :
 assertBusca(str_contains($analisesCode, ':busca1') && str_contains($analisesCode, ':busca4'), "analises_planos/index.php não utiliza :busca1 a :busca4.");
 echo "[OK] analises_planos/index.php validado com parâmetros distintos.\n";
 
-// 4. Validar módulos SGQ e Contratos
+// 4. Validar módulos SGQ e confirmação de remoção do módulo órfão Contratos
 $auditoriaCode = file_get_contents(__DIR__ . '/../modules/sgq/auditoria.php');
 assertBusca(!str_contains($auditoriaCode, 'usuario_nome LIKE :busca OR motivo_justificativa LIKE :busca'), "sgq/auditoria.php ainda reutiliza :busca.");
 $rncCode = file_get_contents(__DIR__ . '/../modules/sgq/nao_conformidades.php');
 assertBusca(!str_contains($rncCode, 'r.numero_rnc LIKE :busca OR r.titulo LIKE :busca'), "sgq/nao_conformidades.php ainda reutiliza :busca.");
 $riscosCode = file_get_contents(__DIR__ . '/../modules/sgq/riscos.php');
 assertBusca(!str_contains($riscosCode, 'codigo_risco LIKE :busca OR descricao_risco LIKE :busca'), "sgq/riscos.php ainda reutiliza :busca.");
-$contratosCode = file_get_contents(__DIR__ . '/../modules/contratos/index.php');
-assertBusca(!str_contains($contratosCode, 'c.numero LIKE :busca OR cl.nome LIKE :busca'), "contratos/index.php ainda reutiliza :busca.");
-echo "[OK] Módulos SGQ (Auditoria, RNC, Riscos) e Contratos higienizados contra HY093.\n\n";
+assertBusca(!is_dir(__DIR__ . '/../modules/contratos'), "Diretório órfão modules/contratos não foi removido.");
+echo "[OK] Módulos SGQ higienizados e módulo legado contratos devidamente removido.\n\n";
 
 echo "TODOS OS TESTES DE BUSCA E HIGIENIZAÇÃO PDO PASSARAM COM SUCESSO!\n";

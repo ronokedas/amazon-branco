@@ -8,6 +8,12 @@ function assertPropostaEdicao(bool $condicao, string $mensagem): void
 }
 
 $wizard = file_get_contents(__DIR__ . '/../modules/comercial/nova.php');
+foreach (glob(__DIR__ . '/../modules/comercial/components/*.php') as $comp) {
+    $wizard .= "\n" . file_get_contents($comp);
+}
+if (file_exists(__DIR__ . '/../modules/comercial/js/proposta_wizard.js')) {
+    $wizard .= "\n" . file_get_contents(__DIR__ . '/../modules/comercial/js/proposta_wizard.js');
+}
 $actions = file_get_contents(__DIR__ . '/../modules/comercial/propostas/actions.php');
 $comercial = file_get_contents(__DIR__ . '/../modules/comercial/index.php');
 $detalhes = file_get_contents(__DIR__ . '/../modules/comercial/propostas/index.php');

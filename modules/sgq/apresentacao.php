@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-exigirAcesso('dashboard');
+exigirAcesso('sgq');
 
 $pdfPath = __DIR__ . '/../../docs/APRESENTACAO_SGQ_ISO_9001_AUDITORIA.pdf';
 $htmlPath = __DIR__ . '/../../docs/apresentacao_iso_9001.html';

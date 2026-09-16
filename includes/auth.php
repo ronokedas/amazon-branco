@@ -52,6 +52,7 @@ function todasPermissoesSistema(): array {
         'protocolos_documentais',
         'certificados',
         'documentacao',
+        'clientes',
         'embarcacoes',
         'armadores',
         'proprietarios',
@@ -60,21 +61,46 @@ function todasPermissoesSistema(): array {
         'servicos',
         'financeiro',
         'emails',
+        'gestao_acessos_portal',
         'portal_clientes',
         'relatorios',
         'sgq',
         'usuarios',
         'configuracoes',
+        'configuracoes_normam202',
+        'configuracoes_basicas',
+        'configuracoes_financeiro',
+        'configuracoes_backup',
+        'configuracoes_exportacoes',
         'responsaveis_assinatura',
     ];
+}
+
+/**
+ * Verifica se o usuário pode acessar um sub-módulo de configurações.
+ * Aceita acesso se tiver a permissão completa do módulo pai OU a permissão granular do sub-módulo.
+ * Exemplo: podeAcessarOuSub('configuracoes', 'configuracoes_normam202')
+ *   → true se o usuário tiver 'configuracoes' OU 'configuracoes_normam202'
+ */
+function podeAcessarOuSub(string $moduloPai, string $subModulo): bool {
+    return podeAcessar($moduloPai) || podeAcessar($subModulo);
+}
+
+/** Exige permissão do módulo pai OU do sub-módulo. Redireciona se ambos forem negados. */
+function exigirAcessoOuSub(string $moduloPai, string $subModulo, string $destino = 'dashboard'): void {
+    requireLogin();
+    if (podeAcessarOuSub($moduloPai, $subModulo)) return;
+
+    setMensagem('error', 'Acesso negado. Voce nao tem permissao para acessar este modulo.');
+    redirecionar(APP_URL . $destino);
 }
 
 /** Módulos iniciais mínimos e essenciais para cada cargo naval. O administrador pode personalizar depois. */
 function permissoesPadraoCargo(string $cargo): array {
     return match ($cargo) {
-        'VISTORIADOR' => ['dashboard', 'vistorias', 'agendamentos', 'embarcacoes', 'documentacao'],
-        'ANALISTA' => ['dashboard', 'analise_planos', 'relatorios_aprovacao', 'protocolos_documentais', 'embarcacoes', 'armadores', 'proprietarios', 'vistorias', 'certificados', 'documentacao'],
-        'VENDEDOR' => ['dashboard', 'comercial', 'servicos', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails'],
+        'VISTORIADOR' => ['dashboard', 'vistorias', 'agendamentos', 'clientes', 'embarcacoes', 'documentacao', 'configuracoes_normam202'],
+        'ANALISTA' => ['dashboard', 'analise_planos', 'relatorios_aprovacao', 'protocolos_documentais', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'vistorias', 'certificados', 'documentacao', 'configuracoes_normam202'],
+        'VENDEDOR' => ['dashboard', 'comercial', 'servicos', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails'],
         'ADMIN' => todasPermissoesSistema(),
         default => ['dashboard'],
     };
@@ -98,6 +124,28 @@ function aplicarPermissoesPadraoUsuario(PDO $pdo, string $usuarioId, string $car
 function podeAcessar(string $modulo): bool {
     if (!estaLogado()) return false;
     if (getCargo() === 'ADMIN') return true;
+
+    // Compatibilidade bidirecional com a unificação de cadastros:
+    // 1. Permissão 'clientes' concede acesso a clientes, armadores, proprietários e despachantes.
+    // 2. Qualquer permissão legada ativa concede acesso a 'clientes'.
+    if ($modulo === 'clientes') {
+        return podeAcessar('clientes_interno') || podeAcessar('armadores_interno') || podeAcessar('proprietarios_interno') || podeAcessar('despachantes_interno');
+    }
+    if (in_array($modulo, ['armadores', 'proprietarios', 'despachantes'], true)) {
+        return podeAcessar('clientes_interno') || podeAcessar($modulo . '_interno');
+    }
+    if ($modulo === 'gestao_acessos_portal' || $modulo === 'portal_clientes') {
+        return podeAcessar('gestao_acessos_portal_interno') || podeAcessar('portal_clientes_interno');
+    }
+    if (str_starts_with($modulo, 'configuracoes_') && $modulo !== 'configuracoes') {
+        if (podeAcessar('configuracoes')) {
+            return true;
+        }
+    }
+
+    if (str_ends_with($modulo, '_interno')) {
+        $modulo = substr($modulo, 0, -8);
+    }
 
     global $pdo;
     $usuarioId = $_SESSION['usuario_id'] ?? '';
@@ -242,6 +290,72 @@ function requireCargo($cargoRequerido) {
     }
 }
 
+/**
+ * Rate Limiting de Login: Máximo de 5 tentativas consecutivas incorretas em 15 minutos por IP ou E-mail.
+ * Retorna mensagem descritiva se bloqueado, ou null se liberado.
+ */
+function loginVerificarRateLimit(PDO $pdo, string $email, string $ip): ?string {
+    try {
+        $janelaMinutos = 15;
+        $maxTentativas = 5;
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*) 
+             FROM login_tentativas 
+             WHERE sucesso = 0 
+               AND criado_em >= (NOW() - INTERVAL :minutos MINUTE)
+               AND (ip = :ip OR (email = :email AND email != ''))"
+        );
+        $stmt->execute([
+            ':minutos' => $janelaMinutos,
+            ':ip' => $ip,
+            ':email' => $email
+        ]);
+        $falhas = (int)$stmt->fetchColumn();
+
+        if ($falhas >= $maxTentativas) {
+            return "Muitas tentativas incorretas de login. Por segurança, o acesso para este usuário/endereço está temporariamente bloqueado por {$janelaMinutos} minutos.";
+        }
+    } catch (Throwable $e) {
+        error_log("Erro ao verificar rate limit de login: " . $e->getMessage());
+    }
+    return null;
+}
+
+/**
+ * Registra a tentativa de login (sucesso ou falha) e limpa registros antigos.
+ */
+function loginRegistrarTentativa(PDO $pdo, string $email, string $ip, bool $sucesso): void {
+    try {
+        $stmt = $pdo->prepare(
+            "INSERT INTO login_tentativas (ip, email, sucesso, criado_em) 
+             VALUES (:ip, :email, :sucesso, NOW())"
+        );
+        $stmt->execute([
+            ':ip' => $ip,
+            ':email' => $email,
+            ':sucesso' => $sucesso ? 1 : 0
+        ]);
+
+        // Se logou com sucesso, limpa as falhas anteriores para esse par ip/email
+        if ($sucesso) {
+            $stmtClear = $pdo->prepare(
+                "DELETE FROM login_tentativas WHERE ip = :ip OR (email = :email AND email != '')"
+            );
+            $stmtClear->execute([
+                ':ip' => $ip,
+                ':email' => $email
+            ]);
+        }
+
+        // Limpeza probabilística de registros com mais de 24 horas (1 em 50 requisições)
+        if (random_int(1, 50) === 1) {
+            $pdo->exec("DELETE FROM login_tentativas WHERE criado_em < (NOW() - INTERVAL 24 HOUR)");
+        }
+    } catch (Throwable $e) {
+        error_log("Erro ao registrar tentativa de login: " . $e->getMessage());
+    }
+}
+
 // Inicializar sessao para o usuario
 function login($usuario) {
     session_regenerate_id(true);
@@ -249,20 +363,36 @@ function login($usuario) {
     $_SESSION['usuario_nome'] = $usuario['nome'];
     $_SESSION['usuario_email'] = $usuario['email'];
     $_SESSION['usuario_cargo'] = $usuario['cargo'];
+    $_SESSION['versao_sessao'] = (int)($usuario['versao_sessao'] ?? 1);
     $_SESSION['usuario_logado'] = true;
     $_SESSION['login_time'] = time();
 }
 
 // Encerrar sessao
 function logout() {
-    session_unset();
-    session_destroy();
+    $_SESSION = [];
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params["path"],
+                $params["domain"],
+                $params["secure"],
+                $params["httponly"]
+            );
+        }
+        session_unset();
+        session_destroy();
+    }
     header('Location: ' . APP_URL . 'login');
     exit;
 }
 
 // Verificar se a sessao e o usuario continuam validos.
-// Nao ha encerramento automatico por tempo de inatividade.
+// Invalida a sessao imediatamente se o usuario for desativado, excluido, tiver cargo alterado ou permissoes revogadas.
 function verificarSessao() {
     if (!estaLogado()) {
         logout();
@@ -271,22 +401,28 @@ function verificarSessao() {
     global $pdo;
     try {
         $stmt = $pdo->prepare(
-            "SELECT ativo, excluido_em
+            "SELECT ativo, excluido_em, cargo, versao_sessao
              FROM usuarios
              WHERE id = :id
              LIMIT 1"
         );
         $stmt->execute([':id' => $_SESSION['usuario_id'] ?? '']);
         $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$usuario || (int)$usuario['ativo'] !== 1 || $usuario['excluido_em'] !== null) {
+
+        $versaoSessao = (int)($usuario['versao_sessao'] ?? 0);
+        $versaoEsperada = (int)($_SESSION['versao_sessao'] ?? 0);
+
+        if (
+            !$usuario ||
+            (int)$usuario['ativo'] !== 1 ||
+            $usuario['excluido_em'] !== null ||
+            $versaoSessao !== $versaoEsperada ||
+            (isset($_SESSION['usuario_cargo']) && $usuario['cargo'] !== $_SESSION['usuario_cargo'])
+        ) {
             logout();
         }
     } catch (Throwable $e) {
         error_log('Erro ao validar sessao do usuario: ' . $e->getMessage());
-        // Uma indisponibilidade momentanea do banco nao significa que a
-        // autenticacao deixou de ser valida. Encerrar a sessao aqui fazia o
-        // usuario voltar aleatoriamente ao login ao navegar entre modulos.
-        // A verificacao sera refeita normalmente na proxima requisicao.
     }
 
     // Mantido apenas como registro da ultima atividade, sem causar logout.

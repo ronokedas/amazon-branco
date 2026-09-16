@@ -20,3 +20,4 @@
 /vendor/
 /test-results/
 docs/.chrome-pdf*
+docs/.temp-profile*

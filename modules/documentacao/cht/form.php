@@ -32,6 +32,9 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
     }
 }
 
+$stmtClientes = $pdo->query("SELECT id, nome, cpf_cnpj, email FROM clientes WHERE status = 'ATIVO' ORDER BY nome");
+$clientes_lista = $stmtClientes->fetchAll(PDO::FETCH_ASSOC);
+
 // Gerar próximo número (se não estiver editando)
 $proximo_numero = '';
 if (!$editando) {
@@ -136,6 +139,8 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
         <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
         <?php if ($editando): ?>
             <input type="hidden" name="id" value="<?php echo h($certificado['id']); ?>">
+            <input type="hidden" name="cliente_id" value="<?php echo h($certificado['cliente_id'] ?? ''); ?>">
+            <input type="hidden" name="embarcacao_id" value="<?php echo h($certificado['embarcacao_id'] ?? ''); ?>">
         <?php endif; ?>
 
         <!-- SEÇÃO 1: Identificação -->
@@ -195,6 +200,24 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                 <h3><i class="fas fa-user-tie"></i> Profissional / Empresa</h3>
             </div>
             <div class="card-body">
+                <?php if (!$editando): ?>
+                <div class="form-group mb-3">
+                    <label for="cliente_select"><i class="fas fa-building"></i> Empresa ou Profissional Cadastrado (Entidade Principal)</label>
+                    <select class="form-control" id="cliente_select" name="cliente_id" onchange="selecionarClienteCht(this)">
+                        <option value="">-- Selecione do cadastro de clientes ou digite os dados avulsos abaixo --</option>
+                        <?php foreach ($clientes_lista as $cli): ?>
+                            <option value="<?php echo h($cli['id']); ?>"
+                                    data-nome="<?php echo h($cli['nome']); ?>"
+                                    data-cpf="<?php echo h($cli['cpf_cnpj']); ?>"
+                                    data-email="<?php echo h($cli['email'] ?? ''); ?>">
+                                <?php echo h($cli['nome']) . ' (' . h($cli['cpf_cnpj']) . ')'; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted">A seleção vincula o certificado à entidade original do sistema e pré-preenche nome, CPF/CNPJ e e-mail.</small>
+                </div>
+                <hr>
+                <?php endif; ?>
                 <div class="grid-2">
                     <div class="form-group">
                         <label for="profissional_empresa">Nome / Razão Social *</label>
@@ -295,4 +318,17 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
     </form>
 </div>
 
+<script>
+function selecionarClienteCht(sel) {
+    var opt = sel.options[sel.selectedIndex];
+    if (opt && opt.value) {
+        var nome = opt.getAttribute('data-nome') || '';
+        var cpf = opt.getAttribute('data-cpf') || '';
+        var email = opt.getAttribute('data-email') || '';
+        if (nome) document.getElementById('profissional_empresa').value = nome;
+        if (cpf) document.getElementById('cpf_cnpj').value = cpf;
+        if (email) document.getElementById('email_destinatario').value = email;
+    }
+}
+</script>
 <?php require_once __DIR__ . '/../../../includes/footer.php'; ?>

@@ -94,6 +94,11 @@ if ($action === 'salvar') {
     $despachante_id = $_POST['despachante_id'] ?? null;
     if(empty($despachante_id)) $despachante_id = null;
 
+    $embarcacao_id = $_POST['embarcacao_id'] ?? null;
+    if (empty($embarcacao_id)) $embarcacao_id = null;
+    $cliente_id = $_POST['cliente_id'] ?? null;
+    if (empty($cliente_id)) $cliente_id = null;
+
     $status = $_POST['status'] ?? 'rascunho';
     if (!in_array($status, ['rascunho', 'emitido', 'cancelado'])) {
         $status = 'rascunho';
@@ -105,6 +110,40 @@ if ($action === 'salvar') {
         $certificadoExistente['vistoria_id'] ?? null,
         $_POST['vistoria_id'] ?? null
     );
+
+    if ($vistoria_id && (empty($embarcacao_id) || empty($cliente_id))) {
+        $stmtVistEmb = $pdo->prepare("
+            SELECT a.embarcacao_id, COALESCE(v.pessoa_id, e.proprietario_id) as cliente_id
+            FROM vistorias v
+            JOIN agendamentos a ON v.agendamento_id = a.id
+            JOIN embarcacoes e ON a.embarcacao_id = e.id
+            WHERE v.id = :vid
+        ");
+        $stmtVistEmb->execute([':vid' => $vistoria_id]);
+        $rowEmb = $stmtVistEmb->fetch(PDO::FETCH_ASSOC);
+        if ($rowEmb) {
+            if (empty($embarcacao_id)) $embarcacao_id = $rowEmb['embarcacao_id'];
+            if (empty($cliente_id)) $cliente_id = $rowEmb['cliente_id'];
+        }
+    }
+    if (empty($embarcacao_id) && !empty($numero_inscricao)) {
+        $stmtEmbInsc = $pdo->prepare("SELECT id, proprietario_id FROM embarcacoes WHERE numero_inscricao = :insc OR registro = :insc LIMIT 1");
+        $stmtEmbInsc->execute([':insc' => $numero_inscricao]);
+        $rowEmbInsc = $stmtEmbInsc->fetch(PDO::FETCH_ASSOC);
+        if ($rowEmbInsc) {
+            $embarcacao_id = $rowEmbInsc['id'];
+            if (empty($cliente_id)) $cliente_id = $rowEmbInsc['proprietario_id'];
+        }
+    }
+    if (empty($embarcacao_id) && !empty($nome_embarcacao)) {
+        $stmtEmbNome = $pdo->prepare("SELECT id, proprietario_id FROM embarcacoes WHERE LOWER(TRIM(nome)) = LOWER(TRIM(:nome)) LIMIT 1");
+        $stmtEmbNome->execute([':nome' => $nome_embarcacao]);
+        $rowEmbNome = $stmtEmbNome->fetch(PDO::FETCH_ASSOC);
+        if ($rowEmbNome) {
+            $embarcacao_id = $rowEmbNome['id'];
+            if (empty($cliente_id)) $cliente_id = $rowEmbNome['proprietario_id'];
+        }
+    }
     if (!$editando && $vistoria_id && !certificadoModeloPermitidoPorVistoria($pdo, (string)$vistoria_id, 'CNARQ')) {
         setMensagem('error', certificadoMensagemServicoObrigatorio('CNARQ'));
         redirecionar(APP_URL . 'certificados');
@@ -153,6 +192,26 @@ if ($action === 'salvar') {
         redirecionar(APP_URL . 'documentacao/cnarq/form' . ($editando ? "?id={$id}" : ''));
     }
 
+    if (!$editando) {
+        try {
+            require_once __DIR__ . '/../../../includes/emissao_certificados.php';
+            // Integridade relacional garantida no motor: :embarcacao_id, :cliente_id
+            $dadosEmissao = array_merge($_POST, [
+                'embarcacao_id' => $embarcacao_id,
+                'cliente_id' => $cliente_id,
+                'vistoria_id' => $vistoria_id,
+                'tipo' => $tipo,
+            ]);
+            $res = emitirCertificadoUnificado($pdo, 'CNARQ', $dadosEmissao, (string)($_SESSION['usuario_id'] ?? ''));
+            $numero = $res['numero'];
+            setMensagem('success', 'Certificado CNARQ criado com sucesso. Número: ' . $numero);
+            redirecionar(APP_URL . 'documentacao/cnarq');
+        } catch (Throwable $e) {
+            setMensagem('error', 'Não foi possível salvar o certificado CNARQ: ' . $e->getMessage());
+            redirecionar(APP_URL . 'documentacao/cnarq/form');
+        }
+    }
+
     try {
         $pdo->beginTransaction();
 
@@ -185,10 +244,12 @@ if ($action === 'salvar') {
                         assinante_nome = :assinante_nome,
                         assinante_titulo = :assinante_titulo,
                         assinante_registro = :assinante_registro,
-                        status = :status, vistoria_id = :vistoria_id, despachante_id = :despachante_id WHERE id = :id";
+                        status = :status, vistoria_id = :vistoria_id, despachante_id = :despachante_id, embarcacao_id = :embarcacao_id, cliente_id = :cliente_id WHERE id = :id";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
+                ':embarcacao_id'      => $embarcacao_id,
+                ':cliente_id'         => $cliente_id,
                 ':nome_embarcacao'    => $nome_embarcacao,
                 ':numero_inscricao'   => $numero_inscricao,
                 ':indicativo_chamada' => $indicativo_chamada,
@@ -243,7 +304,7 @@ if ($action === 'salvar') {
                         relatorio_numero, data_vistoria, local_vistoria,
                         data_emissao, data_validade, local_emissao,
                         assinante_nome, assinante_titulo, assinante_registro,
-                        status, criado_por, vistoria_id, despachante_id) VALUES (
+                        status, criado_por, vistoria_id, despachante_id, embarcacao_id, cliente_id) VALUES (
                         :id, :numero, :token_assinatura,
                         :nome_embarcacao, :numero_inscricao, :indicativo_chamada,
                         :tipo_embarcacao, :ano_construcao, :material_casco,
@@ -254,7 +315,7 @@ if ($action === 'salvar') {
                         :relatorio_numero, :data_vistoria, :local_vistoria,
                         :data_emissao, :data_validade, :local_emissao,
                         :assinante_nome, :assinante_titulo, :assinante_registro,
-                        :status, :criado_por, :vistoria_id, :despachante_id)";
+                        :status, :criado_por, :vistoria_id, :despachante_id, :embarcacao_id, :cliente_id)";
 
             $id = gerarUUID();
 
@@ -293,6 +354,8 @@ if ($action === 'salvar') {
                 ':despachante_id'     => $despachante_id,
                 ':criado_por'         => $_SESSION['usuario_id'] ?? null,
                 ':vistoria_id'        => $vistoria_id,
+                ':embarcacao_id'      => $embarcacao_id,
+                ':cliente_id'         => $cliente_id,
             ]);
         }
 

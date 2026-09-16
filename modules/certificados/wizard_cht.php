@@ -3,6 +3,7 @@
  * Assistente específico do Certificado de Homologação Técnica.
  * O CHT homologa uma empresa/profissional e não depende de vistoria de embarcação.
  */
+require_once __DIR__ . '/../../includes/emissao_certificados.php';
 
 $erro = '';
 $profissional_empresa = trim($_POST['profissional_empresa'] ?? '');
@@ -22,6 +23,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $relatorio_homologacao_numero !== '
 $data_validade = $_POST['data_validade'] ?? '';
 $local_emissao = $_POST['local_emissao'] ?? 'Belém-PA';
 $responsavel_id = $_POST['responsavel_id'] ?? '';
+$cliente_id = $_POST['cliente_id'] ?? '';
+$embarcacao_id = $_POST['embarcacao_id'] ?? '';
+
+$stmtClientes = $pdo->query("SELECT id, nome, cpf_cnpj, email FROM clientes WHERE status = 'ATIVO' ORDER BY nome");
+$clientes_lista = $stmtClientes->fetchAll(PDO::FETCH_ASSOC);
 
 $stmtResponsaveis = $pdo->query("
     SELECT id, nome_completo as nome, cargo_titulo as cargo, registro_profissional
@@ -63,57 +69,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $erro = 'Responsável pela assinatura inválido ou inativo.';
         } else {
             try {
-                $pdo->beginTransaction();
-                $id = gerarUUID();
-                $numero_certificado = gerarNumeroDocumento('CHT', 'AM-CHT');
-                $token = bin2hex(random_bytes(32));
+                // Integridade relacional garantida no motor: :embarcacao_id, :cliente_id
+                $dadosEmissao = [
+                    'responsavel_assinatura_id' => $responsavel_id,
+                    'profissional_empresa' => $profissional_empresa,
+                    'cpf_cnpj' => $cpf_cnpj,
+                    'email_destinatario' => $email_destinatario,
+                    'atividade_homologada' => $atividade_homologada,
+                    'relatorio_homologacao_numero' => $relatorio_homologacao_numero,
+                    'data_validade' => $data_validade,
+                    'local_emissao' => $local_emissao,
+                    'cliente_id' => $cliente_id ?: null,
+                    'embarcacao_id' => $embarcacao_id ?: null,
+                    'observacoes' => trim($_POST['observacoes'] ?? ''),
+                ];
+                $resUnificado = emitirCertificadoUnificado($pdo, 'CHT', $dadosEmissao, (string)($_SESSION['usuario_id'] ?? ''));
+                $numero_certificado = $resUnificado['numero'] ?? '';
 
-                $stmt = $pdo->prepare("
-                    INSERT INTO certificados_cht (
-                        id, numero_certificado, numero_relatorio_ht, token_assinatura,
-                        profissional_empresa, cpf_cnpj, email_destinatario, atividade_homologada,
-                        relatorio_homologacao_numero, observacoes,
-                        data_emissao, data_validade, local_emissao,
-                        assinante_nome, assinante_titulo, assinante_registro,
-                        status, ativo, criado_por
-                    ) VALUES (
-                        :id, :numero_certificado, :numero_relatorio_ht, :token_assinatura,
-                        :profissional_empresa, :cpf_cnpj, :email_destinatario, :atividade_homologada,
-                        :relatorio_homologacao_numero, :observacoes,
-                        :data_emissao, :data_validade, :local_emissao,
-                        :assinante_nome, :assinante_titulo, :assinante_registro,
-                        'emitido', 1, :criado_por
-                    )
-                ");
-                $stmt->execute([
-                    ':id' => $id,
-                    ':numero_certificado' => $numero_certificado,
-                    ':numero_relatorio_ht' => $relatorio_homologacao_numero,
-                    ':token_assinatura' => $token,
-                    ':profissional_empresa' => $profissional_empresa,
-                    ':cpf_cnpj' => $cpf_cnpj,
-                    ':email_destinatario' => $email_destinatario,
-                    ':atividade_homologada' => $atividade_homologada,
-                    ':relatorio_homologacao_numero' => $relatorio_homologacao_numero,
-                    ':observacoes' => trim($_POST['observacoes'] ?? ''),
-                    ':data_emissao' => date('Y-m-d'),
-                    ':data_validade' => $data_validade,
-                    ':local_emissao' => $local_emissao,
-                    ':assinante_nome' => $responsavel['nome_completo'],
-                    ':assinante_titulo' => $responsavel['cargo_titulo'],
-                    ':assinante_registro' => $responsavel['registro_profissional'],
-                    ':criado_por' => $_SESSION['usuario_id'] ?? null,
-                ]);
-
-                $pdo->prepare('UPDATE certificados_cht SET responsavel_assinatura_id = ? WHERE id = ?')->execute([(int)$responsavel_id, $id]);
-                $pdo->commit();
-                log_atividade('certificado_cht_criado', "{$numero_certificado} - {$profissional_empresa}");
                 setMensagem('success', "Certificado CHT criado com sucesso! Número: {$numero_certificado}");
                 redirecionar(APP_URL . 'documentacao/cht');
             } catch (Throwable $e) {
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
                 $erro = 'Não foi possível gerar o CHT: ' . $e->getMessage();
             }
         }
@@ -163,6 +138,23 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
             <form method="POST" class="cert-issue-form">
                 <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
+
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label for="cliente_select"><i class="fas fa-building"></i> Empresa ou Profissional Cadastrado (Entidade Principal)</label>
+                    <select class="form-control" id="cliente_select" name="cliente_id" onchange="selecionarClienteCht(this)">
+                        <option value="">-- Selecione do cadastro de clientes ou digite os dados avulsos abaixo --</option>
+                        <?php foreach ($clientes_lista as $cli): ?>
+                            <option value="<?= h($cli['id']) ?>"
+                                    data-nome="<?= h($cli['nome']) ?>"
+                                    data-cpf="<?= h($cli['cpf_cnpj']) ?>"
+                                    data-email="<?= h($cli['email'] ?? '') ?>"
+                                    <?= (string)$cliente_id === (string)$cli['id'] ? 'selected' : '' ?>>
+                                <?= h($cli['nome']) ?> (<?= h($cli['cpf_cnpj']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted">A seleção vincula o certificado à entidade original do sistema e pré-preenche nome, CPF/CNPJ e e-mail.</small>
+                </div>
 
                 <div class="form-row">
                     <div class="form-group col-6">
@@ -246,5 +238,18 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </aside>
     </div>
 </div>
+<script>
+function selecionarClienteCht(sel) {
+    var opt = sel.options[sel.selectedIndex];
+    if (opt && opt.value) {
+        var nome = opt.getAttribute('data-nome') || '';
+        var cpf = opt.getAttribute('data-cpf') || '';
+        var email = opt.getAttribute('data-email') || '';
+        if (nome) document.getElementById('profissional_empresa').value = nome;
+        if (cpf) document.getElementById('cpf_cnpj').value = cpf;
+        if (email) document.getElementById('email_destinatario').value = email;
+    }
+}
+</script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

@@ -11,7 +11,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/sgq.php';
 
 verificar_sessao();
-exigirAcesso('configuracoes');
+exigirAcessoOuSub('configuracoes', 'configuracoes_normam202');
 
 $action = $_REQUEST['action'] ?? '';
 $usuario_id = $_SESSION['usuario_id'] ?? null;

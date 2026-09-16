@@ -9,20 +9,7 @@ $acao=trim($_POST['action']??'');$id=trim($_POST['id']??$_POST['dossie_id']??'')
 $voltar=fn(?string $x=null)=>APP_URL.($x?'protocolos/form?id='.urlencode($x):'protocolos');
 try{
  if($acao==='criar'){
- $emb=trim($_POST['embarcacao_id']??'');$assunto=trim($_POST['assunto']??'');if(!$emb||!$assunto)throw new InvalidArgumentException('Informe embarcação e assunto.');
-  $q=$pdo->prepare('SELECT COALESCE(cliente_id,proprietario_id) FROM embarcacoes WHERE id=:id');$q->execute([':id'=>$emb]);$cliente=$q->fetchColumn();if($cliente===false)throw new RuntimeException('Embarcação inválida.');
-<?php
-require_once __DIR__.'/../../config.php';
-require_once __DIR__.'/../../includes/functions.php';
-require_once __DIR__.'/../../includes/auth.php';
-require_once __DIR__.'/../../includes/protocolos.php';
-protocoloExigirAcesso();
-if($_SERVER['REQUEST_METHOD']!=='POST'||!verificarCSRF($_POST['csrf_token']??'')){setMensagem('error','Sessão expirada.');redirecionar(APP_URL.'protocolos');}
-$acao=trim($_POST['action']??'');$id=trim($_POST['id']??$_POST['dossie_id']??'');
-$voltar=fn(?string $x=null)=>APP_URL.($x?'protocolos/form?id='.urlencode($x):'protocolos');
-try{
- if($acao==='criar'){
- $emb=trim($_POST['embarcacao_id']??'');$assunto=trim($_POST['assunto']??'');if(!$emb||!$assunto)throw new InvalidArgumentException('Informe embarcação e assunto.');
+  $emb=trim($_POST['embarcacao_id']??'');$assunto=trim($_POST['assunto']??'');if(!$emb||!$assunto)throw new InvalidArgumentException('Informe embarcação e assunto.');
   $q=$pdo->prepare('SELECT COALESCE(cliente_id,proprietario_id) FROM embarcacoes WHERE id=:id');$q->execute([':id'=>$emb]);$cliente=$q->fetchColumn();if($cliente===false)throw new RuntimeException('Embarcação inválida.');
   $proposta=trim($_POST['proposta_id']??'')?:null;$analise=trim($_POST['analise_id']??'')?:null;$vistoria=trim($_POST['vistoria_id']??'')?:null;
   if(getCargo()!=='ADMIN'){
@@ -46,9 +33,11 @@ try{
   $unidade=trim($_POST['unidade_maritima_id']??'')?:null;
   $analise=trim($_POST['analise_id']??'')?:null;
   $vistoria=trim($_POST['vistoria_id']??'')?:null;
+  $ctipo=trim($_POST['certificado_tipo']??'')?:null;
+  $cid=trim($_POST['certificado_id']??'')?:null;
   $pdo->beginTransaction();
-  $pdo->prepare("UPDATE protocolo_dossies SET assunto=:assunto, cliente_id=:cliente, unidade_maritima_id=:unidade, analise_id=:analise, vistoria_id=:vistoria WHERE id=:id")->execute([
-      ':assunto'=>$assunto,':cliente'=>$cliente,':unidade'=>$unidade,':analise'=>$analise,':vistoria'=>$vistoria,':id'=>$id
+  $pdo->prepare("UPDATE protocolo_dossies SET assunto=:assunto, cliente_id=:cliente, unidade_maritima_id=:unidade, analise_id=:analise, vistoria_id=:vistoria, certificado_tipo=:ctipo, certificado_id=:cid WHERE id=:id")->execute([
+      ':assunto'=>$assunto,':cliente'=>$cliente,':unidade'=>$unidade,':analise'=>$analise,':vistoria'=>$vistoria,':ctipo'=>$ctipo,':cid'=>$cid,':id'=>$id
   ]);
   protocoloAuditar($pdo,$id,null,'DOSSIE_EDITADO',null,null,'Dados e vínculos atualizados.');$pdo->commit();
   setMensagem('success','Dados do dossiê atualizados.');redirecionar($voltar($id));
