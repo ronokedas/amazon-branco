@@ -121,21 +121,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             throw new RuntimeException('A proposta não possui um escritório responsável.');
         }
         $responsavelVendaId = financeiroResponsavelVenda($pdo, $prop['criado_por'] ?? null);
+
+        $valorTotal = round((float)($prop['valor_total'] ?? 0), 2);
+        $valorEntrada = round(max(0, min($valorTotal, (float)($prop['valor_entrada'] ?? 0))), 2);
+        $saldoDevedor = round(max(0, $valorTotal - $valorEntrada), 2);
+
+        if ($valorEntrada >= $valorTotal && $valorTotal > 0) {
+            $statusFin = 'PAGO';
+            $saldoDevedor = 0.00;
+            $dataVencimento = date('Y-m-d');
+            $obsFin = 'Lançamento quitado integralmente à vista após assinatura da proposta nº ' . $prop['numero'] . '.';
+        } elseif ($valorEntrada > 0) {
+            $statusFin = 'PARCIAL';
+            $dataVencimento = date('Y-m-d', strtotime('+15 days'));
+            $obsFin = 'Lançamento gerado após assinatura da proposta nº ' . $prop['numero'] . '. Entrada à vista de R$ ' . number_format($valorEntrada, 2, ',', '.') . ' quitada; saldo restante de R$ ' . number_format($saldoDevedor, 2, ',', '.') . ' a receber.';
+        } else {
+            $statusFin = 'PENDENTE';
+            $saldoDevedor = $valorTotal;
+            $dataVencimento = date('Y-m-d', strtotime('+15 days'));
+            $obsFin = 'Lançamento gerado automaticamente após assinatura da proposta.';
+        }
+
+        $lancamentoId = gerarUUID();
         $stmtFin = $pdo->prepare("INSERT INTO financeiro_lancamentos 
             (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por, escritorio_id, responsavel_usuario_id, proposta_id)
-            VALUES (UUID(), 'RECEITA', 'unica', 'PENDENTE', DATE_ADD(CURDATE(), INTERVAL 15 DAY), :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por, :escritorio, :responsavel, :proposta)");
+            VALUES (:id, 'RECEITA', 'unica', :status, :data_vencimento, :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por, :escritorio, :responsavel, :proposta)");
         $stmtFin->execute([
+            ':id'          => $lancamentoId,
+            ':status'      => $statusFin,
+            ':data_vencimento' => $dataVencimento,
             ':cliente_id'  => $prop['cliente_id'],
             ':descricao'   => 'Referente à Proposta Comercial nº ' . $prop['numero'],
-            ':valor'       => $prop['valor_total'],
-            ':valor_original' => $prop['valor_total'],
-            ':saldo_devedor' => $prop['valor_total'],
-            ':observacoes' => 'Lançamento gerado automaticamente após assinatura da proposta.',
+            ':valor'       => $valorTotal,
+            ':valor_original' => $valorTotal,
+            ':saldo_devedor' => $saldoDevedor,
+            ':observacoes' => $obsFin,
             ':criado_por'  => $prop['criado_por'] ?? null,
             ':escritorio'  => $escritorioLancamento,
             ':responsavel' => $responsavelVendaId,
             ':proposta'    => $prop['id'],
         ]);
+
+        if ($valorEntrada > 0) {
+            $formaBaixa = in_array($prop['forma_pagamento'] ?? '', ['a_vista', 'parcelado', 'boleto', 'pix'], true)
+                ? $prop['forma_pagamento']
+                : 'a_vista';
+            $stmtBaixa = $pdo->prepare("
+                INSERT INTO financeiro_historico_baixas
+                    (id, lancamento_id, valor_pago, data_pagamento, forma_pagamento, criado_por)
+                VALUES
+                    (:id, :lancamento_id, :valor_pago, CURDATE(), :forma_pagamento, :criado_por)
+            ");
+            $stmtBaixa->execute([
+                ':id' => gerarUUID(),
+                ':lancamento_id' => $lancamentoId,
+                ':valor_pago' => number_format($valorEntrada, 2, '.', ''),
+                ':forma_pagamento' => $formaBaixa,
+                ':criado_por' => $prop['criado_por'] ?? null,
+            ]);
+        }
 
         // GATILHO 2: Rascunho no Agendamentos
         $stmtEmb = $pdo->prepare("

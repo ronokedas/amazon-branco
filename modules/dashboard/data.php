@@ -209,17 +209,27 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
 
         // Receitas pagas (contribuição para a meta)
         $contrib = (float)dashScalar($pdo, "
-            SELECT COALESCE(SUM(fl.valor), 0) 
+            SELECT COALESCE(SUM(
+                CASE WHEN b.total_baixado IS NOT NULL THEN b.total_baixado 
+                     WHEN fl.status = 'PAGO' THEN fl.valor_original 
+                     ELSE 0 END
+            ), 0)
             FROM financeiro_lancamentos fl 
+            LEFT JOIN (
+                SELECT lancamento_id, SUM(valor_pago) AS total_baixado
+                FROM financeiro_historico_baixas
+                GROUP BY lancamento_id
+            ) b ON b.lancamento_id = fl.id
             LEFT JOIN propostas p ON p.id = fl.proposta_id 
-            WHERE fl.ativo = 1 AND fl.tipo = 'RECEITA' AND fl.status = 'PAGO' 
+            WHERE fl.ativo = 1 AND fl.tipo = 'RECEITA' 
+              AND (fl.status = 'PAGO' OR b.total_baixado > 0)
               AND (fl.criado_por = :uid OR fl.responsavel_usuario_id = :uid2 OR p.criado_por = :uid3)
               AND fl.data BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())
         ", [':uid' => $usuarioId, ':uid2' => $usuarioId, ':uid3' => $usuarioId]);
 
         // Total a receber pendente
         $receber = (float)dashScalar($pdo, "
-            SELECT COALESCE(SUM(fl.valor), 0) 
+            SELECT COALESCE(SUM(fl.saldo_devedor), 0) 
             FROM financeiro_lancamentos fl 
             LEFT JOIN propostas p ON p.id = fl.proposta_id 
             WHERE fl.ativo = 1 AND fl.tipo = 'RECEITA' AND fl.status IN ('PENDENTE', 'PARCIAL') 
@@ -228,7 +238,7 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
 
         // Total vencido
         $vencido = (float)dashScalar($pdo, "
-            SELECT COALESCE(SUM(fl.valor), 0) 
+            SELECT COALESCE(SUM(fl.saldo_devedor), 0) 
             FROM financeiro_lancamentos fl 
             LEFT JOIN propostas p ON p.id = fl.proposta_id 
             WHERE fl.ativo = 1 AND fl.tipo = 'RECEITA' AND fl.status IN ('PENDENTE', 'PARCIAL') 
@@ -348,7 +358,8 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
     // ADMIN
     $certificadosMesSql = "SELECT SUM(total) FROM (SELECT COUNT(*) total FROM certificados_cht WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE()) UNION ALL SELECT COUNT(*) FROM certificados_cnarq WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE()) UNION ALL SELECT COUNT(*) FROM certificados_cnbl WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE()) UNION ALL SELECT COUNT(*) FROM certificados_csn WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE()) UNION ALL SELECT COUNT(*) FROM certificados_lc WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE()) UNION ALL SELECT COUNT(*) FROM certificados_lp WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())) certificados";
     $certificadosAnteriorSql = "SELECT SUM(total) FROM (SELECT COUNT(*) total FROM certificados_cht WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(DATE_SUB(CURDATE(),INTERVAL 1 MONTH),'%Y-%m-01') AND LAST_DAY(DATE_SUB(CURDATE(),INTERVAL 1 MONTH)) UNION ALL SELECT COUNT(*) FROM certificados_cnarq WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(DATE_SUB(CURDATE(),INTERVAL 1 MONTH),'%Y-%m-01') AND LAST_DAY(DATE_SUB(CURDATE(),INTERVAL 1 MONTH)) UNION ALL SELECT COUNT(*) FROM certificados_cnbl WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(DATE_SUB(CURDATE(),INTERVAL 1 MONTH),'%Y-%m-01') AND LAST_DAY(DATE_SUB(CURDATE(),INTERVAL 1 MONTH)) UNION ALL SELECT COUNT(*) FROM certificados_csn WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(DATE_SUB(CURDATE(),INTERVAL 1 MONTH),'%Y-%m-01') AND LAST_DAY(DATE_SUB(CURDATE(),INTERVAL 1 MONTH)) UNION ALL SELECT COUNT(*) FROM certificados_lc WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(DATE_SUB(CURDATE(),INTERVAL 1 MONTH),'%Y-%m-01') AND LAST_DAY(DATE_SUB(CURDATE(),INTERVAL 1 MONTH)) UNION ALL SELECT COUNT(*) FROM certificados_lp WHERE ativo=1 AND status<>'cancelado' AND data_emissao BETWEEN DATE_FORMAT(DATE_SUB(CURDATE(),INTERVAL 1 MONTH),'%Y-%m-01') AND LAST_DAY(DATE_SUB(CURDATE(),INTERVAL 1 MONTH))) certificados";
-    $receitaAnterior = dashScalar($pdo,"SELECT COALESCE(SUM(valor),0) FROM financeiro_lancamentos WHERE ativo=1 AND tipo='RECEITA' AND status='PAGO' AND data BETWEEN DATE_FORMAT(DATE_SUB(CURDATE(),INTERVAL 1 MONTH),'%Y-%m-01') AND LAST_DAY(DATE_SUB(CURDATE(),INTERVAL 1 MONTH))");
+    $receitaAnterior = dashScalar($pdo,"SELECT COALESCE(SUM(CASE WHEN b.total_baixado IS NOT NULL THEN b.total_baixado WHEN fl.status = 'PAGO' THEN fl.valor_original ELSE 0 END),0) FROM financeiro_lancamentos fl LEFT JOIN (SELECT lancamento_id, SUM(valor_pago) AS total_baixado FROM financeiro_historico_baixas GROUP BY lancamento_id) b ON b.lancamento_id = fl.id WHERE fl.ativo=1 AND fl.tipo='RECEITA' AND (fl.status='PAGO' OR b.total_baixado > 0) AND fl.data BETWEEN DATE_FORMAT(DATE_SUB(CURDATE(),INTERVAL 1 MONTH),'%Y-%m-01') AND LAST_DAY(DATE_SUB(CURDATE(),INTERVAL 1 MONTH))");
+    $receitaMesAtual = (float)dashScalar($pdo,"SELECT COALESCE(SUM(CASE WHEN b.total_baixado IS NOT NULL THEN b.total_baixado WHEN fl.status = 'PAGO' THEN fl.valor_original ELSE 0 END),0) FROM financeiro_lancamentos fl LEFT JOIN (SELECT lancamento_id, SUM(valor_pago) AS total_baixado FROM financeiro_historico_baixas GROUP BY lancamento_id) b ON b.lancamento_id = fl.id WHERE fl.ativo=1 AND fl.tipo='RECEITA' AND (fl.status='PAGO' OR b.total_baixado > 0) AND fl.data BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())");
     $base['resumo_executivo'] = [
         'vistorias_mes'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistorias WHERE data_vistoria BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())"),
         'vistorias_planejadas'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM agendamentos WHERE status<>'cancelado' AND data_vistoria BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())"),
@@ -361,10 +372,10 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
         'dossies_total'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM protocolo_dossies"),
         'dossies_tramite'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM protocolo_dossies WHERE status IN ('ENVIADO_AO_ORGAO', 'PROTOCOLADO', 'EM_ANALISE_NO_ORGAO', 'EM_EXIGENCIA')"),
         'dossies_custodia'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM protocolo_movimentacao_itens WHERE requer_devolucao = 1 AND devolvido_em IS NULL"),
-        'financeiro_receber'=>(float)dashScalar($pdo,"SELECT COALESCE(SUM(valor),0) FROM financeiro_lancamentos WHERE ativo=1 AND tipo='RECEITA' AND status='PENDENTE'"),
-        'financeiro_recebido'=>(float)dashScalar($pdo,"SELECT COALESCE(SUM(valor),0) FROM financeiro_lancamentos WHERE ativo=1 AND tipo='RECEITA' AND status='PAGO' AND data BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())"),
+        'financeiro_receber'=>(float)dashScalar($pdo,"SELECT COALESCE(SUM(saldo_devedor),0) FROM financeiro_lancamentos WHERE ativo=1 AND tipo='RECEITA' AND status IN ('PENDENTE','PARCIAL')"),
+        'financeiro_recebido'=>$receitaMesAtual,
         'receita_anterior'=>$receitaAnterior,
-        'variacao_receita'=>$receitaAnterior>0?round((($recebido-$receitaAnterior)/$receitaAnterior)*100,1):null,
+        'variacao_receita'=>$receitaAnterior>0?round((($receitaMesAtual-$receitaAnterior)/$receitaAnterior)*100,1):null,
     ];
     $base['analises_recentes'] = dashRows($pdo, "SELECT ap.id, ap.numero, ap.objeto, ap.tipo_processo, ap.status, e.nome embarcacao, c.nome solicitante, ap.prazo_agendado_em FROM analises_planos ap JOIN embarcacoes e ON e.id = ap.embarcacao_id LEFT JOIN clientes c ON c.id = ap.solicitante_id WHERE ap.status NOT IN ('CONCLUIDA','REPROVADA','CANCELADA') ORDER BY ap.atualizado_em DESC LIMIT 4");
     $base['dossies_recentes'] = dashRows($pdo, "SELECT d.id, d.numero, d.assunto, d.status, d.protocolo_externo_numero, e.nome embarcacao, d.criado_em FROM protocolo_dossies d LEFT JOIN embarcacoes e ON e.id = d.embarcacao_id ORDER BY d.criado_em DESC LIMIT 4");
@@ -380,7 +391,7 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
     foreach ($base['atividade'] as &$atividade) $atividade['url'] = dashActivityUrl($atividade);
     unset($atividade);
     $receitasPorMes=[];
-    foreach(dashRows($pdo,"SELECT DATE_FORMAT(data,'%Y-%m') mes,SUM(valor) valor FROM financeiro_lancamentos WHERE ativo=1 AND tipo='RECEITA' AND status='PAGO' AND data>=DATE_FORMAT(DATE_SUB(CURDATE(),INTERVAL 5 MONTH),'%Y-%m-01') GROUP BY DATE_FORMAT(data,'%Y-%m')") as $receitaMes) $receitasPorMes[$receitaMes['mes']] = (float)$receitaMes['valor'];
+    foreach(dashRows($pdo,"SELECT DATE_FORMAT(fl.data,'%Y-%m') mes, SUM(CASE WHEN b.total_baixado IS NOT NULL THEN b.total_baixado WHEN fl.status = 'PAGO' THEN fl.valor_original ELSE 0 END) valor FROM financeiro_lancamentos fl LEFT JOIN (SELECT lancamento_id, SUM(valor_pago) AS total_baixado FROM financeiro_historico_baixas GROUP BY lancamento_id) b ON b.lancamento_id = fl.id WHERE fl.ativo=1 AND fl.tipo='RECEITA' AND (fl.status='PAGO' OR b.total_baixado > 0) AND fl.data>=DATE_FORMAT(DATE_SUB(CURDATE(),INTERVAL 5 MONTH),'%Y-%m-01') GROUP BY DATE_FORMAT(fl.data,'%Y-%m')") as $receitaMes) $receitasPorMes[$receitaMes['mes']] = (float)$receitaMes['valor'];
     $base['meses']=[]; for($i=5;$i>=0;$i--){$ini=date('Y-m-01',strtotime("-$i months"));$chave=date('Y-m',strtotime($ini));$base['meses'][]=['label'=>date('m/Y',strtotime($ini)),'valor'=>$receitasPorMes[$chave]??0];}
     $base['vistorias_recentes'] = dashRows($pdo, "SELECT
         v.id, v.numero, v.agendamento_id, v.status, v.data_vistoria,

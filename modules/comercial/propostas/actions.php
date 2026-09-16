@@ -49,17 +49,7 @@ if ($action === 'embarcacoes_cliente') {
     }
 }
 
-// === DAQUI EM DIANTE: Ações via POST ===
-verificar_sessao();
-exigirAcesso('comercial');
-
-// Validar CSRF token
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['csrf_token']) || !verificarCSRF($_POST['csrf_token'])) {
-        setMensagem('error', 'Token de segurança inválido. Tente novamente.');
-        redirecionar(APP_URL . 'comercial/propostas');
-    }
-}
+// === Funções Auxiliares do Módulo Comercial ===
 
 function normalizarTextoLog(?string $texto, int $limite = 2000): ?string
 {
@@ -133,23 +123,72 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
             throw new RuntimeException('A proposta não possui um escritório responsável.');
         }
         $responsavelVendaId = financeiroResponsavelVenda($pdo, $prop['criado_por'] ?? null);
+
+        $valorTotal = round((float)($prop['valor_total'] ?? 0), 2);
+        $valorEntrada = round(max(0, min($valorTotal, (float)($prop['valor_entrada'] ?? 0))), 2);
+        $saldoDevedor = round(max(0, $valorTotal - $valorEntrada), 2);
+
+        if ($valorEntrada >= $valorTotal && $valorTotal > 0) {
+            $statusFin = 'PAGO';
+            $saldoDevedor = 0.00;
+            $dataVencimento = date('Y-m-d');
+            $obsFin = $manual
+                ? 'Lançamento quitado integralmente à vista após autorização interna da proposta nº ' . $prop['numero'] . '.'
+                : 'Lançamento quitado integralmente à vista após assinatura da proposta nº ' . $prop['numero'] . '.';
+        } elseif ($valorEntrada > 0) {
+            $statusFin = 'PARCIAL';
+            $dataVencimento = date('Y-m-d', strtotime('+15 days'));
+            $obsFin = ($manual
+                ? 'Lançamento gerado após autorização interna da proposta nº ' . $prop['numero'] . '.'
+                : 'Lançamento gerado após assinatura da proposta nº ' . $prop['numero'] . '.')
+                . ' Entrada à vista de R$ ' . number_format($valorEntrada, 2, ',', '.') . ' quitada; saldo restante de R$ ' . number_format($saldoDevedor, 2, ',', '.') . ' a receber.';
+        } else {
+            $statusFin = 'PENDENTE';
+            $saldoDevedor = $valorTotal;
+            $dataVencimento = date('Y-m-d', strtotime('+15 days'));
+            $obsFin = $manual
+                ? 'Lançamento gerado automaticamente após aprovação interna da proposta.'
+                : 'Lançamento gerado automaticamente após assinatura da proposta.';
+        }
+
+        $lancamentoId = gerarUUID();
         $stmtFin = $pdo->prepare("INSERT INTO financeiro_lancamentos
             (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por, escritorio_id, responsavel_usuario_id, proposta_id)
-            VALUES (UUID(), 'RECEITA', 'unica', 'PENDENTE', DATE_ADD(CURDATE(), INTERVAL 15 DAY), :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por, :escritorio, :responsavel, :proposta)");
+            VALUES (:id, 'RECEITA', 'unica', :status, :data_vencimento, :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por, :escritorio, :responsavel, :proposta)");
         $stmtFin->execute([
+            ':id' => $lancamentoId,
+            ':status' => $statusFin,
+            ':data_vencimento' => $dataVencimento,
             ':cliente_id' => $prop['cliente_id'],
             ':descricao' => $descricaoFinanceiro,
-            ':valor' => $prop['valor_total'],
-            ':valor_original' => $prop['valor_total'],
-            ':saldo_devedor' => $prop['valor_total'],
-            ':observacoes' => $manual
-                ? 'Lançamento gerado automaticamente após aprovação interna da proposta.'
-                : 'Lançamento gerado automaticamente após assinatura da proposta.',
+            ':valor' => $valorTotal,
+            ':valor_original' => $valorTotal,
+            ':saldo_devedor' => $saldoDevedor,
+            ':observacoes' => $obsFin,
             ':criado_por' => $criado_por,
             ':escritorio' => $escritorioLancamento,
             ':responsavel' => $responsavelVendaId,
             ':proposta' => $prop['id'],
         ]);
+
+        if ($valorEntrada > 0) {
+            $formaBaixa = in_array($prop['forma_pagamento'] ?? '', ['a_vista', 'parcelado', 'boleto', 'pix'], true)
+                ? $prop['forma_pagamento']
+                : 'a_vista';
+            $stmtBaixa = $pdo->prepare("
+                INSERT INTO financeiro_historico_baixas
+                    (id, lancamento_id, valor_pago, data_pagamento, forma_pagamento, criado_por)
+                VALUES
+                    (:id, :lancamento_id, :valor_pago, CURDATE(), :forma_pagamento, :criado_por)
+            ");
+            $stmtBaixa->execute([
+                ':id' => gerarUUID(),
+                ':lancamento_id' => $lancamentoId,
+                ':valor_pago' => number_format($valorEntrada, 2, '.', ''),
+                ':forma_pagamento' => $formaBaixa,
+                ':criado_por' => $criado_por,
+            ]);
+        }
     }
 
     $stmtEmb = $pdo->prepare("
@@ -209,9 +248,21 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
     analisePlanosCriarDemandasProposta($pdo, $prop, $criado_por);
 }
 
-switch ($action) {
+if ($action !== '') {
+    verificar_sessao();
+    exigirAcesso('comercial');
 
-    case 'criar':
+    // Validar CSRF token
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (!isset($_POST['csrf_token']) || !verificarCSRF($_POST['csrf_token'])) {
+            setMensagem('error', 'Token de segurança inválido. Tente novamente.');
+            redirecionar(APP_URL . 'comercial/propostas');
+        }
+    }
+
+    switch ($action) {
+
+        case 'criar':
         try {
             $escritorioId = financeiroResolverEscritorio($pdo, $_POST['escritorio_id'] ?? null);
             if ($escritorioId === 'todos') throw new RuntimeException('Selecione o escritório da proposta.');
@@ -973,5 +1024,6 @@ switch ($action) {
         setMensagem('error', 'Ação inválida.');
         redirecionar(APP_URL . 'comercial/propostas');
         break;
+    }
 }
 
