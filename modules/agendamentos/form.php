@@ -19,7 +19,7 @@ $fluxoPropostaSolicitado = (string)($_GET['fluxo_proposta'] ?? '') === '1';
 
 $agendamento = [
     'id'               => '',
-    'proposta_id'      => '',
+    'proposta_id'      => trim((string)($_GET['proposta_id'] ?? '')),
     'embarcacao_id'    => '',
     'cliente_id'       => '',
     'armador_id'       => '',
@@ -558,6 +558,11 @@ function restaurarEmbarcacoes() {
 
 transformarHoraEmSelecao();
 atualizarEstadoServicosTravados(servicosIniciamTravados);
+
+const propSelectInicial = document.getElementById('proposta_id');
+if (propSelectInicial && propSelectInicial.value && !<?php echo $editando ? 'true' : 'false'; ?>) {
+    carregarDadosProposta(propSelectInicial.value);
+}
 </script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

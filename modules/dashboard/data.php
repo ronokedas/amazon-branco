@@ -179,16 +179,169 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
     }
 
     if ($cargo === 'VENDEDOR') {
-        $statuses=['rascunho','enviada','assinada','recusada']; $funil=array_fill_keys($statuses,0);
-        foreach(dashRows($pdo,"SELECT status,COUNT(*) total FROM propostas WHERE criado_por=:uid AND status IN ('rascunho','enviada','assinada','recusada') GROUP BY status",$params) as $grupo) $funil[$grupo['status']] = (int)$grupo['total'];
-        $funil['aguardando_agendamento']=(int)dashScalar($pdo,"SELECT COUNT(*) FROM propostas p WHERE p.criado_por=:uid AND p.assinado=1 AND NOT EXISTS (SELECT 1 FROM agendamentos a WHERE a.proposta_id=p.id AND a.status<>'cancelado' AND a.data_vistoria IS NOT NULL AND a.vistoriador_id IS NOT NULL)",$params);
-        $emitidas=(int)dashScalar($pdo,"SELECT COUNT(*) FROM propostas WHERE criado_por=:uid AND data_emissao BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())",$params);
-        $assinadas=(int)dashScalar($pdo,"SELECT COUNT(*) FROM propostas WHERE criado_por=:uid AND assinado=1 AND COALESCE(assinatura_em,created_at) BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())",$params);
-        $contrib= dashScalar($pdo,"SELECT COALESCE(SUM(valor),0) FROM financeiro_lancamentos WHERE ativo=1 AND tipo='RECEITA' AND status='PAGO' AND criado_por=:uid AND data BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())",$params);
-        $base['funil']=$funil; $base['conversao']=$emitidas?round(($assinadas/$emitidas)*100,1):0; $base['contribuicao']=$meta>0?round(($contrib/$meta)*100,1):0;
-        $base['prioridade']=dashRows($pdo,"SELECT DISTINCT p.id proposta_id,a.id agendamento_id,p.numero,c.nome cliente,COALESCE(e.nome,ep.nome,'Embarcação da proposta') embarcacao,p.assinatura_em FROM propostas p JOIN clientes c ON c.id=p.cliente_id LEFT JOIN agendamentos a ON a.proposta_id=p.id AND a.status<>'cancelado' LEFT JOIN embarcacoes e ON e.id=a.embarcacao_id LEFT JOIN propostas_embarcacoes pe ON pe.proposta_id=p.id LEFT JOIN embarcacoes ep ON ep.id=pe.embarcacao_id WHERE p.criado_por=:uid AND p.assinado=1 AND NOT EXISTS (SELECT 1 FROM agendamentos ac WHERE ac.proposta_id=p.id AND ac.status<>'cancelado' AND ac.data_vistoria IS NOT NULL AND ac.vistoriador_id IS NOT NULL) ORDER BY p.assinatura_em DESC LIMIT 1",$params)[0]??null;
-        $base['recentes']=dashRows($pdo,"SELECT p.id,p.numero,p.status,p.data_emissao,p.updated_at,c.nome cliente FROM propostas p JOIN clientes c ON c.id=p.cliente_id WHERE p.criado_por=:uid ORDER BY p.updated_at DESC LIMIT 8",$params);
-        $base['acompanhamentos']=array_values(array_filter($base['recentes'],fn($p)=>in_array($p['status'],['rascunho','enviada','assinada'],true)));
+        $statuses = ['rascunho', 'enviada', 'assinada', 'recusada', 'cancelada'];
+        $funil = array_fill_keys($statuses, 0);
+        foreach (dashRows($pdo, "SELECT status, COUNT(*) total FROM propostas WHERE criado_por = :uid AND status IN ('rascunho','enviada','assinada','recusada','cancelada') GROUP BY status", $params) as $grupo) {
+            $funil[$grupo['status']] = (int)$grupo['total'];
+        }
+        
+        // Aguardando agendamento: Propostas assinadas criadas pelo vendedor que ainda não possuem vistoria agendada
+        $funil['aguardando_agendamento'] = (int)dashScalar($pdo, "
+            SELECT COUNT(*) 
+            FROM propostas p 
+            WHERE p.criado_por = :uid 
+              AND p.assinado = 1 
+              AND NOT EXISTS (
+                  SELECT 1 FROM agendamentos a 
+                  WHERE a.proposta_id = p.id 
+                    AND a.status <> 'cancelado' 
+                    AND a.data_vistoria IS NOT NULL 
+                    AND a.vistoriador_id IS NOT NULL
+              )
+        ", $params);
+
+        // Métricas do mês corrente
+        $emitidas = (int)dashScalar($pdo, "SELECT COUNT(*) FROM propostas WHERE criado_por = :uid AND data_emissao BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())", $params);
+        $valorEmitidas = (float)dashScalar($pdo, "SELECT COALESCE(SUM(valor_total),0) FROM propostas WHERE criado_por = :uid AND data_emissao BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())", $params);
+
+        $assinadas = (int)dashScalar($pdo, "SELECT COUNT(*) FROM propostas WHERE criado_por = :uid AND assinado = 1 AND COALESCE(assinatura_em, created_at) BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())", $params);
+        $valorAssinadas = (float)dashScalar($pdo, "SELECT COALESCE(SUM(valor_total),0) FROM propostas WHERE criado_por = :uid AND assinado = 1 AND COALESCE(assinatura_em, created_at) BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())", $params);
+
+        // Receitas pagas (contribuição para a meta)
+        $contrib = (float)dashScalar($pdo, "
+            SELECT COALESCE(SUM(fl.valor), 0) 
+            FROM financeiro_lancamentos fl 
+            LEFT JOIN propostas p ON p.id = fl.proposta_id 
+            WHERE fl.ativo = 1 AND fl.tipo = 'RECEITA' AND fl.status = 'PAGO' 
+              AND (fl.criado_por = :uid OR fl.responsavel_usuario_id = :uid2 OR p.criado_por = :uid3)
+              AND fl.data BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())
+        ", [':uid' => $usuarioId, ':uid2' => $usuarioId, ':uid3' => $usuarioId]);
+
+        // Total a receber pendente
+        $receber = (float)dashScalar($pdo, "
+            SELECT COALESCE(SUM(fl.valor), 0) 
+            FROM financeiro_lancamentos fl 
+            LEFT JOIN propostas p ON p.id = fl.proposta_id 
+            WHERE fl.ativo = 1 AND fl.tipo = 'RECEITA' AND fl.status IN ('PENDENTE', 'PARCIAL') 
+              AND (fl.criado_por = :uid OR fl.responsavel_usuario_id = :uid2 OR p.criado_por = :uid3)
+        ", [':uid' => $usuarioId, ':uid2' => $usuarioId, ':uid3' => $usuarioId]);
+
+        // Total vencido
+        $vencido = (float)dashScalar($pdo, "
+            SELECT COALESCE(SUM(fl.valor), 0) 
+            FROM financeiro_lancamentos fl 
+            LEFT JOIN propostas p ON p.id = fl.proposta_id 
+            WHERE fl.ativo = 1 AND fl.tipo = 'RECEITA' AND fl.status IN ('PENDENTE', 'PARCIAL') 
+              AND fl.data_vencimento < CURDATE()
+              AND (fl.criado_por = :uid OR fl.responsavel_usuario_id = :uid2 OR p.criado_por = :uid3)
+        ", [':uid' => $usuarioId, ':uid2' => $usuarioId, ':uid3' => $usuarioId]);
+
+        // Total de agendamentos ativos
+        $totalAgendamentos = (int)dashScalar($pdo, "
+            SELECT COUNT(*) 
+            FROM agendamentos a 
+            LEFT JOIN propostas p ON p.id = a.proposta_id 
+            WHERE (a.vendedor_id = :uid OR a.criado_por = :uid2 OR p.criado_por = :uid3) 
+              AND a.status IN ('pendente', 'confirmado', 'em_andamento')
+        ", [':uid' => $usuarioId, ':uid2' => $usuarioId, ':uid3' => $usuarioId]);
+
+        $base['kpis'] = [
+            'emitidas_mes'            => $emitidas,
+            'valor_emitidas_mes'      => $valorEmitidas,
+            'assinadas_mes'           => $assinadas,
+            'valor_assinadas_mes'     => $valorAssinadas,
+            'aguardando_agendamento'  => $funil['aguardando_agendamento'],
+            'agendamentos_ativos'     => $totalAgendamentos,
+            'financeiro_receber'      => $receber,
+            'financeiro_recebido_mes' => $contrib,
+            'financeiro_vencido'      => $vencido,
+        ];
+
+        $base['funil'] = $funil;
+        $base['conversao'] = $emitidas ? round(($assinadas / $emitidas) * 100, 1) : 0;
+        $base['contribuicao'] = $meta > 0 ? round(($contrib / $meta) * 100, 1) : 0;
+
+        // Fila Crítica: Propostas assinadas aguardando agendamento de vistoria
+        $base['fila_agendamentos'] = dashRows($pdo, "
+            SELECT p.id AS proposta_id, p.numero, p.valor_total, p.assinatura_em, p.created_at,
+                   c.id AS cliente_id, c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                   COALESCE((SELECT GROUP_CONCAT(DISTINCT e.nome SEPARATOR ', ') FROM propostas_embarcacoes pe JOIN embarcacoes e ON e.id = pe.embarcacao_id WHERE pe.proposta_id = p.id), 'Embarcação da proposta') AS embarcacao_nome,
+                   (SELECT a.id FROM agendamentos a WHERE a.proposta_id = p.id AND a.status <> 'cancelado' LIMIT 1) AS agendamento_id
+            FROM propostas p
+            JOIN clientes c ON c.id = p.cliente_id
+            WHERE p.criado_por = :uid
+              AND p.assinado = 1
+              AND NOT EXISTS (
+                  SELECT 1 FROM agendamentos ac 
+                  WHERE ac.proposta_id = p.id 
+                    AND ac.status <> 'cancelado' 
+                    AND ac.data_vistoria IS NOT NULL 
+                    AND ac.vistoriador_id IS NOT NULL
+              )
+            ORDER BY p.assinatura_em DESC, p.created_at DESC
+            LIMIT 5
+        ", [':uid' => $usuarioId]);
+
+        $base['prioridade'] = $base['fila_agendamentos'][0] ?? null;
+
+        // Próximos Agendamentos de Vistoria
+        $base['proximos_agendamentos'] = dashRows($pdo, "
+            SELECT a.id, a.data_vistoria, a.hora_vistoria, a.local, a.tipo_vistoria, a.status,
+                   e.nome AS embarcacao_nome, e.registro AS embarcacao_registro,
+                   c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                   u.nome AS vistoriador_nome, u.telefone AS vistoriador_telefone,
+                   p.numero AS proposta_numero
+            FROM agendamentos a
+            JOIN embarcacoes e ON e.id = a.embarcacao_id
+            LEFT JOIN clientes c ON c.id = a.cliente_id
+            LEFT JOIN usuarios u ON u.id = a.vistoriador_id
+            LEFT JOIN propostas p ON p.id = a.proposta_id
+            WHERE (a.vendedor_id = :uid OR a.criado_por = :uid2 OR p.criado_por = :uid3)
+              AND a.status IN ('pendente', 'confirmado', 'em_andamento')
+            ORDER BY a.data_vistoria IS NULL, (a.data_vistoria < CURDATE()) DESC, a.data_vistoria ASC, a.hora_vistoria ASC
+            LIMIT 5
+        ", [':uid' => $usuarioId, ':uid2' => $usuarioId, ':uid3' => $usuarioId]);
+
+        // Controle Financeiro: Títulos recentes das propostas do vendedor
+        $base['financeiro_recentes'] = dashRows($pdo, "
+            SELECT fl.id, fl.descricao, fl.valor, fl.status, fl.data_vencimento, fl.data,
+                   c.nome AS cliente_nome, c.telefone AS cliente_telefone, c.chave_pix,
+                   p.numero AS proposta_numero
+            FROM financeiro_lancamentos fl
+            LEFT JOIN clientes c ON c.id = fl.cliente_id
+            LEFT JOIN propostas p ON p.id = fl.proposta_id
+            WHERE fl.ativo = 1 AND fl.tipo = 'RECEITA'
+              AND (fl.criado_por = :uid OR fl.responsavel_usuario_id = :uid2 OR p.criado_por = :uid3)
+            ORDER BY fl.data_vencimento IS NULL, fl.data_vencimento DESC, fl.criado_em DESC
+            LIMIT 5
+        ", [':uid' => $usuarioId, ':uid2' => $usuarioId, ':uid3' => $usuarioId]);
+
+        // Minhas Propostas Recentes
+        $base['recentes'] = dashRows($pdo, "
+            SELECT p.id, p.numero, p.valor_total, p.status, p.data_emissao, p.updated_at, p.created_at,
+                   c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                   COALESCE((SELECT GROUP_CONCAT(DISTINCT e.nome SEPARATOR ', ') FROM propostas_embarcacoes pe JOIN embarcacoes e ON e.id = pe.embarcacao_id WHERE pe.proposta_id = p.id), 'Embarcação da proposta') AS embarcacao_nome
+            FROM propostas p
+            JOIN clientes c ON c.id = p.cliente_id
+            WHERE p.criado_por = :uid
+            ORDER BY p.updated_at DESC, p.created_at DESC
+            LIMIT 8
+        ", [':uid' => $usuarioId]);
+
+        $base['acompanhamentos'] = array_values(array_filter($base['recentes'], fn($p) => in_array($p['status'], ['rascunho', 'enviada', 'assinada'], true)));
+
+        // Carteira rápida de clientes ativos para novos negócios
+        $base['carteira_clientes'] = dashRows($pdo, "
+            SELECT c.id, c.nome, c.perfil, c.telefone, c.email, c.cpf_cnpj,
+                   COUNT(DISTINCT ce.id) AS total_embarcacoes
+            FROM clientes c
+            LEFT JOIN clientes_embarcacoes ce ON ce.cliente_id = c.id AND ce.status = 'ATIVO'
+            WHERE c.ativo = 1 AND c.excluido_em IS NULL
+            GROUP BY c.id
+            ORDER BY c.criado_em DESC, c.nome ASC
+            LIMIT 5
+        ");
+
         return $base;
     }
 
