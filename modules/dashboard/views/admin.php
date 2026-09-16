@@ -481,8 +481,8 @@ $usuarioNome = $_SESSION['usuario_nome'] ?? 'Administrador';
             <p>Olá, <strong><?= h($usuarioNome) ?></strong>. Visão executiva da frota naval, controle técnico de vistorias, engenharia, trâmites e finanças.</p>
         </div>
         <div class="dash-admin-header__actions">
-            <a href="<?= APP_URL ?>agendamentos/form" class="btn btn-primary">
-                <i class="fa-solid fa-calendar-plus"></i> Novo Agendamento
+            <a href="<?= APP_URL ?>comercial/nova" class="btn btn-primary">
+                <i class="fa-solid fa-file-circle-plus"></i> Gerar Proposta
             </a>
             <a href="<?= APP_URL ?>analises-planos/form" class="btn btn-secondary">
                 <i class="fa-solid fa-drafting-compass"></i> Nova Análise
