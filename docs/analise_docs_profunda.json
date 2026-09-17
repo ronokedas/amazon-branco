@@ -1,0 +1,595 @@
+{
+  "total_files": 27,
+  "distinct_normam_lines": [
+    "NORMAM 202,  Item",
+    "NORMAM 202,  Item 3,",
+    "NORMAM 202, Anexo",
+    "NORMAM-202,",
+    "NORMAM-202,   Anexo",
+    "NORMAM-202,   Item",
+    "NORMAM-202,  Anexo",
+    "NORMAM-202,  Item",
+    "NORMAM-202,  Item 3,",
+    "NORMAM-202, Anexo",
+    "NORMAM-202, IAnexo",
+    "NORMAM-202, IItem",
+    "NORMAM-202, Item",
+    "NORMAM-202, Item 3",
+    "NORMAM-202, Item 3,",
+    "NORMAM-202, Item 4",
+    "NORMAM-202, Item 6,",
+    "NORMAM-202,Anexo 3-",
+    "NORMAM-202,Item 3,",
+    "NORMAM-331/DPC.",
+    "No item 7, atualizar o número para NORMAM 202. Item 4 do",
+    "da NORMAM 202 para “EMBARCAÇÕES COM COMPRIMENTO DE",
+    "pertinentes aos tipos de vistorias realizados, conforme os parâmetros estabelecidos na NORMAM-",
+    "requisitos estabelecidos nestas Normas (NORMAM 202, Item 3.28,3.28.1)."
+  ],
+  "normam_contexts": [
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202,  Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202,  Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202,  Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202,  Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202,Anexo 3-"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM 202,  Item"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM 202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf",
+      "line": "requisitos estabelecidos nestas Normas (NORMAM 202, Item 3.28,3.28.1)."
+    },
+    {
+      "file": "RAP0014_2026-AMAZON -PDA III REV.pdf",
+      "line": "NORMAM-202,  Anexo"
+    },
+    {
+      "file": "RAP0015_2026-AMAZON -PDA IV REV.pdf",
+      "line": "NORMAM-202,  Item"
+    },
+    {
+      "file": "RAP0015_2026-AMAZON -PDA IV REV.pdf",
+      "line": "NORMAM-202,  Anexo"
+    },
+    {
+      "file": "RAP0015_2026-AMAZON -PDA IV REV.pdf",
+      "line": "NORMAM-202, Item"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202,  Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202,  Anexo"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202,Anexo 3-"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202,  Anexo"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202,  Anexo"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202,  Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202,Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 6,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202,  Item"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "NORMAM-331/DPC."
+    },
+    {
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf",
+      "line": "requisitos estabelecidos nestas Normas (NORMAM 202, Item 3.28,3.28.1)."
+    },
+    {
+      "file": "RAP0018_2026-AMAZON - EDU IV.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0018_2026-AMAZON - EDU IV.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0018_2026-AMAZON - EDU IV.pdf",
+      "line": "NORMAM-202,  Item 3,"
+    },
+    {
+      "file": "RAP0018_2026-AMAZON - EDU IV.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0020_2026-AMAZON - JADE AIUB - REV.pdf",
+      "line": "NORMAM-202,  Anexo"
+    },
+    {
+      "file": "RAP0020_2026-AMAZON - JADE AIUB - REV.pdf",
+      "line": "NORMAM-202, Item"
+    },
+    {
+      "file": "RAP0020_2026-AMAZON - JADE AIUB - REV.pdf",
+      "line": "NORMAM-202,  Item 3,"
+    },
+    {
+      "file": "RAP0020_2026-AMAZON - JADE AIUB - REV.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0021_2026-AMAZON - EDU IV.pdf",
+      "line": "requisitos estabelecidos nestas Normas (NORMAM 202, Item 3.28,3.28.1)."
+    },
+    {
+      "file": "RAP0024_2026-AMAZON - MN I - REV.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0024_2026-AMAZON - MN I - REV.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0024_2026-AMAZON - MN I - REV.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0024_2026-AMAZON - MN I - REV.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0032_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202,  Item 3,"
+    },
+    {
+      "file": "RAP0032_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0032_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM 202,  Item"
+    },
+    {
+      "file": "RAP0032_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202,  Item 3,"
+    },
+    {
+      "file": "RAP0032_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202,  Item 3,"
+    },
+    {
+      "file": "RAP0032_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Anexo"
+    },
+    {
+      "file": "RAP0032_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    },
+    {
+      "file": "RAP0032_2026-AMAZON - P D A V.pdf",
+      "line": "NORMAM-202, Item 3,"
+    }
+  ],
+  "sample_files": {
+    "NAR001_2026-AMAZON - EDU IV.pdf": {
+      "num_pages": 3,
+      "header_lines": [
+        "1. Características Gerais",
+        "Nome da Embarcação:",
+        "EDU IV",
+        "Armador:",
+        "EDUNAV TRANSPORTE, NAVEGAÇÃO E SERVIÇOS LTDA",
+        "Construtor:",
+        "EDUNAV TRANSPORTE, NAVEGAÇÃO E SERVIÇOS LTDA",
+        "Número do Casco:",
+        "x-x-x",
+        "Material do Casco:",
+        "AÇO",
+        "Tipo:",
+        "BALSA",
+        "Classificação:",
+        "CARGA GERAL SOBRE O CONVÉS"
+      ],
+      "images_count": 6,
+      "normam_lines": [],
+      "sample_body": "  \n1. Características Gerais\nNome da Embarcação:\nEDU IV\nArmador:\nEDUNAV TRANSPORTE, NAVEGAÇÃO E SERVIÇOS LTDA\nConstrutor:\nEDUNAV TRANSPORTE, NAVEGAÇÃO E SERVIÇOS LTDA\nNúmero do Casco:\nx-x-x\nMaterial do Casco:\nAÇO\nTipo:\nBALSA\nClassificação:\nCARGA GERAL SOBRE O CONVÉS\nPorto de Inscrição:\nBELÉM PA\nData de Lançamento, Batimento da Quilha ou Construção:\n2. Características do Casco\nCt = 71,00 m\nP = 2,20 m\nL = 66,72 m\nB = 12,50 m\nLpp = 69,50 m\nAV =\n0,400 m\nAV =\n1,766 m\nCalado Leve:\nAR =\n0,400 m\nAR =\n1,765 m\nMédio =\n0,400 m\nMédio =\n1,765 m\n3. Tripulantes e Passageiros\nNúmero de Tripulantes =\n0\nN1 (N° . de Passageiros em camarotes que tenham menos de oito beliches) =\n0\nN2 (N° . dos demais Passageiros) =\n0\n4. Características Calculadas\nDeslocamentos:\nCarregado:\n1268,211 t\nLeve:\n238,211 t\nPorte Bruto:\n1030,000 t\nEspaços Fechados abaixo do Convés Superior\n1650,06 m³\nEspaços Fechados acima do Convés Superior\n0,00 m³\nEspaços Excluídos \n0,00 m³\nV (Volume Total dos Espaços Fechados) \n1650,06 m³\nAB = 436\nVc (Volume dos Espaços de Carga)\n0,00 m³\nAL = 130\n AM-NAR:\n0001/2026\nNOTAS PARA ARQUEAÇÃO DE EMBARCAÇÕES\n(L > ou = 24 m)\nNOME DA EMBARCAÇÃO\nEDU IV\n2020\nCalado Carregado:\nBelém - PA, em 05 de agosto de 2026.\nJERSON DA SILVA ALMEIDA\nTECNÓLOGO NAVAL\nCREA: 22181-AM\n1 / 3\nSIGN\n\n AM-NAR:\n0001/2026\nNOTAS PARA ARQUEAÇÃO DE EMBARCAÇÕES\n(L > ou = 24 m)\nNOME DA EMBARCAÇÃO\nEDU IV\n5. Arqueação Bruta\na) Identifique os Espaços Fechados; (Ver Anexo)\nb) Identifique os Espaços Excluídos;\nc) Espaços Fechados ab",
+      "sample_end": ",00\n(      ) Valor calculado maior do que 0,25 AB, usar o valor calculado\nIII) 0,30 AB =\n130,80\nf) Cálculo da Arqueação Líquida   \n     AL = K2Vc (4h / 3P)2 + 1,25 x (AB + 10.000) / 10.000 x (N1 + (N2 / 10))\n    onde K2Vc (4H / 3P)2 corresponde ao valor obtido em e) II)\n           AL = \n109,00\ng) Comparar o valor obtido em e) III) (30% da arqueação bruta)\n(      ) AL calculada maior ou igual a 30% da AB, usar o valor calculado.\n(  X  ) AL calculada menor que 30% da AB, usar AL = 30% AB.\n       AL = 130\nBelém - PA, em 05 de agosto de 2026.\nJERSON DA SILVA ALMEIDA\nTECNÓLOGO NAVAL\nCREA: 22181-AM\n2 / 3\nSIGN\n\n AM-NAR:\n0001/2026\nNOTAS PARA ARQUEAÇÃO DE EMBARCAÇÕES\n(L > ou = 24 m)\nNOME DA EMBARCAÇÃO\nEDU IV\nANEXO - Espaços Incluídos na Arqueação\nA)  Espaços Fechados:\na.1) Volumes Abaixo do Convés Principal:\ni)\n:\nVi \n=\n1650,06 m³\nii)\n:\nVii\n=\n0,00 m³\niii)\n:\nViii\n=\n0,00 m³\nTOTAL \nVI\n=\n1650,06 m³\na. 2) Volumes Acima do Convés Superior: \ni)\n:\nVi \n=\n0,00 m³\nii)\n:\nVii\n=\n0,00 m³\niii)\n:\nViii\n=\n0,00 m³\niv)\n:\nViv\n=\n0,00 m³\nv)\n:\nVv\n=\n0,00 m³\nvi)\n:\nVvi\n=\n0,00 m³\nTOTAL \nVII \n=\n0,00 m³\nVolume Total: VT =\n1650,06 m³\nB)  Espaços Excluídos:\ni)\n:\nVi \n=\n0,00 m³\nii)\n:\nVii\n=\n0,00 m³\niii)\n:\nViii\n=\n0,00 m³\nVB\n=\n0,00 m³\nC)  Espaços de Carga: \ni)\n:\nVi \n=\n0,00 m³\nii)\n:\nVii\n=\n0,00 m³\niii)\n:\nViii\n=\n0,00 m³\niv)\n:\nViv\n=\n0,00 m³\nv)\n:\nVv\n=\n0,00 m³\nvi)\n:\nVvi\n=\n0,00 m³\nTOTAL \nVC\n=\n0,00 m³\nJERSON DA SILVA ALMEIDA\nTECNÓLOGO NAVAL\nCREA: 22181-AM\nBelém - PA, em 05 de agosto de 2026.\nVolume do casco + Tosamento\n3 / 3\nSIGN\n"
+    },
+    "RAP0011_2026-AMAZON - P D A V.pdf": {
+      "num_pages": 6,
+      "header_lines": [
+        "m",
+        "m",
+        "m",
+        "10",
+        "No item 2. reavaliar a informação de 02 extra roll, compatibilizar",
+        "conforme o estudo de estabilidade.",
+        "NORMAM-202, Anexo",
+        "7-B.",
+        "Ver OBS. 3",
+        "08",
+        "No item 13.2. reavaliar a quantidade de boias salva-vidas, para",
+        "atender quando navegando em comboio.",
+        "NORMAM-202, Anexo",
+        "3-G/ Anexo 3-F.",
+        "Ver OBS. 3"
+      ],
+      "images_count": 7,
+      "normam_lines": [
+        "NORMAM-202, Anexo",
+        "NORMAM-202, Anexo",
+        "NORMAM-202,  Anexo",
+        "NORMAM-202,  Item 3,",
+        "NORMAM-202, Anexo",
+        "NORMAM-202, Item",
+        "NORMAM-202,  Item 3,",
+        "NORMAM-202,  Anexo",
+        "NORMAM-202,Anexo 3-",
+        "NORMAM-202, Anexo",
+        "NORMAM-202, Anexo",
+        "NORMAM-202, Anexo",
+        "NORMAM-202, Item 3,",
+        "NORMAM 202,  Item",
+        "NORMAM 202, Anexo",
+        "NORMAM-202, Anexo",
+        "NORMAM-202, Anexo",
+        "NORMAM-202, Item",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Anexo",
+        "NORMAM-202, Anexo",
+        "NORMAM-202, Item",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Item 3",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Anexo",
+        "NORMAM-202,",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Item 3,",
+        "NORMAM-202, Item 3,",
+        "requisitos estabelecidos nestas Normas (NORMAM 202, Item 3.28,3.28.1)."
+      ],
+      "sample_body": "m\nm\nm\n10\nNo item 2. reavaliar a informação de 02 extra roll, compatibilizar\nconforme o estudo de estabilidade.\nNORMAM-202, Anexo \n7-B.\nVer OBS. 3\n08\nNo item 13.2. reavaliar a quantidade de boias salva-vidas, para\natender quando navegando em comboio. \nNORMAM-202, Anexo \n3-G/ Anexo 3-F.\nVer OBS. 3\n07\nNo item 10.1, informar as características do pau de carga,\ncompatibilizar conforme o plano de arranjo geral.\nNORMAM-202,  Anexo \n3-G/ Anexo 3-F.\nVer OBS. 3\nARMADOR:\nD P A TRANSPORTE FLUVIAL LTDA\nTIPO DE EMBARCAÇÃO:\nEMPURRADOR\nN° de Inscrição:\n1 - CARACTERÍSTICAS PRINCIPAIS DA EMBARCAÇÃO\n1.1 -\nCOMPRIMENTO TOTAL\n01\nApresentar plano de perfil estrutural.\nNORMAM-202,  Item 3, \nJ) do Anexo 3-F.\nVer OBS. 3\nITEM\nDESCRIÇÃO\nREFERÊNCIA\nVENCIMENTO\n05\nNo item 5, reavaliar volume total de água doce, conforme\nespecificado na tabela volumétrica no plano de arranjo geral.  \nNORMAM-202, Anexo \n3-G/ Anexo 3-F.\n02\n Apresentar ângulo de visibilidade no passadiço. \nNORMAM-202, Item \n5.16., b), I), II), III) e IV).\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:11/26\nNOME DA EMBARCAÇÃO\nD P A V\n15,44\n2 - EXIGÊNCIAS\nITEM\nDESCRIÇÃO\nREFERÊNCIA\n1.2 -\nBOCA MOLDADA\n5,67\n1.3 -\nPONTAL MOLDADO\n1,43\nVENCIMENTO\nA SER INSCRITA\nMEMORIAL DESCRITIVO\nGERAL\nDATA: 24/07/2026\nVer OBS. 3\nVer OBS. 3\n04\nApresentar Anotação de Responsabilidade Técnica (ART) referente\nao projeto.\nNORMAM-202,  Item 3, \nq) do Anexo 3-F.\nVer OBS. 3\n06\nNo item 6, reavaliar a informação de 02 extra roll, compatibilizar\nconforme o estudo de estabilidade. ",
+      "sample_end": "m-PA, em 24 de julho de 2026\n01\nForam apresentados pelo armador: Planos e documentos técnicos para embarcação EC1 elaborados pelo\nresponsável técnico Eng Naval José Leandro Cecim Pinto CREA/PA 151421424-5.\n02\nForam analisados os seguintes planos e documentos técnicos, como segue: Memorial Descritivo;- Notas\npara Arqueação;- Tabela de Cotas;- Tabela de Curvas Hidrostáticas e Bonjean;- Tabela de Curvas\nCruzadas;- Relatório de Prova de Inclinação;- Estudo de Estabilidade Definitivo;-Plano de Linhas; e- Plano\nde Arranjo Geral, Segurança, Capacidade e Luzes de Navegação;- \n06\nAs informações constantes dos planos, documentos, cálculos e estudos apresentados são de\nresponsabilidade do engenheiro naval, que elaborou o projeto e/ou efetuou o levantamento de\ncaracterísticas, cabendo a esta Entidade Certificadora a verificação quanto ao atendimento dos\nrequisitos estabelecidos nestas Normas (NORMAM 202, Item 3.28,3.28.1).\n3 - OBSERVAÇÕES\nN°\nDESCRIÇÃO\n03\nO Armador fica ciente de que o Responsável Técnico deverá cumprir as “exigências” relacionadas aos\nplanos e documentos técnicos em tempo hábil, que permita a verificação, por esta Certificadora, do\ncumprimento das mesmas e a consequente emissão da licença aplicável (LC, LA, LR ou LCEC), durante o\nperíodo de vigência do certificado condicional caso a embarcação possua prazo para tais certificados.\n5 / 6\n\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:11/26\nNOME DA EMBARCAÇÃO\nD P A V\nTECNÓLOGO NAVAL\nJERSON DA SILVA ALMEIDA\nCREA: 22181-AM\n6 / 6\n"
+    },
+    "RAP0014_2026-AMAZON -PDA III REV.pdf": {
+      "num_pages": 2,
+      "header_lines": [
+        "m",
+        "m",
+        "m",
+        "1 - CARACTERÍSTICAS PRINCIPAIS DA EMBARCAÇÃO",
+        "1.1 -",
+        "ARMADOR:",
+        "P D A TRANSPORTE FLUVIAL LTDA",
+        "TIPO DE EMBARCAÇÃO:",
+        "BALSA",
+        "N° de Inscrição:",
+        "021-104257-9",
+        "DATA: 03/08/2026",
+        "RELATÓRIO DE ANÁLISE DE PLANOS",
+        "AM-RAP-AP:14/26",
+        "NOME DA EMBARCAÇÃO"
+      ],
+      "images_count": 4,
+      "normam_lines": [
+        "NORMAM-202,  Anexo"
+      ],
+      "sample_body": "m\nm\nm\n1 - CARACTERÍSTICAS PRINCIPAIS DA EMBARCAÇÃO\n1.1 -\nARMADOR:\nP D A TRANSPORTE FLUVIAL LTDA\nTIPO DE EMBARCAÇÃO:\nBALSA\nN° de Inscrição:\n021-104257-9\nDATA: 03/08/2026\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:14/26\nNOME DA EMBARCAÇÃO\nDPA III\n01\nNo item 7, rea valiar a unidade de medida para a ordem do\ntosamento real.\nNORMAM-202,  Anexo \n6-B;\n56,00\nNOTAS DE BORDA LIVRE\nDESCRIÇÃO\nREFERÊNCIA\n1.2 -\nBOCA MOLDADA\n12,00\nVer OBS. 2\n1.3 -\nPONTAL MOLDADO\n2,20\nVENCIMENTO\n2 - EXIGÊNCIAS\nITEM\nCOMPRIMENTO TOTAL\n1 / 2\n\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:14/26\nNOME DA EMBARCAÇÃO\nDPA III\nTECNÓLOGO NAVAL\nJERSON DA SILVA ALMEIDA\nCREA: 22181-AM\n02\nNesta ocasião não foi constatada nenhuma exigência grave, por não influenciarem risco a segurança da\nnavegação, salvaguarda da vida humana e a prevenção da poluição hídrica, motivo pelo qual este REV\nficará arquivado junto ao projeto, sem ser entregue ao armador solicitando correções. Caso o armador\npromova alguma alteração na embarcação que exija a alteração total ou parcial dos planos, as exigências\naqui relatadas serão checadas nos novos planos.\nEmitido em Belém-PA, em 03 de agosto de 2026\n01\nForam analisados planos e documentos técnicos elaborados pelo responsável Eng Naval José Leandro\nCecim Pinto CREA/PA 151421424-5, sob a ART de nº PA20241061226, aprovados pela Organização\nReconhecida Record Certificação Naval sob a Licença de Construção para Embarcação ja Construída n.º\n611EC00638/2024 em 25/01/2024, como segue: ART;- Memorial Descriti",
+      "sample_end": "00\nVer OBS. 2\n1.3 -\nPONTAL MOLDADO\n2,20\nVENCIMENTO\n2 - EXIGÊNCIAS\nITEM\nCOMPRIMENTO TOTAL\n1 / 2\n\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:14/26\nNOME DA EMBARCAÇÃO\nDPA III\nTECNÓLOGO NAVAL\nJERSON DA SILVA ALMEIDA\nCREA: 22181-AM\n02\nNesta ocasião não foi constatada nenhuma exigência grave, por não influenciarem risco a segurança da\nnavegação, salvaguarda da vida humana e a prevenção da poluição hídrica, motivo pelo qual este REV\nficará arquivado junto ao projeto, sem ser entregue ao armador solicitando correções. Caso o armador\npromova alguma alteração na embarcação que exija a alteração total ou parcial dos planos, as exigências\naqui relatadas serão checadas nos novos planos.\nEmitido em Belém-PA, em 03 de agosto de 2026\n01\nForam analisados planos e documentos técnicos elaborados pelo responsável Eng Naval José Leandro\nCecim Pinto CREA/PA 151421424-5, sob a ART de nº PA20241061226, aprovados pela Organização\nReconhecida Record Certificação Naval sob a Licença de Construção para Embarcação ja Construída n.º\n611EC00638/2024 em 25/01/2024, como segue: ART;- Memorial Descritivo;- Declaração;- Notas para\nArqueação;- Notas para Marcação de Borda Livre;- Tabela de Cotas;- Tabela de Curvas Hidrostáticas;-\nTabela de Curvas Cruzadas;- Relatório de Porte Bruto;- Estudo de Estabilidade Definitivo;- Altura de\nCarga x calados; Plano de Linhas; Plano de Arranjo Geral, Segurança, Capacidade e Luzes de Navegação;-\nPlano de Perfil Estrutural e Seção Mestra.\n3 - OBSERVAÇÕES\nN°\nDESCRIÇÃO\n2 / 2\nSIGN\n"
+    },
+    "RAP0014_2026-AMAZON -PDA III.pdf": {
+      "num_pages": 2,
+      "header_lines": [
+        "m",
+        "m",
+        "m",
+        "1 - CARACTERÍSTICAS PRINCIPAIS DA EMBARCAÇÃO",
+        "1.1 -",
+        "ARMADOR:",
+        "P D A TRANSPORTE FLUVIAL LTDA",
+        "TIPO DE EMBARCAÇÃO:",
+        "BALSA",
+        "N° de Inscrição:",
+        "021-104257-9",
+        "DATA: 03/08/2026",
+        "RELATÓRIO DE ANÁLISE DE PLANOS",
+        "AM-RAP-AP:14/26",
+        "NOME DA EMBARCAÇÃO"
+      ],
+      "images_count": 4,
+      "normam_lines": [],
+      "sample_body": "m\nm\nm\n1 - CARACTERÍSTICAS PRINCIPAIS DA EMBARCAÇÃO\n1.1 -\nARMADOR:\nP D A TRANSPORTE FLUVIAL LTDA\nTIPO DE EMBARCAÇÃO:\nBALSA\nN° de Inscrição:\n021-104257-9\nDATA: 03/08/2026\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:14/26\nNOME DA EMBARCAÇÃO\nDPA III\n01\n\"Sem Exigências\"\n56,00\nGERAL\nDESCRIÇÃO\nREFERÊNCIA\n1.2 -\nBOCA MOLDADA\n12,00\n1.3 -\nPONTAL MOLDADO\n2,20\nVENCIMENTO\n2 - EXIGÊNCIAS\nITEM\nCOMPRIMENTO TOTAL\n1 / 2\n\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:14/26\nNOME DA EMBARCAÇÃO\nDPA III\nTECNÓLOGO NAVAL\nJERSON DA SILVA ALMEIDA\nCREA: 22181-AM\n02\nForam analisados planos e documentos técnicos conforme o Anexo 3-F, onde se constatou que não há\nrestriçoes para embarcação operar.\nEmitido em Belém-PA, em 03 de agosto de 2026\n01\nForam analisados planos e documentos técnicos elaborados pelo responsável Eng Naval José Leandro\nCecim Pinto CREA/PA 151421424-5, sob a ART de nº PA20241061226, aprovados pela Organização\nReconhecida Record Certificação Naval sob a Licença de Construção para Embarcação ja Construída n.º\n611EC00638/2024 em 25/01/2024, como segue: ART;- Memorial Descritivo;- Declaração;- Notas para\nArqueação;- Notas para Marcação de Borda Livre;- Tabela de Cotas;- Tabela de Curvas Hidrostáticas;-\nTabela de Curvas Cruzadas;- Relatório de Porte Bruto;- Estudo de Estabilidade Definitivo;- Altura de\nCarga x calados; Plano de Linhas; Plano de Arranjo Geral, Segurança, Capacidade e Luzes de Navegação;-\nPlano de Perfil Estrutural e Seção Mestra.\n3 - OBSERVAÇÕES\nN°\nDESCRIÇÃO\n2 / 2\nSIGN\n",
+      "sample_end": "m\nm\nm\n1 - CARACTERÍSTICAS PRINCIPAIS DA EMBARCAÇÃO\n1.1 -\nARMADOR:\nP D A TRANSPORTE FLUVIAL LTDA\nTIPO DE EMBARCAÇÃO:\nBALSA\nN° de Inscrição:\n021-104257-9\nDATA: 03/08/2026\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:14/26\nNOME DA EMBARCAÇÃO\nDPA III\n01\n\"Sem Exigências\"\n56,00\nGERAL\nDESCRIÇÃO\nREFERÊNCIA\n1.2 -\nBOCA MOLDADA\n12,00\n1.3 -\nPONTAL MOLDADO\n2,20\nVENCIMENTO\n2 - EXIGÊNCIAS\nITEM\nCOMPRIMENTO TOTAL\n1 / 2\n\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:14/26\nNOME DA EMBARCAÇÃO\nDPA III\nTECNÓLOGO NAVAL\nJERSON DA SILVA ALMEIDA\nCREA: 22181-AM\n02\nForam analisados planos e documentos técnicos conforme o Anexo 3-F, onde se constatou que não há\nrestriçoes para embarcação operar.\nEmitido em Belém-PA, em 03 de agosto de 2026\n01\nForam analisados planos e documentos técnicos elaborados pelo responsável Eng Naval José Leandro\nCecim Pinto CREA/PA 151421424-5, sob a ART de nº PA20241061226, aprovados pela Organização\nReconhecida Record Certificação Naval sob a Licença de Construção para Embarcação ja Construída n.º\n611EC00638/2024 em 25/01/2024, como segue: ART;- Memorial Descritivo;- Declaração;- Notas para\nArqueação;- Notas para Marcação de Borda Livre;- Tabela de Cotas;- Tabela de Curvas Hidrostáticas;-\nTabela de Curvas Cruzadas;- Relatório de Porte Bruto;- Estudo de Estabilidade Definitivo;- Altura de\nCarga x calados; Plano de Linhas; Plano de Arranjo Geral, Segurança, Capacidade e Luzes de Navegação;-\nPlano de Perfil Estrutural e Seção Mestra.\n3 - OBSERVAÇÕES\nN°\nDESCRIÇÃO\n2 / 2\nSIGN\n"
+    },
+    "RAP0015_2026-AMAZON -PDA IV OFICIAL.pdf": {
+      "num_pages": 2,
+      "header_lines": [
+        "m",
+        "m",
+        "m",
+        "1.1 -",
+        "05/08/2026",
+        "1 - CARACTERÍSTICAS PRINCIPAIS DA EMBARCAÇÃO",
+        "1.3 -",
+        "PONTAL MOLDADO",
+        "2,30",
+        "RELATÓRIO DE ANÁLISE DE PLANOS",
+        "AM-RAP-AP:15/26",
+        "NOME DA EMBARCAÇÃO",
+        "DPA IV",
+        "ARMADOR:",
+        "P D A TRANSPORTE FLUVIAL LTDA"
+      ],
+      "images_count": 4,
+      "normam_lines": [],
+      "sample_body": "m\nm\nm\n1.1 -\n05/08/2026\n1 - CARACTERÍSTICAS PRINCIPAIS DA EMBARCAÇÃO\n1.3 -\nPONTAL MOLDADO\n2,30\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:15/26\nNOME DA EMBARCAÇÃO\nDPA IV\nARMADOR:\nP D A TRANSPORTE FLUVIAL LTDA\nTIPO DE EMBARCAÇÃO:\nBALSA\nN° de Inscrição:\n021-104789-9\nDATA:\nVENCIMENTO\n2 - EXIGÊNCIAS\nITEM\nCOMPRIMENTO TOTAL\n01\n\"Sem Exigências\"\n47,00\nGERAL\nDESCRIÇÃO\nREFERÊNCIA\n1.2 -\nBOCA MOLDADA\n13,50\n1 / 2\n\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:15/26\nNOME DA EMBARCAÇÃO\nDPA IV\nTECNÓLOGO NAVAL\nJERSON DA SILVA ALMEIDA\nCREA: 22181-AM\n02\nForam analisados planos e documentos técnicos conforme o Anexo 3-F, onde se constatou que não há\nrestriçoes para embarcação operar.\nEmitido em Belém-PA, em 05 de agosto de 2026\n01\nForam analisados planos e documentos técnicos elaborados pelo responsável Eng Naval José Leandro\nCecim Pinto CREA/PA 151421424-5, sob a ART de nº PA20251331440, aprovados pela Organização\nReconhecida Record Certificação Naval sob a Licença de Construção para Embarcação ja Construída n.º\n611EC01173/2025 em 26/05/2025, como segue: ART;- Memorial Descritivo;- Declaração;- Notas para\nArqueação;- Notas para Marcação de Borda Livre;- Tabela de Cotas;- Tabela de Curvas Hidrostáticas;-\nTabela de Curvas Cruzadas;- Relatório de Porte Bruto;- Estudo de Estabilidade Definitivo;- Altura de\nCarga x calados; Plano de Linhas; Plano de Arranjo Geral, Segurança, Capacidade e Luzes de Navegação;-\nPlano de Perfil Estrutural e Seção Mestra.\n3 - OBSERVAÇÕES\nN°\nDESCRIÇÃO\n2 / 2\nSIGN\n",
+      "sample_end": "m\nm\nm\n1.1 -\n05/08/2026\n1 - CARACTERÍSTICAS PRINCIPAIS DA EMBARCAÇÃO\n1.3 -\nPONTAL MOLDADO\n2,30\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:15/26\nNOME DA EMBARCAÇÃO\nDPA IV\nARMADOR:\nP D A TRANSPORTE FLUVIAL LTDA\nTIPO DE EMBARCAÇÃO:\nBALSA\nN° de Inscrição:\n021-104789-9\nDATA:\nVENCIMENTO\n2 - EXIGÊNCIAS\nITEM\nCOMPRIMENTO TOTAL\n01\n\"Sem Exigências\"\n47,00\nGERAL\nDESCRIÇÃO\nREFERÊNCIA\n1.2 -\nBOCA MOLDADA\n13,50\n1 / 2\n\nRELATÓRIO DE ANÁLISE DE PLANOS\n AM-RAP-AP:15/26\nNOME DA EMBARCAÇÃO\nDPA IV\nTECNÓLOGO NAVAL\nJERSON DA SILVA ALMEIDA\nCREA: 22181-AM\n02\nForam analisados planos e documentos técnicos conforme o Anexo 3-F, onde se constatou que não há\nrestriçoes para embarcação operar.\nEmitido em Belém-PA, em 05 de agosto de 2026\n01\nForam analisados planos e documentos técnicos elaborados pelo responsável Eng Naval José Leandro\nCecim Pinto CREA/PA 151421424-5, sob a ART de nº PA20251331440, aprovados pela Organização\nReconhecida Record Certificação Naval sob a Licença de Construção para Embarcação ja Construída n.º\n611EC01173/2025 em 26/05/2025, como segue: ART;- Memorial Descritivo;- Declaração;- Notas para\nArqueação;- Notas para Marcação de Borda Livre;- Tabela de Cotas;- Tabela de Curvas Hidrostáticas;-\nTabela de Curvas Cruzadas;- Relatório de Porte Bruto;- Estudo de Estabilidade Definitivo;- Altura de\nCarga x calados; Plano de Linhas; Plano de Arranjo Geral, Segurança, Capacidade e Luzes de Navegação;-\nPlano de Perfil Estrutural e Seção Mestra.\n3 - OBSERVAÇÕES\nN°\nDESCRIÇÃO\n2 / 2\nSIGN\n"
+    }
+  }
+}

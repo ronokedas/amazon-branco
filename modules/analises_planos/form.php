@@ -500,7 +500,319 @@ require_once __DIR__ . '/../../includes/header.php';
   <?php if(!$itens):?><p>Defina e salve o processo e a norma para gerar o checklist.</p><?php else:?><form method="post" action="<?=APP_URL?>analises-planos/actions"><input type="hidden" name="csrf_token" value="<?=gerarCSRF()?>"><input type="hidden" name="action" value="salvar_itens"><input type="hidden" name="analise_id" value="<?=h($id)?>"><div class="portal-table-wrap"><table><thead><tr><th>#</th><th>Documento/requisito</th><th>Referência</th><th>Obrigatório</th><th>Resultado</th><th>Observação</th></tr></thead><tbody><?php foreach($itens as $i=>$item):?><tr><td><?=$i+1?><input type="hidden" name="item_id[]" value="<?=h($item['id'])?>"></td><td><?=h($item['documento'])?></td><td><?=h($item['referencia_normativa'])?></td><td><?=$item['obrigatorio']?'Sim':'Condicional'?></td><td><select name="resultado[]" <?=$analiseAberta?'':'disabled'?>><?php foreach(['PENDENTE','CONFORME','EXIGENCIA','NAO_APLICA'] as $v):?><option value="<?=$v?>" <?=$item['resultado']===$v?'selected':''?>><?=str_replace('_',' ',$v)?></option><?php endforeach?></select></td><td><textarea name="item_observacao[]" rows="2" <?=$analiseAberta?'':'disabled'?>><?=h($item['observacao'])?></textarea></td></tr><?php endforeach?></tbody></table></div><?php if($analiseAberta):?><button class="btn btn-primary"><i class="fas fa-save"></i> Salvar matriz</button><?php endif?></form><?php endif?>
  </section>
 
- <section class="analise-card"><h3><i class="fas fa-triangle-exclamation"></i> Exigências vigentes</h3><p class="text-muted">A situação não é editada manualmente. A baixa somente ocorre após relatório assinado pelo analista e validado pelo admin.</p><form method="post" action="<?=APP_URL?>analises-planos/actions"><input type="hidden" name="csrf_token" value="<?=gerarCSRF()?>"><input type="hidden" name="action" value="salvar_exigencias"><input type="hidden" name="analise_id" value="<?=h($id)?>"><div class="portal-table-wrap"><table><thead><tr><th>#</th><th>Descrição</th><th>Referência normativa</th><th>Situação vigente</th></tr></thead><tbody><?php foreach($exigencias as $i=>$ex):?><tr><td><?=$i+1?><input type="hidden" name="exigencia_id[]" value="<?=h($ex['id'])?>"></td><td><textarea name="exigencia_descricao[]" <?=$analiseAberta?'':'disabled'?>><?=h($ex['descricao'])?></textarea></td><td><input name="exigencia_referencia[]" value="<?=h($ex['referencia_normativa'])?>" <?=$analiseAberta?'':'disabled'?>></td><td><span class="badge"><?=h($ex['status'])?></span><?php if(!empty($ex['saneamento_pendente'])):?><small class="text-warning">Baixa histórica sem evidência: requer saneamento.</small><?php endif?></td></tr><?php endforeach?></tbody></table></div><?php if($analiseAberta):?><div class="analise-inline-form"><textarea name="nova_exigencia" placeholder="Nova exigência"></textarea><input name="nova_exigencia_referencia" placeholder="Referência normativa"><button class="btn btn-primary">Salvar cadastro de exigências</button></div><?php endif?></form></section>
+  <?php $categoriasNormam = analisePlanosCategoriasNormam(); ?>
+  <section class="analise-card" id="secao-exigencias">
+   <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+    <div>
+     <h3 style="margin:0 0 4px 0;"><i class="fas fa-triangle-exclamation text-warning"></i> Exigências vigentes</h3>
+     <p class="text-muted" style="margin:0; font-size:0.86rem;">
+      A situação não é editada manualmente. A baixa ocorre via manifestação técnica nos relatórios de ciclo com validação da coordenação.
+     </p>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+     <?php if($analiseAberta):?>
+      <button type="button" class="btn btn-success btn-sm" onclick="abrirModalBancoNormam()">
+       <i class="fa-solid fa-book-bookmark"></i> Inserir do Banco NORMAM
+      </button>
+     <?php endif;?>
+     <a href="<?=APP_URL?>analises-planos/referencias" target="_blank" class="btn btn-outline-secondary btn-sm" title="Gerenciar banco de referências da Autoridade Marítima">
+      <i class="fa-solid fa-external-link-alt"></i> Gerenciar Banco
+     </a>
+    </div>
+   </div>
+
+   <form method="post" action="<?=APP_URL?>analises-planos/actions" id="formExigencias">
+    <input type="hidden" name="csrf_token" value="<?=gerarCSRF()?>">
+    <input type="hidden" name="action" value="salvar_exigencias">
+    <input type="hidden" name="analise_id" value="<?=h($id)?>">
+
+    <div class="portal-table-wrap">
+     <table>
+      <thead>
+       <tr>
+        <th style="width:40px;">#</th>
+        <th style="width:180px;">Categoria / Documento</th>
+        <th>Descrição da Exigência</th>
+        <th style="width:220px;">Referência Normativa</th>
+        <th style="width:110px;">Situação</th>
+        <?php if($analiseAberta):?><th style="width:60px;">Ação</th><?php endif;?>
+       </tr>
+      </thead>
+      <tbody>
+       <?php if(!$exigencias):?>
+        <tr>
+         <td colspan="<?=$analiseAberta ? 6 : 5?>" style="text-align:center; padding:18px; color:var(--cor-texto-secundario,#64748b);">
+          <i class="fa-solid fa-circle-check text-success" style="font-size:1.2rem; display:block; margin-bottom:6px;"></i>
+          Nenhuma exigência cadastrada para esta análise. O projeto está sem pendências ativas.
+         </td>
+        </tr>
+       <?php endif;?>
+       <?php foreach($exigencias as $i=>$ex):?>
+        <tr>
+         <td style="vertical-align:middle; text-align:center;">
+          <strong><?=$i+1?></strong>
+          <input type="hidden" name="exigencia_id[]" value="<?=h($ex['id'])?>">
+         </td>
+         <td>
+          <select name="exigencia_categoria[]" class="form-control form-control-sm" <?=$analiseAberta?'':'disabled'?> style="font-size:0.82rem;">
+           <?php 
+           $catAtual = trim($ex['categoria'] ?? 'GERAL') ?: 'GERAL';
+           foreach($categoriasNormam as $cNome):?>
+            <option value="<?=h($cNome)?>" <?=$catAtual===$cNome?'selected':''?>><?=h($cNome)?></option>
+           <?php endforeach;?>
+           <?php if(!in_array($catAtual, $categoriasNormam, true)):?>
+            <option value="<?=h($catAtual)?>" selected><?=h($catAtual)?></option>
+           <?php endif;?>
+          </select>
+         </td>
+         <td>
+          <textarea name="exigencia_descricao[]" rows="2" class="form-control" <?=$analiseAberta?'':'disabled'?> style="font-size:0.88rem;"><?=h($ex['descricao'])?></textarea>
+         </td>
+         <td>
+          <input name="exigencia_referencia[]" class="form-control form-control-sm" value="<?=h($ex['referencia_normativa'])?>" <?=$analiseAberta?'':'disabled'?> style="font-size:0.85rem;" placeholder="Ex.: NORMAM-202/DPC">
+         </td>
+         <td style="vertical-align:middle;">
+          <?php 
+          $badgeClass = match($ex['status']) {
+              'CUMPRIDA' => 'badge-success',
+              'PARCIAL' => 'badge-info',
+              default => 'badge-warning'
+          };
+          ?>
+          <span class="badge <?=$badgeClass?>"><?=h($ex['status'])?></span>
+          <?php if(!empty($ex['saneamento_pendente'])):?>
+           <small class="text-warning" style="display:block; font-size:0.75rem; margin-top:2px;">Requer saneamento.</small>
+          <?php endif;?>
+         </td>
+         <?php if($analiseAberta):?>
+          <td style="vertical-align:middle; text-align:center;">
+           <?php if($ex['status'] === 'PENDENTE'):?>
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="excluirExigencia('<?=h($ex['id'])?>')" title="Excluir exigência cadastrada">
+             <i class="fa-solid fa-trash"></i>
+            </button>
+           <?php else:?>
+            <span class="text-muted" title="Exigências em relatório não podem ser excluídas fisicamente">—</span>
+           <?php endif;?>
+          </td>
+         <?php endif;?>
+        </tr>
+       <?php endforeach;?>
+      </tbody>
+     </table>
+    </div>
+
+    <?php if($analiseAberta):?>
+     <div style="margin-top:16px; padding:16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+       <strong style="color:#0f172a; font-size:0.92rem;"><i class="fa-solid fa-plus-circle text-primary"></i> Nova Exigência para esta Análise</strong>
+       <button type="button" class="btn btn-outline-success btn-sm" onclick="abrirModalBancoNormam()">
+        <i class="fa-solid fa-book-bookmark"></i> Escolher Modelo no Banco NORMAM
+       </button>
+      </div>
+      <div class="form-row" style="margin-bottom:8px;">
+       <div class="form-group col-4" style="margin-bottom:0;">
+        <label style="font-size:0.82rem;">Categoria / Documento</label>
+        <select name="nova_exigencia_categoria" id="nova_exigencia_categoria" class="form-control form-control-sm">
+         <?php foreach($categoriasNormam as $cNome):?>
+          <option value="<?=h($cNome)?>"><?=h($cNome)?></option>
+         <?php endforeach;?>
+        </select>
+        <small class="text-muted" style="font-size:0.75rem;">Grupo onde constará no relatório</small>
+       </div>
+       <div class="form-group col-8" style="margin-bottom:0;">
+        <label style="font-size:0.82rem;">Referência Normativa NORMAM / DPC</label>
+        <input name="nova_exigencia_referencia" id="nova_exigencia_referencia" class="form-control form-control-sm" placeholder="Ex.: NORMAM-202/DPC, Anexo 3-F, Item 0316">
+        <small class="text-muted" style="font-size:0.75rem;">Base legal da Autoridade Marítima ou RIPEAM</small>
+       </div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+       <label style="font-size:0.82rem;">Descrição Técnica da Exigência</label>
+       <textarea name="nova_exigencia" id="nova_exigencia" rows="2" class="form-control" placeholder="Descreva tecnicamente o que o armador/projetista deve corrigir ou envie do Banco de Normas..."></textarea>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+       <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save"></i> Salvar / Registrar Exigências
+       </button>
+      </div>
+     </div>
+    <?php endif;?>
+   </form>
+
+   <!-- Form oculto para exclusão de exigência pendente -->
+   <form id="formExcluirExigencia" method="post" action="<?=APP_URL?>analises-planos/actions" style="display:none;">
+    <input type="hidden" name="csrf_token" value="<?=gerarCSRF()?>">
+    <input type="hidden" name="action" value="excluir_exigencia">
+    <input type="hidden" name="analise_id" value="<?=h($id)?>">
+    <input type="hidden" name="exigencia_id" id="excluir_exigencia_id" value="">
+   </form>
+  </section>
+
+  <!-- Modal Seletor de Referências NORMAM -->
+  <div id="modalBancoNormam" class="modal-normam-overlay" style="display:none;">
+   <div class="modal-normam-content">
+    <div class="modal-normam-header">
+     <div>
+      <h3 style="margin:0; font-size:1.15rem; color:#0f172a;"><i class="fa-solid fa-book-bookmark text-success"></i> Banco de Referências NORMAM</h3>
+      <small style="color:#64748b;">Selecione uma exigência padronizada da Marinha do Brasil / DPC para aplicar com 1 clique.</small>
+     </div>
+     <button type="button" class="btn-fechar-modal" onclick="fecharModalBancoNormam()">&times;</button>
+    </div>
+    
+    <div class="modal-normam-filtros">
+     <div style="flex:1; min-width:200px;">
+      <input type="text" id="modalBuscaNormam" placeholder="Buscar por texto, anexo, item ou artigo..." class="form-control form-control-sm" oninput="filtrarNormasModal()">
+     </div>
+     <div style="width:240px;">
+      <select id="modalCategoriaNormam" class="form-control form-control-sm" onchange="filtrarNormasModal()">
+       <option value="">Todas as Categorias</option>
+       <?php foreach($categoriasNormam as $cNome):?>
+        <option value="<?=h($cNome)?>"><?=h($cNome)?></option>
+       <?php endforeach;?>
+      </select>
+     </div>
+    </div>
+
+    <div id="modalNormamLista" class="modal-normam-lista">
+     <div style="text-align:center; padding:30px; color:#64748b;">
+      <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;"></i>
+      <p style="margin-top:8px;">Carregando referências normativas...</p>
+     </div>
+    </div>
+
+    <div class="modal-normam-footer">
+     <span id="modalContadorNormas" style="font-size:0.84rem; color:#64748b;"></span>
+     <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalBancoNormam()">Fechar</button>
+    </div>
+   </div>
+  </div>
+
+  <style>
+  .modal-normam-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)}
+  .modal-normam-content{background:#fff;border-radius:12px;width:100%;max-width:920px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 40px rgba(0,0,0,0.3);overflow:hidden}
+  .modal-normam-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+  .btn-fechar-modal{background:none;border:none;font-size:1.8rem;line-height:1;color:#64748b;cursor:pointer;padding:0 6px}
+  .btn-fechar-modal:hover{color:#0f172a}
+  .modal-normam-filtros{display:flex;gap:12px;padding:12px 20px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;flex-wrap:wrap}
+  .modal-normam-lista{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+  .normam-item-card{border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;background:#fff;transition:all .15s ease}
+  .normam-item-card:hover{border-color:#10b981;box-shadow:0 2px 8px rgba(16,185,129,0.12)}
+  .normam-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px}
+  .normam-item-cat{font-size:0.75rem;font-weight:700;padding:2px 8px;border-radius:4px;background:#d1fae5;color:#065f46}
+  .normam-item-ref{font-size:0.8rem;font-weight:600;color:#0284c7}
+  .normam-item-desc{font-size:0.86rem;color:#334155;margin:0 0 8px 0;line-height:1.4}
+  .normam-item-actions{display:flex;justify-content:flex-end}
+  .modal-normam-footer{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid #e2e8f0;background:#f8fafc}
+  </style>
+
+  <script>
+  let bancoNormasCache = null;
+
+  function abrirModalBancoNormam() {
+      const modal = document.getElementById('modalBancoNormam');
+      modal.style.display = 'flex';
+      if (!bancoNormasCache) {
+          carregarBancoNormas();
+      } else {
+          filtrarNormasModal();
+      }
+      setTimeout(() => document.getElementById('modalBuscaNormam')?.focus(), 100);
+  }
+
+  function fecharModalBancoNormam() {
+      document.getElementById('modalBancoNormam').style.display = 'none';
+  }
+
+  function carregarBancoNormas() {
+      const lista = document.getElementById('modalNormamLista');
+      lista.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b;"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;"></i><p style="margin-top:8px;">Carregando referências normativas...</p></div>';
+      
+      fetch('<?= APP_URL ?>analises-planos/referencias-actions?action=buscar_ajax')
+          .then(r => r.json())
+          .then(data => {
+              bancoNormasCache = data || [];
+              filtrarNormasModal();
+          })
+          .catch(err => {
+              lista.innerHTML = '<div style="color:#ef4444; padding:20px; text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Falha ao carregar referências do servidor.</div>';
+          });
+  }
+
+  function filtrarNormasModal() {
+      if (!bancoNormasCache) return;
+      const busca = (document.getElementById('modalBuscaNormam')?.value || '').toLowerCase().trim();
+      const cat = document.getElementById('modalCategoriaNormam')?.value || '';
+      
+      const filtrados = bancoNormasCache.filter(item => {
+          if (cat && item.categoria !== cat) return false;
+          if (!busca) return true;
+          const texto = ((item.categoria || '') + ' ' + (item.referencia_normativa || '') + ' ' + (item.titulo || '') + ' ' + (item.descricao_padrao || '')).toLowerCase();
+          return texto.includes(busca);
+      });
+
+      const lista = document.getElementById('modalNormamLista');
+      const contador = document.getElementById('modalContadorNormas');
+      if (contador) contador.textContent = `${filtrados.length} referência(s) encontrada(s)`;
+
+      if (filtrados.length === 0) {
+          lista.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b;"><i class="fa-solid fa-folder-open" style="font-size:1.6rem; margin-bottom:8px; display:block;"></i>Nenhuma referência normativa corresponde aos filtros.</div>';
+          return;
+      }
+
+      lista.innerHTML = filtrados.map(item => {
+          const cat = escapeHtml(item.categoria || 'GERAL');
+          const ref = escapeHtml(item.referencia_normativa || '');
+          const desc = escapeHtml(item.descricao_padrao || item.titulo || '');
+          const id = escapeHtml(item.id || '');
+          
+          return `
+              <div class="normam-item-card">
+                  <div class="normam-item-header">
+                      <span class="normam-item-cat">${cat}</span>
+                      <span class="normam-item-ref"><i class="fa-solid fa-scale-balanced"></i> ${ref}</span>
+                  </div>
+                  <p class="normam-item-desc">${desc}</p>
+                  <div class="normam-item-actions">
+                      <button type="button" class="btn btn-success btn-sm" onclick='aplicarReferenciaNormam(${JSON.stringify(item)})'>
+                          <i class="fa-solid fa-check"></i> Aplicar nesta Exigência
+                      </button>
+                  </div>
+              </div>
+          `;
+      }).join('');
+  }
+
+  function aplicarReferenciaNormam(item) {
+      const selectCat = document.getElementById('nova_exigencia_categoria');
+      const inputRef = document.getElementById('nova_exigencia_referencia');
+      const textDesc = document.getElementById('nova_exigencia');
+
+      if (selectCat && item.categoria) {
+          selectCat.value = item.categoria;
+      }
+      if (inputRef) {
+          inputRef.value = item.referencia_normativa || '';
+      }
+      if (textDesc) {
+          textDesc.value = item.descricao_padrao || item.titulo || '';
+      }
+
+      fecharModalBancoNormam();
+
+      // Scroll suave até o bloco de cadastro e focar na descrição
+      textDesc?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => textDesc?.focus(), 300);
+  }
+
+  function excluirExigencia(id) {
+      if (!confirm('Deseja realmente remover esta exigência pendente?')) return;
+      document.getElementById('excluir_exigencia_id').value = id;
+      document.getElementById('formExcluirExigencia').submit();
+  }
+
+  function escapeHtml(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  </script>
 
  <section class="analise-card" id="pareceres"><h3><i class="fas fa-file-signature"></i> Relatórios por ciclo e licença</h3>
   <?php if($analiseAberta):?><form method="post" action="<?=APP_URL?>analises-planos/actions" class="form-padrao"><input type="hidden" name="csrf_token" value="<?=gerarCSRF()?>"><input type="hidden" name="action" value="criar_parecer"><input type="hidden" name="analise_id" value="<?=h($id)?>"><div class="form-row"><div class="form-group col-4"><label>Resultado do ciclo</label><select name="resultado"><option value="EXIGENCIAS">Exigências pendentes</option><option value="APROVADO">Conclusivo — saldo zero</option><option value="REPROVADO">Reprovado</option></select></div><div class="form-group col-4"><label>Revisão analisada *</label><select name="submissao_id" required><option value="">Selecione</option><?php foreach($submissoes as $s):?><option value="<?=h($s['id'])?>">Revisão <?=$s['revisao']?> · <?=formatarData($s['recebido_em'])?></option><?php endforeach?></select></div><div class="form-group col-4"><label>Resumo</label><textarea name="resumo" required></textarea></div></div><?php if($exigencias):?><h4>Manifestação e baixa das exigências</h4><div class="portal-table-wrap"><table><thead><tr><th>Exigência</th><th>Resultado deste ciclo</th><th>Manifestação técnica</th></tr></thead><tbody><?php foreach($exigencias as $ex):?><tr><td><?=h($ex['descricao'])?></td><td><select name="baixa_resultado[<?=h($ex['id'])?>]" required><option value="NAO_CUMPRIDA">Não cumprida</option><option value="PARCIAL">Parcial</option><option value="CUMPRIDA">Cumprida</option></select></td><td><textarea name="baixa_manifestacao[<?=h($ex['id'])?>]" required placeholder="Indique a evidência e a conclusão técnica"></textarea></td></tr><?php endforeach?></tbody></table></div><?php endif?><div class="form-group"><label>Conclusão</label><textarea name="conclusao" required></textarea></div><button class="btn btn-primary"><i class="fas fa-paper-plane"></i> Preparar relatório do ciclo</button></form><?php endif?>

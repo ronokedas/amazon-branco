@@ -251,10 +251,32 @@ try {
 
     if ($acao === 'salvar_exigencias') {
         analiseAcaoExigirTecnico($analise);if(!in_array($analise['status'],['EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true))throw new RuntimeException('Exigências não podem ser alteradas neste estado.');
-        $ids=$_POST['exigencia_id']??[];$pdo->beginTransaction();$upd=$pdo->prepare('UPDATE analise_planos_exigencias SET ordem=:ordem,descricao=:descricao,referencia_normativa=:referencia WHERE id=:id AND analise_id=:analise AND status<>"CUMPRIDA"');
-        foreach($ids as $i=>$exId){$upd->execute([':ordem'=>$i+1,':descricao'=>trim($_POST['exigencia_descricao'][$i]??''),':referencia'=>trim($_POST['exigencia_referencia'][$i]??'')?:null,':id'=>$exId,':analise'=>$analiseId]);}
-        if(trim($_POST['nova_exigencia']??'')!==''){$pdo->prepare('INSERT INTO analise_planos_exigencias(id,analise_id,ordem,descricao,referencia_normativa,status,criado_por)VALUES(UUID(),:analise,:ordem,:descricao,:referencia,"PENDENTE",:usuario)')->execute([':analise'=>$analiseId,':ordem'=>count($ids)+1,':descricao'=>trim($_POST['nova_exigencia']),':referencia'=>trim($_POST['nova_exigencia_referencia']??'')?:null,':usuario'=>$usuario]);}
+        $ids=$_POST['exigencia_id']??[];
+        $categorias=$_POST['exigencia_categoria']??[];
+        $pdo->beginTransaction();
+        $upd=$pdo->prepare('UPDATE analise_planos_exigencias SET ordem=:ordem,descricao=:descricao,referencia_normativa=:referencia,categoria=:categoria WHERE id=:id AND analise_id=:analise AND status<>"CUMPRIDA"');
+        foreach($ids as $i=>$exId){
+            $cat = trim($categorias[$i] ?? '') ?: 'GERAL';
+            $upd->execute([':ordem'=>$i+1,':descricao'=>trim($_POST['exigencia_descricao'][$i]??''),':referencia'=>trim($_POST['exigencia_referencia'][$i]??'')?:null,':categoria'=>$cat,':id'=>$exId,':analise'=>$analiseId]);
+        }
+        if(trim($_POST['nova_exigencia']??'')!==''){
+            $novaCat = trim($_POST['nova_exigencia_categoria'] ?? '') ?: 'GERAL';
+            $pdo->prepare('INSERT INTO analise_planos_exigencias(id,analise_id,ordem,descricao,referencia_normativa,categoria,status,criado_por)VALUES(UUID(),:analise,:ordem,:descricao,:referencia,:categoria,"PENDENTE",:usuario)')->execute([':analise'=>$analiseId,':ordem'=>count($ids)+1,':descricao'=>trim($_POST['nova_exigencia']),':referencia'=>trim($_POST['nova_exigencia_referencia']??'')?:null,':categoria'=>$novaCat,':usuario'=>$usuario]);
+        }
         analisePlanosHistorico($pdo,$analiseId,'EXIGENCIAS_ATUALIZADAS',$analise['status'],$analise['status']);$pdo->commit();setMensagem('success','Exigências atualizadas.');redirecionar($retorno($analiseId));
+    }
+
+    if ($acao === 'excluir_exigencia') {
+        analiseAcaoExigirTecnico($analise);if(!in_array($analise['status'],['EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true))throw new RuntimeException('Exigências não podem ser alteradas neste estado.');
+        $exId = trim($_POST['exigencia_id'] ?? '');
+        $q = $pdo->prepare('SELECT COUNT(*) FROM analise_planos_relatorio_exigencias WHERE exigencia_id=:id');
+        $q->execute([':id'=>$exId]);
+        if ((int)$q->fetchColumn() > 0) {
+            throw new RuntimeException('Esta exigência já consta em relatório emitido e não pode ser excluída fisicamente.');
+        }
+        $pdo->prepare('DELETE FROM analise_planos_exigencias WHERE id=:id AND analise_id=:analise AND status="PENDENTE"')->execute([':id'=>$exId, ':analise'=>$analiseId]);
+        analisePlanosHistorico($pdo,$analiseId,'EXIGENCIA_EXCLUIDA',$analise['status'],$analise['status']);
+        setMensagem('success','Exigência excluída.');redirecionar($retorno($analiseId));
     }
 
     if ($acao === 'criar_parecer') {

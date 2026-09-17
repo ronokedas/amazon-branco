@@ -582,3 +582,132 @@ function analiseAcaoPersistirParecerPdf(PDO $pdo, string $parecerId, string $ana
     return [$relativo, $hash];
 }
 
+function analisePlanosCategoriasNormam(): array
+{
+    return [
+        'GERAL',
+        'ART',
+        'FOLHA DE ROSTO',
+        'DECLARAÇÃO',
+        'MEMORIAL DESCRITO',
+        'NOTAS DE ARQUEAÇÃO',
+        'NOTAS DE BORDA LIVRE',
+        'DADOS DE ENTRADA OU COTAS',
+        'CURVAS HIDROSTÁTICAS',
+        'CURVAS CRUZADAS',
+        'PROVA DE INCLINAÇÃO OU PORTE BRUTO',
+        'ESTUDO DE ESTABILIDADE',
+        'ESTUDO DE CARGA X CALADOS',
+        'MOMENTO FLETOR E ESFORÇO CORTANTE',
+        'PLANOS DE LINHAS',
+        'PLANO DE ARRANJO GERAL, LUZES, SEGURANÇA E CAPACIDADE',
+        'PLANO DE PERFIL ESTRUTURAL E SEÇÃO MESTRA',
+    ];
+}
+
+function analisePlanosBuscarReferenciasNormam(PDO $pdo, array $filtros = []): array
+{
+    $where = ['ativo = 1'];
+    $params = [];
+    if (!empty($filtros['categoria'])) {
+        $where[] = 'categoria = :categoria';
+        $params[':categoria'] = trim($filtros['categoria']);
+    }
+    if (!empty($filtros['busca'])) {
+        $where[] = '(referencia_normativa LIKE :busca1 OR titulo LIKE :busca2 OR descricao_padrao LIKE :busca3)';
+        $termo = '%' . trim($filtros['busca']) . '%';
+        $params[':busca1'] = $termo;
+        $params[':busca2'] = $termo;
+        $params[':busca3'] = $termo;
+    }
+    if (isset($filtros['todos']) && $filtros['todos']) {
+        array_shift($where);
+    }
+    $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+    $stmt = $pdo->prepare("SELECT * FROM analise_planos_referencias_normam {$whereSql} ORDER BY categoria ASC, ordem ASC, titulo ASC");
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function analisePlanosSalvarReferenciaNormam(PDO $pdo, array $dados, ?string $usuarioId = null): string
+{
+    $id = trim($dados['id'] ?? '');
+    $categoria = trim($dados['categoria'] ?? 'GERAL');
+    $norma = trim($dados['norma'] ?? 'NORMAM-202') ?: 'NORMAM-202';
+    $referencia = trim($dados['referencia_normativa'] ?? '');
+    $titulo = trim($dados['titulo'] ?? '');
+    $descricao = trim($dados['descricao_padrao'] ?? '');
+    $itemNorma = trim($dados['item_norma'] ?? '') ?: null;
+    $ordem = (int)($dados['ordem'] ?? 0);
+
+    if ($referencia === '' || $descricao === '') {
+        throw new InvalidArgumentException('Referência normativa e descrição padrão são obrigatórias.');
+    }
+    if ($titulo === '') {
+        $titulo = mb_substr($descricao, 0, 70);
+    }
+
+    if ($id !== '') {
+        $stmt = $pdo->prepare("UPDATE analise_planos_referencias_normam 
+            SET categoria=:cat, norma=:norma, item_norma=:inorma, referencia_normativa=:ref,
+                titulo=:titulo, descricao_padrao=:desc, ordem=:ordem
+            WHERE id=:id");
+        $stmt->execute([
+            ':cat' => $categoria,
+            ':norma' => $norma,
+            ':inorma' => $itemNorma,
+            ':ref' => $referencia,
+            ':titulo' => $titulo,
+            ':desc' => $descricao,
+            ':ordem' => $ordem,
+            ':id' => $id,
+        ]);
+        return $id;
+    }
+
+    $novoId = gerarUUID();
+    $stmt = $pdo->prepare("INSERT INTO analise_planos_referencias_normam 
+        (id, categoria, norma, item_norma, referencia_normativa, titulo, descricao_padrao, ativo, ordem, criado_por)
+        VALUES (:id, :cat, :norma, :inorma, :ref, :titulo, :desc, 1, :ordem, :usuario)");
+    $stmt->execute([
+        ':id' => $novoId,
+        ':cat' => $categoria,
+        ':norma' => $norma,
+        ':inorma' => $itemNorma,
+        ':ref' => $referencia,
+        ':titulo' => $titulo,
+        ':desc' => $descricao,
+        ':ordem' => $ordem,
+        ':usuario' => $usuarioId,
+    ]);
+    return $novoId;
+}
+
+function analisePlanosExcluirReferenciaNormam(PDO $pdo, string $id): void
+{
+    $stmt = $pdo->prepare("DELETE FROM analise_planos_referencias_normam WHERE id=:id");
+    $stmt->execute([':id' => $id]);
+}
+
+function analisePlanosObservacoesPadrao(array $analise): array
+{
+    $classe = $analise['classe_certificacao'] ?? 'EC1';
+    $respProj = trim(($analise['responsavel_projeto_nome'] ?? '') . ' ' . ($analise['responsavel_projeto_registro'] ? 'CREA ' . $analise['responsavel_projeto_registro'] : ''));
+    if (!$respProj) {
+        $respProj = 'Engenheiro Naval Responsável Técnico';
+    }
+    $artNum = trim($analise['art_numero'] ?? '');
+    $artTexto = $artNum ? " sob a ART nº {$artNum}" : "";
+    
+    $tipoDoc = in_array($analise['tipo_processo'] ?? '', ['LC', 'LCEC', 'LA', 'LR'], true) ? $analise['tipo_processo'] : 'LC';
+
+    return [
+        "01" => "Foram apresentados pelo armador: Planos e documentos técnicos para embarcação {$classe} elaborados pelo responsável técnico {$respProj}{$artTexto}.",
+        "02" => "Foram analisados os seguintes planos e documentos técnicos, como segue: ART; Memorial Descritivo; Declaração; Notas para Arqueação; Notas para Marcação de Borda Livre; Tabela de Cotas; Tabela de Curvas Hidrostáticas; Tabela de Curvas Cruzadas; Relatório de Porte Bruto / Prova de Inclinação; Estudo de Estabilidade Definitivo; Altura de Carga x Calados; Plano de Linhas; Plano de Arranjo Geral, Segurança, Capacidade e Luzes de Navegação; Plano de Perfil Estrutural e Seção Mestra.",
+        "03" => "O Armador fica ciente de que o Responsável Técnico deverá cumprir as \"exigências\" relacionadas aos planos e documentos técnicos em tempo hábil, que permita a verificação, por esta Certificadora, do cumprimento das mesmas e a consequente emissão da licença aplicável ({$tipoDoc}), durante o período de vigência do certificado condicional caso a embarcação possua prazo para tais certificados.",
+        "04" => "O armador e o responsável técnico terão de atentar-se, em todos os documentos, a informações e valores que possam sofrer alterações em razão das correções realizadas nos itens solicitados neste relatório e no Relatório de Vistorias, a fim de evitar exigências relacionadas a eles. O Relatório de Vistorias pode ser solicitado para esta Entidade Certificadora.",
+        "05" => "Fica evidenciado neste relatório que, assim que for constatado que o projeto apresentado não possui mais exigências, esta Entidade Certificadora solicitará os planos e documentos em via física, devidamente assinados e rubricados pelo Responsável Técnico. A Anotação de Responsabilidade Técnica (ART) deverá estar assinada por ambas as partes interessadas. (Nota: Caso haja intenção de assinatura digital na ART, esta deverá ser assinada digitalmente por ambas as partes, antes da aprovação deste projeto).",
+        "06" => "As informações constantes dos planos, documentos, cálculos e estudos apresentados são de responsabilidade do engenheiro naval, que elaborou o projeto e/ou efetuou o levantamento de características, cabendo a esta Entidade Certificadora a verificação quanto ao atendimento dos requisitos estabelecidos nestas Normas (NORMAM 202, Item 3.28, 3.28.1)."
+    ];
+}
+

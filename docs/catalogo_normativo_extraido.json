@@ -1,0 +1,1027 @@
+[
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "01 Apresentar plano de perfil estrutural. NORMAM-202,  Item 3,",
+    "exemplos_exigencia": [
+      "VENCIMENTO"
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "02  Apresentar ângulo de visibilidade no passadiço.  NORMAM-202, Item  5.16., b), I), II), III) e IV).",
+    "exemplos_exigencia": [
+      "J) do Anexo 3-F. Ver OBS. 3",
+      "-F. Ver OBS. 5",
+      "-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "NORMAM-202,Anexo 3-",
+    "exemplos_exigencia": [
+      "Nos planos e documentos técnicos, reavaliar o valor da boca moldada da embarcação (5,970)  e calado de projeto (1,23 m).",
+      "No plano e documentos técnicos, reavaliar o valor da boca da embarcação (4,20).",
+      "Reavaliar o comprimento total e do casco nas vistas do plano de arranjo geral e planos de linhas.",
+      "Nos documentos técnicos, reavaliar qual a área de navegação se é 1 ou 2, compatibilizar entre os documentos."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "NORMAM-202,  Item 3,",
+    "exemplos_exigencia": [
+      "Apresentar Anotação de Responsabilidade Técnica (ART) referente ao projeto."
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "No item 5, reavaliar volume total de água doce, conforme especificado na tabela volumétrica no plano de arranjo geral.",
+      "No item 13.2. reavaliar a quantidade de boias salva-vidas, para atender quando navegando em comboio.",
+      "No item 18, informar o machado, conforme especificado no plano de arranjo geral.",
+      "Ver OBS. 3 No item 6, reavaliar o número de tripulantes, compatibilizar conforme o arranjo geral.",
+      "No item 14.3, rever a quantidade de bombas de arrefecimento, compatibilizar com plano de arranjo geral.",
+      "No item 16, informar sobre a lanterna portatil e pilhas sobressalentes.",
+      "No item 18, informar, as embarcações não propulsadas, quando operando em comboios, poderão deixar de dotar boias salva-vidas.",
+      "Indicar as características do casco (comprimento total, comprimento entre perpendiculares, Boca Moldada, Pontal Moldado, calado Moldado).",
+      "No item 2.2, rever o casa decimais do calado medio, conforme mencionado no estudo de estabilidade (1,710 m).",
+      "No item 14.3, reavaliar a quantidade de bombas, compartibilizar conforme o arranjo geral.",
+      "No item 11.2, reavaliar a área do leme, compatibilizar conforme o plano de arranjo geral.",
+      "No item 13, reavaliar a quantidade de aparelhos flutuantes e coletes salva vidas para o tipo de serviço da embarcação.",
+      "No item 18, informar observação sobre limIte de altura de carga x calados.",
+      "No item 4, rever altura das casarias dos conveses, compatibilizar conforme apresentado na vista do plano de perfil estrutural medindo nas extremidades das chapas dos conveses.",
+      "-G/ Anexo 3-F. Ver OBS. 2"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "NORMAM-202,  Anexo",
+    "exemplos_exigencia": [
+      "No item 6, reavaliar a informação de 02 extra roll, compatibilizar conforme o estudo de estabilidade.",
+      "No item 10.1, informar as características do pau de carga, compatibilizar conforme o plano de arranjo geral.",
+      "No item 16, informar sobre a lanterna portatil e pilhas sobressalentes.",
+      "No item 12, rever nomes guinchos ou molinetes, conforme especificado no plano de arranjo geral. .",
+      "No item 13.2. reavaliar a quantidade de boias salva-vidas, para atender quando navegando em comboio."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "No item 2. reavaliar a informação de 02 extra roll, compatibilizar conforme o estudo de estabilidade.",
+      "Memorial de cálculos, informar o volume do convés intermediário e espaços excluídos (13,79 m3).",
+      "Indicar nos dados de entradas as características do casco (comprimento total, comprimento entre perpendiculares, Boca Moldada, Pontal Moldado, calado Moldado).",
+      "Memorial de cálculos, informar o volume abaixo do comando como e espaços excluídos.",
+      "Reavaliar arqueação bruta e liquida, as medidas para volume dos espaços fechados nas casarias e área de carga, deverão ser medida nas extremidades, incluindo os corredores laterais e central.",
+      "No item 2, reavaliar o valor do calado carregado, conforme especificado no estudo de estabilidade.",
+      "ITEM DESCRIÇÃO REFERÊNCIA VENCIMENTO",
+      "No item 2, reavaliar os valores dos calados leve e carregado, compatibilizar conforme prova de inclinação e estudo de estabilidade.",
+      "Memorial de cálculos, reavaliar o espaço compreendido entre o forro e a cobertura se possuir volume, deverá ser computado nos volumes dos espaços fechados."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "Na tabela das cotas, informar pontos com a dimensão do pontal.   NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-F, Item 3, D). Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "14 Apresentar hidrostáticas com trim. NORMAM 202,  Item",
+    "exemplos_exigencia": [
+      "REFERÊNCIA"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "NORMAM 202, Anexo",
+    "exemplos_exigencia": [
+      "Indicar nas curvas ou tabelas hidrostáticas as características do casco (comprimento total, comprimento entre perpendiculares, Boca Moldada, Pontal Moldado, calado Moldado)."
+    ]
+  },
+  {
+    "categoria": "PROVA DE INCLINAÇÃO",
+    "referencia_normativa": "NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "Na tabela 1, informar Sociedade Certificadora “Amazon Certificadora”.",
+      "Na tabela 11, reavaliar valores hidrostáticos, apresentar os valores informado na hidrostática com trim.",
+      "Na tabela 2b, rever valores de LV, conforme o medida informado no local de medição da borda livre.",
+      "Na tabela 2c, reavaliar os valores de LV e LR, conforme local de medição das bordas Livres."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "19 Na condição A, reavaliar o valor do ângulo de imersão.  NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "ESTUDO DE ESTABILIDADE DEFINITIVO"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "20 Na tabela, rever a H, B e L do tanque de consumo e caixa de água.  NORMAM-202, Item",
+    "exemplos_exigencia": [
+      "MOMENTO DE SUPERFICIE LIVRE"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "Na tabela, rever a H e B do tanque de água. NORMAM-202, Item",
+    "exemplos_exigencia": [
+      ".35. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "Na tabela de capacidade, reavaliar o peso do tanque de água, compatibilizar conforme o estudo de estabilidade.",
+      "Na vista de perfil, reavaliar o centroide do tanque de diesel 01 e 02, compatibilizar com a vista do fundo.",
+      "Na vista do perfil, a abertura da janela localizada na praça de maquinas deverá ser estanque ao tempo, descrever nessa vista.",
+      "Na vista do fundo, reavaliar a quantidade de baterias, conforme o memorial descritivo.",
+      "Na vista do convés principal, reavaliar a existência de molinete, compatibilizar conforme o memorial descritivo.",
+      "Na tabela de segurança, reavaliar a quantidade de estação de incêndio, conforme o memorial descritivo e vista.",
+      "Compatibilizar entre a tabela de vista do fundo e memorial descritivo o número de bombas.",
+      "Na tabela de salvatagem, rever a quantidade de coletes, 01 no comando.",
+      "Na tabela de capacidade, reavaliar a localização entre cavernas da caixa de água, compatibilizar com as vistas.",
+      "Na vista do convés principal ou de perfil, rever dispositivo para a ventilação da praça de máquina, podendo ser forçada ou natural.",
+      "Na tabela das luzes, reavaliar a numeração das luzes de alcançado e as de bordos, compatibilizar com a vista.",
+      "Nas condições, reavaliar o valor do LCG da carga, conforme a tabela de capacidade.",
+      "Ver OBS. 3",
+      "Na vista frontal, representar a cota vertical das luzes de bordos, conforme informado na tabela das luzes.",
+      "Nas condições de carregamento, reavaliar o peso para 04 tripulantes, se vai considerar sem peso de bagagem ou com a bagagem.",
+      "Na condição de carregamento C, reavaliar os valores obtidos, para os critérios da A2 sobre A1 e ângulo de equilíbrio estático para vento.",
+      "Na vista do convés principal, representar a porta de acesso a cozinha.",
+      "Na tabela diversos, informar as baterias conforme informado no memorial descritivo.",
+      "Na vista do convés principal e superior, compatibilizar a quantidade de coletes salva vidas com a tabela de salvatagem e consequentemente no memorial descritivo.",
+      "Na vista do fundo e tabela, rever número de bombas conforme informado no memorial descritivo.",
+      "Carenar o centro do porão de carga vista de perfil com a vista do fundo, para definição do LCG.",
+      "No item 3, rever a área de navegação e tipo de embarcação informada.",
+      "Nas condições, reavaliar o valor do peso leve da embarcação, compatibilizar conforme prova de inclinação e consequentemente corrigir o peso total.",
+      "Nas condições A, C e D, reavaliar os valores para o ângulo de alagamento, não está atendendo aos critérios para a área de navegação 2.",
+      "Nas condições, reavaliar as coordenadas do ponto de alagamento progressivo, conforme indicado no plano de arranjo geral.",
+      "Nas condições, reavaliar o LCG do tanque de diesel 02, compatibilizar conforme vista e tabela de capacidade.",
+      "No plano, representar a tabela das características principais e tabela da legenda.",
+      "Na vista de perfil, reavaliar o centroide do tanque de diesel 02, compatibilizar com a vista do fundo.",
+      "Na vista do convés principal, representar o acesso ao compartimento de carga.",
+      "Na tabela diversos, rever a localização do convés para ancora e cabeço duplo.",
+      "Na tabela de salvatagem, rever a distribuição dos coletes, 04 no convés principal e 02 no convés superior.",
+      "Na vista de perfil, reavaliar o texto da projeção do tanque de diesel de uso diário.",
+      "Na tabela de capacidade, reavaliar a localização entre cavernas do tanque de diesel uso diário e caixa d’água, compatibilizar com as vistas.",
+      "Na vista de perfil, reperesentar o suporte para luz de mastro numero 09 que se encontra proximo a proa da embarcação, e reavaliar a altura conforme RIPEAM.",
+      "Na tabela das luzes, reavaliar os valores das cotas horizontal das luzes de fundeio e de mastro número 9, compatibilizar com a vista.",
+      "Na tabela das luzes, reavaliar o valor da cota vertical da luz de manobra restrita, compatibilizar com a vista.",
+      "Na vista do convés principal, indicar a abertura da saída de emergência, ambas deverão serem estanque ao tempo e descrever nessa vista.",
+      "Na conclusão, reavaliar a descrição carga no convés, colocar para deposito.",
+      "Na tabela de salvatagem, rever a indicação de caixa de incêndio.",
+      "Na tabela diversos, rever número de bombas conforme informado no memorial descritivo.",
+      "Na tabela de capacidade, reavaliar o peso total da carga, compatibilizar com o estudo de estabilidade.",
+      "Na vista de perfil e frontal, representar a cota vertical das luzes de bordos, conforme informado na tabela das luzes.",
+      "REFERÊNCIA",
+      "Nas condiçoes, na tabela dos valores hidrostáticos, reavaliar a referencia iformadad para o LCF.",
+      "Nas condições B e F, informar o gênero e combustível 10%, conforme decrição da condição.",
+      "Na condição C e D, informar o gênero e combustível, conforme decrição da condição.",
+      "Nas condições, reavaliar o valor de Z do ângulo de alagamento, segundo mencinado na vista ta 3,6 m.",
+      "Na vista do convés principal, representar os acessos aos compartimentos de carga.",
+      "Na tabela de capacidade, reavaliar o volumee total últil dos tanque de carga."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "27 Na vista do convés principal, representar a âncora. NORMAM-202, Item 3,",
+    "exemplos_exigencia": []
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "28 Na tabela de segurança, informar a coluna observações.  NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "b) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "31 Nas vistas do plano, reavaliar a quantidade de boias salva vidas.  NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "b) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "NORMAM-202,  RIPEAM-72/Anexo 3-F.",
+    "exemplos_exigencia": [
+      "No plano das luzes, reavaliar o fator de obscuridade das luzes de navegação que deverá não ser superior a 6°, atendendo ao prescrito."
+    ]
+  },
+  {
+    "categoria": "PLANOS DE LINHAS",
+    "referencia_normativa": "37  No plano de balizas, representar as bordas falsas.  NORMAM-202, Item 3",
+    "exemplos_exigencia": [
+      "PLANOS DE LINHAS"
+    ]
+  },
+  {
+    "categoria": "PLANOS DE LINHAS",
+    "referencia_normativa": "NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "Carenar os cortes das linhas d’agua (LW) nas balizas de vante e ré do plano de linhas d’água com plano de linhas de balizas em relação a linha de centro.   38 Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE BORDA LIVRE",
+    "referencia_normativa": "NORMAM-202,  Anexo",
+    "exemplos_exigencia": [
+      "No item 7, rea valiar a unidade de medida para a ordem do tosamento real."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "NORMAM-202,  Item",
+    "exemplos_exigencia": [
+      "Apresentar ângulo visibilidade para o transporte de carga no convés para todas as embarcações com AB maior que 50 que transportem carga em conveses expostos e para as embarcações,"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "NORMAM-202, Item",
+    "exemplos_exigencia": [
+      "Na vista do convés principal, reavaliar a passagem de proa a popa que deverá ser desobstruída nas mediação dos cabeços a meia nau.",
+      "Na tabela, reavaliar as dimensões do H, B e L da caixa de água, conforme representado nas vistas."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "01 Apresentar planos e documentos técnicos completos. NORMAM-202,  Anexo",
+    "exemplos_exigencia": [
+      "VENCIMENTO"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "09 No item 18, informar o machado.  NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-G/ Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "10 No item 1. reavaliar o local de construção. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "NOTAS DE ARQUEAÇÃO"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "Na tabela de capacidade, reavaliar o VCG do tanque de diesel na linha centro, compatibilizar conforme o a vista.",
+      "Na vista de perfil, reavaliar o centroide do tanque de diesel BB e BE, compatibilizar com a vista do fundo.",
+      "Na vista frontal, reavaliar a largura da casaria do convés superior, compatibilizar com as demais vistas.",
+      "Na vista do convés principal, reavaliar a quantidade de grupos geradores (MCA), compatibilizar conforme o memorial descritivo.",
+      "b) do Anexo 3-F. Ver OBS. 3",
+      "Na vista do convés principal, reavaliar a existência de molinete, compatibilizar conforme o memorial descritivo.",
+      "Na tabela de segurança, reavaliar a localização do aparelho flutuante, ele está localizado no convés do comando.",
+      "Na vista e tabela de segurança, reavaliar a quantidade de estação de incêndio, que deverá ter 02 estações nas proximidades da proa.",
+      "Na tabela de segurança, reavaliar a quantidade de extintor de 12 kg, conforme o memorial descritivo e vista.",
+      "Na tabela de segurança, reavaliar o total de extintor de 06 kg, conforme o memorial descritivo e vista.",
+      "Na tabela de capacidade, reavaliar a localização do convés para o tanque de diesel de consumo, compatibilizar conforme o a vista.",
+      "Na tabela das luzes, reavaliar a quantidade de luzes de mastro, compatibilizar com a vista.",
+      "Na vista do convés principal ou de perfil, rever dispositivo para a ventilação da praça de máquina, podendo ser forçada ou natural.",
+      "Na vista frontal, reavaliar a distância das luzes de bordos, compatibilizar com a vista do tijupá.",
+      "Compatibilizar entre a tabela de vista do fundo e memorial descritivo o número de bombas.",
+      "Compatibilizar entre o plano de arranjo geral e memorial a quantidade de tripulantes."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "18 Na vista do convés principal, representar os cabeços na empurra.  NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "b) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "21 Nas vistas do plano, reavaliar a quantidade de boias salva vidas.  NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "n) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "NORMAM-202, Item 6,",
+    "exemplos_exigencia": [
+      "Na vista do convés principal, rever as medidas do camarote a BE que deverá atender 1,9x1,5 m."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "NORMAM-202,Item 3,",
+    "exemplos_exigencia": [
+      "Na vista do convés principal, completar o nome da vista para “convés principal."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "NORMAM-202,  Item 3,",
+    "exemplos_exigencia": [
+      "Na tabela das luzes, reavaliar a numeração das luzes de alcançado e as de bordos e mastro, compatibilizar com a vista."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "32 Na tabela de salvatagem, rever a quantidade de coletes. NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "b) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "NORMAM-202,  Item",
+    "exemplos_exigencia": [
+      "Na vista do tijupá, representar uma balaustrada para segurança da tripulação. 34"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "05 A não conformidade 21 deverá ser resolvida prontamente “Antes de Sair”, para a emissão dos certificados pertinentes aos tipos de vistorias realizados, conforme os parâmetros estabelecidos na NORMAM-331/DPC.",
+    "exemplos_exigencia": [
+      "O armador e o responsável técnico terão de atentar-se, em todos os documentos, a informações e valores que possam sofrer alterações em razão das correções realizadas nos itens solicitados neste relatório e no Relatório de Vistorias, a fim de evitar exigências relacionadas a eles. O Relatório de Vistorias pode ser solicitado para esta Entidade Certificadora."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE BORDA LIVRE",
+    "referencia_normativa": "NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "No item 13, reavaliar a distância do disco de plimsoll que deverá ser medido do bico da proa da embarcação (35497 mm).",
+      "No item 5, reavaliar a Eespessura do trincaniz, conforme o plano de perfil estrutural.",
+      "No item 13, reavaliar a distância do disco de plimsoll que deverá ser medido do bico da proa da embarcação.",
+      "Indicar nos dados de entradas as características do casco (comprimento total, comprimento entre perpendiculares, Boca Moldada, Pontal Moldado, calado Moldado).",
+      "No item 10, reavaliar o calado do projetista, compatibilizar conforme o estudo de estabilidade.",
+      "No item 10, rever valor de borda livre, devido a correção do calado  carregado.",
+      "No item 4, rever o valor do comprimento do tronco, conforme o memorial descritivo."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE BORDA LIVRE",
+    "referencia_normativa": "NORMAM-202,  Item 3,",
+    "exemplos_exigencia": [
+      "Na vista do convés principal, representar a passagem de proa a popa deverá ser desobstruída de proa à popa da embarcação e ver largura nas mediações dos cabeços, com largura de 800 mm."
+    ]
+  },
+  {
+    "categoria": "PLANO DE PERFIL ESTRUTURAL",
+    "referencia_normativa": "NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "Nas vistas das cavernas, representar as dimensões dos elementos estruturais,(vaus, hastilhas, cavernas e longitudinais) compatibilizar entre as vistas."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "01 No item 1, rever o ano de construção. NORMAM-202,  Anexo",
+    "exemplos_exigencia": [
+      "VENCIMENTO"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "NORMAM-202, Item",
+    "exemplos_exigencia": [
+      "Na vista do convés principal, representar a passagem de proa a popa deverá ser desobstruída de proa à popa da embarcação e ver largura nas mediações dos cabeços."
+    ]
+  },
+  {
+    "categoria": "PLANO DE PERFIL ESTRUTURAL E SEÇÃO MESTRA",
+    "referencia_normativa": "NORMAM-202, Item 3,  J) e L), 2) do Anexo 3-F.",
+    "exemplos_exigencia": [
+      "No plano de perfil e seção mestra, informar o peso máximo de carga admissível por m² para cada convés representado."
+    ]
+  },
+  {
+    "categoria": "PLANO DE PERFIL ESTRUTURAL E SEÇÃO MESTRA",
+    "referencia_normativa": "04 Na vista perfil estrutural, reavakiar a espessura da chapa do convés, compatibilizar co a seção mestra. NORMAM-202,  Item 3,",
+    "exemplos_exigencia": [
+      "No plano de perfil e seção mestra, informar o peso máximo de carga admissível por m² para cada convés representado."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "As informações constantes dos planos, documentos, cálculos e estudos apresentados são de responsabilidade do engenheiro naval, que elaborou o projeto e/ou efetuou o levantamento de características, cabendo a esta Entidade Certificadora a verificação quanto ao atendimento dos requisitos estabelecidos nestas Normas (NORMAM 202, Item 3.28,3.28.1).",
+    "exemplos_exigencia": [
+      "Fica evidenciado neste relatório que, assim que for constatado que o projeto apresentado não possui mais exigências, esta Entidade Certificadora solicitará os planos e documentos em via física, devidamente assinados e rubricados pelo Responsável Técnico. A Anotação de Responsabilidade Técnica (ART) deverá estar assinada por ambas as partes interessadas. (Nota: Caso haja intenção de assinatura digital na ART, esta deverá ser assinada digitalmente por ambas as partes, antes da aprovação deste projeto)."
+    ]
+  },
+  {
+    "categoria": "TABELA HIDROSTÁTICAS",
+    "referencia_normativa": "NORMAM 202,  Item",
+    "exemplos_exigencia": [
+      "Na descrição, apresentar hidrostática informando o valor do trim."
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "Na vista do convés principal ou de perfil, rever dispositivo para a ventilação da praça de máquina podendo ser forçada ou natural.  NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "PLANO DE ARRANJO GERAL, CAPACIDADE, SEGURANÇA E LUZES DE NAVEGAÇÃO"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "Na tabela de segurança, reavaliar a quantidade de estação de incêndio, conforme o memorial descritivo e vista.",
+      "Compatibilizar entre a tabela de vista do fundo e memorial descritivo o número de bombas."
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "07 Nas vistas do plano, reavaliar a quantidade de boias salva vidas.  NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "b) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "PLANO DE PERFIL ESTRUTURAL E SEÇÃO MESTRA",
+    "referencia_normativa": "NORMAM-202,  Item 3,",
+    "exemplos_exigencia": [
+      "Nas caracteristicas principais e na vista, reavaliar o valor do pontal (1,45 m).",
+      "Na vista do convés principal, representar as aberturas dos acessos aos compartimentos, conforme apresentado no plano de arranjo geral.",
+      "Na vista de perfil, informar espessura da chapa dos espelhos da proa e popa."
+    ]
+  },
+  {
+    "categoria": "PLANO DE LINHAS",
+    "referencia_normativa": "NORMAM-202, Item 3",
+    "exemplos_exigencia": [
+      "Nas caracteristicas principais e na vista, reavaliar o valor do pontal (1,45 m).",
+      "Rever a numerção da baliza 10 e 11 no plano de lihas dágua e plano de balizas, estão invertidas."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "01 Apresentar plano de perfil estrutural e seção mestra. NORMAM-202,  Anexo",
+    "exemplos_exigencia": [
+      "VENCIMENTO"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "06 No item 10, informar os dados do pau de carga. NORMAM-202,  Anexo",
+    "exemplos_exigencia": [
+      "-G/ Anexo 3-F."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE",
+    "referencia_normativa": "NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "Na condição B, reavaliar valores da area vélica, o momento emborcador devido ao vento não atende ao criterio do ângulo de equilibrio estatico ao vento.",
+      "Nas condiçoes, reavaliar o LCG e VCG do tanque de consumo, compatibilizar conforme informado na tabela de capacidade do arranjo geral.",
+      "Ver OBS. 3 13 Na vista do convés principal, representar o acesso do compartimento localizado da caverna 15 a 24.",
+      "Nas vistas do plano, reavaliar a quantidade de boias salva vidas, para atender quando operando em comboio.",
+      "Na vista do convés principal ou de perfil, rever dispositivo para a ventilação da praça de máquina, podendo ser forçada ou natural.",
+      "Compatibilizar entre a tabela de vista do fundo e memorial descritivo o número de bombas de incêndio."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE",
+    "referencia_normativa": "NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "Reavaliar o comprimento do casco, conforme os demias documento."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE",
+    "referencia_normativa": "12 Reavaliar o nome da embarcação na parte inferior da pagina. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "VENCIMENTO"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE",
+    "referencia_normativa": "17 Na tabela diversos, reavaliar a quantidade baterias.  NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "N) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "PLANO DE LINHAS",
+    "referencia_normativa": "NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "Carenar as LW e balizas a ré e a vante, do plano de linhas d’água com plano de linhas de balizas em relação a linha de centro.",
+      "C) do Anexo 3-F.  No plano de balizas, representar o convés ao lado.  19",
+      "REFERÊNCIA",
+      "i) do Anexo 3-F."
+    ]
+  },
+  {
+    "categoria": "PLANO DE LINHAS",
+    "referencia_normativa": "05 A não conformidade 9 deverá ser resolvida prontamente “Antes de Sair”, para a emissão dos certificados pertinentes aos tipos de vistorias realizados, conforme os parâmetros estabelecidos na NORMAM- 331/DPC.",
+    "exemplos_exigencia": [
+      "O armador e o responsável técnico terão de atentar-se, em todos os documentos, a informações e valores que possam sofrer alterações em razão das correções realizadas nos itens solicitados neste relatório e no Relatório de Vistorias, a fim de evitar exigências relacionadas a eles. O Relatório de Vistorias pode ser solicitado para esta Entidade Certificadora."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "NORMAM-202,  Anexo",
+    "exemplos_exigencia": [
+      "Nos planos e documentos técnicos, reavaliar o calado de projeto, que devera ser medido a a 85% do valor do pontal, e consequetimente LPP e Lregra.",
+      "Nos documentos técnicos, reavaliar o valor do deslocamento carregado e leve, compatibilizar entre os documentos."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "02 Apresentar anotação de responsabilidade técnica. NORMAM-202,   Anexo",
+    "exemplos_exigencia": [
+      "-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "03 Apresentar ângulo de visibilidade no passadiço. NORMAM-202,   Item",
+    "exemplos_exigencia": [
+      "-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "04 No item 3, reavaliar a existencia de casarias e superestruturas. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "MEMORIAL DESCRITIVO"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "05 No item 5, reavaliar a existência de casaria. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-G. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "06 No item 4, reavaliar a existência de água doce. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-G. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "07 No item 6, reavaliar a existência de passageiros NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-G. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "08 No item 16, informar laternas portatíl com pilhas sobressalentes. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-G. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "09 No item 18, reavaliar as observações. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-G. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "10 No item 2, reavaliar a existência de comprimento com rampa. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "VENCIMENTO"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "11 No item 2, reavaliar o valor do calado carregado medio, (1,652).  NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-B. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "NORMAM-202,  Item 3,",
+    "exemplos_exigencia": [
+      "Na vista do convés principal, nomear a passagem de proa a popa deverá ser desobstruída de proa à popa da embarcação e ver largura nas mediações dos cabeços.",
+      "Na vista do convés principal, rever as aberturas da saída de emergência e demais que deverá ser estanque ao tempo e descrever nessa vista.",
+      "Na vista do convés principal, reavaliar uma indicação de 01 extintor na casa das bombas.",
+      "Na vista do convés principal, representar a passagem de proa a popa deverá ser desobstruída de proa à popa da embarcação e ver largura nas mediações dos cabeços.",
+      "Na tabela de capacidade, informar a carga no convés e suas caraterísticas   compatibilizar com o estudo de estabilidade."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "17 NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "b) do Anexo 3-F."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "Apresentar Anotação de Responsabilidade Técnica (ART) referente ao projeto e à execução da alteração pretendida.",
+      "Nos documentos técnicos, reavaliar o valor do calado carregado, compatibilizar conforme o estudo de estabilidade.",
+      "Reavaliar a apresentação de notas de borda livre e notas de arqueação.",
+      "Indicar nos dados de entradas as características do casco (comprimento total, comprimento entre perpendiculares, Boca Moldada, Pontal Moldado, calado Moldado).",
+      "Apresentar as hidrostáticas com a inclusão do volume do tosamento a ré e vante."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "NORMAM-202,   Anexo",
+    "exemplos_exigencia": [
+      "Nos documentos técnicos, reavaliar valores do deslocamento leve e porte bruto a informação deu erro."
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "03 No item 1.4, rever dizerem certificadora. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "MEMORIAL DESCRITIVO"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "04 No item 7, adicionar LESTA/RLESTA. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-G. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "07 No item 13.1, reavaliar a classe do aparelho flutuante.  NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-G. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE BORDA LIVRE",
+    "referencia_normativa": "NORMAM-202,  Item",
+    "exemplos_exigencia": [
+      "No item 8, rever o valor do coeficiente k para área 1 e 2, conforme tipo de embarcação."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE BORDA LIVRE",
+    "referencia_normativa": "12 No item 10, rever valor de borda livre. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "III IRMÃOS"
+    ]
+  },
+  {
+    "categoria": "TABELA HIDROSTÁTICAS",
+    "referencia_normativa": "NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "Indicar nas curvas ou tabelas hidrostáticas as características do casco (comprimento total, comprimento entre perpendiculares, Boca Moldada, Pontal Moldado, calado Moldado)."
+    ]
+  },
+  {
+    "categoria": "CURVAS CRUZADAS",
+    "referencia_normativa": "NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "Indicar nas curvas cruzadas as características do casco (comprimento total, comprimento entre perpendiculares, Boca Moldada, Pontal Moldado, calado Moldado).",
+      "Apresentar curvas cruzadas com os valores de deslocamentos mencionados no estudo de estabilidade."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "NORMAM-202, Item",
+    "exemplos_exigencia": [
+      "Rever a coordenada de X do ponto de alagamento progressivo, conforme especificado na vista do arranjo geral.",
+      "Na respectiva vista, representar e indicar os botijões de gás. Caso a cozinha não faça a utilização do gás, deverá ser informado.",
+      "Na vista do convés tijupá, reavaliar a existência de balaustradas ou bordas falsas, que poderão ser removíveis, com altura não inferior a 1 metro, para proteção da tripulação.",
+      "Reposicionar a luz de mastro que deverá está situada à vante do meio-navio, ou apresentar isenção concedida pela DPC para a dispensa da localização da luz de mastro a ré do meio -navio."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "22 NORMAM-202, IAnexo",
+    "exemplos_exigencia": [
+      "III IRMÃOS"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "25 Na vista do convés principal, representar os cabeços duplos. NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "b) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "PLANO DE LINHAS",
+    "referencia_normativa": "29 No plano de linhas do alto, nomear o tosamento.  NORMAM-202,  Item 3,",
+    "exemplos_exigencia": [
+      "b) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "PLANO DE LINHAS",
+    "referencia_normativa": "NORMAM-202,  Item 3,",
+    "exemplos_exigencia": [
+      "Carenar as LW 3 e 4 na baliza 00 a ré, do plano de linhas d’água com plano de linhas de balizas em relação a linha de centro.",
+      "Carenar as LW 1 na baliza 01 a ré, do plano de linhas d’água com plano de linhas de balizas em relação a linha de centro."
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "NORMAM-202, Item 4",
+    "exemplos_exigencia": [
+      "No item 4, rever o número de antepara estanques, compatibilizar conforme apresentado na vista do plano de arranjo geral."
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "NORMAM-202,  Item",
+    "exemplos_exigencia": [
+      "No item 14.3, rever o número de bombas de transferência de diesel, compatibilizar com plano de arranjo geral.",
+      "No item 16, informar dotação de equipamentos náuticos obrigatórios e opcionais, incluindo o ecobatímetro."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "07 Retificar documento, conforme modelo que consta no anexo 7-B da NORMAM 202 para “EMBARCAÇÕES COM COMPRIMENTO DE REGRA (L) MENOR QUE 24 METROS.",
+    "exemplos_exigencia": [
+      "NOTAS DE ARQUEAÇÃO"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE BORDA LIVRE",
+    "referencia_normativa": "No item 4, rever o valor do comprimento do tronco, compatibilizar conforme os demais documentos.  NORMAM-202, Anexo",
+    "exemplos_exigencia": []
+  },
+  {
+    "categoria": "NOTAS DE BORDA LIVRE",
+    "referencia_normativa": "10 No item 8, rever o valor do tosamento no L/3 AV da MN. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-B. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE BORDA LIVRE",
+    "referencia_normativa": "11 No item 8, rever o valor do coeficiente k para área 2. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-B. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "TABELA DE COTAS",
+    "referencia_normativa": "NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "Na seção 20,864, os valores de Z e Y estão invertidos, (o Z está com o valores de Y)."
+    ]
+  },
+  {
+    "categoria": "TABELA DE COTAS",
+    "referencia_normativa": "NORMAM 202, Anexo",
+    "exemplos_exigencia": [
+      "Na tabela 10, reavaliar valores hidrostáticos, apresentar os valores informado na hidrostática com trim.",
+      "Na tabela 12, reavaliar valores hidrostáticos, apresentar os valores informado na hidrostática sem trim."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "19 NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "i) do Anexo 3-F."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "20 Nas condições, reavaliar os valores do ângulo de imersão.  NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "i) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "27 No plano, representar ou indicar o aparelho flutuante.  NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "b) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "PLANO DE PERFIL ESTRUTURAL E SEÇÃO MESTRA",
+    "referencia_normativa": "NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "Na vista do convés principal, representar abertura do tanque de carga, reposicinar a abertura da saída de emergência, compatibilizar com arranjo geral ou vice versa.  36 Ver OBS. 3",
+      "Na vista do fundo e convés principal, reavaliar o número de anteparas.",
+      "J) do Anexo 3-F. Nas características principais, rever as casas decimais para o calado de projeto.",
+      "J) do Anexo 3-F. Na vista do convés principal, representar as aberturas dos tanques de carga, compatibilizar com arranjo geral ou vice versa.  17"
+    ]
+  },
+  {
+    "categoria": "PLANO DE PERFIL ESTRUTURAL E SEÇÃO MESTRA",
+    "referencia_normativa": "04 A não conformidade 21 deverá ser resolvida prontamente “Antes de Sair”, para a emissão dos certificados pertinentes aos tipos de vistorias realizados, conforme os parâmetros estabelecidos na NORMAM-331/DPC.",
+    "exemplos_exigencia": [
+      "Fica evidenciado neste relatório que, assim que for constatado que o projeto apresentado não possui mais exigências,esta Entidade Certificadora solicitará os planos e documentos em via física, devidamente assinados e rubricados pelo Responsável Técnico. A Anotação de Responsabilidade Técnica (ART) deverá estar assinada por ambas as partes interessadas. (Nota: Caso haja intenção de assinatura digital na ART, esta deverá ser assinada digitalmente por ambasas partes, antes da aprovação deste projeto)"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "02 No item 7, atualizar o número para NORMAM 202. Item 4 do Anexo 3-G.",
+    "exemplos_exigencia": [
+      "-G/ Anexo 3-F. Ver OBS. 2"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "03 No item 18, informar quanto ao kit SOPEP.  NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-G/ Anexo 3-F."
+    ]
+  },
+  {
+    "categoria": "PROVA DE INCLINAÇÃO",
+    "referencia_normativa": "08 Na tabela 4b, reavaliar o KG do material da prova.  NORMAM 202, Anexo",
+    "exemplos_exigencia": [
+      "PROVA DE INCLINAÇÃO"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "09 Nas condições, reavaliar o VCG dos extra roll.   NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "REFERÊNCIA"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "10 Nas condições, informar os valores do ângulo de imersão. NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "i) do Anexo 3-F. Ver OBS. 2"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "14 NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "b) do Anexo 3-F."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "No plano, representar ou indicar as válvulas de alivio. NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "b) do Anexo 3-F. Ver OBS. 2"
+    ]
+  },
+  {
+    "categoria": "PLANO DE PERFIL ESTRUTURAL E SEÇÃO MESTRA",
+    "referencia_normativa": "No plano, informar espessura da chapa das anteparas. NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "J) do Anexo 3-F. Ver OBS. 2"
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "01 Apresentar plano de perfil estrutural e seção mestra. NORMAM-202,  Item 3,",
+    "exemplos_exigencia": [
+      "VENCIMENTO"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "Na conclusão, reavaliar o valor do calado carregado. Item 3, i) do Anexo 3-F."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "NORMAM-202, Item 3,  i), 2), XII) do Anexo 3-F.",
+    "exemplos_exigencia": [
+      "Apresentar curvas de momento fletor e esforço cortante, com a respectiva memória de cálculo ou listagem dos dados de saída, quando os cálculos forem efetuados por computador, informando valores máximos das tensões verificadas no fundo, no convés e em elementos contínuos acimado convés."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "Apresentar dados de entradas das seções do casco conforme especificado no plano de linhas."
+    ]
+  },
+  {
+    "categoria": "RELATÓRIO DE PORTE BRUTO",
+    "referencia_normativa": "04 Na tabela 1, rever a área de navegação 1 e 2. NORMAM 202,  Item 3,",
+    "exemplos_exigencia": [
+      "RELATÓRIO DE PORTE BRUTO"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "NORMAM-202, IItem",
+    "exemplos_exigencia": [
+      "No plano de capacidade, informar o peso máximo admissível de carga por m² dos conveses destinados ao transporte de carga."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "Na vista do convés principal, representar a passagem de proa a popa deverá ser desobstruída de proa à popa da embarcação e ver largura nas mediações dos cabeços.  08 NORMAM-202, Item",
+    "exemplos_exigencia": [
+      "MISS UNIVERSO 89"
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "01 No item 1.4, informar a area de navegação. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "MEMORIAL DESCRITIVO"
+    ]
+  },
+  {
+    "categoria": "PLANO DE LINHAS",
+    "referencia_normativa": "Carenar as LW 1, 2 e 4, do plano de do alto com o plano de linhas d’água em relação a linha de centro.  NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "No plano de balizas, representar o convés ao lado."
+    ]
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "01 Apresentar ângulo de visibilidade no passadiço.  NORMAM-202, Item  5.16., b), I), II), III) e IV).",
+    "exemplos_exigencia": []
+  },
+  {
+    "categoria": "GERAL",
+    "referencia_normativa": "02 NORMAM-202, Item 3,  i), 2), XII) do Anexo 3-F.",
+    "exemplos_exigencia": [
+      "Apresentar curvas de momento fletor e esforço cortante, com a respectiva memória de cálculo ou listagem dos dados de saída, quando os cálculos forem efetuados por computador, informando valores máximos das tensões verificadas no fundo, no convés e em elementos contínuos acimado convés."
+    ]
+  },
+  {
+    "categoria": "MEMORIAL DESCRITIVO",
+    "referencia_normativa": "NORMAM-202,   Item",
+    "exemplos_exigencia": [
+      "No item 18, informar tambem na condição especial o peso do tanque de carga e que o peso do tanque de diesel vazio estão adicinados no tanque de água potavel."
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "02 Retificar documento, conforme modelo que consta no anexo 7-B da NORMAM 202 para “EMBARCAÇÕES COM COMPRIMENTO DE REGRA (L) MENOR QUE 24 METROS.",
+    "exemplos_exigencia": [
+      "NOTAS DE ARQUEAÇÃO"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "03 No memorial de calculo, reavaliar o volume total de carga, compatibilizar com a tabela de capacidade e condição especial.  NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-B. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE BORDA LIVRE",
+    "referencia_normativa": "05 No item 8, rever o valor do coeficiente k para área 1 (0). NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "-B. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "PROVA DE INCLINAÇÃO",
+    "referencia_normativa": "NORMAM 202, Anexo",
+    "exemplos_exigencia": [
+      "Na tabela 10, reavaliar valores do calado corrigido para a deflexão (esta mencionando o calado médio) e calado correspondente."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "10 NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "Na condição G, reavaliar o peso total dos tanques de carga se vai adicionar o peso o mesmo peso dos tanques de diesel vazio ou acima como citado, descrever na conclusão e memorial descrtivo."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "11 Na condição G, reavaliar o valor da área velica e o H. NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "i) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "NOTAS DE ARQUEAÇÃO",
+    "referencia_normativa": "01 No memorial de calculo, reavaliar o volume total de carga, compatibilizar com a tabela de capacidade, informando o volume. NORMAM-202, Anexo",
+    "exemplos_exigencia": [
+      "NOTAS DE ARQUEAÇÃO"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "03 NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "i) do Anexo 3-F."
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "04 Na condição G, reavaliar o valor da área velica e o H. NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      "i) do Anexo 3-F. Ver OBS. 3"
+    ]
+  },
+  {
+    "categoria": "ESTUDO DE ESTABILIDADE DEFINITIVO",
+    "referencia_normativa": "06 Na tabela de capacidade, informar a coluna do peso especifico. NORMAM-202, Item 3,",
+    "exemplos_exigencia": [
+      ".21.1. a). Ver OBS. 3"
+    ]
+  }
+]

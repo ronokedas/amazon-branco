@@ -1,0 +1,522 @@
+{
+  "total_extraidos": 279,
+  "total_referencias_unicas": 66,
+  "ranking_referencias": [
+    {
+      "ref": "NORMAM-202, Item 3, b) do Anexo 3-F.",
+      "count": 49
+    },
+    {
+      "ref": "NORMAM-202, Item 3, i) do Anexo 3-F.",
+      "count": 24
+    },
+    {
+      "ref": "NORMAM-202, Anexo 3-G.",
+      "count": 17
+    },
+    {
+      "ref": "NORMAM-202, Anexo 3-G/ Anexo 3-F.",
+      "count": 16
+    },
+    {
+      "ref": "NORMAM-202, Anexo 7-B.",
+      "count": 15
+    },
+    {
+      "ref": "NORMAM-202, Anexo 3-F, Item 3, D).",
+      "count": 11
+    },
+    {
+      "ref": "NORMAM-202, Anexo 3-F.",
+      "count": 11
+    },
+    {
+      "ref": "NORMAM-202, Item 3, J) do Anexo 3-F.",
+      "count": 10
+    },
+    {
+      "ref": "NORMAM-202, Item 3, N) do Anexo 3-F.",
+      "count": 10
+    },
+    {
+      "ref": "requisitos estabelecidos nestas Normas (NORMAM 202, Item 3.28,3.28.1). 3 - OBSERVAÇÕES",
+      "count": 9
+    },
+    {
+      "ref": "NORMAM-202, Anexo 6-B.",
+      "count": 7
+    },
+    {
+      "ref": "NORMAM-202, Item 3, c) do Anexo 3-F.",
+      "count": 6
+    },
+    {
+      "ref": "NORMAM-202, Anexo 3-F/ Anexo 6-B.",
+      "count": 5
+    },
+    {
+      "ref": "NORMAM-202, Item 5.16., b), I), II), III) e IV).",
+      "count": 4
+    },
+    {
+      "ref": "NORMAM-202,Anexo 3- F.",
+      "count": 4
+    },
+    {
+      "ref": "NORMAM-202, Anexo 6-E.",
+      "count": 4
+    },
+    {
+      "ref": "NORMAM-202, Item 3, m) do Anexo 3-F.",
+      "count": 4
+    },
+    {
+      "ref": "NORMAM-202, Item 3, b) do Anexo 3-F/ Item",
+      "count": 4
+    },
+    {
+      "ref": "NORMAM-202, Item 3, C) do Anexo 3-F.",
+      "count": 4
+    },
+    {
+      "ref": "NORMAM 202, Anexo 6-E.",
+      "count": 4
+    },
+    {
+      "ref": "NORMAM-202, Item 3, q) do Anexo 3-F.",
+      "count": 3
+    },
+    {
+      "ref": "NORMAM-202, Item 6.35.",
+      "count": 3
+    },
+    {
+      "ref": "NORMAM-202, Item 3, b) do Anexo 3-",
+      "count": 3
+    },
+    {
+      "ref": "NORMAM-202, Item 3, n) do Anexo 3-F.",
+      "count": 3
+    },
+    {
+      "ref": "NORMAM-202, Item 4.21.1. a).",
+      "count": 3
+    },
+    {
+      "ref": "NORMAM-202, Item 3, J) e L), 2) do Anexo 3-F.",
+      "count": 2
+    },
+    {
+      "ref": "NORMAM-202, Item 3, J) do Anexo 3-F",
+      "count": 2
+    },
+    {
+      "ref": "NORMAM-202, Item 3 c) do Anexo 3-F.",
+      "count": 2
+    },
+    {
+      "ref": "da NORMAM 202 para “EMBARCAÇÕES COM COMPRIMENTO DE REGRA (L) MENOR QUE 24 METROS.",
+      "count": 2
+    },
+    {
+      "ref": "NORMAM-202, Item 3, b) do Anexo 3-F/",
+      "count": 2
+    },
+    {
+      "ref": "NORMAM 202, Item 6.41.3.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM 202, Anexo 3-F, Item 3, D).",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 3 c) 4 d) do Anexo 3-F.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 3, j) do Anexo 3-O.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Anexo 3-F, N), 4), IV).",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, RIPEAM-72/Anexo 3-F.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Anexo 6-B;",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 5.15.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 4.28.1.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 3, b) do Anexo 3-F",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202,Item 3, b) do Anexo 3-F.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 6, b),1) do Anexo 3-M.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-331/DPC.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Anexo 7-B;",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 4.28.1",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 3, j) do Anexo 3-F.",
+      "count": 1
+    },
+    {
+      "ref": "requisitos estabelecidos nestas Normas (NORMAM 202, Item 3.28,3.28.1). CREA: 22181-AM",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Anexo 3-H.",
+      "count": 1
+    },
+    {
+      "ref": "pertinentes aos tipos de vistorias realizados, conforme os parâmetros estabelecidos na NORMAM- 331/DPC.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 5.16.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 6.18, tabela 6-3.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Anexo 3-F/ Item 03.19.1. a).",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Anexo 3-F/ Anexo 6-E.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 6.36, A), 4).",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 4 do Anexo 3-G.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 14.3 do Anexo 3-G.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 302.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-331/DPC. 3 - OBSERVAÇÕES",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 3, c) 3) do Anexo 3-F.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 3, i), 2), XII) do Anexo 3-F.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Anexo 7-B/ Anexo 6-B.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 3, e), 2) do Anexo 3-F.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, IItem 5.18, b).",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM 202, Item 3, h) do Anexo 3-F.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 18 do Anexo 3-G.",
+      "count": 1
+    },
+    {
+      "ref": "NORMAM-202, Item 4.28.2.",
+      "count": 1
+    }
+  ],
+  "exemplos_exigencias": [
+    {
+      "desc": "No item 2. reavaliar a informação de 02 extra roll, compatibilizar conforme o estudo de estabilidade.",
+      "ref": "NORMAM-202, Anexo 7-B.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "No item 13.2. reavaliar a quantidade de boias salva-vidas, para atender quando navegando em comboio.",
+      "ref": "NORMAM-202, Anexo 3-G/ Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "No item 10.1, informar as características do pau de carga, compatibilizar conforme o plano de arranjo geral.",
+      "ref": "NORMAM-202, Anexo 3-G/ Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Apresentar plano de perfil estrutural.",
+      "ref": "NORMAM-202, Item 3, J) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "No item 5, reavaliar volume total de água doce, conforme especificado na tabela volumétrica no plano de arranjo geral.",
+      "ref": "NORMAM-202, Anexo 3-G/ Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Apresentar ângulo de visibilidade no passadiço.",
+      "ref": "NORMAM-202, Item 5.16., b), I), II), III) e IV).",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Apresentar Anotação de Responsabilidade Técnica (ART) referente ao projeto.",
+      "ref": "NORMAM-202, Item 3, q) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "No item 6, reavaliar a informação de 02 extra roll, compatibilizar conforme o estudo de estabilidade.",
+      "ref": "NORMAM-202, Anexo 3-G/ Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Nos planos e documentos técnicos, reavaliar o valor da boca moldada da embarcação (5,970) e calado de projeto (1,23 m).",
+      "ref": "NORMAM-202,Anexo 3- F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "No item 18, informar o machado, conforme especificado no plano de arranjo geral.",
+      "ref": "NORMAM-202, Anexo 3-G/ Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Memorial de cálculos, informar o volume do convés intermediário e espaços excluídos (13,79 m3).",
+      "ref": "NORMAM-202, Anexo 7-B.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na tabela 11, reavaliar valores hidrostáticos, apresentar os valores informado na hidrostática com trim.",
+      "ref": "NORMAM-202, Anexo 6-E.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na condição A, reavaliar o valor do ângulo de imersão.",
+      "ref": "NORMAM-202, Item 3, i) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Apresentar hidrostáticas com trim.",
+      "ref": "NORMAM 202, Item 6.41.3.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Indicar nas curvas ou tabelas hidrostáticas as características do casco (comprimento total, comprimento entre perpendiculares, Boca Moldada, Pontal Moldado, calado Moldado).",
+      "ref": "NORMAM 202, Anexo 3-F, Item 3, D).",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Indicar nos dados de entradas as características do casco (comprimento total, comprimento entre perpendiculares, Boca Moldada, Pontal Moldado, calado Moldado).",
+      "ref": "NORMAM-202, Anexo 3-F, Item 3, D).",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "3-F, Item 3, D). Ver OBS. 3 Na tabela das cotas, informar pontos com a dimensão do pontal.",
+      "ref": "NORMAM-202, Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na tabela, rever a H, B e L do tanque de consumo e caixa de água.",
+      "ref": "NORMAM-202, Item 6.35.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na tabela de capacidade, reavaliar o peso do tanque de água, compatibilizar conforme o estudo de estabilidade.",
+      "ref": "NORMAM-202, Item 3, m) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "1, informar Sociedade Certificadora “Amazon Certificadora”. Na tabela 2b, reavaliar o valor do pontal a meia nau. Anexo 6-E.",
+      "ref": "NORMAM-202, Anexo 6-E.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "6-E.",
+      "ref": "NORMAM-202, Anexo 6-E.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na tabela, rever a H e B do tanque de água.",
+      "ref": "NORMAM-202, Item 6.35.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na tabela das luzes, reavaliar a numeração das luzes de alcançado e as de bordos, compatibilizar com a vista.",
+      "ref": "NORMAM-202, Item 3, N) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "No plano de balizas, representar as bordas falsas.",
+      "ref": "NORMAM-202, Item 3 c) 4 d) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na tabela de salvatagem, rever a quantidade de coletes, 01 no comando.",
+      "ref": "NORMAM-202, Item 3, N) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na tabela de capacidade, reavaliar a localização entre cavernas da caixa de água, compatibilizar com as vistas.",
+      "ref": "NORMAM-202, Item 3, m) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na vista do convés principal ou de perfil, rever dispositivo para a ventilação da praça de máquina, podendo ser forçada ou natural.",
+      "ref": "NORMAM-202, Item 3, j) do Anexo 3-O.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na tabela de segurança, reavaliar a quantidade de estação de incêndio, conforme o memorial descritivo e vista.",
+      "ref": "NORMAM-202, Item 3, N) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Compatibilizar entre a tabela de vista do fundo e memorial descritivo o número de bombas.",
+      "ref": "NORMAM-202, Item 3, b) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Nas vistas do plano, reavaliar a quantidade de boias salva vidas.",
+      "ref": "NORMAM-202, Item 3, N) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na tabela de segurança, informar a coluna observações.",
+      "ref": "NORMAM-202, Anexo 3-F, N), 4), IV).",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "No plano das luzes, reavaliar o fator de obscuridade das luzes de navegação que deverá não ser superior a 6°, atendendo ao prescrito.",
+      "ref": "NORMAM-202, RIPEAM-72/Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na vista do convés principal, representar a âncora.",
+      "ref": "NORMAM-202, Item 3, b) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na vista de perfil, reavaliar o centroide do tanque de diesel 01 e 02, compatibilizar com a vista do fundo.",
+      "ref": "NORMAM-202, Item 3, b) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na vista do fundo, reavaliar a quantidade de baterias, conforme o memorial descritivo.",
+      "ref": "NORMAM-202, Item 3, b) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na vista do convés principal, reavaliar a existência de molinete, compatibilizar conforme o memorial descritivo.",
+      "ref": "NORMAM-202, Item 3, b) do Anexo 3-",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "Na vista do perfil, a abertura da janela localizada na praça de maquinas deverá ser estanque ao tempo, descrever nessa vista.",
+      "ref": "NORMAM-202, Item 3, b) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "b) do Anexo 3-F. 3 / 6 RELATÓRIO DE ANÁLISE DE PLANOS AM-RAP-AP:11/26 NOME DA EMBARCAÇÃO D P A V",
+      "ref": "NORMAM-202, Item 3, c) do Anexo 3-F.",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "As informações constantes dos planos, documentos, cálculos e estudos apresentados são de responsabilidade do engenheiro naval, que elaborou o projeto e/ou efetuou o levantamento de características, cabendo a esta Entidade Certificadora a verificação quanto ao atendimento dos",
+      "ref": "requisitos estabelecidos nestas Normas (NORMAM 202, Item 3.28,3.28.1). 3 - OBSERVAÇÕES",
+      "file": "RAP0011_2026-AMAZON - P D A V.pdf"
+    },
+    {
+      "desc": "No item 7, rea valiar a unidade de medida para a ordem do tosamento real.",
+      "ref": "NORMAM-202, Anexo 6-B;",
+      "file": "RAP0014_2026-AMAZON -PDA III REV.pdf"
+    },
+    {
+      "desc": "Apresentar ângulo visibilidade para o transporte de carga no convés para todas as embarcações com AB maior que 50 que transportem carga em conveses expostos e para as embarcações,",
+      "ref": "NORMAM-202, Item 5.15.",
+      "file": "RAP0015_2026-AMAZON -PDA IV REV.pdf"
+    },
+    {
+      "desc": "No item 16, informar sobre a lanterna portatil e pilhas sobressalentes.",
+      "ref": "NORMAM-202, Anexo 3-G.",
+      "file": "RAP0015_2026-AMAZON -PDA IV REV.pdf"
+    },
+    {
+      "desc": "Na vista do convés principal, reavaliar a passagem de proa a popa que deverá ser desobstruída nas mediação dos cabeços a meia nau.",
+      "ref": "NORMAM-202, Item 4.28.1.",
+      "file": "RAP0015_2026-AMAZON -PDA IV REV.pdf"
+    },
+    {
+      "desc": "No item 18, informar o machado.",
+      "ref": "NORMAM-202, Anexo 3-G/ Anexo 3-F.",
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf"
+    },
+    {
+      "desc": "Apresentar Anotação de Responsabilidade Técnica (ART) referente ao projeto.",
+      "ref": "NORMAM-202, Item 3, q) do Anexo 3-F.",
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf"
+    },
+    {
+      "desc": "No item 12, rever nomes guinchos ou molinetes, conforme especificado no plano de arranjo geral. .",
+      "ref": "NORMAM-202, Anexo 3-G/ Anexo 3-F.",
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf"
+    },
+    {
+      "desc": "No plano e documentos técnicos, reavaliar o valor da boca da embarcação (4,20).",
+      "ref": "NORMAM-202,Anexo 3- F.",
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf"
+    },
+    {
+      "desc": "A SER INSCRITA MEMORIAL DESCRITIVO GERAL DATA: 27/07/2026 Ver OBS. 3 No item 6, reavaliar o número de tripulantes, compatibilizar conforme o arranjo geral.",
+      "ref": "NORMAM-202, Anexo 3-G/ Anexo 3-F.",
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf"
+    },
+    {
+      "desc": "Apresentar ângulo de visibilidade no passadiço.",
+      "ref": "NORMAM-202, Item 5.16., b), I), II), III) e IV).",
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf"
+    },
+    {
+      "desc": "Apresentar planos e documentos técnicos completos.",
+      "ref": "NORMAM-202, Anexo 3-F.",
+      "file": "RAP0016_2026-AMAZON - CACA III.pdf"
+    }
+  ]
+}
