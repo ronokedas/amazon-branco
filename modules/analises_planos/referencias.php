@@ -122,7 +122,7 @@ require_once __DIR__ . '/../../includes/header.php';
         <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f1f5f9; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
             <span style="font-size: 0.74rem; font-weight: 600; color: #64748b; margin-right: 4px;">Atalhos rápidos:</span>
             <?php 
-            $categoriasAtalhos = ['GERAL', 'MEMORIAL DESCRITO', 'NOTAS DE ARQUEAÇÃO', 'NOTAS DE BORDA LIVRE', 'ESTUDO DE ESTABILIDADE', 'PLANOS DE LINHAS', 'PLANO DE ARRANJO GERAL, LUZES, SEGURANÇA E CAPACIDADE.'];
+            $categoriasAtalhos = ['GERAL', 'MEMORIAL DESCRITO', 'NOTAS DE ARQUEAÇÃO', 'NOTAS DE BORDA LIVRE', 'ESTUDO DE ESTABILIDADE', 'PLANOS DE LINHAS', 'PLANO DE ARRANJO GERAL, LUZES, SEGURANÇA E CAPACIDADE'];
             foreach ($categoriasAtalhos as $catAtalho): 
             ?>
                 <a href="<?= APP_URL ?>analises-planos/referencias?categoria=<?= urlencode($catAtalho) ?>" 
