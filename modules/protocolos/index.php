@@ -80,6 +80,61 @@ if ($f['fim'] !== '') {
     $p[':fim'] = $f['fim'];
 }
 
+$paginaAtual = max(1, (int)($_GET['pagina'] ?? 1));
+$porPagina = (int)($_GET['por_pagina'] ?? 15);
+if (!in_array($porPagina, [5, 10, 15, 25, 50, 100], true)) {
+    $porPagina = 15;
+}
+
+// Helper para gerar URLs mantendo filtros e paginação
+if (!function_exists('protocoloUrl')) {
+    function protocoloUrl(array $overrides = []): string {
+        global $aba, $f, $porPagina, $paginaAtual;
+        $params = [
+            'aba' => ($aba !== '' && $aba !== 'todos') ? $aba : null,
+            'busca' => ($f['busca'] ?? '') !== '' ? $f['busca'] : null,
+            'status' => ($f['status'] ?? '') !== '' ? $f['status'] : null,
+            'unidade' => ($f['unidade'] ?? '') !== '' ? $f['unidade'] : null,
+            'cidade' => ($f['cidade'] ?? '') !== '' ? $f['cidade'] : null,
+            'responsavel' => ($f['responsavel'] ?? '') !== '' ? $f['responsavel'] : null,
+            'inicio' => ($f['inicio'] ?? '') !== '' ? $f['inicio'] : null,
+            'fim' => ($f['fim'] ?? '') !== '' ? $f['fim'] : null,
+            'embarcacao_id' => ($f['embarcacao_id'] ?? '') !== '' ? $f['embarcacao_id'] : null,
+            'por_pagina' => (int)$porPagina !== 15 ? (int)$porPagina : null,
+            'pagina' => (int)$paginaAtual > 1 ? (int)$paginaAtual : null,
+        ];
+        foreach ($overrides as $k => $v) {
+            if ($v === null || $v === '' || ($k === 'aba' && $v === 'todos') || ($k === 'pagina' && (int)$v <= 1) || ($k === 'por_pagina' && (int)$v === 15)) {
+                unset($params[$k]);
+            } else {
+                $params[$k] = $v;
+            }
+        }
+        $qs = http_build_query(array_filter($params, fn($val) => $val !== null && $val !== ''));
+        return APP_URL . 'protocolos' . ($qs ? '?' . $qs : '');
+    }
+}
+
+// Contagem total para paginação com os mesmos filtros
+$sqlCount = "SELECT COUNT(*) FROM protocolo_dossies d 
+JOIN embarcacoes e ON e.id=d.embarcacao_id 
+LEFT JOIN clientes c ON c.id=d.cliente_id 
+LEFT JOIN usuarios u ON u.id=d.criado_por 
+LEFT JOIN protocolo_unidades_maritimas um ON um.id=d.unidade_maritima_id" . ($where ? ' WHERE ' . implode(' AND ', $where) : '');
+
+$qCount = $pdo->prepare($sqlCount);
+$qCount->execute($p);
+$totalDossies = (int)$qCount->fetchColumn();
+
+$totalPaginas = max(1, (int)ceil($totalDossies / $porPagina));
+if ($paginaAtual > $totalPaginas) {
+    $paginaAtual = $totalPaginas;
+}
+$offset = ($paginaAtual - 1) * $porPagina;
+
+$registroInicio = $totalDossies > 0 ? $offset + 1 : 0;
+$registroFim = min($offset + $porPagina, $totalDossies);
+
 $sql = "SELECT d.*, e.nome embarcacao_nome, e.registro embarcacao_registro, c.nome cliente_nome, u.nome responsavel_nome, um.nome unidade_nome,
 (SELECT COUNT(*) FROM protocolo_movimentacoes m WHERE m.dossie_id=d.id AND m.status IN('CONFIRMADA','RETIFICADA')) eventos,
 (SELECT COUNT(*) FROM protocolo_movimentacao_itens i JOIN protocolo_movimentacoes m2 ON m2.id=i.movimentacao_id WHERE m2.dossie_id=d.id AND i.requer_devolucao=1 AND i.devolvido_em IS NULL) originais_pendentes
@@ -87,7 +142,7 @@ FROM protocolo_dossies d
 JOIN embarcacoes e ON e.id=d.embarcacao_id 
 LEFT JOIN clientes c ON c.id=d.cliente_id 
 LEFT JOIN usuarios u ON u.id=d.criado_por 
-LEFT JOIN protocolo_unidades_maritimas um ON um.id=d.unidade_maritima_id" . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY d.atualizado_em DESC LIMIT 300';
+LEFT JOIN protocolo_unidades_maritimas um ON um.id=d.unidade_maritima_id" . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . " ORDER BY d.atualizado_em DESC LIMIT {$porPagina} OFFSET {$offset}";
 
 $q = $pdo->prepare($sql);
 $q->execute($p);
@@ -211,6 +266,73 @@ require __DIR__ . '/../../includes/sidebar.php';
     transform: translateY(-1px);
     box-shadow: 0 4px 14px rgba(8, 118, 83, 0.4) !important;
 }
+/* Componente de Paginação Naval */
+.prot-pagination {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.prot-page-item {
+    display: inline-block;
+}
+.prot-page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
+    background: var(--card-bg, #1e293b);
+    color: var(--text-primary, #f8fafc);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.18s ease;
+    user-select: none;
+}
+.prot-page-link:hover:not(.disabled) {
+    border-color: #087653;
+    color: #ffffff;
+    background: rgba(8, 118, 83, 0.25);
+}
+.prot-page-item.active .prot-page-link {
+    background: #087653 !important;
+    border-color: #087653 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(8, 118, 83, 0.4);
+}
+.prot-page-item.disabled .prot-page-link {
+    color: rgba(148, 163, 184, 0.4) !important;
+    border-color: rgba(148, 163, 184, 0.15) !important;
+    background: rgba(148, 163, 184, 0.05) !important;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.prot-page-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 34px;
+    color: var(--text-secondary, #94a3b8);
+    font-size: 0.9rem;
+}
+@media (max-width: 768px) {
+    .prot-pagination-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    .prot-pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
 </style>
 <main class="conteudo-principal">
     <!-- Cabeçalho da Página -->
@@ -276,27 +398,27 @@ require __DIR__ . '/../../includes/sidebar.php';
 
     <!-- Abas Rápidas de Situação -->
     <div class="prot-tabs-bar">
-        <a href="<?= APP_URL ?>protocolos?aba=todos" class="prot-tab-btn <?= $aba === 'todos' ? 'active' : '' ?>">
+        <a href="<?= h(protocoloUrl(['aba' => 'todos', 'pagina' => 1])) ?>" class="prot-tab-btn <?= $aba === 'todos' ? 'active' : '' ?>">
             <i class="fa-solid fa-list"></i> Todos
             <span class="badge bg-secondary"><?= (int)($totais['total_geral'] ?? 0) ?></span>
         </a>
-        <a href="<?= APP_URL ?>protocolos?aba=EM_PREPARACAO" class="prot-tab-btn <?= $aba === 'EM_PREPARACAO' ? 'active' : '' ?>">
+        <a href="<?= h(protocoloUrl(['aba' => 'EM_PREPARACAO', 'pagina' => 1])) ?>" class="prot-tab-btn <?= $aba === 'EM_PREPARACAO' ? 'active' : '' ?>">
             <i class="fa-solid fa-pen-ruler"></i> Em Preparação
             <span class="badge bg-secondary"><?= (int)($totais['total_preparacao'] ?? 0) ?></span>
         </a>
-        <a href="<?= APP_URL ?>protocolos?aba=MARINHA" class="prot-tab-btn <?= $aba === 'MARINHA' ? 'active' : '' ?>">
+        <a href="<?= h(protocoloUrl(['aba' => 'MARINHA', 'pagina' => 1])) ?>" class="prot-tab-btn <?= $aba === 'MARINHA' ? 'active' : '' ?>">
             <i class="fa-solid fa-building-flag"></i> Na Capitania / Órgão
             <span class="badge bg-info"><?= (int)($totais['total_marinha'] ?? 0) ?></span>
         </a>
-        <a href="<?= APP_URL ?>protocolos?aba=EM_EXIGENCIA" class="prot-tab-btn <?= $aba === 'EM_EXIGENCIA' ? 'active' : '' ?>">
+        <a href="<?= h(protocoloUrl(['aba' => 'EM_EXIGENCIA', 'pagina' => 1])) ?>" class="prot-tab-btn <?= $aba === 'EM_EXIGENCIA' ? 'active' : '' ?>">
             <i class="fa-solid fa-circle-exclamation"></i> Em Exigência
             <span class="badge bg-warning"><?= (int)($totais['total_exigencia'] ?? 0) ?></span>
         </a>
-        <a href="<?= APP_URL ?>protocolos?aba=CUSTODIA" class="prot-tab-btn <?= $aba === 'CUSTODIA' ? 'active' : '' ?>">
+        <a href="<?= h(protocoloUrl(['aba' => 'CUSTODIA', 'pagina' => 1])) ?>" class="prot-tab-btn <?= $aba === 'CUSTODIA' ? 'active' : '' ?>">
             <i class="fa-solid fa-box"></i> Custódia de Originais
             <span class="badge bg-danger"><?= (int)($totais['total_custodia'] ?? 0) ?></span>
         </a>
-        <a href="<?= APP_URL ?>protocolos?aba=CONCLUIDO" class="prot-tab-btn <?= $aba === 'CONCLUIDO' ? 'active' : '' ?>">
+        <a href="<?= h(protocoloUrl(['aba' => 'CONCLUIDO', 'pagina' => 1])) ?>" class="prot-tab-btn <?= $aba === 'CONCLUIDO' ? 'active' : '' ?>">
             <i class="fa-solid fa-check-double"></i> Concluídos
             <span class="badge bg-success"><?= (int)($totais['total_concluido'] ?? 0) ?></span>
         </a>
@@ -308,6 +430,9 @@ require __DIR__ . '/../../includes/sidebar.php';
             <form class="d-flex flex-column gap-3" method="get" action="<?= APP_URL ?>protocolos">
                 <?php if ($aba !== 'todos'): ?>
                     <input type="hidden" name="aba" value="<?= h($aba) ?>">
+                <?php endif; ?>
+                <?php if ($porPagina !== 15): ?>
+                    <input type="hidden" name="por_pagina" value="<?= (int)$porPagina ?>">
                 <?php endif; ?>
                 <div class="row g-2">
                     <div class="col-md-4">
@@ -491,6 +616,104 @@ require __DIR__ . '/../../includes/sidebar.php';
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+        <!-- Rodapé com Resumo e Paginação -->
+        <div class="card-footer prot-pagination-footer" style="padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; border-top: 1px solid var(--border, rgba(255,255,255,0.1)); background: transparent;">
+            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                <small class="text-secondary" style="font-size: 0.85rem;">
+                    <i class="fa-solid fa-circle-info me-1"></i>
+                    Mostrando <strong><?= $registroInicio ?></strong> a <strong><?= $registroFim ?></strong> de <strong><?= $totalDossies ?></strong> dossiê(s)
+                    <?php if (!empty($f['busca'])): ?>
+                        (filtrando por "<strong><?= h($f['busca']) ?></strong>")
+                    <?php endif; ?>
+                </small>
+
+                <!-- Seletor de itens por página -->
+                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                    <label for="selectPorPagina" style="margin: 0; font-size: 0.8rem; color: var(--text-secondary, #94a3b8); white-space: nowrap;">Exibir:</label>
+                    <select id="selectPorPagina" 
+                            class="form-select form-select-sm" 
+                            style="width: auto; height: 32px; padding: 2px 28px 2px 10px; font-size: 0.82rem; border-radius: 6px; background-color: var(--card-bg, #1e293b); color: var(--text-primary, #f8fafc); border-color: var(--border, rgba(255,255,255,0.15));" 
+                            onchange="window.location.href=this.value">
+                        <?php foreach ([10, 15, 25, 50, 100] as $qtd): ?>
+                            <option value="<?= h(protocoloUrl(['por_pagina' => $qtd, 'pagina' => 1])) ?>" <?= $porPagina === $qtd ? 'selected' : '' ?>>
+                                <?= $qtd ?> por pág.
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Navegação de Páginas -->
+            <?php if ($totalPaginas > 1): ?>
+                <nav aria-label="Navegação de páginas de protocolos">
+                    <ul class="prot-pagination">
+                        <!-- Primeira página -->
+                        <li class="prot-page-item <?= $paginaAtual <= 1 ? 'disabled' : '' ?>">
+                            <a class="prot-page-link" 
+                               href="<?= $paginaAtual <= 1 ? 'javascript:void(0)' : h(protocoloUrl(['pagina' => 1])) ?>" 
+                               title="Primeira página">
+                                <i class="fa-solid fa-angles-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Página anterior -->
+                        <li class="prot-page-item <?= $paginaAtual <= 1 ? 'disabled' : '' ?>">
+                            <a class="prot-page-link" 
+                               href="<?= $paginaAtual <= 1 ? 'javascript:void(0)' : h(protocoloUrl(['pagina' => $paginaAtual - 1])) ?>" 
+                               title="Página anterior">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Janela de números de página -->
+                        <?php
+                        $janelaInicio = max(1, $paginaAtual - 2);
+                        $janelaFim = min($totalPaginas, $paginaAtual + 2);
+
+                        if ($janelaInicio > 1) {
+                            echo '<li class="prot-page-item"><a class="prot-page-link" href="' . h(protocoloUrl(['pagina' => 1])) . '">1</a></li>';
+                            if ($janelaInicio > 2) {
+                                echo '<li class="prot-page-ellipsis">...</li>';
+                            }
+                        }
+
+                        for ($p = $janelaInicio; $p <= $janelaFim; $p++) {
+                            if ($p === $paginaAtual) {
+                                echo '<li class="prot-page-item active"><span class="prot-page-link">' . $p . '</span></li>';
+                            } else {
+                                echo '<li class="prot-page-item"><a class="prot-page-link" href="' . h(protocoloUrl(['pagina' => $p])) . '">' . $p . '</a></li>';
+                            }
+                        }
+
+                        if ($janelaFim < $totalPaginas) {
+                            if ($janelaFim < $totalPaginas - 1) {
+                                echo '<li class="prot-page-ellipsis">...</li>';
+                            }
+                            echo '<li class="prot-page-item"><a class="prot-page-link" href="' . h(protocoloUrl(['pagina' => $totalPaginas])) . '">' . $totalPaginas . '</a></li>';
+                        }
+                        ?>
+
+                        <!-- Próxima página -->
+                        <li class="prot-page-item <?= $paginaAtual >= $totalPaginas ? 'disabled' : '' ?>">
+                            <a class="prot-page-link" 
+                               href="<?= $paginaAtual >= $totalPaginas ? 'javascript:void(0)' : h(protocoloUrl(['pagina' => $paginaAtual + 1])) ?>" 
+                               title="Próxima página">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </a>
+                        </li>
+
+                        <!-- Última página -->
+                        <li class="prot-page-item <?= $paginaAtual >= $totalPaginas ? 'disabled' : '' ?>">
+                            <a class="prot-page-link" 
+                               href="<?= $paginaAtual >= $totalPaginas ? 'javascript:void(0)' : h(protocoloUrl(['pagina' => $totalPaginas])) ?>" 
+                               title="Última página">
+                                <i class="fa-solid fa-angles-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            <?php endif; ?>
         </div>
     </section>
 </main>
