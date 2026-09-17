@@ -4,14 +4,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/analise_planos.php';
 
-verificar_sessao();
-exigirAcesso('analise_planos');
-
-$cargo = getCargo();
-if (!in_array($cargo, ['ANALISTA', 'ADMIN'], true)) {
-    http_response_code(403);
-    die('Acesso permitido exclusivamente ao Analista Naval e Administrador.');
-}
+analisePlanosExigirAcesso();
 
 $acao = $_POST['action'] ?? $_GET['action'] ?? '';
 $usuarioId = (string)($_SESSION['usuario_id'] ?? '');
@@ -27,7 +20,7 @@ if ($acao === 'buscar_ajax') {
         'busca' => $busca,
     ]);
     
-    echo json_encode(['sucesso' => true, 'dados' => $refs], JSON_UNESCAPED_UNICODE);
+    echo json_encode($refs, JSON_UNESCAPED_UNICODE);
     exit;
 }
 

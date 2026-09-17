@@ -4,14 +4,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/analise_planos.php';
 
-verificar_sessao();
-exigirAcesso('analise_planos');
-
-$cargo = getCargo();
-if (!in_array($cargo, ['ANALISTA', 'ADMIN'], true)) {
-    http_response_code(403);
-    die('Acesso permitido exclusivamente ao Analista Naval e Administrador.');
-}
+analisePlanosExigirAcesso();
 
 $filtro_categoria = trim($_GET['categoria'] ?? '');
 $filtro_busca = trim($_GET['busca'] ?? '');
@@ -21,7 +14,7 @@ $referencias = analisePlanosBuscarReferenciasNormam($pdo, [
     'busca' => $filtro_busca,
 ]);
 
-$categoriasPadrao = analisePlanosCategoriasPadrao();
+$categoriasPadrao = analisePlanosCategoriasNormam();
 
 // KPIs
 $totalReferencias = (int)$pdo->query("SELECT COUNT(*) FROM analise_planos_referencias_normam WHERE ativo=1")->fetchColumn();

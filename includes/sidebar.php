@@ -160,9 +160,13 @@ if (!function_exists('isActive')) {
         <?php if (podeAcessar('analise_planos') || podeAcessar('protocolos_documentais')): ?>
             <div class="nav-group-label">ENGENHARIA & CAPITANIA</div>
             <?php if (podeAcessar('analise_planos')): ?>
-                <a href="<?= APP_URL ?>analises-planos" class="nav-item<?= strpos($pagina_atual,'analises-planos')===0?' active':'' ?>" data-label="Análise de Planos">
+                <a href="<?= APP_URL ?>analises-planos" class="nav-item<?= ($pagina_atual === 'analises-planos' || strpos($pagina_atual, 'analises-planos/form') === 0) ? ' active' : '' ?>" data-label="Análise de Planos">
                     <i class="fa-solid fa-drafting-compass"></i>
                     <span class="nav-text">Análise de Planos</span>
+                </a>
+                <a href="<?= APP_URL ?>analises-planos/referencias" class="nav-item<?= strpos($pagina_atual, 'analises-planos/referencias') === 0 ? ' active' : '' ?>" data-label="Banco de Normas NORMAM">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                    <span class="nav-text">Banco de Normas NORMAM</span>
                 </a>
             <?php endif; ?>
             <?php if (podeAcessar('protocolos_documentais')): ?>

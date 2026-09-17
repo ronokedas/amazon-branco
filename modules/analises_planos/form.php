@@ -500,7 +500,10 @@ require_once __DIR__ . '/../../includes/header.php';
   <?php if(!$itens):?><p>Defina e salve o processo e a norma para gerar o checklist.</p><?php else:?><form method="post" action="<?=APP_URL?>analises-planos/actions"><input type="hidden" name="csrf_token" value="<?=gerarCSRF()?>"><input type="hidden" name="action" value="salvar_itens"><input type="hidden" name="analise_id" value="<?=h($id)?>"><div class="portal-table-wrap"><table><thead><tr><th>#</th><th>Documento/requisito</th><th>Referência</th><th>Obrigatório</th><th>Resultado</th><th>Observação</th></tr></thead><tbody><?php foreach($itens as $i=>$item):?><tr><td><?=$i+1?><input type="hidden" name="item_id[]" value="<?=h($item['id'])?>"></td><td><?=h($item['documento'])?></td><td><?=h($item['referencia_normativa'])?></td><td><?=$item['obrigatorio']?'Sim':'Condicional'?></td><td><select name="resultado[]" <?=$analiseAberta?'':'disabled'?>><?php foreach(['PENDENTE','CONFORME','EXIGENCIA','NAO_APLICA'] as $v):?><option value="<?=$v?>" <?=$item['resultado']===$v?'selected':''?>><?=str_replace('_',' ',$v)?></option><?php endforeach?></select></td><td><textarea name="item_observacao[]" rows="2" <?=$analiseAberta?'':'disabled'?>><?=h($item['observacao'])?></textarea></td></tr><?php endforeach?></tbody></table></div><?php if($analiseAberta):?><button class="btn btn-primary"><i class="fas fa-save"></i> Salvar matriz</button><?php endif?></form><?php endif?>
  </section>
 
-  <?php $categoriasNormam = analisePlanosCategoriasNormam(); ?>
+  <?php 
+  $categoriasNormam = analisePlanosCategoriasNormam(); 
+  $todasReferenciasPreload = analisePlanosBuscarReferenciasNormam($pdo);
+  ?>
   <section class="analise-card" id="secao-exigencias">
    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
     <div>
@@ -705,12 +708,13 @@ require_once __DIR__ . '/../../includes/header.php';
   </style>
 
   <script>
-  let bancoNormasCache = null;
+  let bancoNormasCache = <?= json_encode($todasReferenciasPreload, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?> || [];
+  let ultimosItensFiltrados = [];
 
   function abrirModalBancoNormam() {
       const modal = document.getElementById('modalBancoNormam');
       modal.style.display = 'flex';
-      if (!bancoNormasCache) {
+      if (!bancoNormasCache || !Array.isArray(bancoNormasCache) || bancoNormasCache.length === 0) {
           carregarBancoNormas();
       } else {
           filtrarNormasModal();
@@ -727,22 +731,31 @@ require_once __DIR__ . '/../../includes/header.php';
       lista.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b;"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;"></i><p style="margin-top:8px;">Carregando referências normativas...</p></div>';
       
       fetch('<?= APP_URL ?>analises-planos/referencias-actions?action=buscar_ajax')
-          .then(r => r.json())
+          .then(r => {
+              if (!r.ok) throw new Error('HTTP ' + r.status);
+              return r.json();
+          })
           .then(data => {
-              bancoNormasCache = data || [];
+              const itens = Array.isArray(data) ? data : (data.dados || []);
+              bancoNormasCache = itens;
               filtrarNormasModal();
           })
           .catch(err => {
-              lista.innerHTML = '<div style="color:#ef4444; padding:20px; text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Falha ao carregar referências do servidor.</div>';
+              console.warn('Erro ao atualizar banco de normas via AJAX:', err);
+              if (bancoNormasCache && Array.isArray(bancoNormasCache) && bancoNormasCache.length > 0) {
+                  filtrarNormasModal();
+              } else {
+                  lista.innerHTML = '<div style="color:#ef4444; padding:20px; text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Falha ao carregar referências do servidor (' + escapeHtml(err.message) + ').</div>';
+              }
           });
   }
 
   function filtrarNormasModal() {
-      if (!bancoNormasCache) return;
+      if (!bancoNormasCache || !Array.isArray(bancoNormasCache)) return;
       const busca = (document.getElementById('modalBuscaNormam')?.value || '').toLowerCase().trim();
       const cat = document.getElementById('modalCategoriaNormam')?.value || '';
       
-      const filtrados = bancoNormasCache.filter(item => {
+      ultimosItensFiltrados = bancoNormasCache.filter(item => {
           if (cat && item.categoria !== cat) return false;
           if (!busca) return true;
           const texto = ((item.categoria || '') + ' ' + (item.referencia_normativa || '') + ' ' + (item.titulo || '') + ' ' + (item.descricao_padrao || '')).toLowerCase();
@@ -751,18 +764,17 @@ require_once __DIR__ . '/../../includes/header.php';
 
       const lista = document.getElementById('modalNormamLista');
       const contador = document.getElementById('modalContadorNormas');
-      if (contador) contador.textContent = `${filtrados.length} referência(s) encontrada(s)`;
+      if (contador) contador.textContent = `${ultimosItensFiltrados.length} referência(s) encontrada(s)`;
 
-      if (filtrados.length === 0) {
+      if (ultimosItensFiltrados.length === 0) {
           lista.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b;"><i class="fa-solid fa-folder-open" style="font-size:1.6rem; margin-bottom:8px; display:block;"></i>Nenhuma referência normativa corresponde aos filtros.</div>';
           return;
       }
 
-      lista.innerHTML = filtrados.map(item => {
+      lista.innerHTML = ultimosItensFiltrados.map((item, idx) => {
           const cat = escapeHtml(item.categoria || 'GERAL');
           const ref = escapeHtml(item.referencia_normativa || '');
           const desc = escapeHtml(item.descricao_padrao || item.titulo || '');
-          const id = escapeHtml(item.id || '');
           
           return `
               <div class="normam-item-card">
@@ -772,13 +784,19 @@ require_once __DIR__ . '/../../includes/header.php';
                   </div>
                   <p class="normam-item-desc">${desc}</p>
                   <div class="normam-item-actions">
-                      <button type="button" class="btn btn-success btn-sm" onclick='aplicarReferenciaNormam(${JSON.stringify(item)})'>
+                      <button type="button" class="btn btn-success btn-sm" onclick="aplicarReferenciaPorIndex(${idx})">
                           <i class="fa-solid fa-check"></i> Aplicar nesta Exigência
                       </button>
                   </div>
               </div>
           `;
       }).join('');
+  }
+
+  function aplicarReferenciaPorIndex(idx) {
+      const item = ultimosItensFiltrados[idx];
+      if (!item) return;
+      aplicarReferenciaNormam(item);
   }
 
   function aplicarReferenciaNormam(item) {
