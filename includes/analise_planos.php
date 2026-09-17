@@ -421,7 +421,7 @@ function analisePlanosGuardarUpload(array $arquivo, string $analiseId, array $me
     $destino = __DIR__ . '/../storage/private/' . $chave;
     $dir = dirname($destino);
     if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) throw new RuntimeException('Falha ao preparar armazenamento privado.');
-    if (!move_uploaded_file($arquivo['tmp_name'], $destino)) throw new RuntimeException('Falha ao armazenar o arquivo.');
+    if (!@move_uploaded_file($arquivo['tmp_name'], $destino) && !copy($arquivo['tmp_name'], $destino)) throw new RuntimeException('Falha ao armazenar o arquivo.');
     return 'local:' . $chave;
 }
 

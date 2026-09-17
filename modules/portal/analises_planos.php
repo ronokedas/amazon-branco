@@ -132,6 +132,65 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                         <i class="fas fa-upload"></i> Enviar nova revisão
                     </button>
                 </form>
+
+                <?php
+                $stmtSubHist = $pdo->prepare("
+                    SELECT s.revisao, s.descricao, s.recebido_em, s.origem,
+                           ar.id AS arquivo_id, ar.nome_original, ar.categoria, ar.tamanho_bytes, ar.extensao, ar.classificacao, ar.criado_em
+                    FROM analise_planos_submissoes s
+                    INNER JOIN analise_planos_arquivos ar ON ar.submissao_id = s.id
+                    WHERE s.analise_id = :id
+                    ORDER BY s.revisao DESC, ar.criado_em ASC
+                ");
+                $stmtSubHist->execute([':id' => $a['id']]);
+                $arquivosHistorico = $stmtSubHist->fetchAll(PDO::FETCH_ASSOC);
+                ?>
+
+                <?php if (!empty($arquivosHistorico)): ?>
+                    <div class="portal-uploaded-history" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                        <h3 style="font-size: 1.05rem; margin-bottom: 6px; color: #1e293b;">
+                            <i class="fa-solid fa-clock-rotate-left text-primary"></i> Documentos Já Enviados (Histórico Preservado)
+                        </h3>
+                        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 14px;">
+                            Abaixo estão os arquivos enviados nas revisões anteriores. Cada arquivo é preservado integralmente no sistema da Amazon Naval.
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <?php foreach ($arquivosHistorico as $histArq): ?>
+                                <?php
+                                $extH = strtolower($histArq['extensao'] ?? 'pdf');
+                                $iconeH = match($extH) {
+                                    'pdf' => 'fa-file-pdf text-danger',
+                                    'dwg', 'dxf' => 'fa-drafting-compass text-primary',
+                                    'doc', 'docx' => 'fa-file-word text-info',
+                                    'xls', 'xlsx' => 'fa-file-excel text-success',
+                                    default => 'fa-file text-secondary'
+                                };
+                                $tByte = (int)($histArq['tamanho_bytes'] ?? 0);
+                                $tFmt = $tByte < 1024 ? $tByte . ' B' : ($tByte < 1048576 ? round($tByte / 1024, 1) . ' KB' : round($tByte / 1048576, 2) . ' MB');
+                                ?>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; flex-wrap: wrap; gap: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <i class="fa-solid <?php echo $iconeH; ?>" style="font-size: 1.2rem;"></i>
+                                        <div>
+                                            <strong style="font-size: 0.9rem; color: #1e293b;"><?php echo h($histArq['nome_original']); ?></strong>
+                                            <div style="font-size: 0.78rem; color: #64748b;">
+                                                <span>Revisão <?php echo (int)$histArq['revisao']; ?></span> ·
+                                                <span><?php echo h($histArq['categoria'] ?: 'Projeto'); ?></span> ·
+                                                <span><?php echo $tFmt; ?></span> ·
+                                                <span>Enviado em <?php echo formatarData($histArq['recebido_em']); ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="badge" style="background: #e2e8f0; color: #334155; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px;">
+                                            <i class="fa-solid fa-check"></i> <?php echo h($histArq['classificacao'] ?: 'Recebido / Em análise'); ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <aside class="portal-analysis-side">

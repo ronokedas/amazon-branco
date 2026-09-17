@@ -18,9 +18,10 @@ try{
     $pdo->prepare("INSERT INTO analise_planos_submissoes(id,analise_id,revisao,descricao,recebido_em,origem,portal_cliente_id,criado_por)VALUES(:id,:analise,:rev,:descricao,CURDATE(),'PORTAL',:cliente,NULL)")->execute([':id'=>$sub,':analise'=>$analiseId,':rev'=>$rev,':descricao'=>trim($_POST['descricao']??'')?:'Revisão enviada pelo portal',':cliente'=>$clienteId]);
     $ins=$pdo->prepare("INSERT INTO analise_planos_arquivos(id,submissao_id,categoria,nome_original,extensao,mime_type,tamanho_bytes,sha256,chave_arquivo,criado_por)VALUES(:id,:sub,:categoria,:nome,:ext,:mime,:tam,:hash,:chave,NULL)");
     foreach($preparados as [$arquivo,$meta]){$chave=analisePlanosGuardarUpload($arquivo,$analiseId,$meta);$ins->execute([':id'=>gerarUUID(),':sub'=>$sub,':categoria'=>trim($_POST['categoria']??'Outros'),':nome'=>$meta['nome'],':ext'=>$meta['extensao'],':mime'=>$meta['mime'],':tam'=>$meta['tamanho'],':hash'=>$meta['sha256'],':chave'=>$chave]);}
-    $pdo->prepare("UPDATE analises_planos SET status='EM_ANALISE' WHERE id=:id")->execute([':id'=>$analiseId]);
-    analisePlanosHistorico($pdo,$analiseId,'REVISAO_PORTAL_RECEBIDA',$analise['status'],'EM_ANALISE','Revisão '.$rev.' enviada pelo portal com '.count($preparados).' arquivo(s).',(string)$analise['criado_por']);
-    analisePlanosNotificar($pdo,$analise['analista_id'],'REVISAO_PORTAL_RECEBIDA','Nova revisão recebida pelo portal',$analise['numero'].' recebeu a revisão '.$rev.'.',$analiseId,'analises-planos/form?id='.urlencode($analiseId));
+    $novoStatus = ($analise['status'] === 'AGUARDANDO_DOCUMENTOS') ? 'EM_ANALISE' : $analise['status'];
+    $pdo->prepare("UPDATE analises_planos SET status=:status WHERE id=:id")->execute([':status'=>$novoStatus, ':id'=>$analiseId]);
+    analisePlanosHistorico($pdo,$analiseId,'REVISAO_PORTAL_RECEBIDA',$analise['status'],$novoStatus,'Revisão '.$rev.' enviada pelo portal com '.count($preparados).' arquivo(s).',(string)$analise['criado_por']);
+    analisePlanosNotificar($pdo,$analise['analista_id'],'REVISAO_PORTAL_RECEBIDA','Nova revisão recebida pelo portal',$analise['numero'].' recebeu a revisão '.$rev.' com '.count($preparados).' arquivo(s) enviados pelo armador.',$analiseId,'analises-planos/form?id='.urlencode($analiseId));
     clientePortalAuditar($pdo,'UPLOAD_ANALISE',null,$analise['embarcacao_id'],'ANALISE_PLANOS',$analiseId,true,'Revisão '.$rev.' com '.count($preparados).' arquivo(s).');$pdo->commit();
     setMensagem('success','Revisão enviada com sucesso. Os arquivos anteriores foram preservados.');
 }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();clientePortalAuditar($pdo,'UPLOAD_ANALISE',null,null,'ANALISE_PLANOS',$analiseId,false,$e->getMessage());setMensagem('error',$e->getMessage());}

@@ -23,6 +23,21 @@ $diasAteVencer = function (?string $data): ?int {
     return (int)$hoje->diff($validade)->format('%r%a');
 };
 
+$analisesAtivasPortal = [];
+$embarcacaoIdsPortal = clientePortalEmbarcacaoIds($pdo, $clienteId);
+if ($embarcacaoIdsPortal) {
+    $pParams = [];
+    $pIn = clientePortalSqlIn($embarcacaoIdsPortal, 'p_emb_', $pParams);
+    $pStmt = $pdo->prepare("SELECT ap.id, ap.numero, ap.status, e.nome AS embarcacao_nome 
+                            FROM analises_planos ap 
+                            JOIN embarcacoes e ON e.id = ap.embarcacao_id
+                            WHERE ap.embarcacao_id IN ({$pIn}) 
+                              AND ap.status IN ('AGENDADA', 'EM_ANALISE', 'AGUARDANDO_DOCUMENTOS')
+                            LIMIT 3");
+    $pStmt->execute($pParams);
+    $analisesAtivasPortal = $pStmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 $titulo_page = 'Portal do Cliente';
 require_once __DIR__ . '/../../includes/portal_header.php';
 ?>
@@ -32,9 +47,16 @@ require_once __DIR__ . '/../../includes/portal_header.php';
             <span>Bem-vindo, <?php echo h(clientePortalNome()); ?></span>
             <h1>Portal do Cliente</h1>
             <p>Acesse seus certificados e acompanhe a situação dos seus documentos e embarcações.</p>
-            <a class="portal-hero-button" href="<?php echo APP_URL; ?>portal/documentos">
-                Ver documentos <i class="fa-solid fa-arrow-right"></i>
-            </a>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a class="portal-hero-button" href="<?php echo APP_URL; ?>portal/documentos">
+                    Ver documentos <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <?php if (!empty($analisesAtivasPortal)): ?>
+                    <a class="portal-hero-button" href="<?php echo APP_URL; ?>portal/analises-planos" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Enviar planos navais (<?php echo count($analisesAtivasPortal); ?> ativo) <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                <?php endif; ?>
+            </div>
         </div>
     </section>
 

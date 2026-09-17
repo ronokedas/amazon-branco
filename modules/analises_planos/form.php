@@ -238,6 +238,141 @@ require_once __DIR__ . '/../../includes/header.php';
   <div class="analise-summary"><span><b>Situação</b><?=h($statusLabels[$a['status']]??$a['status'])?></span><span><b>Embarcação</b><?=h($a['embarcacao_nome'])?></span><span><b>Vendedor de origem</b><?=h($a['vendedor_origem_nome'] ?: 'Legado / Direto')?></span><span><b>Analista</b><?=h($a['analista_nome'] ?: 'Não atribuído')?></span><span><b>Prazo</b><?=!empty($a['prazo_agendado_em'])?formatarDataCompleta($a['prazo_agendado_em']):'Não agendado'?></span></div>
  </div>
 
+ <?php
+ $submissoesPortal = array_filter($submissoes, fn($s) => ($s['origem'] ?? '') === 'PORTAL');
+ $totalArquivosPortal = array_reduce($submissoesPortal, fn($acc, $s) => $acc + count($s['arquivos'] ?? []), 0);
+ $analisePodeIniciar = $podeTecnico && ($a['status'] === 'AGENDADA' || empty($a['iniciado_em']));
+ ?>
+
+ <!-- Documentos de Projeto Recebidos do Armador (Portal do Cliente) -->
+ <section class="analise-card" style="border-left: 4px solid #0284c7;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+   <div>
+    <h3 style="margin-bottom: 4px;"><i class="fa-solid fa-cloud-arrow-up text-primary"></i> Documentos de Projeto do Armador (Portal do Cliente)</h3>
+    <p class="text-muted" style="margin-bottom: 0; font-size: 0.88rem;">
+     Plantas de engenharia naval, memoriais descritivos, arranjo geral e cálculos enviados pelo cliente via Portal do Armador.
+    </p>
+   </div>
+   <div>
+    <?php if ($totalArquivosPortal > 0): ?>
+     <span class="badge bg-primary" style="font-size: 0.82rem; padding: 6px 12px;">
+      <i class="fa-solid fa-folder-open"></i> <?= (int)$totalArquivosPortal ?> arquivo(s) do armador
+     </span>
+    <?php endif; ?>
+   </div>
+  </div>
+
+  <?php if (!empty($submissoesPortal)): ?>
+   <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 14px;">
+    <?php foreach ($submissoesPortal as $subP): ?>
+     <div style="border: 1px solid #e0f2fe; border-radius: 8px; padding: 14px; background: #f8fafc;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+       <div>
+        <strong style="color: #0369a1; font-size: 0.95rem;">
+         <i class="fa-solid fa-box-archive"></i> Revisão <?= (int)$subP['revisao'] ?> · Portal do Armador
+        </strong>
+        <span style="font-size: 0.84rem; color: #64748b; margin-left: 8px;">
+         <i class="fa-solid fa-calendar-day"></i> Recebido em <?= formatarData($subP['recebido_em']) ?>
+         · <i class="fa-solid fa-user"></i> <?= h($subP['portal_nome'] ?: 'Armador/Cliente') ?>
+        </span>
+       </div>
+       <?php if (!empty($subP['descricao'])): ?>
+        <span style="font-size: 0.84rem; background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 12px;">
+         <?= h($subP['descricao']) ?>
+        </span>
+       <?php endif; ?>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+       <?php foreach ($subP['arquivos'] as $arqP): ?>
+        <?php
+        $ext = strtolower($arqP['extensao'] ?? 'pdf');
+        $iconeArquivo = match($ext) {
+            'pdf' => 'fa-file-pdf text-danger',
+            'dwg', 'dxf' => 'fa-drafting-compass text-primary',
+            'doc', 'docx' => 'fa-file-word text-info',
+            'xls', 'xlsx' => 'fa-file-excel text-success',
+            'jpg', 'jpeg', 'png' => 'fa-file-image text-warning',
+            default => 'fa-file text-secondary'
+        };
+        $tamBytes = (int)($arqP['tamanho_bytes'] ?? 0);
+        $tamFormatado = $tamBytes < 1024 ? $tamBytes . ' B' : ($tamBytes < 1048576 ? round($tamBytes / 1024, 1) . ' KB' : round($tamBytes / 1048576, 2) . ' MB');
+        $badgeClassifColor = match($arqP['classificacao'] ?? '') {
+            'ACEITO' => 'success',
+            'SUBSTITUIDO' => 'warning',
+            'REJEITADO' => 'danger',
+            default => 'secondary'
+        };
+        ?>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; flex-wrap: wrap; gap: 8px;">
+         <div style="display: flex; align-items: center; gap: 10px;">
+          <i class="fa-solid <?= $iconeArquivo ?>" style="font-size: 1.3rem;"></i>
+          <div>
+           <strong style="font-size: 0.9rem; color: #1e293b;"><?= h($arqP['nome_original']) ?></strong>
+           <div style="font-size: 0.78rem; color: #64748b;">
+            <span><?= h($arqP['categoria'] ?: 'Projeto') ?></span> · 
+            <span><?= $tamFormatado ?></span> · 
+            <span class="badge bg-<?= $badgeClassifColor ?>" style="font-size: 0.72rem;"><?= h($arqP['classificacao'] ?: 'RECEBIDO') ?></span>
+            <?php if (!empty($arqP['item_documento'])): ?>
+             · <span style="color: #0369a1;"><i class="fa-solid fa-link"></i> <?= h($arqP['item_documento']) ?></span>
+            <?php endif; ?>
+           </div>
+          </div>
+         </div>
+         <div style="display: flex; gap: 8px; align-items: center;">
+          <a class="btn btn-outline-primary btn-sm" href="<?= APP_URL ?>analises-planos/arquivo?id=<?= urlencode($arqP['id']) ?>" target="_blank" title="Abrir / Visualizar documento original">
+           <i class="fa-solid fa-arrow-up-right-from-square"></i> Visualizar
+          </a>
+          <a class="btn btn-secondary btn-sm" href="<?= APP_URL ?>analises-planos/arquivo?id=<?= urlencode($arqP['id']) ?>&download=1" title="Baixar arquivo original para o computador">
+           <i class="fa-solid fa-download"></i> Baixar
+          </a>
+         </div>
+        </div>
+       <?php endforeach; ?>
+      </div>
+     </div>
+    <?php endforeach; ?>
+   </div>
+
+   <?php if ($analisePodeIniciar): ?>
+    <div style="margin-top: 14px; padding: 14px 18px; background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+     <div>
+      <strong style="color: #15803d; font-size: 0.95rem;"><i class="fa-solid fa-circle-check"></i> Documentos prontos para conferência do Analista!</strong>
+      <p style="margin: 2px 0 0 0; font-size: 0.84rem; color: #166534;">
+       Você pode iniciar a análise técnica agora mesmo. A conferência dos planos não depende da realização da vistoria física de campo.
+      </p>
+     </div>
+     <form method="post" action="<?= APP_URL ?>analises-planos/actions">
+      <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
+      <input type="hidden" name="action" value="iniciar">
+      <input type="hidden" name="analise_id" value="<?= h($id) ?>">
+      <button class="btn btn-success" style="font-weight: 600; box-shadow: 0 4px 12px rgba(22, 101, 52, 0.25);">
+       <i class="fas fa-play"></i> Iniciar Análise Técnica Agora
+      </button>
+     </form>
+    </div>
+   <?php endif; ?>
+
+  <?php else: ?>
+   <div style="padding: 14px; background: rgba(148, 163, 184, 0.08); border-radius: 8px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div>
+     <p class="text-muted mb-0" style="font-size: 0.88rem;">
+      <i class="fa-solid fa-info-circle"></i> Nenhum arquivo anexado pelo armador no Portal do Cliente até o momento.
+      O analista também pode anexar arquivos recebidos diretamente por e-mail ou mídia física na seção <strong>Revisões e arquivos</strong> abaixo.
+     </p>
+    </div>
+    <?php if ($analisePodeIniciar): ?>
+     <form method="post" action="<?= APP_URL ?>analises-planos/actions">
+      <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
+      <input type="hidden" name="action" value="iniciar">
+      <input type="hidden" name="analise_id" value="<?= h($id) ?>">
+      <button class="btn btn-outline-primary btn-sm"><i class="fas fa-play"></i> Iniciar Análise Técnica</button>
+     </form>
+    <?php endif; ?>
+   </div>
+  <?php endif; ?>
+ </section>
+
  <!-- Vistoria Técnica de Campo (A Bordo) -->
  <section class="analise-card" style="border-left: 4px solid #087653;">
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
@@ -247,6 +382,11 @@ require_once __DIR__ . '/../../includes/header.php';
      Confronte as medições, fotos e anteparas inspecionadas a bordo pelo Vistoriador com os planos de projeto e estabilidade.
     </p>
    </div>
+  </div>
+
+  <div style="margin-top: 10px; padding: 10px 14px; background: rgba(37, 99, 235, 0.06); border-left: 4px solid #2563eb; border-radius: 4px; font-size: 0.86rem; color: #1e40af;">
+   <strong><i class="fa-solid fa-circle-info"></i> Independência Operacional NORMAM-202:</strong>
+   A análise e aprovação das plantas de engenharia (Arranjo Geral, Linhas, Estabilidade e Memorial Descritivo) é um processo documental de escritório e <strong>pode ser iniciada e realizada a qualquer momento</strong>, independentemente da realização da vistoria física a bordo.
   </div>
 
   <?php if (!$vistoriasVinculadas): ?>
@@ -338,7 +478,7 @@ require_once __DIR__ . '/../../includes/header.php';
  </section>
  <?php endif?>
 
- <?php if($podeTecnico&&$a['status']==='AGENDADA'):?><section class="analise-card"><form method="post" action="<?=APP_URL?>analises-planos/actions"><input type="hidden" name="csrf_token" value="<?=gerarCSRF()?>"><input type="hidden" name="action" value="iniciar"><input type="hidden" name="analise_id" value="<?=h($id)?>"><button class="btn btn-primary"><i class="fas fa-play"></i> Iniciar análise técnica</button></form></section><?php endif?>
+ <?php if ($podeTecnico && ($a['status'] === 'AGENDADA' || empty($a['iniciado_em']))): ?><section class="analise-card"><form method="post" action="<?=APP_URL?>analises-planos/actions"><input type="hidden" name="csrf_token" value="<?=gerarCSRF()?>"><input type="hidden" name="action" value="iniciar"><input type="hidden" name="analise_id" value="<?=h($id)?>"><button class="btn btn-primary"><i class="fas fa-play"></i> Iniciar análise técnica</button></form></section><?php endif?>
 
  <section class="analise-card"><h3><i class="fas fa-ship"></i> Enquadramento técnico</h3>
   <form method="post" action="<?=APP_URL?>analises-planos/actions" class="form-padrao"><input type="hidden" name="csrf_token" value="<?=gerarCSRF()?>"><input type="hidden" name="action" value="salvar"><input type="hidden" name="id" value="<?=h($id)?>">
