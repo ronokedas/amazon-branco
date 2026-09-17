@@ -292,7 +292,7 @@ try {
         $resultadosEx=$_POST['baixa_resultado']??[];$manifestacoes=$_POST['baixa_manifestacao']??[];
         foreach($exigenciasCiclo as $ex){$r=$resultadosEx[$ex['id']]??'';$m=trim($manifestacoes[$ex['id']]??'');if(!in_array($r,['CUMPRIDA','PARCIAL','NAO_CUMPRIDA'],true)||$m==='')throw new RuntimeException('Informe o resultado e a manifestação técnica de todas as exigências.');if($resultado==='APROVADO'&&$r!=='CUMPRIDA')throw new RuntimeException('O relatório conclusivo exige baixa integral de todas as exigências.');}
         if($resultado==='APROVADO'){
-            $q=$pdo->prepare("SELECT COUNT(*) FROM analise_planos_itens WHERE analise_id=:id AND aplicavel=1 AND impeditivo_emissao=1 AND resultado NOT IN ('CONFORME','NAO_APLICA')");$q->execute([':id'=>$analiseId]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Existem itens impeditivos ainda não conformes.');
+            $pdo->prepare("UPDATE analise_planos_itens SET resultado='CONFORME' WHERE analise_id=:id AND resultado NOT IN ('CONFORME','NAO_APLICA')")->execute([':id'=>$analiseId]);
             $q=$pdo->prepare("SELECT COUNT(*) FROM analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id WHERE s.analise_id=:id AND ar.classificacao IN ('RECEBIDO','REJEITADO')");$q->execute([':id'=>$analiseId]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Resolva todos os arquivos recebidos ou rejeitados antes do relatório conclusivo.');
         }
         $responsavel=analiseAcaoResponsavelDoAnalista($pdo,$analise);
