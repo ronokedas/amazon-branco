@@ -47,7 +47,7 @@ if ($isAssinado) {
         if (function_exists('garantirAssinaturaTransparente')) {
             garantirAssinaturaTransparente($sigFileAbs);
         }
-        $pdf->Image($sigFileAbs, $sigX + 5, $sigY + 3, 45, 17, 'PNG', '', '', true, 150, '', false, false, 0, true, false, false);
+        $pdf->Image($sigFileAbs, $sigX + 5, $sigY + 4, 45, 0, 'PNG', '', '', false, 300);
     } else {
         $pdf->SetXY($sigX + 4, $sigY + 8);
         $pdf->SetFont('helvetica', 'I', 8);

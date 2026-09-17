@@ -86,7 +86,7 @@ function aprovacaoPdfCriarComBloco(string $origem, string $destino, array $a): v
 
         $signature = (string)($a['assinatura_caminho_absoluto'] ?? '');
         if ($signature !== '' && is_file($signature)) {
-            $pdf->Image($signature, $x + 4, $y + 7, 34, 11, '', '', '', true, 300, '', false, false, 0, true, false, false);
+            $pdf->Image($signature, $x + 4, $y + 7, 34, 11, '', '', '', false, 300, '', false, false, 0, false, false, false);
         }
         $pdf->SetTextColor(65, 70, 68);
         $pdf->SetFont('helvetica', 'I', 5.1);
@@ -175,7 +175,7 @@ function aprovacaoPdfCriarComBloco(string $origem, string $destino, array $a): v
 
     $signature = (string)($a['assinatura_caminho_absoluto'] ?? '');
     if ($signature !== '' && is_file($signature)) {
-        $pdf->Image($signature, $x + 5, $y + 36, 42, 14, '', '', '', true, 300, '', false, false, 0, true, false, false);
+        $pdf->Image($signature, $x + 5, $y + 36, 42, 14, '', '', '', false, 300, '', false, false, 0, false, false, false);
     }
     $pdf->SetXY($x + 3, $y + 52);
     $pdf->SetFont('helvetica', 'I', 5.8);
