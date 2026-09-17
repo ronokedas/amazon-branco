@@ -471,8 +471,11 @@ $statusMap = [
 /* Grade Principal */
 .analista-main-grid {
     display: grid;
-    grid-template-columns: 1fr 360px;
+    grid-template-columns: minmax(0, 1fr) 360px;
     gap: 22px;
+}
+.analista-card--fila {
+    min-width: 0;
 }
 .analista-card {
     background: #ffffff;
@@ -512,6 +515,7 @@ $statusMap = [
 /* Tabela de Planos */
 .tabela-planos-wrap {
     overflow-x: auto;
+    scrollbar-width: thin;
 }
 .tabela-planos {
     width: 100%;
@@ -531,6 +535,58 @@ $statusMap = [
     border-bottom: 1px solid #f1f5f9;
     font-size: 0.88rem;
     vertical-align: middle;
+}
+.tabela-planos th:last-child,
+.tabela-planos td:last-child {
+    text-align: right !important;
+    white-space: nowrap !important;
+    width: 125px !important;
+    min-width: 125px !important;
+    padding-right: 14px !important;
+}
+
+/* Botão Analisar na Fila Técnica */
+.btn-analisar,
+.tabela-planos td:last-child .btn-analisar,
+td:last-child .btn-analisar,
+.tabela-planos .btn-analisar {
+    width: auto !important;
+    min-width: 104px !important;
+    max-width: none !important;
+    height: 34px !important;
+    padding: 0 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    font-size: 0.84rem !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    border-radius: 8px !important;
+    background-color: #0d4a40 !important;
+    border: 1px solid #0d4a40 !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    box-shadow: 0 2px 5px rgba(13, 74, 64, 0.18) !important;
+    transition: all 0.18s ease-in-out !important;
+    box-sizing: border-box !important;
+}
+
+.btn-analisar:hover,
+.tabela-planos td:last-child .btn-analisar:hover,
+td:last-child .btn-analisar:hover,
+.tabela-planos .btn-analisar:hover {
+    background-color: #08332c !important;
+    border-color: #08332c !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(13, 74, 64, 0.3) !important;
+    transform: translateY(-1px);
+}
+
+.btn-analisar i {
+    font-size: 0.85rem !important;
+    color: #5eead4 !important;
 }
 .plano-info-cell {
     display: flex;
