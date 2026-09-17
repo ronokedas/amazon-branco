@@ -29,6 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verificarCSRF($_POST['csrf_token']
     redirecionar(APP_URL . 'analises-planos/referencias');
 }
 
+$redirectCat = trim($_POST['redirect_categoria'] ?? $_POST['categoria'] ?? '');
+$urlRetorno = APP_URL . 'analises-planos/referencias' . ($redirectCat !== '' ? '?categoria=' . urlencode($redirectCat) : '');
+
 try {
     if ($acao === 'salvar') {
         $id = analisePlanosSalvarReferenciaNormam($pdo, [
@@ -42,8 +45,8 @@ try {
             'ordem' => (int)($_POST['ordem'] ?? 0),
         ], $usuarioId);
         
-        setMensagem('success', 'Referência normativa da NORMAM salva com sucesso.');
-        redirecionar(APP_URL . 'analises-planos/referencias');
+        setMensagem('success', 'Referência normativa da NORMAM salva com sucesso no banco técnico.');
+        redirecionar($urlRetorno);
     }
 
     if ($acao === 'excluir') {
@@ -53,11 +56,11 @@ try {
         }
         analisePlanosExcluirReferenciaNormam($pdo, $id);
         setMensagem('success', 'Referência normativa excluída com sucesso.');
-        redirecionar(APP_URL . 'analises-planos/referencias');
+        redirecionar($urlRetorno);
     }
 
     throw new InvalidArgumentException('Ação não reconhecida.');
 } catch (Throwable $e) {
     setMensagem('error', 'Erro: ' . $e->getMessage());
-    redirecionar(APP_URL . 'analises-planos/referencias');
+    redirecionar($urlRetorno);
 }

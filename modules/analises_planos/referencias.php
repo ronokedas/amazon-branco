@@ -161,7 +161,7 @@ require_once __DIR__ . '/../../includes/header.php';
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($referencias as $ref): ?>
+                        <?php foreach ($referencias as $idx => $ref): ?>
                             <tr style="border-bottom: 1px solid #f1f5f9;">
                                 <td style="padding: 12px 14px; vertical-align: top;">
                                     <span class="badge" style="background: #e0f2fe; color: #0369a1; font-size: 0.72rem; padding: 4px 8px; border-radius: 4px; display: inline-block; word-break: break-word;">
@@ -189,13 +189,14 @@ require_once __DIR__ . '/../../includes/header.php';
                                         <button type="button" 
                                                 class="btn btn-sm btn-outline-primary" 
                                                 title="Editar Referência"
-                                                onclick='editarReferencia(<?= json_encode($ref, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                                                onclick="editarReferenciaPorIndex(<?= $idx ?>)">
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </button>
                                         <form method="post" action="<?= APP_URL ?>analises-planos/referencias-actions" onsubmit="return confirm('Deseja realmente excluir esta referência normativa?');" style="display: inline;">
                                             <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
                                             <input type="hidden" name="action" value="excluir">
                                             <input type="hidden" name="id" value="<?= h($ref['id']) ?>">
+                                            <input type="hidden" name="redirect_categoria" value="<?= h($filtro_categoria) ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
                                                 <i class="fa-solid fa-trash"></i>
                                             </button>
@@ -212,21 +213,22 @@ require_once __DIR__ . '/../../includes/header.php';
 </div>
 
 <!-- Modal para Cadastro e Edição de Referência NORMAM -->
-<div id="modalReferencia" class="modal" tabindex="-1" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
-    <div style="background: #ffffff; width: 100%; max-width: 650px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); overflow: hidden;">
+<div id="modalReferencia" class="modal-referencia-overlay" style="display: none;">
+    <div class="modal-referencia-card">
         <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
-            <h3 id="modalTitulo" style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #0f172a;">
+            <h3 id="modalTitulo" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">
                 <i class="fa-solid fa-book-bookmark text-primary"></i> Nova Referência NORMAM
             </h3>
-            <button type="button" onclick="fecharModalReferencia()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;">
-                <i class="fa-solid fa-xmark"></i>
+            <button type="button" onclick="fecharModalReferencia()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #64748b; line-height: 1; padding: 0 4px;">
+                &times;
             </button>
         </div>
 
-        <form method="post" action="<?= APP_URL ?>analises-planos/referencias-actions" style="padding: 20px;">
+        <form method="post" action="<?= APP_URL ?>analises-planos/referencias-actions" style="padding: 20px; overflow-y: auto; flex: 1;">
             <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
             <input type="hidden" name="action" value="salvar">
             <input type="hidden" name="id" id="ref_id" value="">
+            <input type="hidden" name="redirect_categoria" value="<?= h($filtro_categoria) ?>">
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
                 <div>
@@ -238,7 +240,7 @@ require_once __DIR__ . '/../../includes/header.php';
                             <option value="<?= h($cat) ?>"><?= h($cat) ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <small class="text-muted" style="font-size: 0.72rem;">Prancha ou memorial associado.</small>
+                    <small class="text-muted" style="font-size: 0.72rem;">Prancha ou memorial associado na NORMAM.</small>
                 </div>
 
                 <div>
@@ -246,16 +248,26 @@ require_once __DIR__ . '/../../includes/header.php';
                         Norma Regulamentadora *
                     </label>
                     <input type="text" name="norma" id="ref_norma" class="form-control" value="NORMAM-202" required placeholder="Ex.: NORMAM-202">
-                    <small class="text-muted" style="font-size: 0.72rem;">Ex.: NORMAM-202, RIPEAM-72, etc.</small>
+                    <small class="text-muted" style="font-size: 0.72rem;">Ex.: NORMAM-202, RIPEAM-72, NORMAM-211, etc.</small>
                 </div>
             </div>
 
-            <div style="margin-bottom: 14px;">
-                <label style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 4px; display: block;">
-                    Referência Formal da Norma (Artigo / Anexo / Item) *
-                </label>
-                <input type="text" name="referencia_normativa" id="ref_referencia_normativa" class="form-control" required placeholder="Ex.: NORMAM-202, Item 3, b) do Anexo 3-F.">
-                <small class="text-muted" style="font-size: 0.72rem;">Texto exato da referência que será impresso na coluna REFERÊNCIA do laudo.</small>
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px;">
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 4px; display: block;">
+                        Referência Formal da Norma (Artigo / Anexo / Item) *
+                    </label>
+                    <input type="text" name="referencia_normativa" id="ref_referencia_normativa" class="form-control" required placeholder="Ex.: NORMAM-202, Item 3, b) do Anexo 3-F.">
+                    <small class="text-muted" style="font-size: 0.72rem;">Texto exato que sairá na coluna REFERÊNCIA do relatório oficial RAP.</small>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 4px; display: block;">
+                        Item da Norma
+                    </label>
+                    <input type="text" name="item_norma" id="ref_item_norma" class="form-control" placeholder="Ex.: Anexo 3-F">
+                    <small class="text-muted" style="font-size: 0.72rem;">Seção ou anexo específico.</small>
+                </div>
             </div>
 
             <div style="margin-bottom: 14px;">
@@ -266,50 +278,132 @@ require_once __DIR__ . '/../../includes/header.php';
                 <small class="text-muted" style="font-size: 0.72rem;">Usado para localizar a exigência com facilidade no formulário de análise.</small>
             </div>
 
-            <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 18px;">
                 <label style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 4px; display: block;">
                     Descrição Padrão da Exigência Técnica *
                 </label>
                 <textarea name="descricao_padrao" id="ref_descricao_padrao" class="form-control" rows="4" required placeholder="Ex.: Apresentar ângulo de visibilidade no passadiço conforme parâmetros regulamentares..."></textarea>
-                <small class="text-muted" style="font-size: 0.72rem;">Texto modelo que será sugerido ao analista ao criar novas exigências.</small>
+                <small class="text-muted" style="font-size: 0.72rem;">Texto modelo sugerido ao analista ao criar novas exigências.</small>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
                 <button type="button" class="btn btn-outline-secondary" onclick="fecharModalReferencia()">Cancelar</button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-save"></i> Salvar Referência
+                <button type="submit" class="btn btn-success" style="font-weight: 600;">
+                    <i class="fa-solid fa-check"></i> Salvar Referência
                 </button>
             </div>
         </form>
     </div>
 </div>
 
+<style>
+.modal-referencia-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.65);
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    backdrop-filter: blur(4px);
+}
+.modal-referencia-overlay.aberto {
+    display: flex !important;
+}
+.modal-referencia-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 680px;
+    border-radius: 12px;
+    box-shadow: 0 20px 35px -5px rgba(0,0,0,0.3);
+    overflow: hidden;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+</style>
+
 <script>
-function abrirModalReferencia() {
+const todasReferenciasPagina = <?= json_encode($referencias, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?> || [];
+
+function abrirModalReferencia(categoriaPrevia) {
     document.getElementById('modalTitulo').innerHTML = '<i class="fa-solid fa-book-bookmark text-primary"></i> Nova Referência NORMAM';
     document.getElementById('ref_id').value = '';
-    document.getElementById('ref_categoria').value = 'GERAL';
+    
+    // Auto-selecionar categoria ativa na tela se houver filtro
+    const catUrl = (new URLSearchParams(window.location.search)).get('categoria') || '';
+    const catFiltro = categoriaPrevia || catUrl || 'GERAL';
+    const selectCat = document.getElementById('ref_categoria');
+    if (selectCat) {
+        if (Array.from(selectCat.options).some(o => o.value === catFiltro)) {
+            selectCat.value = catFiltro;
+        } else {
+            selectCat.value = 'GERAL';
+        }
+    }
+    
     document.getElementById('ref_norma').value = 'NORMAM-202';
+    document.getElementById('ref_item_norma').value = '';
     document.getElementById('ref_referencia_normativa').value = '';
     document.getElementById('ref_titulo').value = '';
     document.getElementById('ref_descricao_padrao').value = '';
-    document.getElementById('modalReferencia').style.display = 'flex';
+    
+    const modal = document.getElementById('modalReferencia');
+    modal.classList.add('aberto');
+    modal.style.setProperty('display', 'flex', 'important');
+    
+    setTimeout(() => {
+        document.getElementById('ref_referencia_normativa')?.focus();
+    }, 50);
 }
 
-function editarReferencia(ref) {
+function editarReferenciaPorIndex(idx) {
+    const ref = todasReferenciasPagina[idx];
+    if (!ref) return;
+    
     document.getElementById('modalTitulo').innerHTML = '<i class="fa-solid fa-pen-to-square text-primary"></i> Editar Referência NORMAM';
     document.getElementById('ref_id').value = ref.id || '';
     document.getElementById('ref_categoria').value = ref.categoria || 'GERAL';
     document.getElementById('ref_norma').value = ref.norma || 'NORMAM-202';
+    document.getElementById('ref_item_norma').value = ref.item_norma || '';
     document.getElementById('ref_referencia_normativa').value = ref.referencia_normativa || '';
     document.getElementById('ref_titulo').value = ref.titulo || '';
     document.getElementById('ref_descricao_padrao').value = ref.descricao_padrao || '';
-    document.getElementById('modalReferencia').style.display = 'flex';
+    
+    const modal = document.getElementById('modalReferencia');
+    modal.classList.add('aberto');
+    modal.style.setProperty('display', 'flex', 'important');
+    
+    setTimeout(() => {
+        document.getElementById('ref_referencia_normativa')?.focus();
+    }, 50);
 }
 
 function fecharModalReferencia() {
-    document.getElementById('modalReferencia').style.display = 'none';
+    const modal = document.getElementById('modalReferencia');
+    modal.classList.remove('aberto');
+    modal.style.setProperty('display', 'none', 'important');
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modalReferencia');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                fecharModalReferencia();
+            }
+        });
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            fecharModalReferencia();
+        }
+    });
+});
 </script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
