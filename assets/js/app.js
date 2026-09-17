@@ -343,3 +343,47 @@ document.addEventListener('input', function (event) {
     });
     if (select.selectedOptions[0]?.hidden) select.value = '';
 });
+
+// ============================================
+// MÁSCARA AUTOMÁTICA CPF / CNPJ GLOBAL
+// ============================================
+window.mascararCpfCnpj = function(input) {
+    if (!input) return;
+    let v = input.value.replace(/\D/g, '');
+    if (v.length > 14) v = v.slice(0, 14);
+
+    if (v.length <= 11) {
+        if (v.length > 9) {
+            v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{1,2})$/, '$1.$2.$3-$4');
+        } else if (v.length > 6) {
+            v = v.replace(/^(\d{3})(\d{3})(\d{1,3})$/, '$1.$2.$3');
+        } else if (v.length > 3) {
+            v = v.replace(/^(\d{3})(\d{1,3})$/, '$1.$2');
+        }
+    } else {
+        if (v.length > 12) {
+            v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})$/, '$1.$2.$3/$4-$5');
+        } else if (v.length > 8) {
+            v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})$/, '$1.$2.$3/$4');
+        } else if (v.length > 5) {
+            v = v.replace(/^(\d{2})(\d{3})(\d{1,3})$/, '$1.$2.$3');
+        } else if (v.length > 2) {
+            v = v.replace(/^(\d{2})(\d{1,3})$/, '$1.$2');
+        }
+    }
+    input.value = v;
+};
+
+document.addEventListener('input', function(e) {
+    const el = e.target;
+    if (el && (el.id === 'cpf_cnpj' || el.name === 'cpf_cnpj' || el.name === 'cpf' || el.classList.contains('mascara-cpf') || el.classList.contains('js-mascara-cpf'))) {
+        mascararCpfCnpj(el);
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('#cpf_cnpj, [name="cpf_cnpj"], [name="cpf"], .mascara-cpf, .js-mascara-cpf').forEach(function(input) {
+        if (input.value) mascararCpfCnpj(input);
+    });
+});
+

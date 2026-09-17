@@ -90,9 +90,21 @@ require_once __DIR__ . '/../../includes/header.php';
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="cpf_cnpj" class="form-label">CPF/CNPJ *</label>
+                        <?php
+                        $cpfRespExibicao = $responsavel['cpf_cnpj'] ?? '';
+                        $cpfRespDigitos = preg_replace('/\D/', '', (string)$cpfRespExibicao);
+                        if (strlen($cpfRespDigitos) === 11) {
+                            $cpfRespExibicao = preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $cpfRespDigitos);
+                        } elseif (strlen($cpfRespDigitos) === 14) {
+                            $cpfRespExibicao = preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/', '$1.$2.$3/$4-$5', $cpfRespDigitos);
+                        }
+                        ?>
                         <input type="text" class="form-control" id="cpf_cnpj" name="cpf_cnpj"
-                               value="<?= htmlspecialchars($responsavel['cpf_cnpj'] ?? '') ?>"
-                               placeholder="000.000.000-00 ou 00.000.000/0000-00" required>
+                               value="<?= htmlspecialchars($cpfRespExibicao) ?>"
+                               placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                               maxlength="18"
+                               autocomplete="off"
+                               oninput="mascararCpfCnpj(this)" required>
                     </div>
 
                     <div class="col-md-6 mb-3">

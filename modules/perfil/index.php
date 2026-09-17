@@ -375,13 +375,24 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <label for="cpf_cnpj">
                                 <i class="fas fa-fingerprint"></i> CPF do Responsável Técnico
                             </label>
+                            <?php
+                            $cpfValorExibicao = $responsavel['cpf_cnpj'] ?? '';
+                            $cpfDigitos = preg_replace('/\D/', '', (string)$cpfValorExibicao);
+                            if (strlen($cpfDigitos) === 11) {
+                                $cpfValorExibicao = preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $cpfDigitos);
+                            } elseif (strlen($cpfDigitos) === 14) {
+                                $cpfValorExibicao = preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/', '$1.$2.$3/$4-$5', $cpfDigitos);
+                            }
+                            ?>
                             <input type="text" 
                                    id="cpf_cnpj" 
                                    name="cpf_cnpj" 
                                    placeholder="000.000.000-00" 
                                    maxlength="18"
-                                   value="<?php echo h($responsavel['cpf_cnpj'] ?? ''); ?>">
-                            <small class="text-muted">Utilizado na composição do hash criptográfico e termo de fé pública.</small>
+                                   autocomplete="off"
+                                   oninput="mascararCpfCnpj(this)"
+                                   value="<?php echo h($cpfValorExibicao); ?>">
+                            <small class="text-muted">Formatação automática. Utilizado na composição do hash criptográfico e termo de fé pública.</small>
                         </div>
                     </div>
 
@@ -454,5 +465,28 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const el = document.getElementById('cpf_cnpj');
+    if (el) {
+        if (typeof window.mascararCpfCnpj === 'function') {
+            window.mascararCpfCnpj(el);
+        }
+        el.addEventListener('input', function() {
+            if (typeof window.mascararCpfCnpj === 'function') {
+                window.mascararCpfCnpj(this);
+            }
+        });
+        el.addEventListener('paste', function() {
+            setTimeout(() => {
+                if (typeof window.mascararCpfCnpj === 'function') {
+                    window.mascararCpfCnpj(this);
+                }
+            }, 10);
+        });
+    }
+});
+</script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
