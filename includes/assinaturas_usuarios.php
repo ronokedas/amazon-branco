@@ -383,20 +383,35 @@ if (!function_exists('salvarImagemAssinaturaResponsavel')) {
         imagealphablending($target, true);
         imagecopyresampled($target, $source, (int)(($canvasW - $drawW) / 2), (int)(($canvasH - $drawH) / 2), 0, 0, $drawW, $drawH, $sourceW, $sourceH);
         $baseDir = dirname(__DIR__);
+        $parentDir = $baseDir . '/storage/private/assinaturas_responsaveis/';
+        if (!is_dir($parentDir)) {
+            @mkdir($parentDir, 0777, true);
+            @chmod($parentDir, 0777);
+        }
         $relativeDir = 'storage/private/assinaturas_responsaveis/' . $responsavelId . '/';
         $absoluteDir = $baseDir . '/' . $relativeDir;
-        if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0750, true) && !is_dir($absoluteDir)) {
+        if (!is_dir($absoluteDir)) {
+            @mkdir($absoluteDir, 0777, true);
+            @chmod($absoluteDir, 0777);
+        } else {
+            @chmod($absoluteDir, 0777);
+        }
+        if (!is_dir($absoluteDir) || !is_writable($absoluteDir)) {
             imagedestroy($source);
             imagedestroy($target);
-            throw new RuntimeException('Não foi possível preparar o armazenamento da assinatura.');
+            error_log("Erro de permissao no diretorio de assinatura: {$absoluteDir}");
+            throw new RuntimeException('Sem permissão de gravação na pasta de assinaturas. Contate o suporte técnico.');
         }
         $relative = $relativeDir . date('Ymd_His') . '_' . bin2hex(random_bytes(8)) . '.png';
         $absolute = $baseDir . '/' . $relative;
         if (!imagepng($target, $absolute, 6)) {
+            $err = error_get_last();
             imagedestroy($source);
             imagedestroy($target);
-            throw new RuntimeException('Não foi possível salvar a assinatura.');
+            error_log("Falha ao salvar imagem de assinatura em {$absolute}: " . json_encode($err));
+            throw new RuntimeException('Não foi possível salvar o arquivo da assinatura no disco.');
         }
+        @chmod($absolute, 0666);
         imagedestroy($source);
         imagedestroy($target);
         return ['path' => $relative, 'hash' => hash_file('sha256', $absolute)];

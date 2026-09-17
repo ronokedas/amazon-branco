@@ -126,8 +126,23 @@ require_once __DIR__ . '/../../includes/header.php';
                     <div class="col-md-12 mb-3">
                         <label for="assinatura_imagem" class="form-label">Assinatura manuscrita <?= $id ? '' : '*' ?></label>
                         <input type="file" class="form-control" id="assinatura_imagem" name="assinatura_imagem"
-                               accept="image/png,image/jpeg,.png,.jpg,.jpeg" <?= $id ? '' : 'required' ?>>
+                               accept="image/png,image/jpeg,.png,.jpg,.jpeg" onchange="previewAssinaturaInstantanea(this)" <?= $id ? '' : 'required' ?>>
                         <small class="form-text text-muted">PNG ou JPEG, até 2 MB. Use fundo branco ou transparente, boa resolução e proporção aproximada de 3:1.</small>
+
+                        <!-- Preview Instantaneo -->
+                        <div id="box_preview_nova_assinatura" style="display: none; margin-top: 12px; padding: 14px; background: rgba(56, 189, 248, 0.08); border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.35);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <strong style="font-size: 13px; color: #0284c7;"><i class="fas fa-eye"></i> Prévia da nova imagem selecionada (antes de salvar):</strong>
+                                <span class="badge badge-success" id="badge_preview_info">Pronta para salvar</span>
+                            </div>
+                            <div style="background: repeating-conic-gradient(#e5e7eb 0% 25%, #ffffff 0% 50%) 50% / 16px 16px; border-radius: 6px; padding: 12px; text-align: center; border: 1px dashed #0284c7;">
+                                <img id="img_preview_nova_assinatura" src="" alt="Prévia" style="max-height: 80px; max-width: 100%; object-fit: contain;">
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+                                <small id="txt_preview_detalhes" class="text-muted"></small>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerSelecaoAssinatura()"><i class="fas fa-times"></i> Cancelar seleção</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -154,5 +169,46 @@ require_once __DIR__ . '/../../includes/header.php';
         </div>
     </div>
 </div>
+
+<script>
+function previewAssinaturaInstantanea(input) {
+    const box = document.getElementById('box_preview_nova_assinatura');
+    const img = document.getElementById('img_preview_nova_assinatura');
+    const detalhes = document.getElementById('txt_preview_detalhes');
+    if (!input.files || !input.files[0]) {
+        if (box) box.style.display = 'none';
+        return;
+    }
+    const file = input.files[0];
+    if (!file.type.match(/^image\/(png|jpeg|jpg)$/i)) {
+        alert('Selecione uma imagem PNG ou JPEG.');
+        input.value = '';
+        if (box) box.style.display = 'none';
+        return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+        alert('O arquivo selecionado excede 2 MB.');
+        input.value = '';
+        if (box) box.style.display = 'none';
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        img.src = e.target.result;
+        box.style.display = 'block';
+        detalhes.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+    };
+    reader.readAsDataURL(file);
+}
+
+function removerSelecaoAssinatura() {
+    const input = document.getElementById('assinatura_imagem');
+    const box = document.getElementById('box_preview_nova_assinatura');
+    const img = document.getElementById('img_preview_nova_assinatura');
+    if (input) input.value = '';
+    if (img) img.src = '';
+    if (box) box.style.display = 'none';
+}
+</script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

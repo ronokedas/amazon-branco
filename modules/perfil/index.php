@@ -405,10 +405,32 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                id="assinatura_imagem" 
                                name="assinatura_imagem" 
                                accept="image/png,image/jpeg"
+                               onchange="previewAssinaturaInstantanea(this)"
                                style="background: var(--bg-surface-2); border: 1px dashed var(--border); padding: 10px; border-radius: 6px; width: 100%;">
                         <small class="text-muted">
                             Envie a imagem da sua assinatura com <strong>fundo transparente (PNG)</strong> ou papel branco bem iluminado (máx. 2 MB). O sistema ajustará o contraste e dimensionamento automaticamente.
                         </small>
+                    </div>
+
+                    <!-- Pré-visualização Instantânea da Nova Imagem Selecionada (ANTES de salvar) -->
+                    <div id="box_preview_nova_assinatura" style="display: none; margin-top: 14px; padding: 14px; background: rgba(56, 189, 248, 0.08); border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.35); animation: fadeIn 0.2s ease;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <strong style="font-size: 13px; color: var(--accent); display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-eye"></i> Pré-visualização da Nova Imagem (Antes de Salvar):
+                            </strong>
+                            <span class="badge badge-success" id="badge_preview_info" style="font-size: 11px;">
+                                <i class="fas fa-check"></i> Imagem pronta para salvar
+                            </span>
+                        </div>
+                        <div style="background: repeating-conic-gradient(#e5e7eb 0% 25%, #ffffff 0% 50%) 50% / 16px 16px; border-radius: 6px; padding: 14px; text-align: center; border: 1px dashed var(--accent);">
+                            <img id="img_preview_nova_assinatura" src="" alt="Prévia da nova assinatura" style="max-height: 85px; max-width: 100%; object-fit: contain;">
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 10px; flex-wrap: wrap;">
+                            <small id="txt_preview_detalhes" class="text-muted" style="font-size: 11px;"></small>
+                            <button type="button" class="btn btn-sm btn-outline-danger" style="padding: 2px 10px; font-size: 11px;" onclick="removerSelecaoAssinatura()">
+                                <i class="fas fa-times"></i> Cancelar seleção
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Pré-visualização da Assinatura Cadastrada -->
@@ -467,6 +489,66 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 </div>
 
 <script>
+function previewAssinaturaInstantanea(input) {
+    const box = document.getElementById('box_preview_nova_assinatura');
+    const img = document.getElementById('img_preview_nova_assinatura');
+    const detalhes = document.getElementById('txt_preview_detalhes');
+    const badge = document.getElementById('badge_preview_info');
+    
+    if (!input.files || !input.files[0]) {
+        if (box) box.style.display = 'none';
+        return;
+    }
+    
+    const file = input.files[0];
+    
+    // Validação rápida de tipo
+    if (!file.type.match(/^image\/(png|jpeg|jpg)$/i)) {
+        alert('Por favor, selecione uma imagem no formato PNG ou JPEG.');
+        input.value = '';
+        if (box) box.style.display = 'none';
+        return;
+    }
+    
+    // Validação de tamanho (máx 2 MB)
+    if (file.size > 2 * 1024 * 1024) {
+        alert('O arquivo selecionado tem ' + (file.size / (1024 * 1024)).toFixed(1) + ' MB. O limite máximo permitido é 2 MB.');
+        input.value = '';
+        if (box) box.style.display = 'none';
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        img.src = e.target.result;
+        box.style.display = 'block';
+        const tamanhoKb = (file.size / 1024).toFixed(1);
+        detalhes.innerHTML = '<i class="fas fa-file-image text-primary"></i> <strong>' + escapeHtml(file.name) + '</strong> (' + tamanhoKb + ' KB) — pronta para substituição.';
+        badge.innerHTML = '<i class="fas fa-check"></i> Pronta para salvar';
+        badge.className = 'badge badge-success';
+        
+        // Scroll suave até a pré-visualização
+        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+    reader.readAsDataURL(file);
+}
+
+function removerSelecaoAssinatura() {
+    const input = document.getElementById('assinatura_imagem');
+    const box = document.getElementById('box_preview_nova_assinatura');
+    const img = document.getElementById('img_preview_nova_assinatura');
+    if (input) input.value = '';
+    if (img) img.src = '';
+    if (box) box.style.display = 'none';
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const el = document.getElementById('cpf_cnpj');
     if (el) {
