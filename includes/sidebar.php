@@ -269,12 +269,18 @@ if (!function_exists('isActive')) {
         <?php endif; ?>
 
         <!-- 9. CONFIGURAÇÕES -->
-        <?php if (podeAcessar('configuracoes') || podeAcessar('usuarios') || podeAcessar('configuracoes_normam202')): ?>
+        <?php if (podeAcessar('configuracoes') || podeAcessar('usuarios') || podeAcessar('configuracoes_normam202') || podeAcessar('responsaveis_assinatura')): ?>
             <div class="nav-group-label">CONFIGURAÇÕES</div>
             <?php if (podeAcessar('configuracoes') || podeAcessar('usuarios')): ?>
-                <a href="<?= APP_URL ?>configuracoes" class="nav-item<?= (strpos($pagina_atual,'configuracoes')===0 && strpos($pagina_atual,'configuracoes/normam202')!==0 || strpos($pagina_atual,'usuarios')===0) ? ' active' : '' ?>" data-label="Configurações">
+                <a href="<?= APP_URL ?>configuracoes" class="nav-item<?= (strpos($pagina_atual,'configuracoes')===0 && strpos($pagina_atual,'configuracoes/normam202')!==0 && strpos($pagina_atual,'responsaveis_assinatura')!==0 || strpos($pagina_atual,'usuarios')===0) ? ' active' : '' ?>" data-label="Configurações">
                     <i class="fa-solid fa-sliders"></i>
                     <span class="nav-text">Configurações</span>
+                </a>
+            <?php endif; ?>
+            <?php if (podeAcessar('responsaveis_assinatura')): ?>
+                <a href="<?= APP_URL ?>responsaveis_assinatura" class="nav-item<?= strpos($pagina_atual, 'responsaveis_assinatura') === 0 ? ' active' : '' ?>" data-label="Responsáveis por Assinatura">
+                    <i class="fa-solid fa-signature"></i>
+                    <span class="nav-text">Responsáveis por Assinatura</span>
                 </a>
             <?php endif; ?>
             <?php if (podeAcessar('configuracoes_normam202')): ?>

@@ -138,7 +138,12 @@ header('Content-Type: text/html; charset=UTF-8');
                         
                         <div class="user-dropdown" id="userDropdown">
                             <a href="<?php echo APP_URL; ?>perfil"><i class="fa-solid fa-user"></i> Meu Perfil</a>
-                            <a href="<?php echo APP_URL; ?>configuracoes"><i class="fa-solid fa-gear"></i> Configurações</a>
+                            <?php if (in_array(getCargo(), ['ADMIN', 'VISTORIADOR', 'ANALISTA'], true)): ?>
+                                <a href="<?php echo APP_URL; ?>minhas-assinaturas"><i class="fa-solid fa-file-signature"></i> Minhas Assinaturas</a>
+                            <?php endif; ?>
+                            <?php if (podeAcessar('configuracoes') || podeAcessar('usuarios')): ?>
+                                <a href="<?php echo APP_URL; ?>configuracoes"><i class="fa-solid fa-gear"></i> Configurações</a>
+                            <?php endif; ?>
                             <div class="dropdown-divider"></div>
                             <a href="<?php echo APP_URL; ?>login?action=logout" class="text-error"><i class="fa-solid fa-right-from-bracket"></i> Sair</a>
                         </div>

@@ -5,10 +5,59 @@ require_once __DIR__.'/../../includes/auth.php';
 require_once __DIR__.'/../../includes/assinaturas_usuarios.php';
 verificar_sessao();
 $usuarioId=(string)($_SESSION['usuario_id']??'');$cargo=getCargo();$itens=assinaturaPendencias($pdo,$usuarioId,$cargo);$token=trim((string)($_GET['token']??''));
+$minhaAssinatura = assinaturaResponsavelUsuario($pdo, $usuarioId, true);
 $titulo_page='Minhas assinaturas';require_once __DIR__.'/../../includes/header.php';require_once __DIR__.'/../../includes/sidebar.php';
 ?>
-<div class="main-content" id="mainContent"><div class="page-header"><div><h1><i class="fas fa-file-signature"></i> Minhas assinaturas</h1><p><?= $cargo==='ADMIN'?'Documentos pendentes e relatórios aprovados que permitem assinatura substituta.':'Documentos que aguardam a sua assinatura cadastrada.' ?></p></div></div>
-<?php if(!$itens): ?><div class="empty-state"><i class="fas fa-circle-check"></i><h3>Nenhuma assinatura pendente</h3><p>Os documentos atribuídos a você aparecerão aqui.</p></div><?php else: ?>
+<div class="main-content" id="mainContent">
+    <div class="page-header">
+        <div>
+            <h1><i class="fas fa-file-signature"></i> Minhas assinaturas</h1>
+            <p><?= $cargo==='ADMIN'?'Documentos pendentes e relatórios aprovados que permitem assinatura substituta.':'Documentos que aguardam a sua assinatura cadastrada.' ?></p>
+        </div>
+    </div>
+
+    <?php if ($minhaAssinatura): ?>
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 18px;">
+                    <i class="fas fa-signature"></i>
+                </div>
+                <div>
+                    <div style="font-weight: 600; color: var(--text-primary); font-size: 14px;">
+                        Assinatura Manuscrita Ativa
+                        <span class="badge badge-success" style="font-size: 11px; margin-left: 6px;">Pronta para uso</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                        Identificação: <strong><?= h($minhaAssinatura['cargo_titulo']) ?></strong> — Registro: <strong><?= h($minhaAssinatura['registro_profissional'] ?: 'Sem registro cadastrado') ?></strong>
+                    </div>
+                </div>
+            </div>
+            <a href="<?= APP_URL ?>perfil#assinatura" class="btn btn-sm btn-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fas fa-pen-to-square"></i> Atualizar Minha Assinatura
+            </a>
+        </div>
+    <?php else: ?>
+        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); border-left: 4px solid #f59e0b; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 8px; background: rgba(245, 158, 11, 0.2); display: flex; align-items: center; justify-content: center; color: #d97706; font-size: 20px;">
+                    <i class="fas fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <div style="font-weight: 600; color: var(--text-primary); font-size: 14px;">
+                        Assinatura Manuscrita e Registro Técnico Pendentes
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                        Para assinar laudos, vistorias e certificados com fé pública segundo a NORMAM, configure sua assinatura e registro profissional no seu perfil.
+                    </div>
+                </div>
+            </div>
+            <a href="<?= APP_URL ?>perfil#assinatura" class="btn btn-sm btn-primary" style="display: inline-flex; align-items: center; gap: 6px; background: #d97706; border-color: #d97706;">
+                <i class="fas fa-pen-nib"></i> Configurar Minha Assinatura no Perfil
+            </a>
+        </div>
+    <?php endif; ?>
+
+    <?php if(!$itens): ?><div class="empty-state"><i class="fas fa-circle-check"></i><h3>Nenhuma assinatura pendente</h3><p>Os documentos atribuídos a você aparecerão aqui.</p></div><?php else: ?>
 <div class="table-container"><table class="data-table"><thead><tr><th>Documento</th><th>Número</th><th>Embarcação</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody>
 <?php foreach($itens as $item): $itemToken=(string)($item['token_assinatura']??''); ?>
 <tr <?= $token!==''&&hash_equals($itemToken,$token)?'style="background:#e8f7ef"':'' ?>><td><strong><?=h($item['tipo'])?></strong></td><td><?=h($item['numero']?:'Sem número')?></td><td><?=h($item['nome_embarcacao'])?></td><td><?=!empty($item['data_emissao'])?formatarData($item['data_emissao']):'—'?></td><td><span class="badge badge-warning">Aguardando assinatura</span></td><td style="display:flex;gap:6px">
