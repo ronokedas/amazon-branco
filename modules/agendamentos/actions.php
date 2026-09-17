@@ -47,25 +47,37 @@ if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {
         $stmtEmb->execute([':id' => $proposta_id]);
         $embarcacoes = $stmtEmb->fetchAll(PDO::FETCH_ASSOC);
         
-        // Buscar serviços da proposta
+        // Buscar serviços de VISTORIA da proposta (excluindo Análise de Planos que é tratada separadamente pela engenharia)
         $stmtSrv = $pdo->prepare("
             SELECT s.nome 
             FROM propostas_servicos ps
             INNER JOIN servicos s ON ps.servico_id = s.id
             WHERE ps.proposta_id = :id
+              AND COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
         ");
         $stmtSrv->execute([':id' => $proposta_id]);
         $servicos = array_column($stmtSrv->fetchAll(PDO::FETCH_ASSOC), 'nome');
-        
+
+        // Verificar se já existe agendamento rascunho/pendente desta proposta para atualizar ao invés de duplicar
+        $agendamentoIdExistente = null;
+        if (function_exists('proximoAgendamentoPendenteProposta')) {
+            $agendamentoIdExistente = proximoAgendamentoPendenteProposta($pdo, $proposta_id);
+        } else {
+            $stmtAg = $pdo->prepare("SELECT id FROM agendamentos WHERE proposta_id = :id AND status = 'pendente' LIMIT 1");
+            $stmtAg->execute([':id' => $proposta_id]);
+            $agendamentoIdExistente = $stmtAg->fetchColumn() ?: null;
+        }
+
         echo json_encode([
             'success'          => true,
+            'agendamento_id'   => $agendamentoIdExistente,
             'cliente_id'       => $proposta['cliente_id'],
             'cliente_nome'     => $proposta['cliente_nome'],
             'contato_nome'     => $proposta['responsavel_fechamento_nome'] ?? null,
             'contato_telefone' => $proposta['responsavel_fechamento_telefone'] ?? null,
             'embarcacoes'      => $embarcacoes,
             'embarcacao_id'    => !empty($embarcacoes) ? $embarcacoes[0]['id'] : null,
-            'tipo_vistoria'    => !empty($servicos) ? implode(', ', $servicos) : '',
+            'tipo_vistoria'    => !empty($servicos) ? implode(', ', $servicos) : 'Vistoria Geral',
         ]);
         exit;
         
@@ -310,37 +322,78 @@ switch ($action) {
                     throw new RuntimeException('Este retorno A/S ja possui agendamento ou foi concluido.');
                 }
             }
-            $novoAgendamentoId = gerarUUID();
-            $stmt = $pdo->prepare("
-                INSERT INTO agendamentos (
-                    id, proposta_id, relatorio_origem_id, embarcacao_id, cliente_id, armador_id, operador_nome, vistoriador_id, vendedor_id,
-                    tipo_vistoria, data_vistoria, hora_vistoria, local,
-                    contato_nome, contato_telefone, status, observacoes, criado_por
-                ) VALUES (
-                    :id, :proposta_id, :relatorio_origem_id, :embarcacao_id, :cliente_id, :armador_id, :operador_nome, :vistoriador_id, :vendedor_id,
-                    :tipo_vistoria, :data_vistoria, :hora_vistoria, :local,
-                    :contato_nome, :contato_telefone, 'pendente', :observacoes, :criado_por
-                )
-            ");
-            $stmt->execute([
-                ':id'               => $novoAgendamentoId,
-                ':proposta_id'     => $proposta_id,
-                ':relatorio_origem_id' => $relatorio_origem_id ?: null,
-                ':embarcacao_id'   => $embarcacao_id,
-                ':cliente_id'      => $cliente_id,
-                ':armador_id'      => $armador_id ?: null,
-                ':operador_nome'   => $operador_nome ?: null,
-                ':vistoriador_id'  => $vistoriador_id ?: null,
-                ':vendedor_id'     => $vendedor_id ?: null,
-                ':tipo_vistoria'   => $tipo_vistoria,
-                ':data_vistoria'   => $data_vistoria,
-                ':hora_vistoria'   => $hora_vistoria ?: null,
-                ':local'           => $local ?: null,
-                ':contato_nome'    => $contato_nome ?: null,
-                ':contato_telefone' => $contato_telefone ?: null,
-                ':observacoes'     => $observacoes ?: null,
-                ':criado_por'      => $_SESSION['usuario_id'],
-            ]);
+            // Se foi informada proposta e não é retorno A/S, verificar se já existe rascunho de agendamento criado para ela
+            $agendamentoAlvoId = null;
+            if (!empty($proposta_id) && empty($relatorio_origem_id)) {
+                $stmtCheckAg = $pdo->prepare("SELECT id FROM agendamentos WHERE proposta_id = :prop AND embarcacao_id = :emb AND status = 'pendente' LIMIT 1");
+                $stmtCheckAg->execute([':prop' => $proposta_id, ':emb' => $embarcacao_id]);
+                $agendamentoAlvoId = $stmtCheckAg->fetchColumn() ?: null;
+            }
+
+            if ($agendamentoAlvoId) {
+                $novoAgendamentoId = $agendamentoAlvoId;
+                $stmt = $pdo->prepare("
+                    UPDATE agendamentos SET
+                        armador_id = :armador_id,
+                        operador_nome = :operador_nome,
+                        vistoriador_id = :vistoriador_id,
+                        vendedor_id = COALESCE(:vendedor_id, vendedor_id),
+                        tipo_vistoria = :tipo_vistoria,
+                        data_vistoria = :data_vistoria,
+                        hora_vistoria = :hora_vistoria,
+                        local = :local,
+                        contato_nome = :contato_nome,
+                        contato_telefone = :contato_telefone,
+                        observacoes = :observacoes
+                    WHERE id = :id
+                ");
+                $stmt->execute([
+                    ':armador_id'       => $armador_id ?: null,
+                    ':operador_nome'    => $operador_nome ?: null,
+                    ':vistoriador_id'   => $vistoriador_id ?: null,
+                    ':vendedor_id'      => $vendedor_id ?: null,
+                    ':tipo_vistoria'    => $tipo_vistoria,
+                    ':data_vistoria'    => $data_vistoria,
+                    ':hora_vistoria'    => $hora_vistoria ?: null,
+                    ':local'            => $local ?: null,
+                    ':contato_nome'     => $contato_nome ?: null,
+                    ':contato_telefone' => $contato_telefone ?: null,
+                    ':observacoes'      => $observacoes ?: null,
+                    ':id'               => $novoAgendamentoId,
+                ]);
+            } else {
+                $novoAgendamentoId = gerarUUID();
+                $stmt = $pdo->prepare("
+                    INSERT INTO agendamentos (
+                        id, proposta_id, relatorio_origem_id, embarcacao_id, cliente_id, armador_id, operador_nome, vistoriador_id, vendedor_id,
+                        tipo_vistoria, data_vistoria, hora_vistoria, local,
+                        contato_nome, contato_telefone, status, observacoes, criado_por
+                    ) VALUES (
+                        :id, :proposta_id, :relatorio_origem_id, :embarcacao_id, :cliente_id, :armador_id, :operador_nome, :vistoriador_id, :vendedor_id,
+                        :tipo_vistoria, :data_vistoria, :hora_vistoria, :local,
+                        :contato_nome, :contato_telefone, 'pendente', :observacoes, :criado_por
+                    )
+                ");
+                $stmt->execute([
+                    ':id'               => $novoAgendamentoId,
+                    ':proposta_id'      => $proposta_id,
+                    ':relatorio_origem_id' => $relatorio_origem_id ?: null,
+                    ':embarcacao_id'    => $embarcacao_id,
+                    ':cliente_id'       => $cliente_id,
+                    ':armador_id'       => $armador_id ?: null,
+                    ':operador_nome'    => $operador_nome ?: null,
+                    ':vistoriador_id'   => $vistoriador_id ?: null,
+                    ':vendedor_id'      => $vendedor_id ?: null,
+                    ':tipo_vistoria'    => $tipo_vistoria,
+                    ':data_vistoria'    => $data_vistoria,
+                    ':hora_vistoria'    => $hora_vistoria ?: null,
+                    ':local'            => $local ?: null,
+                    ':contato_nome'     => $contato_nome ?: null,
+                    ':contato_telefone' => $contato_telefone ?: null,
+                    ':observacoes'      => $observacoes ?: null,
+                    ':criado_por'       => $_SESSION['usuario_id'],
+                ]);
+            }
             if ($relatorio_origem_id !== '') {
                 $stmtVincularRetorno = $pdo->prepare("UPDATE vistoria_retornos
                     SET status='AGENDADO',agendamento_id=:agendamento,

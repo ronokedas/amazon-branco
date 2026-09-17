@@ -242,7 +242,12 @@ $linkWhatsHelper = function(?string $telefone, string $mensagem): ?string {
                                         <i class="fa-brands fa-whatsapp"></i>
                                     </a>
                                 <?php endif; ?>
-                                <a href="<?= APP_URL ?>agendamentos/form?proposta_id=<?= urlencode($propFila['proposta_id']) ?>" class="btn btn-agendar-cta">
+                                <?php
+                                $urlAgendarVistoria = !empty($propFila['agendamento_id'])
+                                    ? APP_URL . 'agendamentos/form?id=' . urlencode($propFila['agendamento_id'])
+                                    : APP_URL . 'agendamentos/form?proposta_id=' . urlencode($propFila['proposta_id']);
+                                ?>
+                                <a href="<?= $urlAgendarVistoria ?>" class="btn btn-agendar-cta">
                                     <i class="fa-solid fa-calendar-check"></i> Agendar Vistoria
                                 </a>
                             </div>

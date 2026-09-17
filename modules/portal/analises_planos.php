@@ -22,7 +22,7 @@ if ($embarcacaoIds) {
               JOIN embarcacoes e ON e.id = ap.embarcacao_id
          LEFT JOIN usuarios u ON u.id = ap.analista_id
              WHERE ap.embarcacao_id IN ({$in})
-               AND ap.status IN ('EM_ANALISE', 'AGUARDANDO_DOCUMENTOS')
+               AND ap.status IN ('AGENDADA', 'EM_ANALISE', 'AGUARDANDO_DOCUMENTOS')
           ORDER BY ap.atualizado_em DESC";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -30,8 +30,9 @@ if ($embarcacaoIds) {
 }
 
 $statusLabels = [
-    'EM_ANALISE' => 'Em análise',
-    'AGUARDANDO_DOCUMENTOS' => 'Aguardando documentos',
+    'AGENDADA' => 'Aguardando envio de planos / Em análise',
+    'EM_ANALISE' => 'Em análise técnica',
+    'AGUARDANDO_DOCUMENTOS' => 'Aguardando documentos / revisão',
 ];
 
 $titulo_page = 'Análise de Planos - Portal do Cliente';
@@ -40,7 +41,7 @@ require_once __DIR__ . '/../../includes/portal_header.php';
 <section class="portal-page-header">
     <div>
         <h1>Análise de Planos</h1>
-        <p>Envie uma nova revisão sem substituir os arquivos já analisados.</p>
+        <p>Envie os planos de engenharia e memoriais da embarcação (Arranjo Geral, Linhas, Estabilidade, Borda Livre e ART) para conferência do Analista Naval.</p>
     </div>
     <a class="btn btn-secondary" href="<?php echo APP_URL; ?>portal/documentos">
         <i class="fas fa-file-lines"></i> Meus documentos

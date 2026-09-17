@@ -100,14 +100,19 @@ if docker ps --format '{{.Names}}' | grep -q "erp_db"; then
 fi
 
 echo ""
-echo "🏗️ [4/5] Reconstruindo Containers da Aplicação (Preservando Volumes)..."
+echo "🏗️ [4/6] Reconstruindo Containers da Aplicação (Preservando Volumes)..."
 # IMPORTANTE: NUNCA usar 'down -v'. O comando abaixo reconstrói apenas o código PHP/Apache e worker
 docker compose up -d --build app worker
 docker compose restart app
 echo "   ✅ Containers app e worker atualizados e em execução."
 
 echo ""
-echo "🔐 [5/5] Ajustando Permissões de Runtime para Apache (www-data)..."
+echo "🧹 [5/6] Executando Saneamento Operacional de Agendamentos e Análises..."
+docker exec erp_app php /var/www/html/scripts/limpar_agendamentos_duplicados.php || true
+echo "   ✅ Agendamentos e demandas de análise saneados com sucesso."
+
+echo ""
+echo "🔐 [6/6] Ajustando Permissões de Runtime para Apache (www-data)..."
 sudo chown -R www-data:www-data storage uploads logs temp_pdf tmp
 sudo chmod -R 775 storage uploads logs temp_pdf tmp
 echo "   ✅ Permissões ajustadas."

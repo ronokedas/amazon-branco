@@ -206,7 +206,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             )
         ");
 
+        $stmtAgExiste = $pdo->prepare("
+            SELECT id FROM agendamentos
+            WHERE proposta_id = :proposta_id
+              AND embarcacao_id = :embarcacao_id
+              AND status <> 'cancelado'
+            LIMIT 1
+        ");
+
         foreach ($embarcacoes as $emb) {
+            $stmtAgExiste->execute([
+                ':proposta_id' => $prop['id'],
+                ':embarcacao_id' => $emb['embarcacao_id'],
+            ]);
+            if ($stmtAgExiste->fetchColumn()) {
+                continue;
+            }
+
             $agend_id = gerarUUID();
             $stmtAgendamento->execute([
                 ':id'            => $agend_id,

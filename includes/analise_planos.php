@@ -167,27 +167,62 @@ function analisePlanosCriarDemandasProposta(PDO $pdo, array $proposta, ?string $
     $stmt->execute([':proposta' => $proposta['id']]);
     $servicos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (!$servicos) return 0;
+
+    // Buscar automaticamente o Analista Naval ativo do sistema
+    $stmtAnalista = $pdo->query("
+        SELECT DISTINCT u.id, u.nome, u.email
+        FROM usuarios u
+        LEFT JOIN usuario_perfis up ON up.usuario_id = u.id
+        WHERE u.ativo = 1
+          AND u.excluido_em IS NULL
+          AND (u.cargo = 'ANALISTA' OR up.perfil = 'ANALISTA')
+        ORDER BY u.id ASC
+        LIMIT 1
+    ");
+    $analistaPadrao = $stmtAnalista->fetch(PDO::FETCH_ASSOC) ?: null;
+    $analistaId = $analistaPadrao['id'] ?? null;
+    $statusInicial = $analistaId ? 'AGENDADA' : 'AGUARDANDO_AGENDAMENTO';
+    $prazoInicial = $analistaId ? date('Y-m-d 18:00:00', strtotime('+7 days')) : null;
+
     $insert = $pdo->prepare("INSERT IGNORE INTO analises_planos
         (id,numero,proposta_id,servico_id,vendedor_origem_id,embarcacao_id,solicitante_id,
-         tipo_processo,enquadramento,classe_certificacao,objeto,analista_id,status,criado_por)
+         tipo_processo,enquadramento,classe_certificacao,objeto,analista_id,prazo_agendado_em,status,criado_por)
         VALUES (:id,:numero,:proposta,:servico,:vendedor,:embarcacao,:cliente,
-                NULL,NULL,:classe,:objeto,NULL,'AGUARDANDO_AGENDAMENTO',:usuario)");
+                'LC','NORMAM-202',:classe,:objeto,:analista_id,:prazo,:status,:usuario)");
     $criados = 0;
     foreach ($servicos as $servico) {
         $numero = gerarNumeroDocumento('RAP', 'AM-RAP');
         $id = gerarUUID();
         $classe = $servico['codigo_operacional'] === 'ANALISE_PLANOS_EC1' ? 'EC1' : 'EC2';
+        $usuarioOrigem = $criadoPor ?: ($proposta['criado_por'] ?? null);
+
         $insert->execute([
             ':id' => $id, ':numero' => $numero, ':proposta' => $proposta['id'],
             ':servico' => $servico['servico_id'], ':vendedor' => $proposta['criado_por'] ?? null,
             ':embarcacao' => $servico['embarcacao_id'], ':cliente' => $proposta['cliente_id'],
             ':classe' => $classe, ':objeto' => 'Análise de planos ' . $classe,
-            ':usuario' => $criadoPor ?: ($proposta['criado_por'] ?? null),
+            ':analista_id' => $analistaId,
+            ':prazo' => $prazoInicial,
+            ':status' => $statusInicial,
+            ':usuario' => $usuarioOrigem,
         ]);
         if ($insert->rowCount() === 1) {
             $criados++;
-            analisePlanosHistorico($pdo, $id, 'DEMANDA_CRIADA', null, 'AGUARDANDO_AGENDAMENTO', 'Criada automaticamente pela proposta ' . ($proposta['numero'] ?? ''));
-            analisePlanosNotificar($pdo, $proposta['criado_por'] ?? null, 'ANALISE_AGUARDANDO_AGENDAMENTO', 'Análise aguardando agendamento', 'A proposta ' . ($proposta['numero'] ?? '') . ' gerou uma demanda ' . $classe . '.', $id, 'analises-planos/form?id=' . urlencode($id));
+            analisePlanosHistorico($pdo, $id, 'DEMANDA_CRIADA', null, $statusInicial, 'Criada automaticamente pela proposta ' . ($proposta['numero'] ?? ''));
+
+            if ($analistaId) {
+                analisePlanosHistorico($pdo, $id, 'ANALISTA_ATRIBUIDO', null, $statusInicial, 'Atribuído automaticamente ao Analista Naval ' . ($analistaPadrao['nome'] ?? ''));
+                $pdo->prepare("INSERT INTO analise_planos_agenda_historico (analise_id, analista_anterior_id, analista_novo_id, prazo_anterior_em, prazo_novo_em, motivo, acao, criado_por)
+                               VALUES (?, NULL, ?, NULL, ?, 'Atribuição automática pela assinatura da proposta', 'AGENDAMENTO', ?)")
+                    ->execute([$id, $analistaId, $prazoInicial, $usuarioOrigem]);
+                analisePlanosNotificar($pdo, $analistaId, 'NOVA_ANALISE_ATRIBUIDA', 'Nova Análise de Planos atribuída', 'A proposta ' . ($proposta['numero'] ?? '') . ' gerou a análise ' . $classe . ' (' . $numero . ') sob sua responsabilidade técnica.', $id, 'analises-planos/form?id=' . urlencode($id));
+            } else {
+                analisePlanosNotificar($pdo, $proposta['criado_por'] ?? null, 'ANALISE_AGUARDANDO_AGENDAMENTO', 'Análise aguardando agendamento', 'A proposta ' . ($proposta['numero'] ?? '') . ' gerou uma demanda ' . $classe . '.', $id, 'analises-planos/form?id=' . urlencode($id));
+            }
+
+            if (function_exists('analisePlanosSemearChecklist')) {
+                analisePlanosSemearChecklist($pdo, $id, 'LC', 'NORMAM-202', $classe, $usuarioOrigem ?: ($analistaId ?: '00000000-0000-0000-0000-000000000001'));
+            }
         }
     }
     return $criados;

@@ -13,9 +13,24 @@ $cargo = getCargo();
 exigirAcesso('agendamentos');
 
 $id = $_GET['id'] ?? null;
-$editando = !empty($id);
 $relatorioOrigemId = trim((string)($_GET['relatorio_origem_id'] ?? ''));
 $fluxoPropostaSolicitado = (string)($_GET['fluxo_proposta'] ?? '') === '1';
+
+// Se não veio id mas veio proposta_id, buscar se já existe agendamento pendente para esta proposta
+if (empty($id) && !empty($_GET['proposta_id'])) {
+    $propostaIdGet = trim((string)$_GET['proposta_id']);
+    if (function_exists('proximoAgendamentoPendenteProposta')) {
+        $agendExistente = proximoAgendamentoPendenteProposta($pdo, $propostaIdGet);
+        if ($agendExistente) {
+            $id = $agendExistente;
+        }
+    } else {
+        $stmtCheck = $pdo->prepare("SELECT id FROM agendamentos WHERE proposta_id = :prop AND status = 'pendente' LIMIT 1");
+        $stmtCheck->execute([':prop' => $propostaIdGet]);
+        $id = $stmtCheck->fetchColumn() ?: null;
+    }
+}
+$editando = !empty($id);
 
 $agendamento = [
     'id'               => '',
@@ -526,6 +541,19 @@ function carregarDadosProposta(propostaId) {
                 if (campoVistoria && data.tipo_vistoria) {
                     campoVistoria.value = data.tipo_vistoria;
                     atualizarEstadoServicosTravados(true);
+                }
+                if (data.agendamento_id) {
+                    let inputId = document.querySelector('input[name="id"]');
+                    if (!inputId) {
+                        inputId = document.createElement('input');
+                        inputId.type = 'hidden';
+                        inputId.name = 'id';
+                        const formElem = document.querySelector('form.form-padrao');
+                        if (formElem) formElem.appendChild(inputId);
+                    }
+                    if (inputId) inputId.value = data.agendamento_id;
+                    const inputAction = document.querySelector('input[name="action"]');
+                    if (inputAction) inputAction.value = 'editar';
                 }
             }
         })

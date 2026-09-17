@@ -203,6 +203,32 @@ if (podeAcessar('protocolos_documentais')) {
         $protocolos = $q->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {}
 }
+
+$vistoriasVinculadas = [];
+try {
+    $stmtVist = $pdo->prepare("
+        SELECT v.id AS vistoria_id, v.numero AS vistoria_numero, v.status AS vistoria_status,
+               v.tipo_vistoria AS vistoria_tipo, v.local_vistoria, v.aprovado_em, v.criado_em AS vistoria_data,
+               a.id AS agendamento_id, a.data_vistoria, a.hora_vistoria, a.local AS agendamento_local,
+               a.status AS agendamento_status, a.tipo_vistoria AS agendamento_tipo_vistoria,
+               u.nome AS vistoriador_nome, u.telefone AS vistoriador_telefone,
+               (SELECT COUNT(*) FROM vistoria_fotos vf WHERE vf.vistoria_id = v.id) AS total_fotos,
+               (SELECT COUNT(*) FROM vistoria_exigencias ve WHERE ve.vistoria_id = v.id) AS total_exigencias,
+               (SELECT COUNT(*) FROM vistoria_exigencias ve WHERE ve.vistoria_id = v.id AND ve.status = 'PENDENTE') AS exigencias_pendentes
+        FROM agendamentos a
+        LEFT JOIN vistorias v ON v.agendamento_id = a.id
+        LEFT JOIN usuarios u ON u.id = a.vistoriador_id
+        WHERE a.embarcacao_id = :embarcacao_id
+          AND a.status <> 'cancelado'
+        ORDER BY COALESCE(v.atualizado_em, a.data_vistoria, a.created_at) DESC
+        LIMIT 5
+    ");
+    $stmtVist->execute([':embarcacao_id' => $a['embarcacao_id']]);
+    $vistoriasVinculadas = $stmtVist->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    error_log('Erro ao buscar vistorias vinculadas à análise: ' . $e->getMessage());
+}
+
 $titulo_page = $a['numero'] . ' - Análise de Planos';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
@@ -211,6 +237,78 @@ require_once __DIR__ . '/../../includes/header.php';
   <div class="form-header"><div><h3><i class="fas fa-drafting-compass"></i> <?=h($a['numero'])?></h3><small><?=h($a['proposta_numero'] ?: 'Processo histórico sem proposta')?> · <?=h($a['servico_nome'] ?: 'Serviço não vinculado')?></small></div><a class="btn btn-secondary btn-sm" href="<?=APP_URL?>analises-planos"><i class="fas fa-arrow-left"></i> Voltar</a></div>
   <div class="analise-summary"><span><b>Situação</b><?=h($statusLabels[$a['status']]??$a['status'])?></span><span><b>Embarcação</b><?=h($a['embarcacao_nome'])?></span><span><b>Vendedor de origem</b><?=h($a['vendedor_origem_nome'] ?: 'Legado / Direto')?></span><span><b>Analista</b><?=h($a['analista_nome'] ?: 'Não atribuído')?></span><span><b>Prazo</b><?=!empty($a['prazo_agendado_em'])?formatarDataCompleta($a['prazo_agendado_em']):'Não agendado'?></span></div>
  </div>
+
+ <!-- Vistoria Técnica de Campo (A Bordo) -->
+ <section class="analise-card" style="border-left: 4px solid #087653;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+   <div>
+    <h3 style="margin-bottom: 4px;"><i class="fa-solid fa-ship text-success"></i> Vistoria Técnica de Campo (A Bordo)</h3>
+    <p class="text-muted" style="margin-bottom: 0; font-size: 0.88rem;">
+     Confronte as medições, fotos e anteparas inspecionadas a bordo pelo Vistoriador com os planos de projeto e estabilidade.
+    </p>
+   </div>
+  </div>
+
+  <?php if (!$vistoriasVinculadas): ?>
+   <div style="padding: 14px; background: rgba(148, 163, 184, 0.08); border-radius: 8px; margin-top: 14px;">
+    <p class="text-muted mb-0"><i class="fa-solid fa-info-circle"></i> Nenhuma vistoria de campo agendada ou registrada para esta embarcação no momento.</p>
+   </div>
+  <?php else: ?>
+   <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+    <?php foreach ($vistoriasVinculadas as $vItem): ?>
+     <?php
+     $statusVistLabel = match($vItem['vistoria_status'] ?? '') {
+         'APROVADA' => 'Vistoria Aprovada (Homologada)',
+         'APROVADA_COM_EXIGENCIAS' => 'Aprovada com Exigências de Campo',
+         'RETORNO_AS' => 'Retorno A/S Pendente',
+         'REPROVADA' => 'Reprovada em Campo',
+         'EM_HOMOLOGACAO' => 'Em Homologação Técnica',
+         default => (!empty($vItem['vistoria_id']) ? 'Em Andamento a Bordo' : ($vItem['agendamento_status'] === 'confirmado' ? 'Agendada e Confirmada' : 'Agendamento Pendente de Campo'))
+     };
+     $badgeVistColor = match($vItem['vistoria_status'] ?? '') {
+         'APROVADA' => 'success',
+         'APROVADA_COM_EXIGENCIAS', 'RETORNO_AS' => 'warning',
+         'REPROVADA' => 'danger',
+         default => 'info'
+     };
+     ?>
+     <div style="border: 1px solid var(--cor-borda, #e2e8f0); border-radius: 8px; padding: 14px; background: var(--cor-card-bg, #fff); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div>
+       <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 4px;">
+        <?= !empty($vItem['vistoria_numero']) ? h($vItem['vistoria_numero']) : 'Ordem de Campo' ?>
+        <span class="badge bg-<?= $badgeVistColor ?>" style="font-size: 0.76rem; margin-left: 6px;"><?= $statusVistLabel ?></span>
+       </div>
+       <div style="font-size: 0.84rem; color: var(--cor-texto-secundario, #64748b);">
+        <i class="fa-solid fa-user-gear"></i> Vistoriador: <strong><?= h($vItem['vistoriador_nome'] ?: 'Ainda não atribuído') ?></strong>
+        · <i class="fa-solid fa-calendar"></i> Data: <strong><?= !empty($vItem['data_vistoria']) ? date('d/m/Y', strtotime($vItem['data_vistoria'])) : 'A definir' ?></strong>
+        <?php if (!empty($vItem['local_vistoria']) || !empty($vItem['agendamento_local'])): ?>
+         · <i class="fa-solid fa-location-dot"></i> Local: <?= h($vItem['local_vistoria'] ?: $vItem['agendamento_local']) ?>
+        <?php endif; ?>
+       </div>
+       <div style="font-size: 0.8rem; margin-top: 6px; display: flex; gap: 14px; color: #475569;">
+        <span><i class="fa-solid fa-camera"></i> <strong><?= (int)$vItem['total_fotos'] ?></strong> foto(s) de bordo</span>
+        <span><i class="fa-solid fa-triangle-exclamation"></i> <strong><?= (int)$vItem['total_exigencias'] ?></strong> exigência(s) de campo <?= (int)$vItem['exigencias_pendentes'] > 0 ? '(' . (int)$vItem['exigencias_pendentes'] . ' pendentes)' : '' ?></span>
+       </div>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;">
+       <?php if (!empty($vItem['vistoria_id'])): ?>
+        <a class="btn btn-secondary btn-sm" target="_blank" href="<?= APP_URL ?>vistorias/relatorio-pdf?id=<?= urlencode($vItem['vistoria_id']) ?>" title="Baixar PDF Oficial do Relatório de Vistoria">
+         <i class="fa-solid fa-file-pdf text-danger"></i> PDF RTV
+        </a>
+        <a class="btn btn-primary btn-sm" href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode((string)$vItem['agendamento_id']) ?>&vistoria_id=<?= urlencode((string)$vItem['vistoria_id']) ?>" title="Abrir Relatório Técnico de Vistoria e Fotos">
+         <i class="fa-solid fa-clipboard-check"></i> Ver Vistoria & Fotos
+        </a>
+       <?php elseif (!empty($vItem['agendamento_id'])): ?>
+        <a class="btn btn-outline-secondary btn-sm" href="<?= APP_URL ?>agendamentos/form?id=<?= urlencode($vItem['agendamento_id']) ?>" title="Ver detalhes do agendamento">
+         <i class="fa-solid fa-calendar"></i> Ver Agendamento
+        </a>
+       <?php endif; ?>
+      </div>
+     </div>
+    <?php endforeach; ?>
+   </div>
+  <?php endif; ?>
+ </section>
 
  <?php if(podeAcessar('protocolos_documentais')): ?><section class="analise-card"><h3><i class="fas fa-arrow-right-arrow-left"></i> Tramitação documental</h3><p>O protocolo registra custódia e envio; a baixa técnica das exigências continua sendo feita somente pelos relatórios de ciclo.</p><?php foreach($protocolos as $prot): ?><p><a href="<?= APP_URL ?>protocolos/form?id=<?= urlencode($prot['id']) ?>"><strong><?= h($prot['numero']) ?></strong> · <?= h($prot['assunto']) ?></a> <span class="badge"><?= h($prot['status']) ?></span></p><?php endforeach; ?><?php if(!$protocolos): ?><p class="text-muted">Nenhum dossiê vinculado.</p><?php endif; ?><a class="btn btn-secondary btn-sm" href="<?= APP_URL ?>protocolos/form?analise_id=<?= urlencode($id) ?>&embarcacao_id=<?= urlencode($a['embarcacao_id']) ?>"><i class="fas fa-plus"></i> Abrir protocolo deste processo</a></section><?php endif; ?>
 

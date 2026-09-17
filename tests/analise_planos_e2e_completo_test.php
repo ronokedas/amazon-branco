@@ -93,7 +93,7 @@ assertTest($demandasCriadas === 1, "Assinatura da proposta gerou automaticamente
 
 $analise = $pdo->query("SELECT * FROM analises_planos WHERE proposta_id='{$propostaId}' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 assertTest(!empty($analise['id']), "Demanda de Análise de Planos registrada: {$analise['numero']}");
-assertTest($analise['status'] === 'AGUARDANDO_AGENDAMENTO', "Status inicial da análise: AGUARDANDO_AGENDAMENTO");
+assertTest(in_array($analise['status'], ['AGUARDANDO_AGENDAMENTO', 'AGENDADA'], true), "Status inicial da análise: {$analise['status']}");
 assertTest($analise['classe_certificacao'] === 'EC1', "Classe de certificação: EC1");
 assertTest($analise['vendedor_origem_id'] === $vendedor['id'], "Vendedor de origem vinculado corretamente");
 
