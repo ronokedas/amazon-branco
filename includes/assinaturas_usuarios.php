@@ -352,6 +352,88 @@ function assinaturaAssinarRelatorio(PDO $pdo,array $input): array
     ];
 }
 
+if (!function_exists('removerFundoBrancoImagemAssinatura')) {
+    function removerFundoBrancoImagemAssinatura($im)
+    {
+        $w = imagesx($im);
+        $h = imagesy($im);
+        $out = imagecreatetruecolor($w, $h);
+        imagealphablending($out, false);
+        imagesavealpha($out, true);
+
+        $tLow = 14;   // <= 14: fundo branco puro -> totalmente transparente (alpha 127)
+        $tHigh = 55;  // >= 55: tinta solida -> totalmente opaco (alpha 0)
+
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                $rgba = imagecolorsforindex($im, imagecolorat($im, $x, $y));
+                if ($rgba['alpha'] == 127) {
+                    imagesetpixel($out, $x, $y, imagecolorallocatealpha($out, 0, 0, 0, 127));
+                    continue;
+                }
+                $dr = 255 - $rgba['red'];
+                $dg = 255 - $rgba['green'];
+                $db = 255 - $rgba['blue'];
+                $dist = sqrt($dr * $dr + $dg * $dg + $db * $db);
+
+                if ($dist <= $tLow) {
+                    imagesetpixel($out, $x, $y, imagecolorallocatealpha($out, 0, 0, 0, 127));
+                } elseif ($dist >= $tHigh) {
+                    imagesetpixel($out, $x, $y, imagecolorallocatealpha($out, $rgba['red'], $rgba['green'], $rgba['blue'], $rgba['alpha']));
+                } else {
+                    $op = ($dist - $tLow) / ($tHigh - $tLow);
+                    $alpha = (int)round(127 * (1 - $op));
+                    $r = max(0, min(255, (int)round(255 - ($dr / max(0.01, $op)))));
+                    $g = max(0, min(255, (int)round(255 - ($dg / max(0.01, $op)))));
+                    $b = max(0, min(255, (int)round(255 - ($db / max(0.01, $op)))));
+                    imagesetpixel($out, $x, $y, imagecolorallocatealpha($out, $r, $g, $b, max($rgba['alpha'], $alpha)));
+                }
+            }
+        }
+        return $out;
+    }
+}
+
+if (!function_exists('garantirAssinaturaTransparente')) {
+    function garantirAssinaturaTransparente(string $caminhoAbsoluto): bool
+    {
+        if (!is_file($caminhoAbsoluto) || !is_readable($caminhoAbsoluto)) return false;
+        $im = @imagecreatefrompng($caminhoAbsoluto);
+        if (!$im) return false;
+
+        $w = imagesx($im);
+        $h = imagesy($im);
+        $temFundoBrancoOpaco = false;
+
+        // Amostragem rapida para verificar se ha pixels brancos opacos
+        for ($y = 0; $y < $h; $y += max(1, (int)($h / 15))) {
+            for ($x = 0; $x < $w; $x += max(1, (int)($w / 15))) {
+                $c = imagecolorsforindex($im, imagecolorat($im, $x, $y));
+                if ($c['alpha'] < 50 && $c['red'] > 240 && $c['green'] > 240 && $c['blue'] > 240) {
+                    $temFundoBrancoOpaco = true;
+                    break 2;
+                }
+            }
+        }
+
+        if (!$temFundoBrancoOpaco) {
+            imagedestroy($im);
+            return false;
+        }
+
+        $out = removerFundoBrancoImagemAssinatura($im);
+        imagedestroy($im);
+
+        if (is_writable($caminhoAbsoluto)) {
+            imagepng($out, $caminhoAbsoluto, 6);
+            imagedestroy($out);
+            return true;
+        }
+        imagedestroy($out);
+        return false;
+    }
+}
+
 if (!function_exists('salvarImagemAssinaturaResponsavel')) {
     function salvarImagemAssinaturaResponsavel(array $arquivo, int $responsavelId): array
     {
@@ -363,6 +445,12 @@ if (!function_exists('salvarImagemAssinaturaResponsavel')) {
         $bytes = file_get_contents($arquivo['tmp_name']);
         $source = $bytes !== false ? @imagecreatefromstring($bytes) : false;
         if (!$source) throw new RuntimeException('A imagem da assinatura está corrompida ou é inválida.');
+        
+        // Remove automaticamente fundos brancos/claros com suavização de bordas (anti-aliasing)
+        $cleanSource = removerFundoBrancoImagemAssinatura($source);
+        imagedestroy($source);
+        $source = $cleanSource;
+
         $sourceW = imagesx($source);
         $sourceH = imagesy($source);
         if ($sourceW < 100 || $sourceH < 30) {

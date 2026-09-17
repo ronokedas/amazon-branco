@@ -27,12 +27,25 @@ assertAssinatura(str_contains($servico,"assinaturaResponsavelUsuario(\$pdo,(stri
 assertAssinatura(str_contains($servico,'Assine o parecer dentro do processo atribuído'), 'Parecer do analista ainda pode contornar o fluxo próprio de assinatura.');
 assertAssinatura(str_contains($router,"login_return_to")&&str_contains($router,"validar-assinatura/"),'Roteador nao preserva retorno autenticado ou validacao.');
 assertAssinatura(str_contains($painel,'Permitir localização e assinar')&&str_contains($actions,'verificarCSRF'),'Painel ou endpoint nao exige confirmacao segura.');
-
-$paginaPublica=file_get_contents(__DIR__.'/../modules/assinaturas_publicas/certificado.php');$confirmacaoPublica=file_get_contents(__DIR__.'/../modules/assinaturas_publicas/confirmar.php');$previewPublica=file_get_contents(__DIR__.'/../modules/assinaturas_publicas/preview.php');
+$paginaPublica=file_get_contents(__DIR__.'/../modules/assinaturas_publicas/certificado.php');$confirmacaoPublica=file_get_contents(__DIR__.'/../modules/assinaturas_publicas/confirmar.php');$previewPublica=file_get_contents(__DIR__.'/../modules/assinaturas_publicas/preview.php');
 assertAssinatura(str_contains($router,'assinatura-certificado/')&&$paginaPublica!==false&&$confirmacaoPublica!==false&&$previewPublica!==false,'Rotas publicas do convite nao foram criadas.');
 assertAssinatura(str_contains($servico,"hash('sha256',\$token)")&&str_contains($servico,"modify('+7 days')"),'Convite nao usa token em hash com validade de sete dias.');
 assertAssinatura(str_contains($paginaPublica,'Li o documento e autorizo')&&str_contains($paginaPublica,'Prévia completa do certificado'),'Pagina publica nao exige aceite ou nao mostra o PDF.');
 assertAssinatura(str_contains($confirmacaoPublica,'verificarCSRF')&&str_contains($servico,"status='PROCESSANDO'"),'Confirmacao publica nao possui CSRF ou trava de concorrencia.');
 assertAssinatura(str_contains($servico,'EMAIL_MAGIC_LINK'),'Auditoria nao registra autenticacao por link de e-mail.');
 
-echo "OK: estrutura, vinculos, convites e guardas de assinatura estao presentes.\n";
+// Validar remocao automatica de fundo branco para transparencia
+$imgTeste = imagecreatetruecolor(50, 50);
+$fundoBranco = imagecolorallocate($imgTeste, 255, 255, 255);
+imagefill($imgTeste, 0, 0, $fundoBranco);
+$tintaAzul = imagecolorallocate($imgTeste, 0, 50, 200);
+imageline($imgTeste, 10, 10, 40, 40, $tintaAzul);
+$transparente = removerFundoBrancoImagemAssinatura($imgTeste);
+$corFundo = imagecolorsforindex($transparente, imagecolorat($transparente, 0, 0));
+assertAssinatura($corFundo['alpha'] === 127, 'Fundo branco nao foi convertido para transparente.');
+$corTinta = imagecolorsforindex($transparente, imagecolorat($transparente, 25, 25));
+assertAssinatura($corTinta['alpha'] === 0 && $corTinta['blue'] > 150, 'Traco da assinatura nao foi preservado.');
+imagedestroy($imgTeste);
+imagedestroy($transparente);
+
+echo "OK: estrutura, vinculos, convites, transparencia e guardas de assinatura estao presentes.\n";
