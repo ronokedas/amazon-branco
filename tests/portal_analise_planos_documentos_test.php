@@ -39,6 +39,30 @@ $analista = $pdo->query("SELECT u.id, u.nome, u.cargo FROM usuarios u
 assertDocTest(!empty($admin['id']), "Usuário Admin localizado ({$admin['nome']})");
 assertDocTest(!empty($analista['id']), "Analista Naval ativo identificado ({$analista['nome']})");
 
+// 1b. Validar Relação Completa de Documentos Técnicos Oficiais (NORMAM-202)
+$categoriasPadrao = analisePlanosCategoriasPadrao();
+$esperadas = [
+    'ART',
+    'FOLHA DE ROSTO',
+    'DECLARAÇÃO',
+    'MEMORIAL DESCRITO',
+    'NOTAS DE ARQUEAÇÃO',
+    'NOTAS DE BORDA LIVRE',
+    'DADOS DE ENTRADA OU COTAS',
+    'CURVAS HIDROSTÁTICAS',
+    'CURVAS CRUZADAS',
+    'PROVA DE INCLINAÇÃO OU PORTE BRUTO',
+    'ESTUDO DE ESTABILIDADE',
+    'ESTUDO DE CARGA X CALADOS',
+    'MOMENTO FLETOR E ESFORÇO CORTANTE',
+    'PLANOS DE LINHAS',
+    'PLANO DE ARRANJO GERAL, LUZES, SEGURANÇA E CAPACIDADE.',
+    'PLANO DE PERFIL ESTRUTURAL E SEÇÃO MESTRA.',
+];
+foreach ($esperadas as $esp) {
+    assertDocTest(in_array($esp, $categoriasPadrao, true), "Categoria oficial NORMAM disponível no catálogo: '{$esp}'");
+}
+
 // 2. Criar Armador / Cliente e Embarcação de Teste
 $clienteId = gerarUUID();
 $cpfCnpj = sprintf('%02d.%03d.%03d/%04d-%02d', mt_rand(10,99), mt_rand(100,999), mt_rand(100,999), 1, mt_rand(10,99));

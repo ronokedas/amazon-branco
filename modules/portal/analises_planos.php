@@ -69,6 +69,37 @@ require_once __DIR__ . '/../../includes/portal_header.php';
         <?php
         $statusLabel = $statusLabels[$a['status']] ?? ucfirst(strtolower(str_replace('_', ' ', $a['status'])));
         $statusClass = $a['status'] === 'AGUARDANDO_DOCUMENTOS' ? 'is-warning' : 'is-analysis';
+
+        $stmtSubHist = $pdo->prepare("
+            SELECT s.revisao, s.descricao, s.recebido_em, s.origem,
+                   ar.id AS arquivo_id, ar.nome_original, ar.categoria, ar.tamanho_bytes, ar.extensao, ar.classificacao, ar.criado_em
+            FROM analise_planos_submissoes s
+            INNER JOIN analise_planos_arquivos ar ON ar.submissao_id = s.id
+            WHERE s.analise_id = :id
+            ORDER BY s.revisao DESC, ar.criado_em ASC
+        ");
+        $stmtSubHist->execute([':id' => $a['id']]);
+        $arquivosHistorico = $stmtSubHist->fetchAll(PDO::FETCH_ASSOC);
+
+        $catsEnviadas = [];
+        foreach ($arquivosHistorico as $h) {
+            $c = trim($h['categoria'] ?? '');
+            if ($c !== '') {
+                $catsEnviadas[$c] = true;
+                $catsEnviadas[rtrim($c, '.')] = true;
+                $catsEnviadas[mb_strtoupper($c, 'UTF-8')] = true;
+                $catsEnviadas[rtrim(mb_strtoupper($c, 'UTF-8'), '.')] = true;
+            }
+        }
+        $todasCategorias = analisePlanosCategoriasPadrao();
+        $totalObrigatorios = 16;
+        $enviadosCount = 0;
+        foreach ($todasCategorias as $docItem) {
+            if ($docItem === 'OUTROS') continue;
+            if (isset($catsEnviadas[$docItem]) || isset($catsEnviadas[rtrim($docItem, '.')]) || isset($catsEnviadas[mb_strtoupper($docItem, 'UTF-8')])) {
+                $enviadosCount++;
+            }
+        }
         ?>
         <section class="portal-analysis-layout">
             <div class="portal-analysis-main">
@@ -85,25 +116,63 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                                 · Analista: <?php echo h($a['analista_nome'] ?: 'A definir'); ?>
                             </span>
                         </div>
-                        <div class="portal-analysis-fields">
-                            <div>
-                                <label for="descricao-<?php echo h($a['id']); ?>">Descrição da revisão</label>
-                                <input id="descricao-<?php echo h($a['id']); ?>" name="descricao" maxlength="500" required placeholder="Ex.: correção solicitada no parecer">
-                            </div>
-                            <div>
-                                <label for="categoria-<?php echo h($a['id']); ?>">Categoria</label>
-                                <select id="categoria-<?php echo h($a['id']); ?>" name="categoria">
-                                    <?php foreach (analisePlanosCategoriasPadrao() as $cat): ?>
-                                        <option><?php echo h($cat); ?></option>
+
+                        <div class="portal-analysis-fields" style="display: flex; gap: 16px; flex-wrap: wrap;">
+                            <div style="flex: 1.2; min-width: 260px;">
+                                <label for="categoria-<?php echo h($a['id']); ?>" style="font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa-solid fa-file-contract text-primary"></i> Tipo de Documento / Categoria *
+                                </label>
+                                <select id="categoria-<?php echo h($a['id']); ?>" name="categoria" class="form-control" required style="width: 100%; height: 42px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; font-weight: 500; background: #fff;">
+                                    <?php foreach ($todasCategorias as $cat): ?>
+                                        <option value="<?php echo h($cat); ?>"><?php echo h($cat); ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                                <small class="text-muted" style="display: block; margin-top: 4px; font-size: 0.78rem;">
+                                    Selecione o tipo oficial do documento conforme exigido pela NORMAM-202/DPC.
+                                </small>
+                            </div>
+                            <div style="flex: 1; min-width: 240px;">
+                                <label for="descricao-<?php echo h($a['id']); ?>" style="font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa-regular fa-comment-dots text-secondary"></i> Descrição / Observações (Opcional)
+                                </label>
+                                <input id="descricao-<?php echo h($a['id']); ?>" name="descricao" maxlength="500" placeholder="Ex.: Prancha inicial ou revisão solicitada" style="width: 100%; height: 42px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px;">
+                                <small class="text-muted" style="display: block; margin-top: 4px; font-size: 0.78rem;">
+                                    Opcional. Se vazio, será identificado automaticamente como Envio do Documento.
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Atalhos Rápidos (Chips/Pills) para seleção em 1 clique -->
+                        <div style="margin-top: 14px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            <div style="font-size: 0.78rem; font-weight: 600; color: #475569; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-bolt text-warning"></i>
+                                <span>Atalhos Rápidos de Documentos (clique para selecionar no formulário):</span>
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                <?php foreach ($todasCategorias as $catChip): ?>
+                                    <?php 
+                                    if ($catChip === 'OUTROS') continue; 
+                                    $chipEnviado = isset($catsEnviadas[$catChip]) || isset($catsEnviadas[rtrim($catChip, '.')]) || isset($catsEnviadas[mb_strtoupper($catChip, 'UTF-8')]);
+                                    ?>
+                                    <button type="button"
+                                            class="btn btn-sm"
+                                            style="font-size: 0.74rem; padding: 3px 9px; border-radius: 14px; border: 1px solid <?php echo $chipEnviado ? '#86efac' : '#cbd5e1'; ?>; background: <?php echo $chipEnviado ? '#f0fdf4' : '#ffffff'; ?>; color: <?php echo $chipEnviado ? '#166534' : '#334155'; ?>; font-weight: <?php echo $chipEnviado ? '600' : '400'; ?>; cursor: pointer; transition: all 0.15s ease;"
+                                            onclick="selecionarCategoriaPortal('<?php echo h($a['id']); ?>', '<?php echo addslashes($catChip); ?>')">
+                                        <?php if ($chipEnviado): ?>
+                                            <i class="fa-solid fa-circle-check text-success" style="font-size: 0.72rem;"></i>
+                                        <?php else: ?>
+                                            <i class="fa-regular fa-circle text-muted" style="font-size: 0.72rem;"></i>
+                                        <?php endif; ?>
+                                        <?php echo h($catChip); ?>
+                                    </button>
+                                <?php endforeach; ?>
                             </div>
                         </div>
                     </div>
 
                     <div class="portal-upload-section">
                         <h3>Anexe os arquivos</h3>
-                        <p>Selecione ou arraste todos os arquivos que fazem parte desta revisão.</p>
+                        <p>Selecione ou arraste todos os arquivos que fazem parte deste documento ou revisão.</p>
                         <div class="portal-upload-zone" role="button" tabindex="0" aria-label="Selecionar arquivos para a revisão">
                             <input type="file" name="arquivos[]" multiple required accept=".pdf,.jpg,.jpeg,.png,.dwg,.dxf,.doc,.docx,.xls,.xlsx">
                             <div>
@@ -129,22 +198,9 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                     </div>
 
                     <button class="btn btn-primary portal-analysis-submit" type="submit">
-                        <i class="fas fa-upload"></i> Enviar nova revisão
+                        <i class="fas fa-upload"></i> Enviar documento para análise
                     </button>
                 </form>
-
-                <?php
-                $stmtSubHist = $pdo->prepare("
-                    SELECT s.revisao, s.descricao, s.recebido_em, s.origem,
-                           ar.id AS arquivo_id, ar.nome_original, ar.categoria, ar.tamanho_bytes, ar.extensao, ar.classificacao, ar.criado_em
-                    FROM analise_planos_submissoes s
-                    INNER JOIN analise_planos_arquivos ar ON ar.submissao_id = s.id
-                    WHERE s.analise_id = :id
-                    ORDER BY s.revisao DESC, ar.criado_em ASC
-                ");
-                $stmtSubHist->execute([':id' => $a['id']]);
-                $arquivosHistorico = $stmtSubHist->fetchAll(PDO::FETCH_ASSOC);
-                ?>
 
                 <?php if (!empty($arquivosHistorico)): ?>
                     <div class="portal-uploaded-history" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
@@ -175,7 +231,7 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                                             <strong style="font-size: 0.9rem; color: #1e293b;"><?php echo h($histArq['nome_original']); ?></strong>
                                             <div style="font-size: 0.78rem; color: #64748b;">
                                                 <span>Revisão <?php echo (int)$histArq['revisao']; ?></span> ·
-                                                <span><?php echo h($histArq['categoria'] ?: 'Projeto'); ?></span> ·
+                                                <span class="badge" style="background: #e0f2fe; color: #0369a1;"><?php echo h($histArq['categoria'] ?: 'Projeto'); ?></span> ·
                                                 <span><?php echo $tFmt; ?></span> ·
                                                 <span>Enviado em <?php echo formatarData($histArq['recebido_em']); ?></span>
                                             </div>
@@ -194,14 +250,51 @@ require_once __DIR__ . '/../../includes/portal_header.php';
             </div>
 
             <aside class="portal-analysis-side">
+                <!-- Relação NORMAM-202 com status e 1 clique -->
+                <section class="portal-side-card">
+                    <h2 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span><i class="fa-solid fa-clipboard-list text-primary"></i> Relação de Documentos</span>
+                        <span class="badge" style="background: <?php echo $enviadosCount === $totalObrigatorios ? '#22c55e' : '#2596be'; ?>; color: #fff; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px;">
+                            <?php echo $enviadosCount; ?> / <?php echo $totalObrigatorios; ?>
+                        </span>
+                    </h2>
+                    <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px;">
+                        Relação oficial de documentos de engenharia para enquadramento da embarcação (NORMAM-202). Clique em qualquer item para preencher:
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 6px; max-height: 480px; overflow-y: auto; padding-right: 2px;">
+                        <?php foreach ($todasCategorias as $docNormam): ?>
+                            <?php 
+                            if ($docNormam === 'OUTROS') continue; 
+                            $jaEnviado = isset($catsEnviadas[$docNormam]) || isset($catsEnviadas[rtrim($docNormam, '.')]) || isset($catsEnviadas[mb_strtoupper($docNormam, 'UTF-8')]);
+                            ?>
+                            <div role="button"
+                                 tabindex="0"
+                                 title="Clique para selecionar este documento para envio"
+                                 onclick="selecionarCategoriaPortal('<?php echo h($a['id']); ?>', '<?php echo addslashes($docNormam); ?>')"
+                                 style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 6px; font-size: 0.76rem; cursor: pointer; border: 1px solid <?php echo $jaEnviado ? '#bbf7d0' : '#e2e8f0'; ?>; background: <?php echo $jaEnviado ? '#f0fdf4' : '#ffffff'; ?>; transition: all 0.2s ease;">
+                                <div style="display: flex; align-items: center; gap: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75%;">
+                                    <i class="fa-solid <?php echo $jaEnviado ? 'fa-check-circle text-success' : 'fa-clock text-secondary'; ?>" style="font-size: 0.85rem; flex-shrink: 0;"></i>
+                                    <span style="font-weight: <?php echo $jaEnviado ? '600' : '400'; ?>; color: <?php echo $jaEnviado ? '#166534' : '#334155'; ?>; overflow: hidden; text-overflow: ellipsis;">
+                                        <?php echo h($docNormam); ?>
+                                    </span>
+                                </div>
+                                <span class="badge" style="flex-shrink: 0; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; background: <?php echo $jaEnviado ? '#dcfce7' : '#f1f5f9'; ?>; color: <?php echo $jaEnviado ? '#15803d' : '#64748b'; ?>;">
+                                    <?php echo $jaEnviado ? 'Enviado' : 'Pendente'; ?>
+                                </span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+
                 <section class="portal-side-card">
                     <h2>Como funciona</h2>
                     <ol class="portal-steps">
-                        <li class="portal-step"><span class="portal-step-number">1</span><div><strong>Identifique a revisão</strong><p>Descreva a correção e selecione a categoria.</p></div></li>
-                        <li class="portal-step"><span class="portal-step-number">2</span><div><strong>Anexe os arquivos</strong><p>Adicione os novos documentos. Os anteriores serão preservados.</p></div></li>
-                        <li class="portal-step"><span class="portal-step-number">3</span><div><strong>Envie para análise</strong><p>Nossa equipe será notificada para continuar o processo.</p></div></li>
+                        <li class="portal-step"><span class="portal-step-number">1</span><div><strong>Selecione o documento</strong><p>Escolha o tipo correspondente na lista da NORMAM-202.</p></div></li>
+                        <li class="portal-step"><span class="portal-step-number">2</span><div><strong>Anexe os arquivos</strong><p>Adicione o PDF, pranchas DWG ou memoriais calculados.</p></div></li>
+                        <li class="portal-step"><span class="portal-step-number">3</span><div><strong>Envie para análise</strong><p>O Analista Naval é notificado imediatamente no sistema.</p></div></li>
                     </ol>
                 </section>
+
                 <section class="portal-side-card">
                     <h2>Resumo da análise atual</h2>
                     <div class="portal-current-summary">
@@ -217,5 +310,22 @@ require_once __DIR__ . '/../../includes/portal_header.php';
         </section>
     <?php endforeach; ?>
 <?php endif; ?>
+
+<script>
+function selecionarCategoriaPortal(analiseId, categoria) {
+    const sel = document.getElementById('categoria-' + analiseId);
+    if (!sel) return;
+    sel.value = categoria;
+    sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    sel.focus();
+    sel.style.transition = 'all 0.3s ease';
+    sel.style.borderColor = '#2596be';
+    sel.style.boxShadow = '0 0 0 3px rgba(37, 150, 190, 0.25)';
+    setTimeout(() => {
+        sel.style.borderColor = '';
+        sel.style.boxShadow = '';
+    }, 1200);
+}
+</script>
 
 <?php require_once __DIR__ . '/../../includes/portal_footer.php'; ?>

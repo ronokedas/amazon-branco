@@ -448,7 +448,25 @@ function analisePlanosEmitirArquivo(array $registro, bool $download = false): ne
 
 function analisePlanosCategoriasPadrao(): array
 {
-    return ['Memorial Descritivo','Arranjo Geral','Plano de Linhas','Seção Mestra e Perfil Estrutural','Curvas Hidrostáticas','Estabilidade','Capacidade','Segurança','ART','Outros'];
+    return [
+        'ART',
+        'FOLHA DE ROSTO',
+        'DECLARAÇÃO',
+        'MEMORIAL DESCRITO',
+        'NOTAS DE ARQUEAÇÃO',
+        'NOTAS DE BORDA LIVRE',
+        'DADOS DE ENTRADA OU COTAS',
+        'CURVAS HIDROSTÁTICAS',
+        'CURVAS CRUZADAS',
+        'PROVA DE INCLINAÇÃO OU PORTE BRUTO',
+        'ESTUDO DE ESTABILIDADE',
+        'ESTUDO DE CARGA X CALADOS',
+        'MOMENTO FLETOR E ESFORÇO CORTANTE',
+        'PLANOS DE LINHAS',
+        'PLANO DE ARRANJO GERAL, LUZES, SEGURANÇA E CAPACIDADE.',
+        'PLANO DE PERFIL ESTRUTURAL E SEÇÃO MESTRA.',
+        'OUTROS',
+    ];
 }
 
 function analiseAcaoExigirTecnico(array $analise): void

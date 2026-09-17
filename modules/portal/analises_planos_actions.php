@@ -15,9 +15,14 @@ try{
     $preparados=[];foreach($arquivos['name'] as $i=>$nome){if(($arquivos['error'][$i]??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE)continue;$arquivo=['name'=>$nome,'type'=>$arquivos['type'][$i]??'','tmp_name'=>$arquivos['tmp_name'][$i]??'','error'=>$arquivos['error'][$i]??UPLOAD_ERR_NO_FILE,'size'=>$arquivos['size'][$i]??0];$preparados[]=[$arquivo,analisePlanosValidarUpload($arquivo)];}
     if(!$preparados)throw new RuntimeException('Selecione ao menos um arquivo válido.');
     $pdo->beginTransaction();$q=$pdo->prepare('SELECT COALESCE(MAX(revisao),0)+1 FROM analise_planos_submissoes WHERE analise_id=:id FOR UPDATE');$q->execute([':id'=>$analiseId]);$rev=(int)$q->fetchColumn();$sub=gerarUUID();
-    $pdo->prepare("INSERT INTO analise_planos_submissoes(id,analise_id,revisao,descricao,recebido_em,origem,portal_cliente_id,criado_por)VALUES(:id,:analise,:rev,:descricao,CURDATE(),'PORTAL',:cliente,NULL)")->execute([':id'=>$sub,':analise'=>$analiseId,':rev'=>$rev,':descricao'=>trim($_POST['descricao']??'')?:'Revisão enviada pelo portal',':cliente'=>$clienteId]);
+    $categoria = trim($_POST['categoria'] ?? 'OUTROS');
+    $descricao = trim($_POST['descricao'] ?? '');
+    if ($descricao === '') {
+        $descricao = 'Envio de ' . $categoria;
+    }
+    $pdo->prepare("INSERT INTO analise_planos_submissoes(id,analise_id,revisao,descricao,recebido_em,origem,portal_cliente_id,criado_por)VALUES(:id,:analise,:rev,:descricao,CURDATE(),'PORTAL',:cliente,NULL)")->execute([':id'=>$sub,':analise'=>$analiseId,':rev'=>$rev,':descricao'=>$descricao,':cliente'=>$clienteId]);
     $ins=$pdo->prepare("INSERT INTO analise_planos_arquivos(id,submissao_id,categoria,nome_original,extensao,mime_type,tamanho_bytes,sha256,chave_arquivo,criado_por)VALUES(:id,:sub,:categoria,:nome,:ext,:mime,:tam,:hash,:chave,NULL)");
-    foreach($preparados as [$arquivo,$meta]){$chave=analisePlanosGuardarUpload($arquivo,$analiseId,$meta);$ins->execute([':id'=>gerarUUID(),':sub'=>$sub,':categoria'=>trim($_POST['categoria']??'Outros'),':nome'=>$meta['nome'],':ext'=>$meta['extensao'],':mime'=>$meta['mime'],':tam'=>$meta['tamanho'],':hash'=>$meta['sha256'],':chave'=>$chave]);}
+    foreach($preparados as [$arquivo,$meta]){$chave=analisePlanosGuardarUpload($arquivo,$analiseId,$meta);$ins->execute([':id'=>gerarUUID(),':sub'=>$sub,':categoria'=>$categoria,':nome'=>$meta['nome'],':ext'=>$meta['extensao'],':mime'=>$meta['mime'],':tam'=>$meta['tamanho'],':hash'=>$meta['sha256'],':chave'=>$chave]);}
     $novoStatus = ($analise['status'] === 'AGUARDANDO_DOCUMENTOS') ? 'EM_ANALISE' : $analise['status'];
     $pdo->prepare("UPDATE analises_planos SET status=:status WHERE id=:id")->execute([':status'=>$novoStatus, ':id'=>$analiseId]);
     analisePlanosHistorico($pdo,$analiseId,'REVISAO_PORTAL_RECEBIDA',$analise['status'],$novoStatus,'Revisão '.$rev.' enviada pelo portal com '.count($preparados).' arquivo(s).',(string)$analise['criado_por']);
