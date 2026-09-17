@@ -68,11 +68,13 @@ $ex->execute([':id' => $p['id']]);
 $exigencias = $ex->fetchAll(PDO::FETCH_ASSOC);
 
 $numeroRap = $p['numero'] ?: ($p['processo_numero'] . ' · histórico v' . $p['versao']);
+$numLimpo = trim(preg_replace('/^(?:AM-)?RAP-(?:AP|REL)[:\s-]*/i', '', $numeroRap));
+$codigoOficial = 'AM-RAP-AP: ' . ($numLimpo ?: $numeroRap);
 $embarcacaoNome = $p['embarcacao_nome'];
 
 if (!class_exists('RelatorioAnalisePlanosPdf')) {
     class RelatorioAnalisePlanosPdf extends TCPDF {
-        public string $numeroRelatorio = '';
+        public string $codigoOficial = '';
         public string $embarcacaoNome = '';
 
         public function Header() {
@@ -97,7 +99,7 @@ if (!class_exists('RelatorioAnalisePlanosPdf')) {
                 $this->SetXY(44, 27.5);
                 $this->SetFont('helvetica', 'B', 10);
                 $this->SetTextColor(13, 73, 65);
-                $this->Cell(151, 7, 'AM-RAP-AP: ' . $this->numeroRelatorio, 0, 1, 'C');
+                $this->Cell(151, 7, $this->codigoOficial, 0, 1, 'C');
             } else {
                 // Cabeçalho das páginas seguintes
                 if (is_file($logo)) {
@@ -110,7 +112,7 @@ if (!class_exists('RelatorioAnalisePlanosPdf')) {
                 $this->SetFont('helvetica', '', 7.5);
                 $this->SetTextColor(85, 105, 98);
                 $this->SetX(32);
-                $this->Cell(163, 4, 'AM-RAP-AP: ' . $this->numeroRelatorio . ' · Embarcação: ' . $this->embarcacaoNome, 0, 1, 'L');
+                $this->Cell(163, 4, $this->codigoOficial . ' · Embarcação: ' . $this->embarcacaoNome, 0, 1, 'L');
                 $this->SetDrawColor(13, 73, 65);
                 $this->SetLineWidth(0.3);
                 $this->Line(15, 23.5, 195, 23.5);
@@ -132,7 +134,7 @@ if (!class_exists('RelatorioAnalisePlanosPdf')) {
 }
 
 $pdf = new RelatorioAnalisePlanosPdf('P', 'mm', 'A4', true, 'UTF-8');
-$pdf->numeroRelatorio = $numeroRap;
+$pdf->codigoOficial = $codigoOficial;
 $pdf->embarcacaoNome = $embarcacaoNome;
 $pdf->SetCreator('Amazon Certificadora Naval');
 $pdf->SetTitle('RAP ' . $numeroRap . ' - ' . $embarcacaoNome);
@@ -201,6 +203,7 @@ if (!empty($exigencias)) {
     }
 }
 
+$globalItemNum = 1;
 if (!empty($exigenciasPorCategoria)) {
     foreach ($exigenciasPorCategoria as $catNome => $itensCat) {
         $html .= '
@@ -217,9 +220,11 @@ if (!empty($exigenciasPorCategoria)) {
         foreach ($itensCat as $k => $itemEx) {
             $desc = $itemEx['descricao_snapshot'] ?: $itemEx['desc_original'];
             $ref = $itemEx['referencia_snapshot'] ?: ($itemEx['ref_original'] ?: 'NORMAM-202/DPC');
+            $numExib = str_pad((string)$globalItemNum, 2, '0', STR_PAD_LEFT);
+            $globalItemNum++;
             $html .= '
           <tr nobr="true" style="font-size:7.8pt;">
-            <td width="8%" style="text-align:center; font-weight:bold;">' . str_pad((string)($k + 1), 2, '0', STR_PAD_LEFT) . '</td>
+            <td width="8%" style="text-align:center; font-weight:bold;">' . $numExib . '</td>
             <td width="53%" style="text-align:justify; line-height:1.3;">' . nl2br(h($desc)) . '</td>
             <td width="24%" style="line-height:1.3;">' . h($ref) . '</td>
             <td width="15%" style="text-align:center;">Ver OBS. 3</td>
@@ -286,7 +291,8 @@ if ($isAssinado) {
     $sigX = 15;
     $sigW = 180;
     $sigH = 34;
-    $colImgW = 55;
+    $colImgW = 50;
+    $colQrW = 28;
 
     $pdf->SetDrawColor(13, 73, 65);
     $pdf->SetLineWidth(0.3);
@@ -300,21 +306,21 @@ if ($isAssinado) {
         if (function_exists('garantirAssinaturaTransparente')) {
             garantirAssinaturaTransparente($sigFileAbs);
         }
-        $pdf->Image($sigFileAbs, $sigX + 5, $sigY + 3, 45, 0, 'PNG', '', '', false, 300);
+        $pdf->Image($sigFileAbs, $sigX + 3, $sigY + 3, 44, 0, 'PNG', '', '', false, 300);
     } else {
-        $pdf->SetXY($sigX + 4, $sigY + 8);
+        $pdf->SetXY($sigX + 2, $sigY + 8);
         $pdf->SetFont('helvetica', 'I', 8);
         $pdf->SetTextColor(120, 120, 120);
-        $pdf->Cell($colImgW - 8, 8, '[Assinatura Cadastrada]', 0, 0, 'C');
+        $pdf->Cell($colImgW - 4, 8, '[Assinatura Cadastrada]', 0, 0, 'C');
     }
 
-    $pdf->SetXY($sigX + 2, $sigY + 22);
-    $pdf->SetFont('helvetica', 'I', 6.0);
+    $pdf->SetXY($sigX + 1, $sigY + 22);
+    $pdf->SetFont('helvetica', 'I', 5.8);
     $pdf->SetTextColor(90, 100, 95);
     $pdf->Cell($colImgW, 3.5, 'Representação gráfica da assinatura', 0, 1, 'C');
 
-    $pdf->SetXY($sigX + 2, $sigY + 26);
-    $pdf->SetFont('helvetica', 'B', 6.8);
+    $pdf->SetXY($sigX + 1, $sigY + 26);
+    $pdf->SetFont('helvetica', 'B', 6.5);
     $pdf->SetTextColor(13, 73, 65);
     $pdf->Cell($colImgW, 4, 'ASSINADO DIGITALMENTE', 0, 1, 'C');
 
@@ -322,15 +328,15 @@ if ($isAssinado) {
     $pdf->SetLineWidth(0.2);
     $pdf->Line($sigX + $colImgW, $sigY + 2, $sigX + $colImgW, $sigY + $sigH - 2);
 
-    $textX = $sigX + $colImgW + 4;
-    $textW = $sigW - $colImgW - 6;
+    $textX = $sigX + $colImgW + 3;
+    $textW = $sigW - $colImgW - $colQrW - 6;
 
     $pdf->SetXY($textX, $sigY + 2.5);
-    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->SetFont('helvetica', 'B', 7.2);
     $pdf->SetTextColor(13, 73, 65);
-    $pdf->Cell($textW, 4, 'CHANCELA TÉCNICA NAVAL · ASSINATURA ELETRÔNICA QUALIFICADA', 0, 1, 'L');
+    $pdf->Cell($textW, 4, 'CHANCELA TÉCNICA NAVAL · ASSINATURA QUALIFICADA', 0, 1, 'L');
 
-    $pdf->SetFont('helvetica', '', 6.8);
+    $pdf->SetFont('helvetica', '', 6.5);
     $pdf->SetTextColor(30, 40, 35);
 
     $dtAssinatura = !empty($p['assinado_analista_em']) ? date('d/m/Y H:i:s', strtotime($p['assinado_analista_em'])) : date('d/m/Y H:i:s');
@@ -339,33 +345,50 @@ if ($isAssinado) {
     $cargoReg = trim(($p['responsavel_cargo'] ?: 'TECNÓLOGO NAVAL / ANALISTA NAVAL') . ' | ' . ($p['responsavel_registro'] ?: 'CREA/Conselho Regional'));
 
     $pdf->SetX($textX);
-    $pdf->Cell($textW, 3.6, 'Signatário: ' . $signatario . (!empty($p['responsavel_cpf_cnpj']) ? ' · CPF: ' . $p['responsavel_cpf_cnpj'] : ''), 0, 1, 'L');
+    $pdf->Cell($textW, 3.5, 'Signatário: ' . $signatario . (!empty($p['responsavel_cpf_cnpj']) ? ' · CPF: ' . $p['responsavel_cpf_cnpj'] : ''), 0, 1, 'L');
 
     $pdf->SetX($textX);
-    $pdf->Cell($textW, 3.6, 'Qualificação: ' . $cargoReg, 0, 1, 'L');
+    $pdf->Cell($textW, 3.5, 'Qualificação: ' . $cargoReg, 0, 1, 'L');
 
     $pdf->SetX($textX);
-    $pdf->Cell($textW, 3.6, 'Data/Hora da Assinatura: ' . $dtAssinatura . ' (Horário de Brasília)', 0, 1, 'L');
+    $pdf->Cell($textW, 3.5, 'Data/Hora: ' . $dtAssinatura . ' (Horário de Brasília)', 0, 1, 'L');
 
     if (!empty($p['assinatura_hash'])) {
         $pdf->SetX($textX);
-        $pdf->SetFont('helvetica', '', 5.8);
+        $pdf->SetFont('helvetica', '', 5.5);
         $pdf->SetTextColor(95, 105, 100);
-        $pdf->Cell($textW, 3.2, 'Hash SHA-256: ' . $p['assinatura_hash'], 0, 1, 'L');
+        $pdf->Cell($textW, 3.2, 'SHA-256: ' . substr($p['assinatura_hash'], 0, 36) . '...', 0, 1, 'L');
     }
 
     if ($p['status'] === 'PUBLICADO') {
         $validador = $p['admin_validador_nome'] ?: 'Administrador';
         $pdf->SetX($textX);
-        $pdf->SetFont('helvetica', 'B', 6.5);
+        $pdf->SetFont('helvetica', 'B', 6.2);
         $pdf->SetTextColor(13, 73, 65);
-        $pdf->Cell($textW, 3.6, 'Homologação Administrativa: Aprovado por ' . $validador . ($dtPublicado ? ' em ' . $dtPublicado : ''), 0, 1, 'L');
+        $pdf->Cell($textW, 3.5, 'Homologação: Aprovado por ' . $validador . ($dtPublicado ? ' em ' . $dtPublicado : ''), 0, 1, 'L');
     } else {
         $pdf->SetX($textX);
-        $pdf->SetFont('helvetica', 'I', 6.5);
+        $pdf->SetFont('helvetica', 'I', 6.2);
         $pdf->SetTextColor(170, 95, 0);
-        $pdf->Cell($textW, 3.6, 'Situação: Assinado tecnicamente · Aguardando homologação administrativa', 0, 1, 'L');
+        $pdf->Cell($textW, 3.5, 'Situação: Assinado tecnicamente · Aguardando homologação', 0, 1, 'L');
     }
+
+    // Coluna QR Code na direita
+    $qrX = $sigX + $sigW - $colQrW;
+    $pdf->Line($qrX - 1, $sigY + 2, $qrX - 1, $sigY + $sigH - 2);
+
+    $qrUrl = APP_URL . 'validar/' . urlencode($p['id']);
+    $pdf->write2DBarcode($qrUrl, 'QRCODE,L', $qrX + 3, $sigY + 3, 22, 22, [
+        'border' => false,
+        'padding' => 0,
+        'fgcolor' => [13, 73, 65],
+        'bgcolor' => false
+    ], 'N');
+
+    $pdf->SetXY($qrX, $sigY + 26);
+    $pdf->SetFont('helvetica', 'B', 5.2);
+    $pdf->SetTextColor(13, 73, 65);
+    $pdf->Cell($colQrW, 3.5, 'VERIFICAR AUTENTICIDADE', 0, 1, 'C');
 
     $pdf->SetY($sigY + $sigH + 2);
 } else {
