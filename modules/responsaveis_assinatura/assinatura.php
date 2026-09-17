@@ -27,7 +27,9 @@ if (!is_file($file) || !hash_equals((string)$r['assinatura_hash'], hash_file('sh
 
 header('Content-Type: image/png');
 header('Content-Length: ' . filesize($file));
-header('Cache-Control: private,max-age=300');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
 header('X-Content-Type-Options: nosniff');
 readfile($file);
 exit;

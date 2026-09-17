@@ -140,27 +140,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['atualizar_perfil'])) 
                 $respId = (int)$responsavel['id'];
                 $image = $temArquivo ? salvarImagemAssinaturaResponsavel($arquivoAssinatura, $respId) : [];
 
-                $stmtUpResp = $pdo->prepare("UPDATE responsaveis_assinatura 
-                    SET nome_completo = :nome,
-                        email = :email,
-                        cargo_titulo = :cargo_titulo,
-                        registro_profissional = :reg,
-                        cpf_cnpj = :cpf,
-                        assinatura_arquivo = COALESCE(:arq, assinatura_arquivo),
-                        assinatura_hash = COALESCE(:hash, assinatura_hash),
-                        assinatura_atualizada_em = IF(:arq IS NULL, assinatura_atualizada_em, NOW()),
-                        ativo = 1
-                    WHERE id = :id");
-                $stmtUpResp->execute([
-                    ':nome' => $nome,
-                    ':email' => $email,
-                    ':cargo_titulo' => $cargo_titulo ?: ($responsavel['cargo_titulo'] ?: $usuario['cargo']),
-                    ':reg' => $registro_profissional,
-                    ':cpf' => $cpf_cnpj ?: null,
-                    ':arq' => $image['path'] ?? null,
-                    ':hash' => $image['hash'] ?? null,
-                    ':id' => $respId
-                ]);
+                if (!empty($image['path'])) {
+                    $stmtUpResp = $pdo->prepare("UPDATE responsaveis_assinatura 
+                        SET nome_completo = :nome,
+                            email = :email,
+                            cargo_titulo = :cargo_titulo,
+                            registro_profissional = :reg,
+                            cpf_cnpj = :cpf,
+                            assinatura_arquivo = :arq,
+                            assinatura_hash = :hash,
+                            assinatura_atualizada_em = NOW(),
+                            ativo = 1
+                        WHERE id = :id");
+                    $stmtUpResp->execute([
+                        ':nome' => $nome,
+                        ':email' => $email,
+                        ':cargo_titulo' => $cargo_titulo ?: ($responsavel['cargo_titulo'] ?: $usuario['cargo']),
+                        ':reg' => $registro_profissional,
+                        ':cpf' => $cpf_cnpj ?: null,
+                        ':arq' => $image['path'],
+                        ':hash' => $image['hash'],
+                        ':id' => $respId
+                    ]);
+                } else {
+                    $stmtUpResp = $pdo->prepare("UPDATE responsaveis_assinatura 
+                        SET nome_completo = :nome,
+                            email = :email,
+                            cargo_titulo = :cargo_titulo,
+                            registro_profissional = :reg,
+                            cpf_cnpj = :cpf,
+                            ativo = 1
+                        WHERE id = :id");
+                    $stmtUpResp->execute([
+                        ':nome' => $nome,
+                        ':email' => $email,
+                        ':cargo_titulo' => $cargo_titulo ?: ($responsavel['cargo_titulo'] ?: $usuario['cargo']),
+                        ':reg' => $registro_profissional,
+                        ':cpf' => $cpf_cnpj ?: null,
+                        ':id' => $respId
+                    ]);
+                }
             } elseif (!empty($cargo_titulo) || !empty($registro_profissional) || !empty($cpf_cnpj) || $temArquivo) {
                 $stmtInsResp = $pdo->prepare("INSERT INTO responsaveis_assinatura 
                     (nome_completo, email, cpf_cnpj, usuario_id, cargo_titulo, registro_profissional, ativo)
@@ -443,7 +462,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 </span>
                             </div>
                             <div style="background: repeating-conic-gradient(#e5e7eb 0% 25%, #ffffff 0% 50%) 50% / 16px 16px; border-radius: 6px; padding: 14px; text-align: center; border: 1px dashed var(--border);">
-                                <img src="<?php echo APP_URL; ?>responsaveis_assinatura/assinatura?id=<?php echo (int)$responsavel['id']; ?>" 
+                                <img src="<?php echo APP_URL; ?>responsaveis_assinatura/assinatura?id=<?php echo (int)$responsavel['id']; ?>&t=<?php echo !empty($responsavel['assinatura_atualizada_em']) ? strtotime($responsavel['assinatura_atualizada_em']) : time(); ?>" 
                                      alt="Assinatura de <?php echo h($usuario['nome']); ?>" 
                                      style="max-height: 80px; max-width: 100%; object-fit: contain;">
                             </div>
