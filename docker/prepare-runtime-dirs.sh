@@ -31,6 +31,10 @@ for relative_dir in $RUNTIME_DIRS; do
     install -d -o www-data -g www-data -m 0770 "$absolute_dir"
 done
 
+# Garantir permissoes recursivas em subpastas anuais criadas dinamicamente
+chown -R www-data:www-data "${APP_ROOT}/storage/documentos_aprovados" "${APP_ROOT}/storage/certificados" 2>/dev/null || true
+chmod -R 0775 "${APP_ROOT}/storage/documentos_aprovados" "${APP_ROOT}/storage/certificados" 2>/dev/null || true
+
 # Testar como o mesmo usuario dos processos PHP/worker. Um deploy com volume
 # somente leitura ou filesystem incompatível deve falhar aqui, com erro claro.
 if command -v su >/dev/null 2>&1; then

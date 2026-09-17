@@ -504,8 +504,16 @@ function analiseAcaoPersistirParecerPdf(PDO $pdo, string $parecerId, string $ana
     $ano = date('Y');
     $relativo = 'storage/documentos_aprovados/' . $ano . '/parecer_planos/' . $parecerId . '.pdf';
     $absoluto = __DIR__ . '/../' . $relativo;
-    if (!is_dir(dirname($absoluto)) && !mkdir(dirname($absoluto), 0750, true) && !is_dir(dirname($absoluto))) {
-        throw new RuntimeException('Não foi possível preparar o armazenamento do parecer.');
+    $dir = dirname($absoluto);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+        @chmod($dir, 0775);
+    }
+    if (!is_dir($dir) || !is_writable($dir)) {
+        @chmod($dir, 0775);
+    }
+    if (!is_dir($dir) || !is_writable($dir)) {
+        throw new RuntimeException('Não foi possível preparar o armazenamento do parecer (diretório sem permissão de escrita).');
     }
     $oldGet = $_GET;
     $_GET = ['id' => $parecerId];
