@@ -81,6 +81,7 @@
                                                 <input type="hidden" name="action" value="registrar_devolucao">
                                                 <input type="hidden" name="dossie_id" value="<?= h($id) ?>">
                                                 <input type="hidden" name="item_id" value="<?= h($o['id']) ?>">
+                                                <input type="hidden" name="aba" class="input-aba-ativa" value="custodia">
                                                 <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Confirma a devolução deste documento original ao cliente/representante?')">
                                                     <i class="fa-solid fa-hand-holding-hand"></i> Dar Baixa na Devolução
                                                 </button>

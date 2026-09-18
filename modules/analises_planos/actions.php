@@ -21,7 +21,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verificarCSRF($_POST['csrf_token']
 
 $acao = trim($_POST['action'] ?? '');
 $analiseId = trim($_POST['analise_id'] ?? $_POST['id'] ?? '');
-$retorno = fn(string $id = '') => APP_URL . ($id ? 'analises-planos/form?id=' . urlencode($id) : 'analises-planos');
+$abaRetorno = trim($_POST['aba'] ?? $_GET['aba'] ?? '');
+$retorno = function(string $id = '', ?string $aba = null) use ($abaRetorno) {
+    if (!$id) return APP_URL . 'analises-planos';
+    $abaFinal = $aba !== null ? $aba : ($abaRetorno !== '' ? $abaRetorno : 'exigencias');
+    return APP_URL . 'analises-planos/form?id=' . urlencode($id) . ($abaFinal !== '' ? '&aba=' . urlencode($abaFinal) : '');
+};
 
 // As funções analiseAcaoExigirTecnico, analiseAcaoResponsavelDoAnalista, analiseAcaoCriarLicenca e analiseAcaoPersistirParecerPdf
 // estão centralizadas em includes/analise_planos.php para reuso seguro no sistema e testes.
@@ -141,7 +146,7 @@ try {
         $pdo->prepare("UPDATE analises_planos SET proposta_id=:proposta,servico_id=:servico,vendedor_origem_id=:vendedor,classe_certificacao=:classe,legado_sem_proposta=0 WHERE id=:id")->execute([':proposta'=>$propostaId,':servico'=>$servicoId,':vendedor'=>$vendedorId,':classe'=>$classe,':id'=>$analiseId]);
         analisePlanosHistorico($pdo,$analiseId,'ORIGEM_COMERCIAL_VINCULADA',$analise['status'],$analise['status'],'Processo legado vinculado manualmente pelo admin.');
         analisePlanosNotificar($pdo,$vendedorId,'ANALISE_LEGADO_VINCULADA','Análise vinculada à sua proposta',$analise['numero'].' foi vinculada pelo admin.',$analiseId,'analises-planos/form?id='.urlencode($analiseId));
-        $pdo->commit();setMensagem('success','Origem comercial vinculada. O processo já pode ser agendado.');redirecionar($retorno($analiseId));
+        $pdo->commit();setMensagem('success','Origem comercial vinculada. O processo já pode ser agendado.');redirecionar($retorno($analiseId, 'vistoria_tramite'));
     }
 
     if ($acao === 'agendar') {
@@ -181,7 +186,7 @@ try {
         }
         $pdo->commit();
         setMensagem('success',$primeiro?'Análise agendada.':'Análise reagendada com histórico preservado.');
-        redirecionar($retorno($analiseId));
+        redirecionar($retorno($analiseId, 'vistoria_tramite'));
     }
 
     if ($acao === 'iniciar') {
@@ -194,7 +199,7 @@ try {
         analisePlanosHistorico($pdo,$analiseId,'ANALISE_INICIADA',$analise['status'],'EM_ANALISE','Analista iniciou os trabalhos técnicos de conferência de planos e documentos.');
         $pdo->commit();
         setMensagem('success','Análise técnica iniciada com sucesso. Você já pode classificar os arquivos e avaliar a matriz normativa.');
-        redirecionar($retorno($analiseId));
+        redirecionar($retorno($analiseId, 'enquadramento'));
     }
 
     if ($acao === 'salvar') {
@@ -224,7 +229,7 @@ try {
         analisePlanosHistorico($pdo,$analiseId,'ENQUADRAMENTO_ATUALIZADO',$analise['status'],$analise['status'],$tipo.' · '.$norma);
         $pdo->commit();
         setMensagem('success','Enquadramento salvo e checklist normativo preparado.');
-        redirecionar($retorno($analiseId));
+        redirecionar($retorno($analiseId, 'enquadramento'));
     }
 
     if ($acao === 'adicionar_submissao') {
@@ -238,7 +243,7 @@ try {
         $ins=$pdo->prepare("INSERT INTO analise_planos_arquivos(id,submissao_id,categoria,nome_original,extensao,mime_type,tamanho_bytes,sha256,chave_arquivo,criado_por)VALUES(:id,:sub,:categoria,:nome,:ext,:mime,:tam,:hash,:chave,:usuario)");
         foreach($preparados as [$arquivo,$meta]){$chave=analisePlanosGuardarUpload($arquivo,$analiseId,$meta);$ins->execute([':id'=>gerarUUID(),':sub'=>$subId,':categoria'=>trim($_POST['categoria']??'Outros'),':nome'=>$meta['nome'],':ext'=>$meta['extensao'],':mime'=>$meta['mime'],':tam'=>$meta['tamanho'],':hash'=>$meta['sha256'],':chave'=>$chave,':usuario'=>$usuario]);}
         $pdo->prepare("UPDATE analises_planos SET status='EM_ANALISE' WHERE id=:id")->execute([':id'=>$analiseId]);analisePlanosHistorico($pdo,$analiseId,'REVISAO_RECEBIDA',$analise['status'],'EM_ANALISE','Revisão '.$rev.' com '.count($preparados).' arquivo(s).');$pdo->commit();
-        setMensagem('success','Revisão armazenada sem sobrescrever os documentos anteriores.');redirecionar($retorno($analiseId));
+        setMensagem('success','Revisão armazenada sem sobrescrever os documentos anteriores.');redirecionar($retorno($analiseId, 'arquivos'));
     }
 
     if ($acao === 'classificar_arquivo') {
@@ -249,14 +254,14 @@ try {
         $stmt=$pdo->prepare("UPDATE analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id SET ar.item_id=:item,ar.classificacao=:classificacao,ar.justificativa_classificacao=:justificativa,ar.classificado_por=:usuario,ar.classificado_em=NOW() WHERE ar.id=:arquivo AND s.analise_id=:analise");
         $stmt->execute([':item'=>$itemId,':classificacao'=>$classificacao,':justificativa'=>$justificativa?:null,':usuario'=>$usuario,':arquivo'=>$arquivoId,':analise'=>$analiseId]);if($stmt->rowCount()!==1)throw new RuntimeException('Arquivo não encontrado ou classificação inalterada.');
         analisePlanosHistorico($pdo,$analiseId,'ARQUIVO_CLASSIFICADO',$analise['status'],$analise['status'],$classificacao.($justificativa?' · '.$justificativa:''));
-        setMensagem('success','Arquivo classificado.');redirecionar($retorno($analiseId));
+        setMensagem('success','Arquivo classificado.');redirecionar($retorno($analiseId, 'arquivos'));
     }
 
     if ($acao === 'salvar_itens') {
         analiseAcaoExigirTecnico($analise);if(!in_array($analise['status'],['EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true))throw new RuntimeException('A matriz não pode ser alterada neste estado.');
         $ids=$_POST['item_id']??[];$resultados=$_POST['resultado']??[];$pdo->beginTransaction();$upd=$pdo->prepare('UPDATE analise_planos_itens SET resultado=:resultado,observacao=:observacao WHERE id=:id AND analise_id=:analise');
         foreach($ids as $i=>$itemId){$res=$resultados[$i]??'PENDENTE';if(!in_array($res,['PENDENTE','CONFORME','EXIGENCIA','NAO_APLICA'],true))$res='PENDENTE';$upd->execute([':resultado'=>$res,':observacao'=>trim($_POST['item_observacao'][$i]??'')?:null,':id'=>$itemId,':analise'=>$analiseId]);}
-        analisePlanosHistorico($pdo,$analiseId,'MATRIZ_ATUALIZADA',$analise['status'],$analise['status']);$pdo->commit();setMensagem('success','Matriz atualizada.');redirecionar($retorno($analiseId));
+        analisePlanosHistorico($pdo,$analiseId,'MATRIZ_ATUALIZADA',$analise['status'],$analise['status']);$pdo->commit();setMensagem('success','Matriz atualizada.');redirecionar($retorno($analiseId, 'enquadramento'));
     }
 
     if ($acao === 'inserir_exigencias_lote') {
@@ -353,7 +358,7 @@ try {
         }
 
         setMensagem('success', "{$totalInseridos} exigência(s) registrada(s) com sucesso.");
-        redirecionar($retorno($analiseId) . '#pane-exigencias');
+        redirecionar($retorno($analiseId, 'exigencias'));
     }
 
     if ($acao === 'salvar_exigencias') {
@@ -386,7 +391,7 @@ try {
             exit;
         }
 
-        setMensagem('success','Exigências atualizadas.');redirecionar($retorno($analiseId));
+        setMensagem('success','Exigências atualizadas.');redirecionar($retorno($analiseId, 'exigencias'));
     }
 
     if ($acao === 'excluir_exigencia') {
@@ -415,7 +420,7 @@ try {
             exit;
         }
 
-        setMensagem('success','Exigência excluída.');redirecionar($retorno($analiseId));
+        setMensagem('success','Exigência excluída.');redirecionar($retorno($analiseId, 'exigencias'));
     }
 
     if ($acao === 'criar_parecer') {
@@ -553,7 +558,7 @@ try {
             $pdo->commit();
             setMensagem('success', "Relatório {$numero} preparado. Clique em 'Assinar e Finalizar Documento' para concluir.");
         }
-        redirecionar($retorno($analiseId) . '#pareceres');
+        redirecionar($retorno($analiseId, 'pareceres'));
     }
 
     if ($acao === 'assinar_parecer') {
@@ -573,7 +578,7 @@ try {
         $pdo->commit();
 
         setMensagem('success', $parecer['resultado'] === 'APROVADO' ? "Relatório {$parecer['numero']} assinado e finalizado! Minuta da Licença gerada." : "Relatório {$parecer['numero']} assinado e finalizado com sucesso.");
-        redirecionar($retorno($analiseId) . '#pareceres');
+        redirecionar($retorno($analiseId, 'pareceres'));
     }
 
     if ($acao === 'publicar') {
@@ -595,7 +600,7 @@ try {
             analisePlanosNotificar($pdo, $analise['analista_id'], 'PARECER_DEVOLVIDO', 'Relatório devolvido pelo admin', $motivo, $analiseId, 'analises-planos/form?id=' . urlencode($analiseId));
             $pdo->commit();
             setMensagem('success', 'Relatório devolvido ao analista.');
-            redirecionar($retorno($analiseId) . '#pareceres');
+            redirecionar($retorno($analiseId, 'pareceres'));
         }
 
         $responsavel = analiseAcaoResponsavelDoAnalista($pdo, $analise);
@@ -603,7 +608,7 @@ try {
         $pdo->commit();
 
         setMensagem('success', $parecer['resultado'] === 'APROVADO' ? 'Relatório conclusivo publicado e minuta da licença criada.' : 'Relatório publicado com sucesso.');
-        redirecionar($retorno($analiseId) . '#pareceres');
+        redirecionar($retorno($analiseId, 'pareceres'));
     }
 
     throw new RuntimeException('Ação inválida.');

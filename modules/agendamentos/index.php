@@ -1,5 +1,5 @@
 <?php
-/** Listagem responsiva de agendamentos. */
+/** Listagem responsiva de agendamentos com paginação. */
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
@@ -12,6 +12,30 @@ $usuario_id = $_SESSION['usuario_id'];
 $filtro_status = trim($_GET['status'] ?? '');
 $filtro_data = trim($_GET['data'] ?? '');
 $busca = trim($_GET['busca'] ?? '');
+$paginaAtual = max(1, (int)($_GET['pagina'] ?? 1));
+$porPagina = (int)($_GET['por_pagina'] ?? 15);
+if (!in_array($porPagina, [10, 15, 25, 50, 100], true)) {
+    $porPagina = 15;
+}
+
+$agendamentoUrl = function(array $novos = []) use (&$filtro_status, &$filtro_data, &$busca, &$paginaAtual, &$porPagina): string {
+    $params = [
+        'status' => $filtro_status !== '' ? $filtro_status : null,
+        'data' => $filtro_data !== '' ? $filtro_data : null,
+        'busca' => $busca !== '' ? $busca : null,
+        'por_pagina' => (int)$porPagina !== 15 ? (int)$porPagina : null,
+        'pagina' => (int)$paginaAtual > 1 ? (int)$paginaAtual : null,
+    ];
+    foreach ($novos as $k => $v) {
+        if ($v === null || $v === '' || ($k === 'pagina' && (int)$v <= 1) || ($k === 'por_pagina' && (int)$v === 15)) {
+            unset($params[$k]);
+        } else {
+            $params[$k] = $v;
+        }
+    }
+    $query = http_build_query($params);
+    return APP_URL . 'agendamentos' . ($query ? '?' . $query : '');
+};
 
 function agendaTexto(?string $texto): string
 {
@@ -26,9 +50,22 @@ function agendaTexto(?string $texto): string
     ]);
 }
 
+$totalFiltrados = 0;
+$totalPaginas = 1;
+$offset = 0;
+$registroInicio = 0;
+$registroFim = 0;
+$agendamentos = [];
+
+// KPIs
+$kpi_total = 0;
+$kpi_hoje = 0;
+$kpi_pendentes = 0;
+
 try {
     $where = [];
     $params = [];
+    $escapedAgIds = "''";
     if ($cargo === 'VISTORIADOR') {
         $uEmail = trim((string)($_SESSION['usuario_email'] ?? ''));
         $vistoriadorIds = array_values(array_filter([$usuario_id]));
@@ -45,6 +82,20 @@ try {
         $escapedAgIds = "'" . implode("','", array_map('addslashes', $vistoriadorIds)) . "'";
         $where[] = "(a.vistoriador_id IN ({$escapedAgIds}) OR a.vistoriador_id IS NULL)";
     }
+
+    // Calcular KPIs
+    $sqlKpi = "SELECT COUNT(*) AS total,
+                      SUM(CASE WHEN a.status = 'pendente' THEN 1 ELSE 0 END) AS pendentes,
+                      SUM(CASE WHEN a.data_vistoria = CURDATE() THEN 1 ELSE 0 END) AS hoje
+               FROM agendamentos a";
+    if ($cargo === 'VISTORIADOR') {
+        $sqlKpi .= " WHERE (a.vistoriador_id IN ({$escapedAgIds}) OR a.vistoriador_id IS NULL)";
+    }
+    $kpiRow = $pdo->query($sqlKpi)->fetch(PDO::FETCH_ASSOC);
+    $kpi_total = (int)($kpiRow['total'] ?? 0);
+    $kpi_pendentes = (int)($kpiRow['pendentes'] ?? 0);
+    $kpi_hoje = (int)($kpiRow['hoje'] ?? 0);
+
     if ($filtro_status !== '') {
         $where[] = 'a.status = :status';
         $params[':status'] = $filtro_status;
@@ -57,6 +108,30 @@ try {
         $where[] = '(c.nome LIKE :busca1 OR e.nome LIKE :busca2 OR a.tipo_vistoria LIKE :busca3 OR a.local LIKE :busca4)';
         foreach ([':busca1', ':busca2', ':busca3', ':busca4'] as $chave) $params[$chave] = '%' . $busca . '%';
     }
+
+    $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
+
+    // Contagem total dos registros filtrados
+    $sqlCount = "SELECT COUNT(*)
+                 FROM agendamentos a
+                 LEFT JOIN clientes c ON a.cliente_id = c.id
+                 LEFT JOIN embarcacoes e ON a.embarcacao_id = e.id
+                 LEFT JOIN usuarios u ON a.vistoriador_id = u.id
+                 {$whereSql}";
+    $stmtCount = $pdo->prepare($sqlCount);
+    foreach ($params as $k => $v) {
+        $stmtCount->bindValue($k, $v);
+    }
+    $stmtCount->execute();
+    $totalFiltrados = (int)$stmtCount->fetchColumn();
+
+    $totalPaginas = max(1, (int)ceil($totalFiltrados / $porPagina));
+    if ($paginaAtual > $totalPaginas) {
+        $paginaAtual = $totalPaginas;
+    }
+    $offset = ($paginaAtual - 1) * $porPagina;
+    $registroInicio = $totalFiltrados > 0 ? $offset + 1 : 0;
+    $registroFim = min($offset + $porPagina, $totalFiltrados);
 
     $sql = "
         SELECT a.*, c.nome AS cliente_nome, e.nome AS embarcacao_nome,
@@ -75,14 +150,19 @@ try {
         LEFT JOIN ordens_servico os ON os.agendamento_id = a.id
         LEFT JOIN vistoria_retornos vr ON vr.agendamento_id = a.id
         LEFT JOIN vistorias vo ON vo.id = vr.relatorio_origem_id
-    ";
-    if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
-    $sql .= " ORDER BY CASE vr.tipo WHEN 'AS' THEN 0 WHEN 'EXIGENCIAS' THEN 1 ELSE 2 END,
-        COALESCE(a.data_vistoria, DATE(a.created_at)) DESC, a.hora_vistoria DESC,
-        COALESCE(a.updated_at, a.created_at) DESC";
+        {$whereSql}
+        ORDER BY CASE vr.tipo WHEN 'AS' THEN 0 WHEN 'EXIGENCIAS' THEN 1 ELSE 2 END,
+            COALESCE(a.data_vistoria, DATE(a.created_at)) DESC, a.hora_vistoria DESC,
+            COALESCE(a.updated_at, a.created_at) DESC
+        LIMIT :limite OFFSET :offset";
 
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    foreach ($params as $k => $v) {
+        $stmt->bindValue($k, $v);
+    }
+    $stmt->bindValue(':limite', $porPagina, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
     $agendamentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     error_log('Erro ao listar agendamentos: ' . $e->getMessage());
@@ -101,9 +181,9 @@ $retorno_labels = [
     'EXIGENCIAS' => ['label' => 'RETORNO - EXIGÊNCIAS', 'class' => 'requirements'],
 ];
 
-$total_agendamentos = count($agendamentos);
-$total_pendentes = count(array_filter($agendamentos, fn($a) => $a['status'] === 'pendente'));
-$total_hoje = count(array_filter($agendamentos, fn($a) => ($a['data_vistoria'] ?? '') === date('Y-m-d')));
+$total_agendamentos = $kpi_total;
+$total_pendentes = $kpi_pendentes;
+$total_hoje = $kpi_hoje;
 $filtros_ativos = ($filtro_status !== '' ? 1 : 0) + ($filtro_data !== '' ? 1 : 0) + ($busca !== '' ? 1 : 0);
 
 $titulo_page = 'Agendamentos - Amazon Certificadora';
@@ -133,6 +213,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <i class="fa-solid fa-chevron-down"></i>
     </button>
     <form id="scheduleFilters" class="schedule-filters <?= $filtros_ativos ? 'is-open' : '' ?>" method="get" action="<?= APP_URL ?>agendamentos">
+        <?php if ($porPagina !== 15): ?>
+            <input type="hidden" name="por_pagina" value="<?= (int)$porPagina ?>">
+        <?php endif; ?>
         <label><span>Buscar</span><div class="schedule-input-icon"><i class="fa-solid fa-magnifying-glass"></i><input type="search" name="busca" value="<?= h($busca) ?>" placeholder="Cliente, embarcação, tipo ou local"></div></label>
         <label><span>Status</span><select name="status"><option value="">Todos os status</option><?php foreach ($status_labels as $valor => $info): ?><option value="<?= h($valor) ?>" <?= $filtro_status === $valor ? 'selected' : '' ?>><?= h($info['label']) ?></option><?php endforeach; ?></select></label>
         <label><span>Data</span><input type="date" name="data" value="<?= h($filtro_data) ?>"></label>
@@ -144,7 +227,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <section class="schedule-empty"><i class="fa-regular fa-calendar-check"></i><h2>Nenhum agendamento encontrado</h2><p><?= $cargo === 'VISTORIADOR' ? 'Você verá aqui apenas os agendamentos atribuídos a você.' : 'Ajuste os filtros ou crie um novo agendamento.' ?></p><?php if ($cargo !== 'VISTORIADOR'): ?><a href="<?= APP_URL ?>agendamentos/form">Novo agendamento</a><?php endif; ?></section>
     <?php else: ?>
         <section class="schedule-desktop-list">
-            <div class="schedule-list-heading"><div><h2>Todos os agendamentos</h2><p><?= $total_agendamentos ?> registro<?= $total_agendamentos === 1 ? '' : 's' ?> encontrado<?= $total_agendamentos === 1 ? '' : 's' ?></p></div></div>
+            <div class="schedule-list-heading">
+                <div>
+                    <h2>Todos os agendamentos</h2>
+                    <p><?= $totalFiltrados ?> registro<?= $totalFiltrados === 1 ? '' : 's' ?> encontrado<?= $totalFiltrados === 1 ? '' : 's' ?> <?= $totalFiltrados > 0 ? '• Exibindo ' . $registroInicio . ' a ' . $registroFim : '' ?></p>
+                </div>
+            </div>
             <div class="schedule-table-wrap">
                 <table id="tabelaAgendamentos" class="schedule-table" data-responsive="off">
                     <thead><tr><th>Data e local</th><th>Cliente / embarcação</th><th>Tipo de vistoria</th><th>Vistoriador</th><th>Status</th><th>OS</th><th>Ações</th></tr></thead>
@@ -206,8 +294,118 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </article>
             <?php endforeach; ?>
         </section>
+
+        <!-- Controles de Paginação -->
+        <div class="schedule-paginacao-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 24px; padding: 14px 18px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <span style="font-size: 0.85rem; color: #64748b;">
+                    Mostrando <strong><?= $registroInicio ?></strong> a <strong><?= $registroFim ?></strong> de <strong><?= $totalFiltrados ?></strong> agendamentos
+                </span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <label for="selectPorPagina" style="font-size: 0.82rem; color: #64748b; margin: 0;">Exibir:</label>
+                    <select id="selectPorPagina" class="form-control form-control-sm" style="width: auto; height: 32px; padding: 2px 8px; font-size: 0.82rem; border-radius: 6px; border: 1px solid #cbd5e1;" onchange="window.location.href=this.value">
+                        <?php foreach ([10, 15, 25, 50, 100] as $qtd): ?>
+                            <option value="<?= h($agendamentoUrl(['por_pagina' => $qtd, 'pagina' => 1])) ?>" <?= $porPagina === $qtd ? 'selected' : '' ?>>
+                                <?= $qtd ?> por pág.
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <?php if ($totalPaginas > 1): ?>
+                <nav aria-label="Navegação de páginas de agendamentos">
+                    <ul class="paginacao-agendamentos" style="display: flex; align-items: center; gap: 5px; margin: 0; padding: 0; list-style: none;">
+                        <!-- Primeira página -->
+                        <li class="paginacao-item <?= $paginaAtual <= 1 ? 'disabled' : '' ?>">
+                            <a class="paginacao-link" href="<?= $paginaAtual <= 1 ? 'javascript:void(0)' : h($agendamentoUrl(['pagina' => 1])) ?>" title="Primeira página">
+                                <i class="fas fa-angles-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Página anterior -->
+                        <li class="paginacao-item <?= $paginaAtual <= 1 ? 'disabled' : '' ?>">
+                            <a class="paginacao-link" href="<?= $paginaAtual <= 1 ? 'javascript:void(0)' : h($agendamentoUrl(['pagina' => $paginaAtual - 1])) ?>" title="Página anterior">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Janela de páginas -->
+                        <?php
+                        $janelaInicio = max(1, $paginaAtual - 2);
+                        $janelaFim = min($totalPaginas, $paginaAtual + 2);
+
+                        if ($janelaInicio > 1) {
+                            echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h($agendamentoUrl(['pagina' => 1])) . '">1</a></li>';
+                            if ($janelaInicio > 2) {
+                                echo '<li class="paginacao-ellipsis" style="padding: 0 4px; color: #94a3b8;">...</li>';
+                            }
+                        }
+
+                        for ($p = $janelaInicio; $p <= $janelaFim; $p++) {
+                            if ($p === $paginaAtual) {
+                                echo '<li class="paginacao-item active"><span class="paginacao-link active-link" style="background: var(--cor-primaria, #0d9488); color: #ffffff; border-color: var(--cor-primaria, #0d9488); font-weight: 700;">' . $p . '</span></li>';
+                            } else {
+                                echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h($agendamentoUrl(['pagina' => $p])) . '">' . $p . '</a></li>';
+                            }
+                        }
+
+                        if ($janelaFim < $totalPaginas) {
+                            if ($janelaFim < $totalPaginas - 1) {
+                                echo '<li class="paginacao-ellipsis" style="padding: 0 4px; color: #94a3b8;">...</li>';
+                            }
+                            echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h($agendamentoUrl(['pagina' => $totalPaginas])) . '">' . $totalPaginas . '</a></li>';
+                        }
+                        ?>
+
+                        <!-- Próxima página -->
+                        <li class="paginacao-item <?= $paginaAtual >= $totalPaginas ? 'disabled' : '' ?>">
+                            <a class="paginacao-link" href="<?= $paginaAtual >= $totalPaginas ? 'javascript:void(0)' : h($agendamentoUrl(['pagina' => $paginaAtual + 1])) ?>" title="Próxima página">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+
+                        <!-- Última página -->
+                        <li class="paginacao-item <?= $paginaAtual >= $totalPaginas ? 'disabled' : '' ?>">
+                            <a class="paginacao-link" href="<?= $paginaAtual >= $totalPaginas ? 'javascript:void(0)' : h($agendamentoUrl(['pagina' => $totalPaginas])) ?>" title="Última página">
+                                <i class="fas fa-angles-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            <?php endif; ?>
+        </div>
     <?php endif; ?>
 </main>
+
+<style>
+.paginacao-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.paginacao-link:hover:not(.active-link):not(.disabled) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+.paginacao-item.disabled .paginacao-link {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #f8fafc;
+}
+</style>
 
 <script>
 document.querySelector('.schedule-filter-toggle')?.addEventListener('click', function () {

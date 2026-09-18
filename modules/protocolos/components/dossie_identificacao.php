@@ -208,6 +208,7 @@
                     <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
                     <input type="hidden" name="action" value="editar_dossie">
                     <input type="hidden" name="dossie_id" value="<?= h($id) ?>">
+                    <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
 
                     <div class="mb-3">
                         <label class="form-label fw-bold" for="edit_assunto">Assunto / Finalidade do Processo *</label>

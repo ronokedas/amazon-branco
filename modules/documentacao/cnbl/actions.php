@@ -26,7 +26,7 @@ if ($action === 'atualizar_convalidacoes') {
     $id = trim((string)($_POST['id'] ?? ''));
     if (!documentoEstaAssinado($pdo, 'certificados_cnbl', $id)) {
         setMensagem('error', 'Esta exceção de edição existe apenas para certificado assinado.');
-        redirecionar(APP_URL . 'documentacao/cnbl/form?id=' . urlencode($id));
+        redirecionar(APP_URL . 'documentacao/cnbl/form?id=' . urlencode($id) . '&aba=tab-convalidacoes');
     }
     $ids = $_POST['conv_id'] ?? [];
     $locais = $_POST['conv_local'] ?? [];
@@ -59,7 +59,7 @@ if ($action === 'atualizar_convalidacoes') {
         if ($pdo->inTransaction()) $pdo->rollBack();
         setMensagem('error', 'Erro ao atualizar convalidações: ' . $e->getMessage());
     }
-    redirecionar(APP_URL . 'documentacao/cnbl/form?id=' . urlencode($id));
+    redirecionar(APP_URL . 'documentacao/cnbl/form?id=' . urlencode($id) . '&aba=tab-convalidacoes');
 }
 
 // ============================================

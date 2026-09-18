@@ -159,6 +159,7 @@
                                         <input type="hidden" name="action" value="criar_aceite">
                                         <input type="hidden" name="dossie_id" value="<?= h($id) ?>">
                                         <input type="hidden" name="movimentacao_id" value="<?= h($m['id']) ?>">
+                                        <input type="hidden" name="aba" class="input-aba-ativa" value="timeline">
                                         <button type="submit" class="btn btn-sm btn-secondary">
                                             <i class="fa-solid fa-signature"></i> Gerar link de aceite
                                         </button>
@@ -172,6 +173,7 @@
                                     <input type="hidden" name="action" value="confirmar">
                                     <input type="hidden" name="dossie_id" value="<?= h($id) ?>">
                                     <input type="hidden" name="movimentacao_id" value="<?= h($m['id']) ?>">
+                                    <input type="hidden" name="aba" class="input-aba-ativa" value="timeline">
                                     <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Atenção: Ao confirmar, este evento terá seu conteúdo congelado e será gerado o comprovante com código de autenticidade. Deseja prosseguir?')">
                                         <i class="fa-solid fa-lock"></i> Confirmar e Congelar Evento
                                     </button>
@@ -228,6 +230,7 @@
                     <input type="hidden" name="dossie_id" value="<?= h($id) ?>">
                     <input type="hidden" name="idempotency_key" value="<?= h(bin2hex(random_bytes(16))) ?>">
                     <input type="hidden" name="retifica_movimentacao_id" value="<?= h($retificar) ?>">
+                    <input type="hidden" name="aba" class="input-aba-ativa" value="timeline">
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">

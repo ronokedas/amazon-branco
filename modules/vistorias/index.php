@@ -18,8 +18,33 @@ if (!podeAcessar('vistorias')) {
     redirecionar(APP_URL . 'dashboard');
 }
 
-// Filtro de status
+// Filtros e paginação
 $filtro_status = $_GET['status'] ?? '';
+$busca = trim($_GET['busca'] ?? '');
+$paginaAtual = max(1, (int)($_GET['pagina'] ?? 1));
+$porPagina = (int)($_GET['por_pagina'] ?? 15);
+if (!in_array($porPagina, [10, 15, 25, 50, 100], true)) {
+    $porPagina = 15;
+}
+
+$vistoriaUrl = function(array $novos = []) use (&$filtro_status, &$busca, &$paginaAtual, &$porPagina): string {
+    $params = [
+        'status' => $filtro_status !== '' ? $filtro_status : null,
+        'busca' => $busca !== '' ? $busca : null,
+        'por_pagina' => (int)$porPagina !== 15 ? (int)$porPagina : null,
+        'pagina' => (int)$paginaAtual > 1 ? (int)$paginaAtual : null,
+    ];
+    foreach ($novos as $k => $v) {
+        if ($v === null || $v === '' || ($k === 'pagina' && (int)$v <= 1) || ($k === 'por_pagina' && (int)$v === 15)) {
+            unset($params[$k]);
+        } else {
+            $params[$k] = $v;
+        }
+    }
+    $query = http_build_query($params);
+    return APP_URL . 'vistorias' . ($query ? '?' . $query : '');
+};
+
 $cargo = getCargo();
 
 $vistoriadorIds = [];
@@ -59,7 +84,13 @@ try {
     error_log('Erro ao buscar filtros de vistorias: ' . $e->getMessage());
 }
 
-// Buscar vistorias
+// Buscar vistorias com paginação
+$totalVistorias = 0;
+$totalPaginas = 1;
+$offset = 0;
+$registroInicio = 0;
+$registroFim = 0;
+
 try {
     $status_filter = '';
     if ($filtro_status === 'APROVADA') {
@@ -69,19 +100,60 @@ try {
         $params[':status'] = $filtro_status;
     }
 
+    $busca_filter = '';
+    if ($busca !== '') {
+        $busca_filter = " AND (e.nome LIKE :busca1 OR e.numero_inscricao LIKE :busca2 OR c.nome LIKE :busca3 OR v.numero LIKE :busca4)";
+        $params[':busca1'] = '%' . $busca . '%';
+        $params[':busca2'] = '%' . $busca . '%';
+        $params[':busca3'] = '%' . $busca . '%';
+        $params[':busca4'] = '%' . $busca . '%';
+    }
+
+    // Contagem total
+    $sqlCount = "SELECT COUNT(*)
+                 FROM vistorias v
+                 LEFT JOIN agendamentos a ON v.agendamento_id = a.id
+                 LEFT JOIN embarcacoes e ON v.embarcacao_id = e.id
+                 LEFT JOIN clientes c ON a.cliente_id = c.id
+                 WHERE 1=1 {$status_filter} {$where_extra} {$busca_filter}";
+    $stmtCount = $pdo->prepare($sqlCount);
+    foreach ($params as $k => $v) {
+        $stmtCount->bindValue($k, $v);
+    }
+    $stmtCount->execute();
+    $totalVistorias = (int)$stmtCount->fetchColumn();
+
+    $totalPaginas = max(1, (int)ceil($totalVistorias / $porPagina));
+    if ($paginaAtual > $totalPaginas) {
+        $paginaAtual = $totalPaginas;
+    }
+    $offset = ($paginaAtual - 1) * $porPagina;
+    $registroInicio = $totalVistorias > 0 ? $offset + 1 : 0;
+    $registroFim = min($offset + $porPagina, $totalVistorias);
+
     $sql = "SELECT v.*, a.data_vistoria, a.hora_vistoria, a.local, a.tipo_vistoria,
                    e.nome AS embarcacao_nome, e.tipo AS embarcacao_tipo, e.numero_inscricao,
-                   c.nome AS cliente_nome,
-                   u.nome AS vistoriador_nome
+                   COALESCE(NULLIF(e.registro,''), e.numero_inscricao) AS embarcacao_registro,
+                   c.nome AS cliente_nome, c.cpf_cnpj AS pessoa_cpf,
+                   COALESCE(c.nome, '') AS pessoa_nome,
+                   u.nome AS vistoriador_nome,
+                   uc.nome AS criado_por_nome
             FROM vistorias v
             LEFT JOIN agendamentos a ON v.agendamento_id = a.id
             LEFT JOIN embarcacoes e ON v.embarcacao_id = e.id
             LEFT JOIN clientes c ON a.cliente_id = c.id
             LEFT JOIN usuarios u ON a.vistoriador_id = u.id
-            WHERE 1=1 {$status_filter} {$where_extra}
-            ORDER BY v.criado_em DESC";
+            LEFT JOIN usuarios uc ON v.criado_por = uc.id
+            WHERE 1=1 {$status_filter} {$where_extra} {$busca_filter}
+            ORDER BY v.criado_em DESC
+            LIMIT :limite OFFSET :offset";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    foreach ($params as $k => $v) {
+        $stmt->bindValue($k, $v);
+    }
+    $stmt->bindValue(':limite', $porPagina, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
     $vistorias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     error_log('Erro ao listar vistorias: ' . $e->getMessage());
@@ -258,7 +330,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         ];
         foreach ($statusFilters as $statusKey => [$statusIcon, $statusLabel, $statusCount]):
             $active = $filtro_status === $statusKey;
-            $href = APP_URL . 'vistorias' . ($statusKey !== '' ? '?status=' . urlencode($statusKey) : '');
+            $href = $vistoriaUrl(['status' => $statusKey, 'pagina' => 1]);
         ?>
             <a href="<?php echo h($href); ?>" class="<?php echo $active ? 'is-active' : ''; ?>" <?php echo $active ? 'aria-current="page"' : ''; ?>>
                 <i class="fas <?php echo h($statusIcon); ?>" aria-hidden="true"></i>
@@ -268,11 +340,27 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <?php endforeach; ?>
     </nav>
 
-    <div class="inspection-search">
-        <i class="fas fa-search" aria-hidden="true"></i>
-        <label class="sr-only" for="buscaVistoria">Buscar vistoria</label>
-        <input type="search" id="buscaVistoria" placeholder="Buscar por embarcação, pessoa ou registro">
-    </div>
+    <form method="get" action="<?php echo APP_URL; ?>vistorias" class="inspection-search-form" style="margin-bottom: 24px;">
+        <?php if ($filtro_status !== ''): ?>
+            <input type="hidden" name="status" value="<?php echo h($filtro_status); ?>">
+        <?php endif; ?>
+        <?php if ($porPagina !== 15): ?>
+            <input type="hidden" name="por_pagina" value="<?php echo (int)$porPagina; ?>">
+        <?php endif; ?>
+        <div class="inspection-search" style="display: flex; gap: 8px; align-items: center; max-width: 100%;">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <label class="sr-only" for="buscaVistoria">Buscar vistoria</label>
+            <input type="search" id="buscaVistoria" name="busca" value="<?php echo h($busca); ?>" placeholder="Buscar por embarcação, registro, cliente ou número..." style="flex: 1;">
+            <button type="submit" class="btn btn-primary" style="padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+                <i class="fas fa-filter"></i> Filtrar
+            </button>
+            <?php if ($busca !== ''): ?>
+                <a href="<?php echo h($vistoriaUrl(['busca' => '', 'pagina' => 1])); ?>" class="btn btn-secondary" style="padding: 10px 14px; border-radius: 8px; font-weight: 600;" title="Limpar busca">
+                    <i class="fas fa-times"></i> Limpar
+                </a>
+            <?php endif; ?>
+        </div>
+    </form>
 
     <?php if (empty($vistorias)): ?>
         <div class="inspection-empty">
@@ -285,7 +373,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <div class="inspection-list-heading">
                 <div>
                     <h2>Vistorias cadastradas</h2>
-                    <p><?php echo count($vistorias); ?> registro(s) no filtro atual</p>
+                    <p><?php echo $totalVistorias; ?> vistoria(s) encontrada(s) <?php echo $totalVistorias > 0 ? '• Exibindo ' . $registroInicio . ' a ' . $registroFim : ''; ?></p>
                 </div>
             </div>
             <table id="tabelaVistorias" data-responsive="off">
@@ -367,8 +455,118 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <?php endforeach; ?>
         </section>
         <p class="inspection-no-results" hidden>Nenhuma vistoria corresponde à busca.</p>
+
+        <!-- CONTROLES DE PAGINAÇÃO -->
+        <div class="vistorias-paginacao-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 24px; padding: 14px 18px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <span style="font-size: 0.85rem; color: #64748b;">
+                    Mostrando <strong><?= $registroInicio ?></strong> a <strong><?= $registroFim ?></strong> de <strong><?= $totalVistorias ?></strong> registros
+                </span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <label for="selectPorPagina" style="font-size: 0.82rem; color: #64748b; margin: 0;">Exibir:</label>
+                    <select id="selectPorPagina" class="form-control form-control-sm" style="width: auto; height: 32px; padding: 2px 8px; font-size: 0.82rem; border-radius: 6px; border: 1px solid #cbd5e1;" onchange="window.location.href=this.value">
+                        <?php foreach ([10, 15, 25, 50, 100] as $qtd): ?>
+                            <option value="<?= h($vistoriaUrl(['por_pagina' => $qtd, 'pagina' => 1])) ?>" <?= $porPagina === $qtd ? 'selected' : '' ?>>
+                                <?= $qtd ?> por pág.
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <?php if ($totalPaginas > 1): ?>
+                <nav aria-label="Navegação de páginas de vistorias">
+                    <ul class="paginacao-vistorias" style="display: flex; align-items: center; gap: 5px; margin: 0; padding: 0; list-style: none;">
+                        <!-- Primeira página -->
+                        <li class="paginacao-item <?= $paginaAtual <= 1 ? 'disabled' : '' ?>">
+                            <a class="paginacao-link" href="<?= $paginaAtual <= 1 ? 'javascript:void(0)' : h($vistoriaUrl(['pagina' => 1])) ?>" title="Primeira página">
+                                <i class="fas fa-angles-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Página anterior -->
+                        <li class="paginacao-item <?= $paginaAtual <= 1 ? 'disabled' : '' ?>">
+                            <a class="paginacao-link" href="<?= $paginaAtual <= 1 ? 'javascript:void(0)' : h($vistoriaUrl(['pagina' => $paginaAtual - 1])) ?>" title="Página anterior">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Janela de páginas -->
+                        <?php
+                        $janelaInicio = max(1, $paginaAtual - 2);
+                        $janelaFim = min($totalPaginas, $paginaAtual + 2);
+
+                        if ($janelaInicio > 1) {
+                            echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h($vistoriaUrl(['pagina' => 1])) . '">1</a></li>';
+                            if ($janelaInicio > 2) {
+                                echo '<li class="paginacao-ellipsis" style="padding: 0 4px; color: #94a3b8;">...</li>';
+                            }
+                        }
+
+                        for ($p = $janelaInicio; $p <= $janelaFim; $p++) {
+                            if ($p === $paginaAtual) {
+                                echo '<li class="paginacao-item active"><span class="paginacao-link active-link" style="background: #0d9488; color: #ffffff; border-color: #0d9488; font-weight: 700;">' . $p . '</span></li>';
+                            } else {
+                                echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h($vistoriaUrl(['pagina' => $p])) . '">' . $p . '</a></li>';
+                            }
+                        }
+
+                        if ($janelaFim < $totalPaginas) {
+                            if ($janelaFim < $totalPaginas - 1) {
+                                echo '<li class="paginacao-ellipsis" style="padding: 0 4px; color: #94a3b8;">...</li>';
+                            }
+                            echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h($vistoriaUrl(['pagina' => $totalPaginas])) . '">' . $totalPaginas . '</a></li>';
+                        }
+                        ?>
+
+                        <!-- Próxima página -->
+                        <li class="paginacao-item <?= $paginaAtual >= $totalPaginas ? 'disabled' : '' ?>">
+                            <a class="paginacao-link" href="<?= $paginaAtual >= $totalPaginas ? 'javascript:void(0)' : h($vistoriaUrl(['pagina' => $paginaAtual + 1])) ?>" title="Próxima página">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+
+                        <!-- Última página -->
+                        <li class="paginacao-item <?= $paginaAtual >= $totalPaginas ? 'disabled' : '' ?>">
+                            <a class="paginacao-link" href="<?= $paginaAtual >= $totalPaginas ? 'javascript:void(0)' : h($vistoriaUrl(['pagina' => $totalPaginas])) ?>" title="Última página">
+                                <i class="fas fa-angles-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            <?php endif; ?>
+        </div>
     <?php endif; ?>
 </div>
+
+<style>
+.paginacao-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.paginacao-link:hover:not(.active-link):not(.disabled) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+.paginacao-item.disabled .paginacao-link {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #f8fafc;
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

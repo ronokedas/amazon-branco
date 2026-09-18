@@ -267,6 +267,7 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>">
                 <input type="hidden" name="_submission_token" value="<?php echo h(bin2hex(random_bytes(24))); ?>">
                 <input type="hidden" name="id" value="<?php echo h($embarcacao['id'] ?? ''); ?>">
+                <input type="hidden" name="aba" id="input_aba_ativa_emb" value="<?php echo h($_GET['aba'] ?? 'tab-gerais'); ?>">
 
                 <?php if ($dadosTesteAtivos && !$isEdicao): ?>
                 <section class="test-data-panel" aria-labelledby="titulo-preenchimento-teste">
@@ -767,7 +768,31 @@ function openTab(tabId, element) {
                   document.querySelector(`.tab-item[onclick*="${tabId}"]`);
     }
     if (element) element.classList.add('active');
+
+    const inp = document.getElementById('input_aba_ativa_emb');
+    if (inp) inp.value = tabId;
+
+    try {
+        sessionStorage.setItem('erp_aba_embarcacao', tabId);
+    } catch (e) {}
+
+    const url = new URL(window.location);
+    url.searchParams.set('aba', tabId);
+    window.history.replaceState({}, '', url);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let targetAba = urlParams.get('aba');
+    if (!targetAba) {
+        try {
+            targetAba = sessionStorage.getItem('erp_aba_embarcacao');
+        } catch (e) {}
+    }
+    if (targetAba && document.getElementById(targetAba)) {
+        openTab(targetAba);
+    }
+});
 
 function atualizarCamposPropulsao() {
     const possuiPropulsao = document.getElementById('possui_propulsao');

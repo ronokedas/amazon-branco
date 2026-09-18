@@ -316,8 +316,8 @@ require __DIR__ . '/../../includes/sidebar.php';
         <?php require __DIR__ . '/components/auditoria_aceite.php'; ?>
 
         <script>
-        // Função para alternar abas do dossiê
-        function trocarAbaDossie(abaId) {
+        // Função para alternar abas do dossiê com preservação de estado e rolagem
+        function trocarAbaDossie(abaId, suave = false) {
             document.querySelectorAll('.prot-tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.prot-tab-pane').forEach(p => p.classList.remove('active'));
             
@@ -326,11 +326,44 @@ require __DIR__ . '/../../includes/sidebar.php';
             if (btn) btn.classList.add('active');
             if (pane) pane.classList.add('active');
             
+            // Sincronizar campos ocultos de formulários
+            document.querySelectorAll('.input-aba-ativa').forEach(inp => {
+                inp.value = abaId;
+            });
+
+            try {
+                sessionStorage.setItem('erp_aba_dossie_' + <?= json_encode($id) ?>, abaId);
+            } catch (e) {}
+
             // Atualizar URL sem recarregar
             const url = new URL(window.location);
             url.searchParams.set('aba', abaId);
             window.history.replaceState({}, '', url);
+
+            if (suave && pane) {
+                pane.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
         }
+
+        // Restauração inteligente de aba ativa
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let targetAba = urlParams.get('aba');
+            if (!targetAba && window.location.hash) {
+                const hashClean = window.location.hash.replace('#pane-', '').replace('#', '');
+                if (['timeline', 'movimentacao', 'marinha', 'custodia', 'anexos', 'auditoria'].includes(hashClean)) {
+                    targetAba = hashClean;
+                }
+            }
+            if (!targetAba) {
+                try {
+                    targetAba = sessionStorage.getItem('erp_aba_dossie_' + <?= json_encode($id) ?>);
+                } catch (e) {}
+            }
+            if (targetAba && ['timeline', 'movimentacao', 'marinha', 'custodia', 'anexos', 'auditoria'].includes(targetAba)) {
+                trocarAbaDossie(targetAba, false);
+            }
+        });
 
         // Catálogo dinâmico para adicionar documentos
         const catalogo = <?= json_encode(array_map(fn($x) => ['id' => $x['id'], 'codigo' => $x['codigo'], 'nome' => $x['nome'], 'categoria' => $x['categoria']], $catalogo), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;

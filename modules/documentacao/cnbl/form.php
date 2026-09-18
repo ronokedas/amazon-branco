@@ -243,6 +243,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
     <form method="POST" action="<?php echo APP_URL; ?>documentacao/cnbl/actions" id="formCertificado">
         <input type="hidden" name="action" value="<?php echo $documento_bloqueado ? 'atualizar_convalidacoes' : 'salvar'; ?>">
         <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
+        <input type="hidden" name="aba" id="input_aba_ativa_cnbl" value="<?php echo h($_GET['aba'] ?? ($editando ? 'tab-dados' : 'tab-selecao')); ?>">
         <?php if ($editando): ?>
             <input type="hidden" name="id" value="<?php echo h($certificado['id']); ?>">
             <input type="hidden" name="vistoria_id" value="<?php echo h($certificado['vistoria_id'] ?? ''); ?>">
@@ -1442,9 +1443,32 @@ document.addEventListener('keydown', function(e) {
 });
 
 // Fechar modal clicando fora
-document.getElementById('modalPrevia').addEventListener('click', function(e) {
+document.getElementById('modalPrevia')?.addEventListener('click', function(e) {
     if (e.target === this) {
         fecharModal();
+    }
+});
+
+// Rastreamento e restauração de aba ativa no CNBL
+document.querySelectorAll('#formTabs a[data-toggle="tab"]').forEach(tabLink => {
+    tabLink.addEventListener('shown.bs.tab', function(e) {
+        const targetId = (e.target.getAttribute('href') || '').replace('#', '');
+        const inp = document.getElementById('input_aba_ativa_cnbl');
+        if (inp && targetId) inp.value = targetId;
+        const url = new URL(window.location);
+        url.searchParams.set('aba', targetId);
+        window.history.replaceState({}, '', url);
+    });
+});
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const aba = urlParams.get('aba') || '<?= h($_GET['aba'] ?? '') ?>';
+    if (aba && document.querySelector(`#formTabs a[href="#${aba}"]`)) {
+        if (typeof $ !== 'undefined' && $.fn && $.fn.tab) {
+            $(`#formTabs a[href="#${aba}"]`).tab('show');
+        } else {
+            document.querySelector(`#formTabs a[href="#${aba}"]`).click();
+        }
     }
 });
 </script>

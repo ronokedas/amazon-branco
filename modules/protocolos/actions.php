@@ -5,8 +5,12 @@ require_once __DIR__.'/../../includes/auth.php';
 require_once __DIR__.'/../../includes/protocolos.php';
 protocoloExigirAcesso();
 if($_SERVER['REQUEST_METHOD']!=='POST'||!verificarCSRF($_POST['csrf_token']??'')){setMensagem('error','Sessão expirada.');redirecionar(APP_URL.'protocolos');}
-$acao=trim($_POST['action']??'');$id=trim($_POST['id']??$_POST['dossie_id']??'');
-$voltar=fn(?string $x=null)=>APP_URL.($x?'protocolos/form?id='.urlencode($x):'protocolos');
+$abaRetorno = trim($_POST['aba'] ?? $_GET['aba'] ?? '');
+$voltar = function(?string $x = null, ?string $aba = null) use ($abaRetorno) {
+    if (!$x) return APP_URL . 'protocolos';
+    $abaFinal = $aba !== null ? $aba : ($abaRetorno !== '' ? $abaRetorno : 'timeline');
+    return APP_URL . 'protocolos/form?id=' . urlencode($x) . ($abaFinal !== '' ? '&aba=' . urlencode($abaFinal) : '');
+};
 try{
  if($acao==='criar'){
   $emb=trim($_POST['embarcacao_id']??'');$assunto=trim($_POST['assunto']??'');if(!$emb||!$assunto)throw new InvalidArgumentException('Informe embarcação e assunto.');
@@ -40,7 +44,7 @@ try{
       ':assunto'=>$assunto,':cliente'=>$cliente,':unidade'=>$unidade,':analise'=>$analise,':vistoria'=>$vistoria,':ctipo'=>$ctipo,':cid'=>$cid,':id'=>$id
   ]);
   protocoloAuditar($pdo,$id,null,'DOSSIE_EDITADO',null,null,'Dados e vínculos atualizados.');$pdo->commit();
-  setMensagem('success','Dados do dossiê atualizados.');redirecionar($voltar($id));
+  setMensagem('success','Dados do dossiê atualizados.');redirecionar($voltar($id, $abaRetorno ?: 'timeline'));
  }
  if($acao==='adicionar_movimentacao'){
   $tipo=trim($_POST['tipo']??'');$nat=trim($_POST['natureza']??'');$tipos=['ENTRADA','SAIDA'];$nats=['RECEBIMENTO_CLIENTE','ENVIO_ORGAO','RETORNO_ORGAO','CUMPRIMENTO_EXIGENCIA','RETIRADA_ORGAO','ENTREGA_CLIENTE','TRANSFERENCIA_INTERNA','OUTRA'];
@@ -57,7 +61,7 @@ try{
   $cats=$_POST['item_catalogo_id']??[];$desc=$_POST['item_descricao']??[];$ins=$pdo->prepare('INSERT INTO protocolo_movimentacao_itens(id,movimentacao_id,catalogo_id,descricao,categoria,suporte,forma,quantidade,numero_revisao,data_documento,condicao_documento,requer_devolucao,arquivo_origem_tipo,arquivo_origem_id,arquivo_nome,arquivo_hash,observacao)VALUES(UUID(),:mov,:catalogo,:descricao,:categoria,:suporte,:forma,:qtd,:rev,:data,:condicao,:devolve,:atipo,:aid,:anome,:hash,:obs)');
   foreach($desc as $i=>$descricao){$descricao=trim($descricao);if($descricao==='')continue;$cat=null;$forma=trim($_POST['item_forma'][$i]??'ORIGINAL');if(!in_array($forma,['ORIGINAL','COPIA_SIMPLES','COPIA_AUTENTICADA','NATO_DIGITAL','DIGITALIZADO'],true))throw new InvalidArgumentException('Forma documental inválida.');$catalogo=trim($cats[$i]??'')?:null;if($catalogo){$qc=$pdo->prepare('SELECT categoria,nome FROM protocolo_catalogo_documentos WHERE id=:id AND ativo=1');$qc->execute([':id'=>$catalogo]);$cat=$qc->fetch(PDO::FETCH_ASSOC);if(!$cat)throw new InvalidArgumentException('Documento de catálogo inválido.');}elseif(mb_strtolower($descricao)==='outro documento')throw new InvalidArgumentException('Identifique o outro documento apresentado.');$ins->execute([':mov'=>$mov,':catalogo'=>$catalogo,':descricao'=>$descricao,':categoria'=>$cat['categoria']??trim($_POST['item_categoria'][$i]??'OUTROS'),':suporte'=>($_POST['item_suporte'][$i]??'FISICO')==='DIGITAL'?'DIGITAL':'FISICO',':forma'=>$forma,':qtd'=>max(1,(int)($_POST['item_quantidade'][$i]??1)),':rev'=>trim($_POST['item_revisao'][$i]??'')?:null,':data'=>trim($_POST['item_data'][$i]??'')?:null,':condicao'=>trim($_POST['item_condicao'][$i]??'')?:null,':devolve'=>!empty($_POST['item_devolucao'][$i])?1:0,':atipo'=>trim($_POST['item_arquivo_tipo'][$i]??'')?:null,':aid'=>trim($_POST['item_arquivo_id'][$i]??'')?:null,':anome'=>trim($_POST['item_arquivo_nome'][$i]??'')?:null,':hash'=>trim($_POST['item_arquivo_hash'][$i]??'')?:null,':obs'=>trim($_POST['item_observacao'][$i]??'')?:null]);}
   $q=$pdo->prepare('SELECT COUNT(*) FROM protocolo_movimentacao_itens WHERE movimentacao_id=:id');$q->execute([':id'=>$mov]);if(!(int)$q->fetchColumn())throw new RuntimeException('Adicione ao menos um documento à movimentação.');
-  protocoloAuditar($pdo,$id,$mov,'MOVIMENTACAO_RASCUNHO',null,'RASCUNHO','Evento '.str_pad((string)$seq,2,'0',STR_PAD_LEFT));$pdo->commit();setMensagem('success','Movimentação criada. Confira e confirme para congelar os dados.');redirecionar($voltar($id).'#mov-'.$mov);
+  protocoloAuditar($pdo,$id,$mov,'MOVIMENTACAO_RASCUNHO',null,'RASCUNHO','Evento '.str_pad((string)$seq,2,'0',STR_PAD_LEFT));$pdo->commit();setMensagem('success','Movimentação criada. Confira e confirme para congelar os dados.');redirecionar($voltar($id, 'timeline').'#mov-'.$mov);
  }
  if($acao==='confirmar'){
   $mov=trim($_POST['movimentacao_id']??'');$pdo->beginTransaction();$q=$pdo->prepare('SELECT id FROM protocolo_dossies WHERE id=:id FOR UPDATE');$q->execute([':id'=>$id]);if(!$q->fetchColumn())throw new RuntimeException('Dossiê não encontrado.');$q=$pdo->prepare("SELECT * FROM protocolo_movimentacoes WHERE id=:mov AND dossie_id=:dossie AND status='RASCUNHO' FOR UPDATE");$q->execute([':mov'=>$mov,':dossie'=>$id]);$m=$q->fetch(PDO::FETCH_ASSOC);if(!$m)throw new RuntimeException('Movimentação não está disponível para confirmação.');
@@ -67,7 +71,7 @@ try{
   $salvar_pdf_caminho=$abs;$movimentacao_pdf_id=$mov;require __DIR__.'/pdf.php';if(!is_file($abs)||filesize($abs)<200)throw new RuntimeException('Falha ao gerar o PDF do protocolo.');$hash=hash_file('sha256',$abs);
   $novo=protocoloStatusPorNatureza($m['natureza'],$d['status']);$q=$pdo->prepare("UPDATE protocolo_movimentacoes SET status='CONFIRMADA',snapshot_json=:snapshot,pdf_caminho=:pdf,pdf_hash=:hash,confirmado_por=:usuario,confirmado_em=NOW() WHERE id=:id AND status='RASCUNHO'");$q->execute([':snapshot'=>json_encode($snapshot,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),':pdf'=>$rel,':hash'=>$hash,':usuario'=>$_SESSION['usuario_id'],':id'=>$mov]);if($q->rowCount()!==1)throw new RuntimeException('A movimentação já foi confirmada.');
   if($m['retifica_movimentacao_id'])$pdo->prepare("UPDATE protocolo_movimentacoes SET status='RETIFICADA' WHERE id=:id AND dossie_id=:dossie AND status='CONFIRMADA'")->execute([':id'=>$m['retifica_movimentacao_id'],':dossie'=>$id]);
-  $pdo->prepare('UPDATE protocolo_dossies SET status=:status,unidade_maritima_id=COALESCE(:unidade,unidade_maritima_id) WHERE id=:id')->execute([':status'=>$novo,':unidade'=>$m['unidade_maritima_id'],':id'=>$id]);protocoloAuditar($pdo,$id,$mov,'MOVIMENTACAO_CONFIRMADA',$d['status'],$novo,'Evento '.str_pad((string)$m['sequencia'],2,'0',STR_PAD_LEFT),$hash);$pdo->commit();protocoloNotificarAdmins($pdo,'PROTOCOLO_MOVIMENTADO','Protocolo movimentado',$d['numero'].' recebeu um evento '.$m['tipo'].'.',$id);setMensagem('success','Movimentação confirmada e PDF congelado.');redirecionar($voltar($id));
+  $pdo->prepare('UPDATE protocolo_dossies SET status=:status,unidade_maritima_id=COALESCE(:unidade,unidade_maritima_id) WHERE id=:id')->execute([':status'=>$novo,':unidade'=>$m['unidade_maritima_id'],':id'=>$id]);protocoloAuditar($pdo,$id,$mov,'MOVIMENTACAO_CONFIRMADA',$d['status'],$novo,'Evento '.str_pad((string)$m['sequencia'],2,'0',STR_PAD_LEFT),$hash);$pdo->commit();protocoloNotificarAdmins($pdo,'PROTOCOLO_MOVIMENTADO','Protocolo movimentado',$d['numero'].' recebeu um evento '.$m['tipo'].'.',$id);setMensagem('success','Movimentação confirmada e PDF congelado.');redirecionar($voltar($id, 'timeline'));
  }
  if($acao==='registro_orgao'){
   $data=trim($_POST['protocolo_externo_em']??'');$unidade=trim($_POST['unidade_maritima_id']??'');$numeroExt=trim($_POST['numero_processo_orgao']??$_POST['protocolo_externo_numero']??'');
@@ -78,12 +82,12 @@ try{
       ':num_ext'=>$numeroExt?:null,':data'=>str_replace('T',' ',$data),':validade'=>trim($_POST['validade']??'')?:null,':unidade'=>$unidade,':id'=>$id
   ]);
   protocoloAuditar($pdo,$id,null,'REGISTRO_ORGAO',$d['status'],'PROTOCOLADO','Atendimento registrado em '.str_replace('T',' ',$data).($numeroExt?' (Nº '.$numeroExt.')':''));$pdo->commit();
-  setMensagem('success','Atendimento no órgão registrado com sucesso.');redirecionar($voltar($id));
+  setMensagem('success','Atendimento no órgão registrado com sucesso.');redirecionar($voltar($id, 'marinha'));
  }
  if($acao==='criar_aceite'){
   $mov=trim($_POST['movimentacao_id']??'');$q=$pdo->prepare("SELECT 1 FROM protocolo_movimentacoes WHERE id=:id AND dossie_id=:dossie AND status='CONFIRMADA'");$q->execute([':id'=>$mov,':dossie'=>$id]);if(!$q->fetchColumn())throw new RuntimeException('Movimentação confirmada não encontrada.');$token=bin2hex(random_bytes(32));$hash=hash('sha256',$token);
   $pdo->prepare("INSERT INTO protocolo_aceites(id,movimentacao_id,token_hash,expira_em,criado_por)VALUES(UUID(),:mov,:hash,DATE_ADD(NOW(),INTERVAL 15 DAY),:usuario) ON DUPLICATE KEY UPDATE token_hash=VALUES(token_hash),expira_em=VALUES(expira_em),criado_por=VALUES(criado_por),nome=NULL,documento_mascarado=NULL,termo_aceito=0,ip=NULL,aceito_em=NULL")->execute([':mov'=>$mov,':hash'=>$hash,':usuario'=>$_SESSION['usuario_id']]);protocoloAuditar($pdo,$id,$mov,'ACEITE_CRIADO',null,'PENDENTE');
-  setMensagem('success','Link de aceite gerado: '.APP_URL.'protocolo-aceite/'.$token);redirecionar($voltar($id).'&aceite_token='.urlencode($token).'&aceite_mov='.urlencode($mov).'#mov-'.$mov);
+  setMensagem('success','Link de aceite gerado: '.APP_URL.'protocolo-aceite/'.$token);redirecionar($voltar($id, 'timeline').'&aceite_token='.urlencode($token).'&aceite_mov='.urlencode($mov).'#mov-'.$mov);
  }
  if($acao==='anexar_documentos'){
   $mov=trim($_POST['movimentacao_id']??'')?:null;
@@ -97,18 +101,18 @@ try{
    foreach($validados as $item){$caminho=protocoloGuardarArquivo($item['arquivo'],$item['meta'],$id);$novosCaminhos[]=$caminho;$ins->execute([':dossie'=>$id,':mov'=>$mov,':nome'=>$item['meta']['nome'],':mime'=>$item['meta']['mime'],':tam'=>$item['meta']['tam'],':hash'=>$item['meta']['hash'],':caminho'=>$caminho,':usuario'=>$_SESSION['usuario_id']]);protocoloAuditar($pdo,$id,$mov,'DOCUMENTO_ANEXADO',null,'DOCUMENTO',$item['meta']['nome'],$item['meta']['hash']);}
    $pdo->commit();
   }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();foreach($novosCaminhos as $rel){$abs=dirname(__DIR__,2).'/'.$rel;if(is_file($abs))@unlink($abs);}throw $e;}
-  setMensagem('success',count($validados).' documento(s) anexado(s) e protegido(s) contra substituição.');redirecionar($voltar($id));
+  setMensagem('success',count($validados).' documento(s) anexado(s) e protegido(s) contra substituição.');redirecionar($voltar($id, 'anexos'));
  }
  if($acao==='registrar_devolucao'){
   $item=trim($_POST['item_id']??'');$q=$pdo->prepare("SELECT i.id,m.id movimentacao_id FROM protocolo_movimentacao_itens i JOIN protocolo_movimentacoes m ON m.id=i.movimentacao_id WHERE i.id=:item AND m.dossie_id=:dossie AND m.status IN('CONFIRMADA','RETIFICADA') AND i.requer_devolucao=1 AND i.devolvido_em IS NULL");$q->execute([':item'=>$item,':dossie'=>$id]);$it=$q->fetch(PDO::FETCH_ASSOC);if(!$it)throw new RuntimeException('Original pendente não encontrado.');
-  $pdo->prepare('UPDATE protocolo_movimentacao_itens SET devolvido_em=NOW() WHERE id=:id AND devolvido_em IS NULL')->execute([':id'=>$item]);protocoloAuditar($pdo,$id,$it['movimentacao_id'],'ORIGINAL_DEVOLVIDO',null,'DEVOLVIDO','Baixa de custódia do original '.$item);setMensagem('success','Devolução do original registrada na custódia.');redirecionar($voltar($id));
+  $pdo->prepare('UPDATE protocolo_movimentacao_itens SET devolvido_em=NOW() WHERE id=:id AND devolvido_em IS NULL')->execute([':id'=>$item]);protocoloAuditar($pdo,$id,$it['movimentacao_id'],'ORIGINAL_DEVOLVIDO',null,'DEVOLVIDO','Baixa de custódia do original '.$item);setMensagem('success','Devolução do original registrada na custódia.');redirecionar($voltar($id, 'custodia'));
  }
  if($acao==='andamento_orgao'){
   $novo=trim($_POST['novo_status']??'');$permitidos=['PROTOCOLADO','EM_ANALISE_NO_ORGAO','EM_EXIGENCIA','A_DISPOSICAO','RETIRADO'];if(!in_array($novo,$permitidos,true))throw new InvalidArgumentException('Andamento inválido.');
   $obs=trim($_POST['andamento_observacao']??'');if(!$obs)throw new InvalidArgumentException('Descreva a informação recebida do órgão.');
-  $pdo->prepare('UPDATE protocolo_dossies SET status=:status WHERE id=:id')->execute([':status'=>$novo,':id'=>$id]);protocoloAuditar($pdo,$id,null,'ANDAMENTO_ORGAO',$d['status'],$novo,$obs);setMensagem('success','Andamento do órgão registrado na auditoria.');redirecionar($voltar($id));
+  $pdo->prepare('UPDATE protocolo_dossies SET status=:status WHERE id=:id')->execute([':status'=>$novo,':id'=>$id]);protocoloAuditar($pdo,$id,null,'ANDAMENTO_ORGAO',$d['status'],$novo,$obs);setMensagem('success','Andamento do órgão registrado na auditoria.');redirecionar($voltar($id, 'marinha'));
  }
- if($acao==='encerrar'){$pdo->prepare("UPDATE protocolo_dossies SET status='ENCERRADO' WHERE id=:id")->execute([':id'=>$id]);protocoloAuditar($pdo,$id,null,'DOSSIE_ENCERRADO',$d['status'],'ENCERRADO');setMensagem('success','Dossiê encerrado.');redirecionar($voltar($id));}
- if($acao==='cancelar'){$motivo=trim($_POST['motivo']??'');if(!$motivo)throw new InvalidArgumentException('Informe o motivo do cancelamento.');$pdo->prepare("UPDATE protocolo_dossies SET status='CANCELADO',cancelado_motivo=:motivo,cancelado_por=:usuario,cancelado_em=NOW() WHERE id=:id")->execute([':motivo'=>$motivo,':usuario'=>$_SESSION['usuario_id'],':id'=>$id]);protocoloAuditar($pdo,$id,null,'DOSSIE_CANCELADO',$d['status'],'CANCELADO',$motivo);setMensagem('success','Dossiê cancelado sem apagar o histórico.');redirecionar($voltar($id));}
+ if($acao==='encerrar'){$pdo->prepare("UPDATE protocolo_dossies SET status='ENCERRADO' WHERE id=:id")->execute([':id'=>$id]);protocoloAuditar($pdo,$id,null,'DOSSIE_ENCERRADO',$d['status'],'ENCERRADO');setMensagem('success','Dossiê encerrado.');redirecionar($voltar($id, 'auditoria'));}
+ if($acao==='cancelar'){$motivo=trim($_POST['motivo']??'');if(!$motivo)throw new InvalidArgumentException('Informe o motivo do cancelamento.');$pdo->prepare("UPDATE protocolo_dossies SET status='CANCELADO',cancelado_motivo=:motivo,cancelado_por=:usuario,cancelado_em=NOW() WHERE id=:id")->execute([':motivo'=>$motivo,':usuario'=>$_SESSION['usuario_id'],':id'=>$id]);protocoloAuditar($pdo,$id,null,'DOSSIE_CANCELADO',$d['status'],'CANCELADO',$motivo);setMensagem('success','Dossiê cancelado sem apagar o histórico.');redirecionar($voltar($id, 'auditoria'));}
  throw new RuntimeException('Ação inválida.');
 }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Erro em protocolos: '.$e->getMessage());setMensagem('error',$e->getMessage());redirecionar($voltar($id?:null));}

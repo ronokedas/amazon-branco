@@ -440,6 +440,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                 <input type="hidden" name="action" value="salvar_exigencias">
                 <input type="hidden" name="analise_id" value="<?= h($id) ?>">
+                <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
 
                 <!-- Toolbar da Tabela de Exigências -->
                 <div class="tabela-exigencias-toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
@@ -639,6 +640,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 <input type="hidden" name="action" value="excluir_exigencia">
                 <input type="hidden" name="analise_id" value="<?= h($id) ?>">
                 <input type="hidden" name="exigencia_id" id="excluir_exigencia_id" value="">
+                <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
             </form>
         </section>
     </div>
@@ -754,6 +756,7 @@ require_once __DIR__ . '/../../includes/header.php';
                     <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                     <input type="hidden" name="action" value="adicionar_submissao">
                     <input type="hidden" name="analise_id" value="<?= h($id) ?>">
+                    <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
 
                     <div class="form-row">
                         <div class="form-group col-3">
@@ -810,6 +813,7 @@ require_once __DIR__ . '/../../includes/header.php';
                                         <input type="hidden" name="action" value="classificar_arquivo">
                                         <input type="hidden" name="analise_id" value="<?= h($id) ?>">
                                         <input type="hidden" name="arquivo_id" value="<?= h($arq['id']) ?>">
+                                        <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
                                         <select name="item_id" class="form-control form-control-sm" style="max-width:180px;">
                                             <option value="">Sem item</option>
                                             <?php foreach ($itens as $item): ?>
@@ -853,6 +857,7 @@ require_once __DIR__ . '/../../includes/header.php';
                         <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                         <input type="hidden" name="action" value="criar_parecer">
                         <input type="hidden" name="analise_id" value="<?= h($id) ?>">
+                        <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
 
                         <div class="form-row">
                             <div class="form-group col-4">
@@ -981,6 +986,7 @@ require_once __DIR__ . '/../../includes/header.php';
                                     <input type="hidden" name="action" value="assinar_parecer">
                                     <input type="hidden" name="analise_id" value="<?= h($id) ?>">
                                     <input type="hidden" name="parecer_id" value="<?= h($p['id']) ?>">
+                                    <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
                                     <button class="btn btn-success btn-sm"><i class="fas fa-signature"></i> Assinar e Finalizar Documento</button>
                                 </form>
                             <?php endif; ?>
@@ -990,6 +996,7 @@ require_once __DIR__ . '/../../includes/header.php';
                                     <input type="hidden" name="action" value="publicar">
                                     <input type="hidden" name="analise_id" value="<?= h($id) ?>">
                                     <input type="hidden" name="parecer_id" value="<?= h($p['id']) ?>">
+                                    <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
                                     <button class="btn btn-success btn-sm"><i class="fa-solid fa-check-double"></i> Validar e Publicar</button>
                                     <input name="motivo" placeholder="Motivo de devolução" class="form-control form-control-sm" style="width:180px;">
                                     <button name="devolver" value="1" class="btn btn-warning btn-sm">Devolver</button>
@@ -1026,6 +1033,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                 <input type="hidden" name="action" value="salvar">
                 <input type="hidden" name="id" value="<?= h($id) ?>">
+                <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
 
                 <div class="form-row">
                     <div class="form-group col-3">
@@ -1252,6 +1260,7 @@ require_once __DIR__ . '/../../includes/header.php';
                     <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                     <input type="hidden" name="action" value="agendar">
                     <input type="hidden" name="analise_id" value="<?= h($id) ?>">
+                    <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
 
                     <div class="form-group">
                         <label>Analista Responsável *</label>
@@ -2164,8 +2173,11 @@ require_once __DIR__ . '/../../includes/header.php';
 </style>
 
 <script>
-// Controle das Abas da Análise
-function trocarAbaAnalise(abaId) {
+// Controle das Abas da Análise com Preservação de Estado e Rolagem
+function trocarAbaAnalise(abaId, suave = false) {
+    if (!['exigencias', 'arquivos', 'pareceres', 'enquadramento', 'vistoria_tramite'].includes(abaId)) {
+        return;
+    }
     document.querySelectorAll('.analise-tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.analise-tab-pane').forEach(p => p.classList.remove('active'));
 
@@ -2174,10 +2186,23 @@ function trocarAbaAnalise(abaId) {
     if (btn) btn.classList.add('active');
     if (pane) pane.classList.add('active');
 
-    // Atualizar URL silenciosamente para permitir reload na mesma aba
+    // Sincronizar campos ocultos de formulários
+    document.querySelectorAll('.input-aba-ativa').forEach(inp => {
+        inp.value = abaId;
+    });
+
+    // Salvar na sessão e atualizar URL
+    try {
+        sessionStorage.setItem('erp_aba_analise_' + analiseIdGlobal, abaId);
+    } catch (e) {}
+
     const url = new URL(window.location);
     url.searchParams.set('aba', abaId);
     window.history.replaceState({}, '', url);
+
+    if (suave && pane) {
+        pane.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 // Atalho para seleção de categoria em 1 clique via chips
@@ -2828,6 +2853,26 @@ document.addEventListener('keydown', function(e) {
 function escapeHtml(str) {
     return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// Restauração inteligente da aba ativa (URL > Hash > SessionStorage)
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let targetAba = urlParams.get('aba');
+    if (!targetAba && window.location.hash) {
+        const hashClean = window.location.hash.replace('#pane-', '').replace('#', '');
+        if (['exigencias', 'arquivos', 'pareceres', 'enquadramento', 'vistoria_tramite'].includes(hashClean)) {
+            targetAba = hashClean;
+        }
+    }
+    if (!targetAba) {
+        try {
+            targetAba = sessionStorage.getItem('erp_aba_analise_' + analiseIdGlobal);
+        } catch (e) {}
+    }
+    if (targetAba && ['exigencias', 'arquivos', 'pareceres', 'enquadramento', 'vistoria_tramite'].includes(targetAba)) {
+        trocarAbaAnalise(targetAba, false);
+    }
+});
 </script>
 
 <?php

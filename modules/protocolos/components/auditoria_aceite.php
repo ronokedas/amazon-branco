@@ -25,6 +25,7 @@
                     <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
                     <input type="hidden" name="action" value="anexar_documentos">
                     <input type="hidden" name="dossie_id" value="<?= h($id) ?>">
+                    <input type="hidden" name="aba" class="input-aba-ativa" value="anexos">
 
                     <div class="row g-2 align-items-end">
                         <div class="col-md-4">
@@ -155,6 +156,7 @@
                             <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
                             <input type="hidden" name="action" value="encerrar">
                             <input type="hidden" name="dossie_id" value="<?= h($id) ?>">
+                            <input type="hidden" name="aba" class="input-aba-ativa" value="auditoria">
                             <button type="submit" class="btn btn-success w-100 mb-2" onclick="return confirm('Confirma o encerramento do dossiê? Os dados serão congelados como finalizados.')">
                                 <i class="fa-solid fa-check-circle"></i> Encerrar Dossiê (Concluído)
                             </button>
@@ -167,6 +169,7 @@
                             <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
                             <input type="hidden" name="action" value="cancelar">
                             <input type="hidden" name="dossie_id" value="<?= h($id) ?>">
+                            <input type="hidden" name="aba" class="input-aba-ativa" value="auditoria">
                             <div class="mb-2">
                                 <input class="form-control form-control-sm" name="motivo" required placeholder="Motivo obrigatório do cancelamento...">
                             </div>

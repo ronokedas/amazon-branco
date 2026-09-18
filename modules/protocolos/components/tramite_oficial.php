@@ -26,6 +26,7 @@ $chaveProc = 'protocolo_externo_' . 'numero';
                             <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
                             <input type="hidden" name="action" value="registro_orgao">
                             <input type="hidden" name="dossie_id" value="<?= h($id) ?>">
+                            <input type="hidden" name="aba" class="input-aba-ativa" value="marinha">
 
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Unidade Marítima (Capitania / Delegacia) *</label>
@@ -89,6 +90,7 @@ $chaveProc = 'protocolo_externo_' . 'numero';
                             <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
                             <input type="hidden" name="action" value="andamento_orgao">
                             <input type="hidden" name="dossie_id" value="<?= h($id) ?>">
+                            <input type="hidden" name="aba" class="input-aba-ativa" value="marinha">
 
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Novo Andamento Informado pelo Órgão *</label>

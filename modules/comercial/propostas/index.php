@@ -20,6 +20,31 @@ $filtro_status   = $_GET['status'] ?? 'todos';
 $filtro_busca    = trim($_GET['busca'] ?? '');
 $filtro_data_ini = $_GET['data_ini'] ?? '';
 $filtro_data_fim = $_GET['data_fim'] ?? '';
+$paginaAtual     = max(1, (int)($_GET['pagina'] ?? 1));
+$porPagina       = (int)($_GET['por_pagina'] ?? 15);
+if (!in_array($porPagina, [10, 15, 25, 50, 100], true)) {
+    $porPagina = 15;
+}
+
+$propostaUrl = function(array $novos = []) use (&$filtro_status, &$filtro_busca, &$filtro_data_ini, &$filtro_data_fim, &$paginaAtual, &$porPagina): string {
+    $params = [
+        'status' => $filtro_status !== 'todos' ? $filtro_status : null,
+        'busca' => $filtro_busca !== '' ? $filtro_busca : null,
+        'data_ini' => $filtro_data_ini !== '' ? $filtro_data_ini : null,
+        'data_fim' => $filtro_data_fim !== '' ? $filtro_data_fim : null,
+        'por_pagina' => (int)$porPagina !== 15 ? (int)$porPagina : null,
+        'pagina' => (int)$paginaAtual > 1 ? (int)$paginaAtual : null,
+    ];
+    foreach ($novos as $k => $v) {
+        if ($v === null || $v === '' || ($k === 'pagina' && (int)$v <= 1) || ($k === 'por_pagina' && (int)$v === 15) || ($k === 'status' && $v === 'todos')) {
+            unset($params[$k]);
+        } else {
+            $params[$k] = $v;
+        }
+    }
+    $query = http_build_query($params);
+    return APP_URL . 'comercial/propostas' . ($query ? '?' . $query : '');
+};
 
 $where = [];
 $params = [];
@@ -56,17 +81,49 @@ if (!empty($where)) {
 }
 
 // ============================================
-// BUSCAR PROPOSTAS
+// BUSCAR PROPOSTAS COM PAGINAÇÃO
 // ============================================
+$totalPropostas = 0;
+$somaTotal = 0.0;
+$totalPaginas = 1;
+$offset = 0;
+$registroInicio = 0;
+$registroFim = 0;
+
 try {
+    // Total de registros e soma geral do filtro
+    $sqlCount = "SELECT COUNT(*), COALESCE(SUM(p.valor_total), 0)
+                 FROM propostas p
+                 INNER JOIN clientes c ON c.id = p.cliente_id
+                 {$sqlWhere}";
+    $stmtCount = $pdo->prepare($sqlCount);
+    $stmtCount->execute($params);
+    $resCount = $stmtCount->fetch(PDO::FETCH_NUM);
+    $totalPropostas = (int)($resCount[0] ?? 0);
+    $somaTotal = (float)($resCount[1] ?? 0.0);
+
+    $totalPaginas = max(1, (int)ceil($totalPropostas / $porPagina));
+    if ($paginaAtual > $totalPaginas) {
+        $paginaAtual = $totalPaginas;
+    }
+    $offset = ($paginaAtual - 1) * $porPagina;
+    $registroInicio = $totalPropostas > 0 ? $offset + 1 : 0;
+    $registroFim = min($offset + $porPagina, $totalPropostas);
+
     $sql = "SELECT p.*, c.nome AS cliente_nome, c.cpf_cnpj AS cliente_cpfcnpj,
                    c.email AS cliente_email
             FROM propostas p
             INNER JOIN clientes c ON c.id = p.cliente_id
             {$sqlWhere}
-            ORDER BY p.created_at DESC";
+            ORDER BY p.created_at DESC
+            LIMIT :limite OFFSET :offset";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    foreach ($params as $k => $v) {
+        $stmt->bindValue($k, $v);
+    }
+    $stmt->bindValue(':limite', $porPagina, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
     $propostas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Buscar embarcações de cada proposta
@@ -537,19 +594,122 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
             </table>
         <?php endif; ?>
 
-        <div class="card-footer" style="padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-            <small class="text-muted">
-                <i class="fas fa-info-circle"></i> 
-                Total: <?php echo count($propostas); ?> proposta(s)
-            </small>
-            <small class="text-muted">
-                <strong>Soma:</strong> R$ <?php echo number_format(array_sum(array_column($propostas, 'valor_total')), 2, ',', '.'); ?>
-            </small>
+        <div class="card-footer" style="padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    Mostrando <strong><?php echo $registroInicio; ?></strong> a <strong><?php echo $registroFim; ?></strong> de <strong><?php echo $totalPropostas; ?></strong> proposta(s)
+                </small>
+                <small class="text-muted" style="border-left: 1px solid #cbd5e1; padding-left: 12px;">
+                    <strong>Soma total do filtro:</strong> R$ <?php echo number_format($somaTotal, 2, ',', '.'); ?>
+                </small>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <label for="selectPorPagina" style="font-size: 0.82rem; color: #64748b; margin: 0;">Exibir:</label>
+                    <select id="selectPorPagina" class="form-control form-control-sm" style="width: auto; height: 32px; padding: 2px 8px; font-size: 0.82rem; border-radius: 6px; border: 1px solid #cbd5e1;" onchange="window.location.href=this.value">
+                        <?php foreach ([10, 15, 25, 50, 100] as $qtd): ?>
+                            <option value="<?php echo h($propostaUrl(['por_pagina' => $qtd, 'pagina' => 1])); ?>" <?php echo $porPagina === $qtd ? 'selected' : ''; ?>>
+                                <?php echo $qtd; ?> por pág.
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <?php if ($totalPaginas > 1): ?>
+                <nav aria-label="Navegação de páginas de propostas">
+                    <ul class="paginacao-propostas" style="display: flex; align-items: center; gap: 5px; margin: 0; padding: 0; list-style: none;">
+                        <!-- Primeira página -->
+                        <li class="paginacao-item <?php echo $paginaAtual <= 1 ? 'disabled' : ''; ?>">
+                            <a class="paginacao-link" href="<?php echo $paginaAtual <= 1 ? 'javascript:void(0)' : h($propostaUrl(['pagina' => 1])); ?>" title="Primeira página">
+                                <i class="fas fa-angles-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Página anterior -->
+                        <li class="paginacao-item <?php echo $paginaAtual <= 1 ? 'disabled' : ''; ?>">
+                            <a class="paginacao-link" href="<?php echo $paginaAtual <= 1 ? 'javascript:void(0)' : h($propostaUrl(['pagina' => $paginaAtual - 1])); ?>" title="Página anterior">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Janela de páginas -->
+                        <?php
+                        $janelaInicio = max(1, $paginaAtual - 2);
+                        $janelaFim = min($totalPaginas, $paginaAtual + 2);
+
+                        if ($janelaInicio > 1) {
+                            echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h($propostaUrl(['pagina' => 1])) . '">1</a></li>';
+                            if ($janelaInicio > 2) {
+                                echo '<li class="paginacao-ellipsis" style="padding: 0 4px; color: #94a3b8;">...</li>';
+                            }
+                        }
+
+                        for ($p = $janelaInicio; $p <= $janelaFim; $p++) {
+                            if ($p === $paginaAtual) {
+                                echo '<li class="paginacao-item active"><span class="paginacao-link active-link" style="background: var(--cor-primaria, #0d9488); color: #ffffff; border-color: var(--cor-primaria, #0d9488); font-weight: 700;">' . $p . '</span></li>';
+                            } else {
+                                echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h($propostaUrl(['pagina' => $p])) . '">' . $p . '</a></li>';
+                            }
+                        }
+
+                        if ($janelaFim < $totalPaginas) {
+                            if ($janelaFim < $totalPaginas - 1) {
+                                echo '<li class="paginacao-ellipsis" style="padding: 0 4px; color: #94a3b8;">...</li>';
+                            }
+                            echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h($propostaUrl(['pagina' => $totalPaginas])) . '">' . $totalPaginas . '</a></li>';
+                        }
+                        ?>
+
+                        <!-- Próxima página -->
+                        <li class="paginacao-item <?php echo $paginaAtual >= $totalPaginas ? 'disabled' : ''; ?>">
+                            <a class="paginacao-link" href="<?php echo $paginaAtual >= $totalPaginas ? 'javascript:void(0)' : h($propostaUrl(['pagina' => $paginaAtual + 1])); ?>" title="Próxima página">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+
+                        <!-- Última página -->
+                        <li class="paginacao-item <?php echo $paginaAtual >= $totalPaginas ? 'disabled' : ''; ?>">
+                            <a class="paginacao-link" href="<?php echo $paginaAtual >= $totalPaginas ? 'javascript:void(0)' : h($propostaUrl(['pagina' => $totalPaginas])); ?>" title="Última página">
+                                <i class="fas fa-angles-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            <?php endif; ?>
         </div>
     </div>
     <?php endif; ?>
 
 </div>
+
+<style>
+.paginacao-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.paginacao-link:hover:not(.active-link):not(.disabled) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+.paginacao-item.disabled .paginacao-link {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #f8fafc;
+}
+</style>
 
 <script>
 function filtrarPropostas() {
@@ -557,6 +717,7 @@ function filtrarPropostas() {
     const busca    = document.getElementById('buscaProposta').value.trim();
     const dataIni  = document.getElementById('filtroDataIni').value;
     const dataFim  = document.getElementById('filtroDataFim').value;
+    const porPagina = '<?php echo (int)$porPagina; ?>';
 
     let url = '<?php echo APP_URL; ?>comercial/propostas?';
     const params = [];
@@ -564,6 +725,7 @@ function filtrarPropostas() {
     if (busca !== '')       params.push('busca=' + encodeURIComponent(busca));
     if (dataIni !== '')     params.push('data_ini=' + encodeURIComponent(dataIni));
     if (dataFim !== '')     params.push('data_fim=' + encodeURIComponent(dataFim));
+    if (porPagina !== '15') params.push('por_pagina=' + encodeURIComponent(porPagina));
 
     window.location.href = url + params.join('&');
 }

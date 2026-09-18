@@ -213,8 +213,10 @@ switch ($action) {
 
         if (!empty($erros)) {
             setMensagem('error', implode(' ', $erros), $errosCampos);
+            $aba = trim($_POST['aba'] ?? '');
             $url = APP_URL . 'embarcacoes/form';
             if ($isEdicao) $url .= '?id=' . urlencode($id);
+            if ($aba !== '') $url .= ($isEdicao ? '&' : '?') . 'aba=' . urlencode($aba);
             redirecionar($url);
         }
 
