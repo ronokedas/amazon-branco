@@ -404,6 +404,27 @@
                             </div>
                         </div>
 
+                        <!-- Documentos da Análise Vinculada (se houver) -->
+                        <?php if (!empty($arquivosAnalise)): ?>
+                            <div class="mb-3 p-2 rounded" style="background: rgba(86, 224, 173, 0.08); border: 1px dashed var(--accent, #56e0ad);">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <span class="small text-accent fw-semibold">
+                                        <i class="fa-solid fa-compass-drafting me-1"></i> Pranchas e Documentos da Análise Vinculada (<?= count($arquivosAnalise) ?> disponível(is)):
+                                    </span>
+                                    <button type="button" class="btn btn-sm btn-primary py-0 px-2" style="font-size: 0.75rem;" onclick="importarTodosArquivosAnalise()">
+                                        <i class="fa-solid fa-file-import me-1"></i> Importar Todos na Movimentação
+                                    </button>
+                                </div>
+                                <div class="d-flex flex-wrap gap-1 mt-2">
+                                    <?php foreach ($arquivosAnalise as $idx => $arq): ?>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;" onclick="importarArquivoAnalise(<?= (int)$idx ?>)" title="<?= h($arq['nome_original']) ?>">
+                                            + <?= h($arq['item_nome']) ?>
+                                        </button>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
                         <div id="lista-docs-container"></div>
                     </div>
 
@@ -419,4 +440,25 @@
             </div>
         </section>
     </div>
+
+    <script>
+    const arquivosAnaliseDisponiveis = <?= json_encode($arquivosAnalise ?? [], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP|JSON_UNESCAPED_UNICODE) ?>;
+    function importarArquivoAnalise(idx) {
+        const arq = arquivosAnaliseDisponiveis[idx];
+        if (!arq || typeof addDoc !== 'function') return;
+        addDoc('', arq.item_nome, {
+            suporte: 'DIGITAL',
+            forma: 'NATO_DIGITAL',
+            categoria: arq.item_categoria || 'PROJETOS',
+            arquivo_origem_tipo: 'ANALISE_PLANOS',
+            arquivo_origem_id: arq.arquivo_id,
+            arquivo_nome: arq.nome_original,
+            arquivo_hash: arq.sha256
+        });
+    }
+    function importarTodosArquivosAnalise() {
+        if (!arquivosAnaliseDisponiveis || !arquivosAnaliseDisponiveis.length) return;
+        arquivosAnaliseDisponiveis.forEach((_, idx) => importarArquivoAnalise(idx));
+    }
+    </script>
 <?php endif; ?>

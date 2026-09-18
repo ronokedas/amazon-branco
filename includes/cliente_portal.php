@@ -239,9 +239,14 @@ function clientePortalSelectDocumentos(PDO $pdo, string $clienteId, array $filtr
                 {$fallbackInscricao}
             WHERE c.ativo = 1
               AND c.status IN ('emitido', 'assinado')
-              AND (c.{$validadeCampo} IS NULL OR c.{$validadeCampo} >= CURDATE())
               AND COALESCE(ed.id, ev.id, en.id) IN ({$in})
         ";
+
+        if (!empty($filtros['apenas_validos'])) {
+            $sql .= " AND (c.{$validadeCampo} IS NULL OR c.{$validadeCampo} >= CURDATE())";
+        } elseif (($filtros['status'] ?? '') === 'vencido') {
+            $sql .= " AND c.{$validadeCampo} IS NOT NULL AND c.{$validadeCampo} < CURDATE()";
+        }
 
         if (!empty($filtros['embarcacao_id'])) {
             $sql .= " AND COALESCE(ed.id, ev.id, en.id) = :filtro_embarcacao";
@@ -454,4 +459,293 @@ function clientePortalGerarSenhaFacil(int $tamanho = 8): string
         $senha .= $chars[random_int(0, strlen($chars) - 1)];
     }
     return $senha;
+}
+
+/**
+ * Retorna os dossiês de protocolo naval (Capitania / SISAP) vinculados ao cliente ou à sua frota.
+ */
+function clientePortalSelectProtocolos(PDO $pdo, string $clienteId, array $filtros = []): array
+{
+    $embarcacaoIds = clientePortalEmbarcacaoIds($pdo, $clienteId);
+    $params = [':cliente_id' => $clienteId];
+    $whereOr = ["d.cliente_id = :cliente_id"];
+    
+    if (!empty($embarcacaoIds)) {
+        $inParams = [];
+        $inSql = clientePortalSqlIn($embarcacaoIds, 'prot_emb_', $inParams);
+        $whereOr[] = "d.embarcacao_id IN ({$inSql})";
+        $params = array_merge($params, $inParams);
+    }
+    
+    $where = ["(" . implode(" OR ", $whereOr) . ")"];
+    
+    if (!empty($filtros['embarcacao_id'])) {
+        $where[] = "d.embarcacao_id = :filtro_emb";
+        $params[':filtro_emb'] = $filtros['embarcacao_id'];
+    }
+    if (!empty($filtros['status'])) {
+        $where[] = "d.status = :filtro_status";
+        $params[':filtro_status'] = $filtros['status'];
+    }
+    if (!empty($filtros['busca'])) {
+        $where[] = "(d.numero LIKE :busca OR d.assunto LIKE :busca OR d.protocolo_externo_numero LIKE :busca OR e.nome LIKE :busca)";
+        $params[':busca'] = '%' . $filtros['busca'] . '%';
+    }
+    
+    $sql = "SELECT d.*, 
+                   e.nome AS embarcacao_nome, 
+                   e.registro AS embarcacao_registro, 
+                   um.nome AS unidade_maritima_nome,
+                   (SELECT COUNT(*) FROM protocolo_movimentacoes m WHERE m.dossie_id = d.id AND m.status IN ('CONFIRMADA','RETIFICADA')) AS total_movimentacoes,
+                   (SELECT COUNT(*) FROM protocolo_movimentacao_itens i 
+                      JOIN protocolo_movimentacoes m2 ON m2.id = i.movimentacao_id 
+                     WHERE m2.dossie_id = d.id AND i.requer_devolucao = 1 AND i.devolvido_em IS NULL) AS originais_sob_custodia
+              FROM protocolo_dossies d
+         LEFT JOIN embarcacoes e ON e.id = d.embarcacao_id
+         LEFT JOIN protocolo_unidades_maritimas um ON um.id = d.unidade_maritima_id
+             WHERE " . implode(" AND ", $where) . "
+          ORDER BY d.atualizado_em DESC";
+          
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Retorna as propostas comerciais emitidas para o cliente.
+ */
+function clientePortalSelectPropostas(PDO $pdo, string $clienteId, array $filtros = []): array
+{
+    $params = [':cli_id1' => $clienteId, ':cli_id2' => $clienteId];
+    $where = ["(p.cliente_id = :cli_id1 OR p.armador_id = :cli_id2)"];
+    
+    if (!empty($filtros['status'])) {
+        $where[] = "p.status = :filtro_status";
+        $params[':filtro_status'] = $filtros['status'];
+    }
+    if (!empty($filtros['busca'])) {
+        $where[] = "(p.numero LIKE :busca OR p.observacoes LIKE :busca)";
+        $params[':busca'] = '%' . $filtros['busca'] . '%';
+    }
+    
+    $sql = "SELECT p.*,
+                   (SELECT COUNT(*) FROM propostas_embarcacoes pe WHERE pe.proposta_id = p.id) AS total_embarcacoes
+              FROM propostas p
+             WHERE " . implode(" AND ", $where) . "
+          ORDER BY p.data_emissao DESC, p.created_at DESC";
+          
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Retorna vistorias vinculadas às embarcações ou cadastro do cliente.
+ */
+function clientePortalSelectVistorias(PDO $pdo, string $clienteId, array $filtros = []): array
+{
+    $embarcacaoIds = clientePortalEmbarcacaoIds($pdo, $clienteId);
+    $params = [':cliente_id' => $clienteId, ':armador_id' => $clienteId];
+    $whereOr = ["v.pessoa_id = :cliente_id", "v.armador_id = :armador_id"];
+    
+    if (!empty($embarcacaoIds)) {
+        $inParams = [];
+        $inSql = clientePortalSqlIn($embarcacaoIds, 'vist_emb_', $inParams);
+        $whereOr[] = "v.embarcacao_id IN ({$inSql})";
+        $params = array_merge($params, $inParams);
+    }
+    
+    $where = ["(" . implode(" OR ", $whereOr) . ")"];
+    
+    if (!empty($filtros['embarcacao_id'])) {
+        $where[] = "v.embarcacao_id = :filtro_emb";
+        $params[':filtro_emb'] = $filtros['embarcacao_id'];
+    }
+    if (!empty($filtros['status'])) {
+        $where[] = "v.status = :filtro_status";
+        $params[':filtro_status'] = $filtros['status'];
+    }
+    if (!empty($filtros['busca'])) {
+        $where[] = "(v.numero LIKE :busca OR e.nome LIKE :busca)";
+        $params[':busca'] = '%' . $filtros['busca'] . '%';
+    }
+    
+    $sql = "SELECT v.*, e.nome AS embarcacao_nome, e.registro AS embarcacao_registro,
+                   u.nome AS vistoriador_nome
+              FROM vistorias v
+         LEFT JOIN embarcacoes e ON e.id = v.embarcacao_id
+         LEFT JOIN usuarios u ON u.id = v.criado_por
+             WHERE " . implode(" AND ", $where) . "
+          ORDER BY v.data_vistoria DESC, v.criado_em DESC";
+          
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Retorna agendamentos futuros da frota do cliente.
+ */
+function clientePortalSelectAgendamentos(PDO $pdo, string $clienteId): array
+{
+    $embarcacaoIds = clientePortalEmbarcacaoIds($pdo, $clienteId);
+    $params = [':cliente_id' => $clienteId, ':armador_id' => $clienteId];
+    $whereOr = ["a.cliente_id = :cliente_id", "a.armador_id = :armador_id"];
+    
+    if (!empty($embarcacaoIds)) {
+        $inParams = [];
+        $inSql = clientePortalSqlIn($embarcacaoIds, 'ag_emb_', $inParams);
+        $whereOr[] = "a.embarcacao_id IN ({$inSql})";
+        $params = array_merge($params, $inParams);
+    }
+    
+    $sql = "SELECT a.*, e.nome AS embarcacao_nome, u.nome AS vistoriador_nome
+              FROM agendamentos a
+         LEFT JOIN embarcacoes e ON e.id = a.embarcacao_id
+         LEFT JOIN usuarios u ON u.id = a.vistoriador_id
+             WHERE (" . implode(" OR ", $whereOr) . ")
+               AND a.status NOT IN ('cancelado', 'concluido')
+          ORDER BY a.data_vistoria ASC, a.hora_vistoria ASC";
+          
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Retorna análises técnicas da frota (ativas e/ou concluídas).
+ */
+function clientePortalSelectAnalises(PDO $pdo, string $clienteId, array $filtros = []): array
+{
+    $embarcacaoIds = clientePortalEmbarcacaoIds($pdo, $clienteId);
+    $params = [':cliente_id' => $clienteId];
+    $whereOr = ["ap.solicitante_id = :cliente_id"];
+    
+    if (!empty($embarcacaoIds)) {
+        $inParams = [];
+        $inSql = clientePortalSqlIn($embarcacaoIds, 'an_emb_', $inParams);
+        $whereOr[] = "ap.embarcacao_id IN ({$inSql})";
+        $params = array_merge($params, $inParams);
+    }
+    
+    $where = ["(" . implode(" OR ", $whereOr) . ")"];
+    
+    if (!empty($filtros['status_grupo'])) {
+        if ($filtros['status_grupo'] === 'ativas') {
+            $where[] = "ap.status IN ('AGENDADA', 'EM_ANALISE', 'AGUARDANDO_DOCUMENTOS', 'EM_EXIGENCIA')";
+        } elseif ($filtros['status_grupo'] === 'concluidas') {
+            $where[] = "ap.status IN ('CONCLUIDA', 'APROVADA', 'DEFERIDA', 'ARQUIVADA')";
+        }
+    }
+    if (!empty($filtros['embarcacao_id'])) {
+        $where[] = "ap.embarcacao_id = :filtro_emb";
+        $params[':filtro_emb'] = $filtros['embarcacao_id'];
+    }
+    if (!empty($filtros['busca'])) {
+        $where[] = "(ap.numero LIKE :busca OR ap.objeto LIKE :busca OR e.nome LIKE :busca)";
+        $params[':busca'] = '%' . $filtros['busca'] . '%';
+    }
+    
+    $sql = "SELECT ap.*, e.nome AS embarcacao_nome, e.registro AS embarcacao_registro,
+                   u.nome AS analista_nome,
+                   (SELECT COALESCE(MAX(s.revisao), 0) FROM analise_planos_submissoes s WHERE s.analise_id = ap.id) AS ultima_revisao,
+                   (SELECT COUNT(*) FROM analise_planos_arquivos ar 
+                      JOIN analise_planos_submissoes s2 ON s2.id = ar.submissao_id 
+                     WHERE s2.analise_id = ap.id) AS total_arquivos_enviados
+              FROM analises_planos ap
+         LEFT JOIN embarcacoes e ON e.id = ap.embarcacao_id
+         LEFT JOIN usuarios u ON u.id = ap.analista_id
+             WHERE " . implode(" AND ", $where) . "
+          ORDER BY ap.atualizado_em DESC";
+          
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Retorna dados detalhados e técnicos da frota do cliente.
+ */
+function clientePortalSelectEmbarcacoesDetalhadas(PDO $pdo, string $clienteId): array
+{
+    $embarcacoes = clientePortalEmbarcacoes($pdo, $clienteId);
+    if (empty($embarcacoes)) {
+        return [];
+    }
+    $ids = array_column($embarcacoes, 'id');
+    $params = [];
+    $in = clientePortalSqlIn($ids, 'frot_emb_', $params);
+    
+    $sql = "SELECT e.*,
+                   (SELECT COUNT(*) FROM analises_planos ap WHERE ap.embarcacao_id = e.id AND ap.status IN ('AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS')) AS analises_ativas,
+                   (SELECT COUNT(*) FROM protocolo_dossies d WHERE d.embarcacao_id = e.id AND d.status NOT IN ('ENCERRADO','CANCELADO')) AS protocolos_ativos,
+                   (SELECT COUNT(*) FROM vistorias v WHERE v.embarcacao_id = e.id) AS total_vistorias
+              FROM embarcacoes e
+             WHERE e.id IN ({$in})
+          ORDER BY e.nome ASC";
+          
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Resumo consolidado de todas as áreas do cliente no sistema.
+ */
+function clientePortalResumoGeral(PDO $pdo, string $clienteId): array
+{
+    $embarcacoes = clientePortalEmbarcacoes($pdo, $clienteId);
+    $documentos = clientePortalSelectDocumentos($pdo, $clienteId);
+    $protocolos = clientePortalSelectProtocolos($pdo, $clienteId);
+    $propostas = clientePortalSelectPropostas($pdo, $clienteId);
+    $vistorias = clientePortalSelectVistorias($pdo, $clienteId);
+    $agendamentos = clientePortalSelectAgendamentos($pdo, $clienteId);
+    $analises = clientePortalSelectAnalises($pdo, $clienteId);
+    
+    $docsVencendo = 0;
+    $docsVencidos = 0;
+    $docsValidos = 0;
+    $hoje = new DateTimeImmutable('today');
+    
+    foreach ($documentos as $d) {
+        if (!empty($d['data_validade'])) {
+            $val = new DateTimeImmutable($d['data_validade']);
+            $diff = (int)$hoje->diff($val)->format('%r%a');
+            if ($diff < 0) {
+                $docsVencidos++;
+            } elseif ($diff <= 90) {
+                $docsVencendo++;
+            } else {
+                $docsValidos++;
+            }
+        } elseif (($d['status'] ?? '') === 'assinado' || ($d['status'] ?? '') === 'emitido') {
+            $docsValidos++;
+        }
+    }
+    
+    $protocolosAtivos = count(array_filter($protocolos, fn($p) => !in_array($p['status'], ['ENCERRADO', 'CANCELADO'], true)));
+    $protocolosExigencia = count(array_filter($protocolos, fn($p) => $p['status'] === 'EM_EXIGENCIA'));
+    $custodiaPendente = 0;
+    foreach ($protocolos as $p) {
+        $custodiaPendente += (int)($p['originais_sob_custodia'] ?? 0);
+    }
+    
+    $analisesAtivas = count(array_filter($analises, fn($a) => in_array($a['status'], ['AGENDADA', 'EM_ANALISE', 'AGUARDANDO_DOCUMENTOS', 'EM_EXIGENCIA'], true)));
+    $analisesAguardandoDocs = count(array_filter($analises, fn($a) => $a['status'] === 'AGUARDANDO_DOCUMENTOS'));
+    
+    return [
+        'total_embarcacoes' => count($embarcacoes),
+        'total_documentos' => count($documentos),
+        'docs_validos' => $docsValidos,
+        'docs_vencendo' => $docsVencendo,
+        'docs_vencidos' => $docsVencidos,
+        'protocolos_ativos' => $protocolosAtivos,
+        'protocolos_exigencia' => $protocolosExigencia,
+        'custodia_pendente' => $custodiaPendente,
+        'analises_ativas' => $analisesAtivas,
+        'analises_aguardando_docs' => $analisesAguardandoDocs,
+        'total_propostas' => count($propostas),
+        'total_vistorias' => count($vistorias),
+        'agendamentos_futuros' => count($agendamentos),
+    ];
 }

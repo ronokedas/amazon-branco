@@ -221,7 +221,7 @@ $statusBadges = [
 $protocolos = [];
 if (podeAcessar('protocolos_documentais')) {
     try {
-        $q = $pdo->prepare('SELECT id,numero,assunto,status FROM protocolo_dossies WHERE analise_id=:id ORDER BY criado_em');
+        $q = $pdo->prepare('SELECT d.id, d.numero, d.assunto, d.status, d.protocolo_externo_numero, d.protocolo_externo_em, d.protocolo_externo_validade, d.unidade_maritima_id, um.nome unidade_nome, (SELECT COUNT(*) FROM protocolo_movimentacoes m WHERE m.dossie_id = d.id) total_movs, (SELECT COUNT(*) FROM protocolo_movimentacao_itens i JOIN protocolo_movimentacoes m2 ON m2.id=i.movimentacao_id WHERE m2.dossie_id=d.id AND i.requer_devolucao=1 AND i.devolvido_em IS NULL) originais_pendentes FROM protocolo_dossies d LEFT JOIN protocolo_unidades_maritimas um ON um.id = d.unidade_maritima_id WHERE d.analise_id=:id ORDER BY d.criado_em DESC');
         $q->execute([':id'=>$id]);
         $protocolos = $q->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {}
@@ -315,6 +315,17 @@ require_once __DIR__ . '/../../includes/header.php';
                     <button type="button" class="btn btn-primary" onclick="trocarAbaAnalise('pareceres')">
                         <i class="fa-solid fa-file-signature"></i> Relatório RAP
                     </button>
+                <?php endif; ?>
+                <?php if (podeAcessar('protocolos_documentais')): ?>
+                    <?php if (!empty($protocolos)): ?>
+                        <a class="btn btn-outline-info text-white" href="<?= APP_URL ?>protocolos/form?id=<?= urlencode($protocolos[0]['id']) ?>" title="Acessar Dossiê de Protocolo na Capitania">
+                            <i class="fa-solid fa-folder-open"></i> Protocolo: <?= h($protocolos[0]['numero']) ?>
+                        </a>
+                    <?php else: ?>
+                        <a class="btn btn-outline-primary" href="<?= APP_URL ?>protocolos/form?analise_id=<?= urlencode($id) ?>&embarcacao_id=<?= urlencode($a['embarcacao_id']) ?>" title="Abrir Dossiê de Protocolo na Marinha">
+                            <i class="fa-solid fa-arrow-right-arrow-left"></i> Abrir Protocolo
+                        </a>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <a class="btn btn-secondary" href="<?= APP_URL ?>analises-planos">
                     <i class="fas fa-arrow-left"></i> Voltar à Fila
@@ -1230,24 +1241,72 @@ require_once __DIR__ . '/../../includes/header.php';
             <section class="analise-card">
                 <div class="analise-card__head-flex">
                     <div>
-                        <h3><i class="fa-solid fa-arrow-right-arrow-left text-primary"></i> Tramitação Documental na Capitania / Órgão</h3>
-                        <p class="text-muted">Acompanhamento do processo protocolado na Capitania dos Portos (SISAP).</p>
+                        <h3><i class="fa-solid fa-arrow-right-arrow-left text-primary"></i> Tramitação Documental na Capitania / Órgão (SISAP)</h3>
+                        <p class="text-muted">Acompanhamento formal do processo protocolado na Capitania dos Portos, Delegacia ou Agência Fluvial.</p>
                     </div>
-                    <a class="btn btn-secondary btn-sm" href="<?= APP_URL ?>protocolos/form?analise_id=<?= urlencode($id) ?>&embarcacao_id=<?= urlencode($a['embarcacao_id']) ?>">
-                        <i class="fas fa-plus"></i> Abrir Protocolo deste Processo
+                    <a class="btn btn-primary btn-sm" href="<?= APP_URL ?>protocolos/form?analise_id=<?= urlencode($id) ?>&embarcacao_id=<?= urlencode($a['embarcacao_id']) ?>">
+                        <i class="fas fa-plus"></i> Abrir Dossiê de Protocolo na Marinha
                     </a>
                 </div>
 
-                <?php foreach ($protocolos as $prot): ?>
-                    <p style="padding:8px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:8px;">
-                        <a href="<?= APP_URL ?>protocolos/form?id=<?= urlencode($prot['id']) ?>">
-                            <strong><?= h($prot['numero']) ?></strong> · <?= h($prot['assunto']) ?>
+                <?php if ($protocolos): ?>
+                    <div class="d-flex flex-column gap-3 mt-3">
+                        <?php foreach ($protocolos as $prot): ?>
+                            <?php 
+                            $badgeProtClass = match($prot['status']) {
+                                'EM_PREPARACAO' => 'bg-info text-dark',
+                                'ENVIADO_AO_ORGAO', 'PROTOCOLADO', 'EM_ANALISE_NO_ORGAO' => 'bg-primary text-white',
+                                'EM_EXIGENCIA' => 'bg-warning text-dark',
+                                'A_DISPOSICAO', 'RETIRADO', 'ENTREGUE_AO_CLIENTE' => 'bg-success text-white',
+                                'ENCERRADO' => 'bg-secondary text-white',
+                                default => 'bg-dark text-white'
+                            };
+                            ?>
+                            <div style="padding: 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border, #1e3a34); border-radius: 10px;">
+                                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                                    <div>
+                                        <a href="<?= APP_URL ?>protocolos/form?id=<?= urlencode($prot['id']) ?>" class="fs-6 fw-bold text-accent text-decoration-none">
+                                            <i class="fa-solid fa-folder-open me-1"></i> <?= h($prot['numero']) ?>
+                                        </a>
+                                        <span class="badge <?= $badgeProtClass ?> ms-2"><?= h(str_replace('_', ' ', $prot['status'])) ?></span>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <a href="<?= APP_URL ?>protocolos/pdf-dossie?id=<?= urlencode($prot['id']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary py-1 px-2" title="Imprimir Dossiê Consolidado">
+                                            <i class="fa-solid fa-file-pdf text-danger"></i> PDF
+                                        </a>
+                                        <a href="<?= APP_URL ?>protocolos/form?id=<?= urlencode($prot['id']) ?>" class="btn btn-sm btn-primary py-1 px-2">
+                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Acessar Dossiê
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="text-secondary small mb-2"><?= h($prot['assunto']) ?></div>
+                                <div class="row g-2 small text-secondary">
+                                    <div class="col-md-4">
+                                        <i class="fa-solid fa-anchor text-accent"></i> 
+                                        <strong>Órgão:</strong> <?= h($prot['unidade_nome'] ?: 'Não definida') ?>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <i class="fa-solid fa-receipt text-info"></i> 
+                                        <strong>Processo SISAP:</strong> <?= h($prot['protocolo_externo_numero'] ?: 'Aguardando atendimento') ?>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <i class="fa-solid fa-boxes-packing text-warning"></i> 
+                                        <strong>Movimentações:</strong> <?= (int)$prot['total_movs'] ?> evento(s)
+                                        <?php if ((int)$prot['originais_pendentes'] > 0): ?>
+                                            · <span class="text-warning fw-bold"><?= (int)$prot['originais_pendentes'] ?> original(is) sob custódia</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="p-3 text-center rounded mt-3" style="background: rgba(255,255,255,0.02); border: 1px dashed var(--border, #1e3a34);">
+                        <p class="text-muted mb-2"><i class="fa-solid fa-folder-open fs-4 text-secondary d-block mb-1"></i> Nenhum dossiê de protocolo tramitado na Capitania para esta análise.</p>
+                        <a class="btn btn-sm btn-outline-primary" href="<?= APP_URL ?>protocolos/form?analise_id=<?= urlencode($id) ?>&embarcacao_id=<?= urlencode($a['embarcacao_id']) ?>">
+                            <i class="fas fa-plus me-1"></i> Abrir Dossiê de Protocolo para Envio dos Planos à Marinha
                         </a>
-                        <span class="badge"><?= h($prot['status']) ?></span>
-                    </p>
-                <?php endforeach; ?>
-                <?php if (!$protocolos): ?>
-                    <p class="text-muted">Nenhum dossiê de protocolo vinculado até o momento.</p>
+                    </div>
                 <?php endif; ?>
             </section>
         <?php endif; ?>

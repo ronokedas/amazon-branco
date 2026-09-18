@@ -116,17 +116,17 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                                 <?php $jaAvaliado = in_array($doc['id'], $avaliacoesDocs, true); ?>
                                 <div class="portal-table-actions">
                                     <?php if ($jaAvaliado): ?>
-                                        <a class="btn btn-primary btn-sm" target="_blank" href="<?php echo APP_URL; ?>portal/documentos/pdf?acao=visualizar&tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>">
+                                        <a class="btn btn-primary btn-sm btn-has-text" target="_blank" href="<?php echo APP_URL; ?>portal/documentos/pdf?acao=visualizar&tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>">
                                             <i class="fas fa-eye"></i> Visualizar
                                         </a>
-                                        <a class="btn btn-secondary btn-sm" href="<?php echo APP_URL; ?>portal/documentos/pdf?acao=download&tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>">
+                                        <a class="btn btn-secondary btn-sm btn-has-text" href="<?php echo APP_URL; ?>portal/documentos/pdf?acao=download&tipo=<?php echo h($doc['tipo']); ?>&id=<?php echo h($doc['id']); ?>">
                                             <i class="fas fa-download"></i> PDF
                                         </a>
                                     <?php else: ?>
-                                        <button type="button" class="btn btn-primary btn-sm" onclick="solicitarAvaliacaoDownload('<?php echo h($doc['id']); ?>', '<?php echo h($doc['tipo']); ?>', '<?php echo h($doc['embarcacao_id'] ?? ''); ?>', 'visualizar')">
+                                        <button type="button" class="btn btn-primary btn-sm btn-has-text" onclick="solicitarAvaliacaoDownload('<?php echo h($doc['id']); ?>', '<?php echo h($doc['tipo']); ?>', '<?php echo h($doc['embarcacao_id'] ?? ''); ?>', 'visualizar')">
                                             <i class="fas fa-eye"></i> Visualizar
                                         </button>
-                                        <button type="button" class="btn btn-secondary btn-sm" onclick="solicitarAvaliacaoDownload('<?php echo h($doc['id']); ?>', '<?php echo h($doc['tipo']); ?>', '<?php echo h($doc['embarcacao_id'] ?? ''); ?>', 'download')">
+                                        <button type="button" class="btn btn-secondary btn-sm btn-has-text" onclick="solicitarAvaliacaoDownload('<?php echo h($doc['id']); ?>', '<?php echo h($doc['tipo']); ?>', '<?php echo h($doc['embarcacao_id'] ?? ''); ?>', 'download')">
                                             <i class="fas fa-download"></i> PDF
                                         </button>
                                     <?php endif; ?>

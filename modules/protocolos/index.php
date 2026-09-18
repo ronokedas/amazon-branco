@@ -22,12 +22,18 @@ $where = [];
 $p = [];
 $uid = (string)($_SESSION['usuario_id'] ?? '');
 
-if (getCargo() !== 'ADMIN') {
-    $where[] = '(d.criado_por = :uid1 OR EXISTS(SELECT 1 FROM propostas px WHERE px.id=d.proposta_id AND px.criado_por = :uid2) OR EXISTS(SELECT 1 FROM analises_planos ax WHERE ax.id=d.analise_id AND ax.analista_id = :uid3) OR EXISTS(SELECT 1 FROM vistorias vx JOIN agendamentos gx ON gx.id=vx.agendamento_id WHERE vx.id=d.vistoria_id AND gx.vistoriador_id = :uid4))';
-    $p[':uid1'] = $uid;
-    $p[':uid2'] = $uid;
-    $p[':uid3'] = $uid;
-    $p[':uid4'] = $uid;
+if (!in_array(getCargo(), ['ADMIN', 'DIRETOR', 'OPERACIONAL'], true)) {
+    if (getCargo() === 'ANALISTA') {
+        $where[] = '(d.criado_por = :uid1 OR d.analise_id IS NOT NULL OR EXISTS(SELECT 1 FROM analises_planos ax WHERE ax.id=d.analise_id AND (ax.analista_id = :uid3 OR ax.analista_id IS NULL)))';
+        $p[':uid1'] = $uid;
+        $p[':uid3'] = $uid;
+    } else {
+        $where[] = '(d.criado_por = :uid1 OR EXISTS(SELECT 1 FROM propostas px WHERE px.id=d.proposta_id AND px.criado_por = :uid2) OR EXISTS(SELECT 1 FROM analises_planos ax WHERE ax.id=d.analise_id AND ax.analista_id = :uid3) OR EXISTS(SELECT 1 FROM vistorias vx JOIN agendamentos gx ON gx.id=vx.agendamento_id WHERE vx.id=d.vistoria_id AND gx.vistoriador_id = :uid4))';
+        $p[':uid1'] = $uid;
+        $p[':uid2'] = $uid;
+        $p[':uid3'] = $uid;
+        $p[':uid4'] = $uid;
+    }
 }
 
 if ($f['busca'] !== '') {

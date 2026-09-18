@@ -11,23 +11,31 @@ $voltar = function(?string $x = null, ?string $aba = null) use ($abaRetorno) {
     $abaFinal = $aba !== null ? $aba : ($abaRetorno !== '' ? $abaRetorno : 'timeline');
     return APP_URL . 'protocolos/form?id=' . urlencode($x) . ($abaFinal !== '' ? '&aba=' . urlencode($abaFinal) : '');
 };
+$acao = trim($_POST['action'] ?? $_POST['acao'] ?? $_GET['action'] ?? $_GET['acao'] ?? '');
+$id = trim($_POST['dossie_id'] ?? $_POST['id'] ?? $_GET['dossie_id'] ?? $_GET['id'] ?? '');
 try{
  if($acao==='criar'){
   $emb=trim($_POST['embarcacao_id']??'');$assunto=trim($_POST['assunto']??'');if(!$emb||!$assunto)throw new InvalidArgumentException('Informe embarcação e assunto.');
   $q=$pdo->prepare('SELECT COALESCE(cliente_id,proprietario_id) FROM embarcacoes WHERE id=:id');$q->execute([':id'=>$emb]);$cliente=$q->fetchColumn();if($cliente===false)throw new RuntimeException('Embarcação inválida.');
+  $cliPost=trim($_POST['cliente_id']??'');if($cliPost)$cliente=$cliPost;
   $proposta=trim($_POST['proposta_id']??'')?:null;$analise=trim($_POST['analise_id']??'')?:null;$vistoria=trim($_POST['vistoria_id']??'')?:null;
   if(getCargo()!=='ADMIN'){
-   $permitido=false;$uid=(string)$_SESSION['usuario_id'];
-   if($proposta){$q=$pdo->prepare('SELECT 1 FROM propostas p JOIN propostas_embarcacoes pe ON pe.proposta_id=p.id WHERE p.id=:id AND pe.embarcacao_id=:emb AND p.criado_por=:u');$q->execute([':id'=>$proposta,':emb'=>$emb,':u'=>$uid]);$permitido=(bool)$q->fetchColumn();}
-   if(!$permitido&&$analise){$q=$pdo->prepare('SELECT 1 FROM analises_planos WHERE id=:id AND embarcacao_id=:emb AND (analista_id=:u1 OR vendedor_origem_id=:u2)');$q->execute([':id'=>$analise,':emb'=>$emb,':u1'=>$uid,':u2'=>$uid]);$permitido=(bool)$q->fetchColumn();}
+   $permitido=in_array(getCargo(),['ANALISTA','ENGENHEIRO','OPERACIONAL','DIRETOR'],true);$uid=(string)$_SESSION['usuario_id'];
+   if(!$permitido&&$proposta){$q=$pdo->prepare('SELECT 1 FROM propostas p JOIN propostas_embarcacoes pe ON pe.proposta_id=p.id WHERE p.id=:id AND pe.embarcacao_id=:emb AND p.criado_por=:u');$q->execute([':id'=>$proposta,':emb'=>$emb,':u'=>$uid]);$permitido=(bool)$q->fetchColumn();}
+   if(!$permitido&&$analise){$q=$pdo->prepare('SELECT 1 FROM analises_planos WHERE id=:id AND embarcacao_id=:emb AND (analista_id=:u1 OR vendedor_origem_id=:u2 OR analista_id IS NULL)');$q->execute([':id'=>$analise,':emb'=>$emb,':u1'=>$uid,':u2'=>$uid]);$permitido=(bool)$q->fetchColumn();}
    if(!$permitido&&$vistoria){$q=$pdo->prepare('SELECT 1 FROM vistorias v JOIN agendamentos a ON a.id=v.agendamento_id WHERE v.id=:id AND v.embarcacao_id=:emb AND (a.vistoriador_id=:u1 OR a.vendedor_id=:u2)');$q->execute([':id'=>$vistoria,':emb'=>$emb,':u1'=>$uid,':u2'=>$uid]);$permitido=(bool)$q->fetchColumn();}
+   if(!$permitido&&!$proposta&&!$analise&&!$vistoria&&podeAcessar('protocolos_documentais')){$permitido=true;}
    if(!$permitido)throw new RuntimeException('Vincule um processo ao qual você já possui acesso.');
   }
   $unidade=trim($_POST['unidade_maritima_id']??'')?:null;
   $pdo->beginTransaction();$numero=gerarNumeroDocumento('PROTOCOLO','AM-PROT');$id=gerarUUID();
   $q=$pdo->prepare("INSERT INTO protocolo_dossies(id,numero,embarcacao_id,cliente_id,assunto,servico_id,proposta_id,analise_id,vistoria_id,certificado_tipo,certificado_id,unidade_maritima_id,criado_por)VALUES(:id,:numero,:emb,:cliente,:assunto,:servico,:proposta,:analise,:vistoria,:ctipo,:cid,:unidade,:usuario)");
   $q->execute([':id'=>$id,':numero'=>$numero,':emb'=>$emb,':cliente'=>$cliente?:null,':assunto'=>$assunto,':servico'=>trim($_POST['servico_id']??'')?:null,':proposta'=>$proposta,':analise'=>$analise,':vistoria'=>$vistoria,':ctipo'=>trim($_POST['certificado_tipo']??'')?:null,':cid'=>trim($_POST['certificado_id']??'')?:null,':unidade'=>$unidade,':usuario'=>$_SESSION['usuario_id']]);
-  protocoloAuditar($pdo,$id,null,'DOSSIE_CRIADO',null,'EM_PREPARACAO',$numero);$pdo->commit();setMensagem('success','Dossiê '.$numero.' criado com sucesso.');redirecionar($voltar($id));
+  protocoloAuditar($pdo,$id,null,'DOSSIE_CRIADO',null,'EM_PREPARACAO',$numero);
+  if($analise){
+   try{$pdo->prepare("INSERT INTO analise_planos_historico(analise_id,usuario_id,evento,status_anterior,status_novo,detalhe)VALUES(:aid,:uid,'TRAMITE_MARINHA',NULL,NULL,:desc)")->execute([':aid'=>$analise,':uid'=>$_SESSION['usuario_id'],':desc'=>'Dossiê de protocolo criado na Capitania: '.$numero]);}catch(Throwable $e){}
+  }
+  $pdo->commit();setMensagem('success','Dossiê '.$numero.' criado com sucesso.');redirecionar($voltar($id));
  }
  if($id==='')throw new RuntimeException('Dossiê não informado.');$d=protocoloCarregar($pdo,$id,in_array($acao,['adicionar_movimentacao','confirmar','registro_orgao','encerrar','cancelar','editar_dossie'],true));
  if(in_array($d['status'],['ENCERRADO','CANCELADO'],true)&&!in_array($acao,['criar_aceite'],true))throw new RuntimeException('Dossiê encerrado ou cancelado é somente leitura.');
@@ -81,7 +89,11 @@ try{
   $pdo->prepare("UPDATE protocolo_dossies SET protocolo_externo_numero=:num_ext,protocolo_externo_em=:data,protocolo_externo_validade=:validade,unidade_maritima_id=:unidade,status='PROTOCOLADO' WHERE id=:id")->execute([
       ':num_ext'=>$numeroExt?:null,':data'=>str_replace('T',' ',$data),':validade'=>trim($_POST['validade']??'')?:null,':unidade'=>$unidade,':id'=>$id
   ]);
-  protocoloAuditar($pdo,$id,null,'REGISTRO_ORGAO',$d['status'],'PROTOCOLADO','Atendimento registrado em '.str_replace('T',' ',$data).($numeroExt?' (Nº '.$numeroExt.')':''));$pdo->commit();
+  protocoloAuditar($pdo,$id,null,'REGISTRO_ORGAO',$d['status'],'PROTOCOLADO','Atendimento registrado em '.str_replace('T',' ',$data).($numeroExt?' (Nº '.$numeroExt.')':''));
+  if(!empty($d['analise_id'])){
+   try{$pdo->prepare("INSERT INTO analise_planos_historico(analise_id,usuario_id,evento,status_anterior,status_novo,detalhe)VALUES(:aid,:uid,'TRAMITE_MARINHA',NULL,'PROTOCOLADO',:desc)")->execute([':aid'=>$d['analise_id'],':uid'=>$_SESSION['usuario_id'],':desc'=>'Protocolado na Marinha (Dossiê '.$d['numero'].'): Processo SISAP '.($numeroExt?:'S/N')]);}catch(Throwable $e){}
+  }
+  $pdo->commit();
   setMensagem('success','Atendimento no órgão registrado com sucesso.');redirecionar($voltar($id, 'marinha'));
  }
  if($acao==='criar_aceite'){
@@ -110,7 +122,14 @@ try{
  if($acao==='andamento_orgao'){
   $novo=trim($_POST['novo_status']??'');$permitidos=['PROTOCOLADO','EM_ANALISE_NO_ORGAO','EM_EXIGENCIA','A_DISPOSICAO','RETIRADO'];if(!in_array($novo,$permitidos,true))throw new InvalidArgumentException('Andamento inválido.');
   $obs=trim($_POST['andamento_observacao']??'');if(!$obs)throw new InvalidArgumentException('Descreva a informação recebida do órgão.');
-  $pdo->prepare('UPDATE protocolo_dossies SET status=:status WHERE id=:id')->execute([':status'=>$novo,':id'=>$id]);protocoloAuditar($pdo,$id,null,'ANDAMENTO_ORGAO',$d['status'],$novo,$obs);setMensagem('success','Andamento do órgão registrado na auditoria.');redirecionar($voltar($id, 'marinha'));
+  $pdo->beginTransaction();
+  $pdo->prepare('UPDATE protocolo_dossies SET status=:status WHERE id=:id')->execute([':status'=>$novo,':id'=>$id]);
+  protocoloAuditar($pdo,$id,null,'ANDAMENTO_ORGAO',$d['status'],$novo,$obs);
+  if(!empty($d['analise_id'])){
+   try{$pdo->prepare("INSERT INTO analise_planos_historico(analise_id,usuario_id,evento,status_anterior,status_novo,detalhe)VALUES(:aid,:uid,'TRAMITE_MARINHA',:ant,:status,:desc)")->execute([':aid'=>$d['analise_id'],':uid'=>$_SESSION['usuario_id'],':ant'=>$d['status'],':status'=>$novo,':desc'=>'Andamento na Capitania (Dossiê '.$d['numero'].'): '.$novo.' - '.$obs]);}catch(Throwable $e){}
+  }
+  $pdo->commit();
+  setMensagem('success','Andamento do órgão registrado na auditoria.');redirecionar($voltar($id, 'marinha'));
  }
  if($acao==='encerrar'){$pdo->prepare("UPDATE protocolo_dossies SET status='ENCERRADO' WHERE id=:id")->execute([':id'=>$id]);protocoloAuditar($pdo,$id,null,'DOSSIE_ENCERRADO',$d['status'],'ENCERRADO');setMensagem('success','Dossiê encerrado.');redirecionar($voltar($id, 'auditoria'));}
  if($acao==='cancelar'){$motivo=trim($_POST['motivo']??'');if(!$motivo)throw new InvalidArgumentException('Informe o motivo do cancelamento.');$pdo->prepare("UPDATE protocolo_dossies SET status='CANCELADO',cancelado_motivo=:motivo,cancelado_por=:usuario,cancelado_em=NOW() WHERE id=:id")->execute([':motivo'=>$motivo,':usuario'=>$_SESSION['usuario_id'],':id'=>$id]);protocoloAuditar($pdo,$id,null,'DOSSIE_CANCELADO',$d['status'],'CANCELADO',$motivo);setMensagem('success','Dossiê cancelado sem apagar o histórico.');redirecionar($voltar($id, 'auditoria'));}

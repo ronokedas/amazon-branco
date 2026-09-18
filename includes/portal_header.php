@@ -5,8 +5,11 @@ $titulo_page = $titulo_page ?? 'Portal do Cliente - ' . APP_NAME;
 $portalRequestUri = $_SERVER['REQUEST_URI'] ?? '';
 $portalInicioAtivo = preg_match('#/portal/?(?:\?.*)?$#', $portalRequestUri) === 1;
 $portalDocumentosAtivo = strpos($portalRequestUri, '/portal/documentos') !== false;
+$portalProtocolosAtivo = strpos($portalRequestUri, '/portal/protocolos') !== false;
 $portalAnalisesAtivo = strpos($portalRequestUri, '/portal/analises-planos') !== false;
 $portalEmbarcacoesAtivo = strpos($portalRequestUri, '/portal/embarcacoes') !== false;
+$portalVistoriasAtivo = strpos($portalRequestUri, '/portal/vistorias') !== false;
+$portalPropostasAtivo = strpos($portalRequestUri, '/portal/propostas') !== false;
 $portalOuvidoriaAtivo = strpos($portalRequestUri, '/portal/ouvidoria') !== false;
 ?>
 <!DOCTYPE html>
@@ -34,17 +37,20 @@ $portalOuvidoriaAtivo = strpos($portalRequestUri, '/portal/ouvidoria') !== false
                 <img src="<?php echo APP_URL; ?>img/logo-amazon-sidebar.svg" alt="Amazon Certificadora">
             </a>
             <nav class="portal-nav" id="portal-navigation" aria-label="Navegação principal">
-                <a class="<?php echo $portalInicioAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal">Portal do Cliente</a>
-                <a class="<?php echo $portalDocumentosAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/documentos">Meus documentos</a>
-                <a class="<?php echo $portalAnalisesAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/analises-planos">Enviar planos</a>
+                <a class="<?php echo $portalInicioAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal">Início</a>
+                <a class="<?php echo $portalDocumentosAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/documentos">Documentos</a>
+                <a class="<?php echo $portalProtocolosAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/protocolos">Trâmites SISAP</a>
+                <a class="<?php echo $portalAnalisesAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/analises-planos">Planos Navais</a>
                 <a class="<?php echo $portalEmbarcacoesAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/embarcacoes">Embarcações</a>
+                <a class="<?php echo $portalVistoriasAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/vistorias">Vistorias</a>
+                <a class="<?php echo $portalPropostasAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/propostas">Propostas</a>
                 <a class="<?php echo $portalOuvidoriaAtivo ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>portal/ouvidoria">Ouvidoria</a>
             </nav>
             <div class="portal-user-chip">
                 <span class="portal-user-avatar"><?php echo h(strtoupper(substr(clientePortalNome(), 0, 1))); ?></span>
                 <div class="portal-user-info">
                     <strong><?php echo h(clientePortalNome()); ?></strong>
-                    <small>Cliente</small>
+                    <small><?php echo h(ucfirst(clientePortalPerfil() ?: 'Cliente')); ?></small>
                 </div>
                 <a class="portal-logout portal-logout-btn" href="<?php echo APP_URL; ?>portal/logout" title="Sair do portal" aria-label="Sair do portal">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i>

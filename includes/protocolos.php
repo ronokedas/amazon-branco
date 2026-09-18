@@ -12,13 +12,15 @@ function protocoloUsuarioPodeAcessar(PDO $pdo, array $dossie): bool
     $usuario = (string)($_SESSION['usuario_id'] ?? '');
     if ($usuario === '') return false;
     if (($dossie['criado_por'] ?? '') === $usuario) return true;
+    if (in_array(getCargo(), ['DIRETOR', 'OPERACIONAL'], true)) return true;
+    if (getCargo() === 'ANALISTA' && podeAcessar('analises_planos')) return true;
     if (!empty($dossie['proposta_id'])) {
         $q=$pdo->prepare('SELECT 1 FROM propostas WHERE id=:id AND criado_por=:usuario');
         $q->execute([':id'=>$dossie['proposta_id'],':usuario'=>$usuario]);
         if ($q->fetchColumn()) return true;
     }
     if (!empty($dossie['analise_id'])) {
-        $q=$pdo->prepare('SELECT 1 FROM analises_planos WHERE id=:id AND analista_id=:usuario');
+        $q=$pdo->prepare('SELECT 1 FROM analises_planos WHERE id=:id AND (analista_id=:usuario OR analista_id IS NULL)');
         $q->execute([':id'=>$dossie['analise_id'],':usuario'=>$usuario]);
         if ($q->fetchColumn()) return true;
     }

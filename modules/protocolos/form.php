@@ -34,42 +34,39 @@ $vistoriasAbertas = $pdo->query("SELECT v.id, v.numero, v.embarcacao_id, v.final
 if ($id) {
     $d = protocoloCarregar($pdo, $id);
     $q = $pdo->prepare("SELECT m.*, u.nome criador_nome, um.nome unidade_nome, (SELECT COUNT(*) FROM protocolo_movimentacao_itens i WHERE i.movimentacao_id = m.id) itens_total, (SELECT token_hash FROM protocolo_aceites pa WHERE pa.movimentacao_id = m.id LIMIT 1) aceite_existente, (SELECT aceito_em FROM protocolo_aceites pa WHERE pa.movimentacao_id = m.id LIMIT 1) aceite_data FROM protocolo_movimentacoes m LEFT JOIN usuarios u ON u.id = m.criado_por LEFT JOIN protocolo_unidades_maritimas um ON um.id = m.unidade_maritima_id WHERE m.dossie_id = :id ORDER BY m.sequencia");
-    $q->execute([':id' => $id]);
-    $movs = $q->fetchAll(PDO::FETCH_ASSOC);
-
+    $q->execute([':id' => $id]);$movs = $q->fetchAll(PDO::FETCH_ASSOC);
     $q = $pdo->prepare('SELECT c.*, m.sequencia movimentacao_sequencia, u.nome criador_nome FROM protocolo_comprovantes c LEFT JOIN protocolo_movimentacoes m ON m.id = c.movimentacao_id LEFT JOIN usuarios u ON u.id = c.criado_por WHERE c.dossie_id = :id ORDER BY c.criado_em DESC');
-    $q->execute([':id' => $id]);
-    $documentosAnexados = $q->fetchAll(PDO::FETCH_ASSOC);
-
+    $q->execute([':id' => $id]);$documentosAnexados = $q->fetchAll(PDO::FETCH_ASSOC);
     $q = $pdo->prepare('SELECT a.*, u.nome usuario_nome FROM protocolo_auditoria a LEFT JOIN usuarios u ON u.id = a.usuario_id WHERE a.dossie_id = :id ORDER BY a.criado_em DESC LIMIT 100');
-    $q->execute([':id' => $id]);
-    $auditoria = $q->fetchAll(PDO::FETCH_ASSOC);
-
+    $q->execute([':id' => $id]);$auditoria = $q->fetchAll(PDO::FETCH_ASSOC);
     $q = $pdo->prepare("SELECT i.*, m.sequencia, m.status movimentacao_status FROM protocolo_movimentacao_itens i JOIN protocolo_movimentacoes m ON m.id = i.movimentacao_id WHERE m.dossie_id = :id AND i.requer_devolucao = 1 ORDER BY i.devolvido_em IS NULL DESC, m.sequencia");
-    $q->execute([':id' => $id]);
-    $originais = $q->fetchAll(PDO::FETCH_ASSOC);
-
-    // Consulta de certificado vinculado se presente
+    $q->execute([':id' => $id]);$originais = $q->fetchAll(PDO::FETCH_ASSOC);
     if (!empty($d['certificado_tipo']) && !empty($d['certificado_id'])) {
         $tabelaCert = match (strtoupper($d['certificado_tipo'])) {
-            'CSN' => 'certificados_csn',
-            'CNBL' => 'certificados_cnbl',
-            'CNARQ' => 'certificados_cnarq',
-            'LP' => 'certificados_lp',
-            'LC' => 'certificados_lc',
-            'CHT' => 'certificados_cht',
-            default => null
+            'CSN' => 'certificados_csn','CNBL' => 'certificados_cnbl','CNARQ' => 'certificados_cnarq',
+            'LP' => 'certificados_lp','LC' => 'certificados_lc','CHT' => 'certificados_cht',default => null
         };
         if ($tabelaCert) {
             try {
                 $qc = $pdo->prepare("SELECT id, numero, status, data_emissao, data_validade FROM {$tabelaCert} WHERE id = :cid OR numero = :cnum LIMIT 1");
                 $qc->execute([':cid' => $d['certificado_id'], ':cnum' => $d['certificado_id']]);
                 $certificadoVinculado = $qc->fetch(PDO::FETCH_ASSOC) ?: null;
-            } catch (Throwable $e) {
-                // Tabela pode não estar disponível
-            }
+            } catch (Throwable $e) {}
         }
     }
+}
+$analisePre = null;$arquivosAnalise = [];
+$analiseAlvoId = $d ? ($d['analise_id'] ?? null) : trim($_GET['analise_id'] ?? '');
+if ($analiseAlvoId) {
+    try {
+        $qA = $pdo->prepare("SELECT a.*, e.nome embarcacao_nome, e.registro embarcacao_registro, COALESCE(e.cliente_id, e.proprietario_id) emb_cliente_id FROM analises_planos a LEFT JOIN embarcacoes e ON e.id = a.embarcacao_id WHERE a.id = :aid");
+        $qA->execute([':aid' => $analiseAlvoId]);
+        $analisePre = $qA->fetch(PDO::FETCH_ASSOC);
+        if ($analisePre && !$preEmb && !empty($analisePre['embarcacao_id'])) $preEmb = $analisePre['embarcacao_id'];
+        $qArq = $pdo->prepare("SELECT ar.id arquivo_id, ar.nome_original, ar.caminho, ar.sha256, ar.tamanho_bytes, COALESCE(i.documento, ar.nome_original) item_nome, COALESCE(i.tipo, 'PLANOS') item_categoria FROM analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id = ar.submissao_id LEFT JOIN analise_planos_itens i ON i.id = ar.item_id WHERE s.analise_id = :aid ORDER BY s.revisao DESC, ar.criado_em ASC");
+        $qArq->execute([':aid' => $analiseAlvoId]);
+        $arquivosAnalise = $qArq->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {}
 }
 
 $labels = protocoloRotulosStatus();
@@ -369,7 +366,7 @@ require __DIR__ . '/../../includes/sidebar.php';
         const catalogo = <?= json_encode(array_map(fn($x) => ['id' => $x['id'], 'codigo' => $x['codigo'], 'nome' => $x['nome'], 'categoria' => $x['categoria']], $catalogo), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
         let docIndex = 0;
 
-        function addDoc(catPre = '', nomePre = '') {
+        function addDoc(catPre = '', nomePre = '', docData = {}) {
             const container = document.getElementById('lista-docs-container');
             if (!container) return;
             const i = docIndex++;
@@ -377,6 +374,8 @@ require __DIR__ . '/../../includes/sidebar.php';
             row.className = 'prot-doc-item-card';
 
             let optionsHtml = catalogo.map(x => `<option value="${x.id}" data-codigo="${x.codigo}" data-nome="${x.nome.replaceAll('"', '&quot;')}" data-cat="${x.categoria}" ${x.codigo === catPre ? 'selected' : ''}>${x.nome}</option>`).join('');
+            const sup = docData.suporte || 'FISICO';
+            const form = docData.forma || 'ORIGINAL';
 
             row.innerHTML = `
                 <div>
@@ -387,25 +386,29 @@ require __DIR__ . '/../../includes/sidebar.php';
                     </select>
                     <input class="form-control form-control-sm doc-desc" name="item_descricao[${i}]" required value="${nomePre ? nomePre.replaceAll('"', '&quot;') : ''}" placeholder="Descrição exata do documento...">
                     <input type="hidden" class="cat-id" name="item_catalogo_id[${i}]">
-                    <input type="hidden" class="cat-categoria" name="item_categoria[${i}]" value="OUTROS">
+                    <input type="hidden" class="cat-categoria" name="item_categoria[${i}]" value="${docData.categoria || 'OUTROS'}">
+                    <input type="hidden" name="item_arquivo_tipo[${i}]" value="${docData.arquivo_origem_tipo || ''}">
+                    <input type="hidden" name="item_arquivo_id[${i}]" value="${docData.arquivo_origem_id || ''}">
+                    <input type="hidden" name="item_arquivo_nome[${i}]" value="${docData.arquivo_nome ? docData.arquivo_nome.replaceAll('"', '&quot;') : ''}">
+                    <input type="hidden" name="item_arquivo_hash[${i}]" value="${docData.arquivo_hash || ''}">
                 </div>
 
                 <div>
                     <label class="form-label small text-secondary mb-1">Suporte</label>
                     <select class="form-control form-control-sm" name="item_suporte[${i}]">
-                        <option value="FISICO">FÍSICO (Impresso)</option>
-                        <option value="DIGITAL">DIGITAL (Arquivo)</option>
+                        <option value="FISICO" ${sup==='FISICO'?'selected':''}>FÍSICO (Impresso)</option>
+                        <option value="DIGITAL" ${sup==='DIGITAL'?'selected':''}>DIGITAL (Arquivo)</option>
                     </select>
                 </div>
 
                 <div>
                     <label class="form-label small text-secondary mb-1">Forma</label>
                     <select class="form-control form-control-sm" name="item_forma[${i}]">
-                        <option value="ORIGINAL">Original</option>
-                        <option value="COPIA_SIMPLES">Cópia Simples</option>
-                        <option value="COPIA_AUTENTICADA">Cópia Autenticada</option>
-                        <option value="NATO_DIGITAL">Nato-Digital (PDF)</option>
-                        <option value="DIGITALIZADO">Digitalizado</option>
+                        <option value="ORIGINAL" ${form==='ORIGINAL'?'selected':''}>Original</option>
+                        <option value="COPIA_SIMPLES" ${form==='COPIA_SIMPLES'?'selected':''}>Cópia Simples</option>
+                        <option value="COPIA_AUTENTICADA" ${form==='COPIA_AUTENTICADA'?'selected':''}>Cópia Autenticada</option>
+                        <option value="NATO_DIGITAL" ${form==='NATO_DIGITAL'?'selected':''}>Nato-Digital (PDF)</option>
+                        <option value="DIGITALIZADO" ${form==='DIGITALIZADO'?'selected':''}>Digitalizado</option>
                     </select>
                 </div>
 

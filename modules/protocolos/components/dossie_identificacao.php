@@ -27,6 +27,16 @@
                 <i class="fa-solid fa-pen-to-square"></i> 1. Identificação e Objeto do Dossiê
             </h3>
 
+            <?php if (!empty($analisePre)): ?>
+                <div class="prot-helper-box mb-3" style="background: rgba(86, 224, 173, 0.08); border: 1px solid var(--accent, #56e0ad);">
+                    <i class="fa-solid fa-compass-drafting text-accent fs-5 me-2"></i>
+                    <div>
+                        <strong>Vínculo com Análise de Planos Ativo:</strong> Processo nº <strong><?= h($analisePre['numero']) ?></strong> (<?= h($analisePre['tipo_processo']) ?>).
+                        <span class="text-secondary">Embarcação, Armador e Assunto Técnico NORMAM pré-selecionados para trâmite oficial na Capitania dos Portos.</span>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <form method="post" action="<?= APP_URL ?>protocolos/actions">
                 <input type="hidden" name="csrf_token" value="<?= h(gerarCSRF()) ?>">
                 <input type="hidden" name="action" value="criar">
@@ -51,8 +61,11 @@
                         <label class="form-label fw-bold" for="cliente_id">Cliente / Solicitante</label>
                         <select class="form-control" name="cliente_id" id="cliente_id">
                             <option value="">Usar vínculo cadastral da embarcação</option>
-                            <?php foreach ($clientes as $c): ?>
-                                <option value="<?= h($c['id']) ?>">
+                            <?php 
+                            $cliPreSel = !empty($analisePre['emb_cliente_id']) ? $analisePre['emb_cliente_id'] : '';
+                            foreach ($clientes as $c): 
+                            ?>
+                                <option value="<?= h($c['id']) ?>" <?= $cliPreSel === $c['id'] ? 'selected' : '' ?>>
                                     <?= h($c['nome'] . ($c['cpf_cnpj'] ? ' (' . $c['cpf_cnpj'] . ')' : '')) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -63,7 +76,14 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-bold" for="assunto">Assunto / Finalidade do Processo *</label>
+                    <?php
+                    $assuntoInicial = '';
+                    if (!empty($analisePre)) {
+                        $assuntoInicial = 'Aprovação de Planos e Memoriais (' . $analisePre['tipo_processo'] . ') - ' . $analisePre['numero'] . ' - ' . ($analisePre['embarcacao_nome'] ?? '');
+                    }
+                    ?>
                     <input class="form-control" required maxlength="255" name="assunto" id="assunto" 
+                           value="<?= h($assuntoInicial) ?>"
                            placeholder="Ex.: Apresentação de Projeto Técnico para Licença de Construção (LC) - NORMAM-202">
                     
                     <!-- Pílulas de Atalho Rápido para Assunto (Usabilidade Autodidática NORMAM) -->
@@ -108,10 +128,10 @@
 
                     <div class="col-md-3">
                         <label class="form-label fw-bold" for="analise_id">Análise de Planos Vinculada</label>
-                        <select class="form-control" name="analise_id" id="analise_id">
+                        <select class="form-control" name="analise_id" id="analise_id" onchange="aoMudarAnalise(this)">
                             <option value="">Sem vínculo com análise</option>
                             <?php foreach ($analisesAbertas as $a): ?>
-                                <option value="<?= h($a['id']) ?>" data-embarcacao="<?= h($a['embarcacao_id']) ?>" <?= ($_GET['analise_id'] ?? '') === $a['id'] ? 'selected' : '' ?>>
+                                <option value="<?= h($a['id']) ?>" data-embarcacao="<?= h($a['embarcacao_id']) ?>" <?= (($_GET['analise_id'] ?? '') === $a['id'] || (!empty($analisePre) && $analisePre['id'] === $a['id'])) ? 'selected' : '' ?>>
                                     <?= h($a['numero'] . ' (' . $a['tipo_processo'] . ' - ' . $a['status'] . ')') ?>
                                 </option>
                             <?php endforeach; ?>
@@ -165,6 +185,16 @@
     <script>
     function definirAssunto(txt) {
         document.getElementById('assunto').value = txt;
+    }
+    function aoMudarAnalise(sel) {
+        const opt = sel.selectedOptions[0];
+        if (!opt || !opt.value) return;
+        const txt = opt.textContent.trim();
+        const ass = document.getElementById('assunto');
+        if (ass && (!ass.value || ass.value.startsWith('Aprovação de Planos') || ass.value.startsWith('Apresentação de Projeto'))) {
+            const embNome = document.getElementById('embarcacao_id')?.selectedOptions[0]?.textContent?.trim() || '';
+            ass.value = 'Aprovação de Planos e Memoriais - ' + txt.split('(')[0].trim() + (embNome ? ' - ' + embNome.split('·')[0].trim() : '');
+        }
     }
     function sincronizarDadosEmbarcacao(select) {
         const opt = select.selectedOptions[0];

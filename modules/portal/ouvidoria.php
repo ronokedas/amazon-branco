@@ -315,7 +315,7 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                                 <?php endif; ?>
                             </td>
                             <td data-label="Ação" style="text-align: center;">
-                                <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#modalDetalhe<?php echo h($item['id']); ?>" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600;">
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-has-text" data-toggle="modal" data-target="#modalDetalhe<?php echo h($item['id']); ?>" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600;">
                                     <i class="fa-solid fa-eye"></i> Ver Detalhes
                                 </button>
                             </td>
