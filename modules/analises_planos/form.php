@@ -1972,15 +1972,24 @@ require_once __DIR__ . '/../../includes/header.php';
     background: #f8fafc;
 }
 .btn-fechar-modal {
-    background: none;
+    background: transparent;
     border: none;
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     line-height: 1;
     color: #64748b;
     cursor: pointer;
-    padding: 0 6px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.15s ease;
 }
-.btn-fechar-modal:hover { color: #0f172a; }
+.btn-fechar-modal:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
 .modal-normam-filtros {
     display: flex;
     gap: 12px;
@@ -2307,6 +2316,28 @@ function fecharModalBancoNormam() {
     const modal = document.getElementById('modalBancoNormam');
     if (modal) modal.style.display = 'none';
 }
+
+// Fechar modal ao clicar no fundo (backdrop)
+document.addEventListener('DOMContentLoaded', function() {
+    const modalEl = document.getElementById('modalBancoNormam');
+    if (modalEl) {
+        modalEl.addEventListener('click', function(e) {
+            if (e.target === this) {
+                fecharModalBancoNormam();
+            }
+        });
+    }
+});
+
+// Fechar modal ao pressionar ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+        const modalEl = document.getElementById('modalBancoNormam');
+        if (modalEl && modalEl.style.display === 'flex') {
+            fecharModalBancoNormam();
+        }
+    }
+});
 
 function carregarBancoNormas() {
     const lista = document.getElementById('modalNormamLista');

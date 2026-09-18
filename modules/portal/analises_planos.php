@@ -18,8 +18,8 @@ if ($embarcacaoIds) {
     $pParamsCount = [];
     $pInCount = clientePortalSqlIn($embarcacaoIds, 'ap_cnt_', $pParamsCount);
     $stCount = $pdo->prepare("SELECT 
-        SUM(CASE WHEN ap.status IN ('AGENDADA', 'EM_ANALISE', 'AGUARDANDO_DOCUMENTOS', 'EM_EXIGENCIA') THEN 1 ELSE 0 END) AS total_ativas,
-        SUM(CASE WHEN ap.status IN ('CONCLUIDA', 'APROVADA', 'DEFERIDA', 'ARQUIVADA') THEN 1 ELSE 0 END) AS total_concluidas
+        SUM(CASE WHEN ap.status IN ('AGUARDANDO_AGENDAMENTO', 'AGENDADA', 'EM_ANALISE', 'AGUARDANDO_DOCUMENTOS', 'AGUARDANDO_ASSINATURA_ANALISTA', 'AGUARDANDO_APROVACAO_ADMIN', 'EM_EXIGENCIA') THEN 1 ELSE 0 END) AS total_ativas,
+        SUM(CASE WHEN ap.status IN ('CONCLUIDA', 'APROVADA', 'DEFERIDA', 'ARQUIVADA', 'REPROVADA', 'CANCELADA') THEN 1 ELSE 0 END) AS total_concluidas
         FROM analises_planos ap WHERE ap.embarcacao_id IN ({$pInCount})");
     $stCount->execute($pParamsCount);
     $countsRow = $stCount->fetch(PDO::FETCH_ASSOC) ?: ['total_ativas' => 0, 'total_concluidas' => 0];
@@ -29,8 +29,8 @@ if ($embarcacaoIds) {
     $params = [];
     $in = clientePortalSqlIn($embarcacaoIds, 'ap_emb_', $params);
     $statusWhere = $abaStatus === 'concluidas' 
-        ? "ap.status IN ('CONCLUIDA', 'APROVADA', 'DEFERIDA', 'ARQUIVADA')"
-        : "ap.status IN ('AGENDADA', 'EM_ANALISE', 'AGUARDANDO_DOCUMENTOS', 'EM_EXIGENCIA')";
+        ? "ap.status IN ('CONCLUIDA', 'APROVADA', 'DEFERIDA', 'ARQUIVADA', 'REPROVADA', 'CANCELADA')"
+        : "ap.status IN ('AGUARDANDO_AGENDAMENTO', 'AGENDADA', 'EM_ANALISE', 'AGUARDANDO_DOCUMENTOS', 'AGUARDANDO_ASSINATURA_ANALISTA', 'AGUARDANDO_APROVACAO_ADMIN', 'EM_EXIGENCIA')";
 
     $sql = "SELECT ap.id, ap.numero, ap.tipo_processo, ap.enquadramento, ap.status,
                    ap.prazo_agendado_em, e.nome AS embarcacao_nome, u.nome AS analista_nome,
@@ -49,14 +49,19 @@ if ($embarcacaoIds) {
 }
 
 $statusLabels = [
-    'AGENDADA' => 'Aguardando envio de planos / Em análise',
+    'AGUARDANDO_AGENDAMENTO' => 'Aguardando agendamento técnico',
+    'AGENDADA' => 'Agendada / Em análise',
     'EM_ANALISE' => 'Em análise técnica',
     'AGUARDANDO_DOCUMENTOS' => 'Aguardando documentos / revisão',
+    'AGUARDANDO_ASSINATURA_ANALISTA' => 'Em homologação / Assinatura do analista',
+    'AGUARDANDO_APROVACAO_ADMIN' => 'Aguardando validação da diretoria',
     'EM_EXIGENCIA' => 'Em exigência técnica',
     'APROVADA' => 'Aprovada / Homologada',
-    'CONCLUIDA' => 'Concluída',
+    'CONCLUIDA' => 'Concluída / Deferida',
     'DEFERIDA' => 'Deferida',
     'ARQUIVADA' => 'Arquivada',
+    'REPROVADA' => 'Reprovada',
+    'CANCELADA' => 'Cancelada',
 ];
 
 // Identifica a análise selecionada
