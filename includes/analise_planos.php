@@ -290,10 +290,10 @@ function analisePlanosTransicaoPermitida(string $atual, string $novo): bool
     $mapa = [
         'AGUARDANDO_AGENDAMENTO' => ['AGENDADA', 'CANCELADA'],
         'AGENDADA' => ['EM_ANALISE', 'CANCELADA'],
-        'EM_ANALISE' => ['AGUARDANDO_DOCUMENTOS', 'AGUARDANDO_ASSINATURA_ANALISTA', 'REPROVADA', 'CANCELADA'],
-        'AGUARDANDO_DOCUMENTOS' => ['EM_ANALISE', 'CANCELADA'],
-        'AGUARDANDO_ASSINATURA_ANALISTA' => ['AGUARDANDO_APROVACAO_ADMIN', 'EM_ANALISE', 'CANCELADA'],
-        'AGUARDANDO_APROVACAO_ADMIN' => ['EM_ANALISE', 'CONCLUIDA', 'CANCELADA'],
+        'EM_ANALISE' => ['AGUARDANDO_DOCUMENTOS', 'AGUARDANDO_ASSINATURA_ANALISTA', 'CONCLUIDA', 'REPROVADA', 'CANCELADA'],
+        'AGUARDANDO_DOCUMENTOS' => ['EM_ANALISE', 'CONCLUIDA', 'REPROVADA', 'CANCELADA'],
+        'AGUARDANDO_ASSINATURA_ANALISTA' => ['AGUARDANDO_APROVACAO_ADMIN', 'CONCLUIDA', 'AGUARDANDO_DOCUMENTOS', 'REPROVADA', 'EM_ANALISE', 'CANCELADA'],
+        'AGUARDANDO_APROVACAO_ADMIN' => ['EM_ANALISE', 'CONCLUIDA', 'AGUARDANDO_DOCUMENTOS', 'REPROVADA', 'CANCELADA'],
         'CONCLUIDA' => [], 'REPROVADA' => [], 'CANCELADA' => [],
     ];
     return in_array($novo, $mapa[$atual] ?? [], true);
@@ -580,6 +580,69 @@ function analiseAcaoPersistirParecerPdf(PDO $pdo, string $parecerId, string $ana
     $pdo->prepare('UPDATE analise_planos_pareceres SET caminho_pdf_final=:caminho,hash_pdf_final=:hash WHERE id=:id AND analise_id=:analise')
         ->execute([':caminho'=>$relativo, ':hash'=>$hash, ':id'=>$parecerId, ':analise'=>$analiseId]);
     return [$relativo, $hash];
+}
+
+function analiseAcaoFinalizarParecer(PDO $pdo, array $analise, array $parecer, array $responsavel, string $usuario): string
+{
+    $analiseId = (string)$analise['id'];
+    $parecerId = (string)$parecer['id'];
+    $resultado = $parecer['resultado'] ?? 'APROVADO';
+    $novoStatus = match($resultado) {
+        'EXIGENCIAS' => 'AGUARDANDO_DOCUMENTOS',
+        'REPROVADO' => 'REPROVADA',
+        default => 'CONCLUIDA'
+    };
+
+    // Baixa das exigências registradas no parecer
+    $resultados = $pdo->prepare('SELECT exigencia_id, resultado FROM analise_planos_relatorio_exigencias WHERE relatorio_id=:id');
+    $resultados->execute([':id' => $parecerId]);
+    $updEx = $pdo->prepare("UPDATE analise_planos_exigencias SET status=:status, saneamento_pendente=0, observacao_cumprimento=CONCAT(COALESCE(observacao_cumprimento,''), :nota) WHERE id=:id AND analise_id=:analise");
+    foreach ($resultados->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $updEx->execute([
+            ':status' => $r['resultado'] === 'NAO_CUMPRIDA' ? 'NAO_CUMPRIDA' : $r['resultado'],
+            ':nota' => "\nBaixa registrada no relatório " . ($parecer['numero'] ?? '') . '.',
+            ':id' => $r['exigencia_id'],
+            ':analise' => $analiseId
+        ]);
+    }
+
+    // Publica o parecer e registra assinatura técnica do analista
+    $ip = function_exists('obterIpCliente') ? obterIpCliente() : ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
+    $pdo->prepare("UPDATE analise_planos_pareceres 
+        SET status='PUBLICADO', 
+            assinado_analista_em=COALESCE(assinado_analista_em, NOW()), 
+            assinatura_analista_ip=:ip, 
+            publicado_em=COALESCE(publicado_em, NOW()), 
+            validado_em=COALESCE(validado_em, NOW()), 
+            validado_por=:usuario 
+        WHERE id=:id")
+        ->execute([
+            ':ip' => $ip,
+            ':usuario' => $usuario,
+            ':id' => $parecerId
+        ]);
+
+    // Se aprovado, valida conclusão NORMAM e gera Licença LC
+    if ($resultado === 'APROVADO') {
+        analisePlanosValidarConclusao($pdo, $analiseId);
+        if (!empty($analise['legado_sem_proposta']) && (empty($analise['proposta_id']) || empty($analise['servico_id']) || empty($analise['vendedor_origem_id']))) {
+            throw new RuntimeException('Vincule a origem comercial do processo legado antes de publicar uma nova licença.');
+        }
+        analiseAcaoCriarLicenca($pdo, $analise, $responsavel);
+    }
+
+    // Atualiza status da análise
+    $pdo->prepare('UPDATE analises_planos SET status=:status, responsavel_assinatura_id=:responsavel WHERE id=:id')
+        ->execute([':status' => $novoStatus, ':responsavel' => $responsavel['id'], ':id' => $analiseId]);
+
+    // Histórico e Auditoria NORMAM
+    analisePlanosHistorico($pdo, $analiseId, 'RELATORIO_CICLO_PUBLICADO', $analise['status'], $novoStatus, ($parecer['numero'] ?? 'Relatório') . ' assinado e finalizado pelo analista.');
+    analisePlanosAuditarNorma($pdo, $analiseId, 'RELATORIO_CICLO_PUBLICADO', $analise['status'], $novoStatus, $parecer['numero'] ?? '');
+
+    // Persiste PDF oficial assinado com SHA-256 e QR Code
+    analiseAcaoPersistirParecerPdf($pdo, $parecerId, $analiseId);
+
+    return $novoStatus;
 }
 
 function analisePlanosCategoriasNormam(): array

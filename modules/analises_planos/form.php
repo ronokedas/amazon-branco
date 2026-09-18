@@ -899,9 +899,22 @@ require_once __DIR__ . '/../../includes/header.php';
                             <textarea name="conclusao" required rows="2" class="form-control" placeholder="Parecer conclusivo sobre a conformidade das plantas com a NORMAM-202/DPC..."></textarea>
                         </div>
 
-                        <button class="btn btn-primary">
-                            <i class="fas fa-paper-plane"></i> Preparar Relatório Técnico do Ciclo (RAP)
-                        </button>
+                        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:14px; margin-top:14px; margin-bottom:18px;">
+                            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:600; color:#166534; margin-bottom:4px;">
+                                <input type="checkbox" name="assinar_agora" value="1" checked style="width:18px; height:18px; accent-color:#16a34a;">
+                                <span><i class="fas fa-file-signature"></i> Assinar tecnicamente e finalizar relatório agora</span>
+                            </label>
+                            <small class="text-muted" style="display:block; margin-left:28px;">
+                                Sob a NORMAM-202/DPC, a assinatura digital do Analista Naval (ART/CREA) finaliza o relatório oficial de forma autônoma e imediata, sem necessidade de aprovação da diretoria.
+                            </small>
+                        </div>
+
+                        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                            <button class="btn btn-success btn-lg">
+                                <i class="fas fa-signature"></i> Emitir, Assinar e Finalizar Relatório (RAP)
+                            </button>
+                            <span class="text-muted" style="font-size:0.85rem;"><i class="fas fa-shield-alt text-success"></i> Validade técnica autônoma e imediata</span>
+                        </div>
                     </form>
                 </div>
             <?php endif; ?>
@@ -916,7 +929,18 @@ require_once __DIR__ . '/../../includes/header.php';
                     <article class="parecer-row">
                         <div>
                             <strong><i class="fa-solid fa-file-signature text-success"></i> <?= h($p['numero'] ?: ('Relatório v' . $p['versao'])) ?> · <?= h($p['finalidade'] ?: $p['resultado']) ?></strong>
-                            <span><?= h($p['status']) ?> · <?= formatarDataCompleta($p['criado_em']) ?> por <?= h($p['criador_nome']) ?></span>
+                            <span>
+                                <?php if ($p['status'] === 'PUBLICADO'): ?>
+                                    <span class="badge badge-success" style="font-size:0.75rem;"><i class="fas fa-check-circle"></i> Publicado / Finalizado</span>
+                                <?php elseif ($p['status'] === 'AGUARDANDO_ASSINATURA_ANALISTA'): ?>
+                                    <span class="badge badge-warning" style="font-size:0.75rem;"><i class="fas fa-pen-fancy"></i> Aguardando Assinatura</span>
+                                <?php elseif ($p['status'] === 'AGUARDANDO_APROVACAO_ADMIN'): ?>
+                                    <span class="badge badge-info" style="font-size:0.75rem;"><i class="fas fa-user-shield"></i> Aguardando Validação</span>
+                                <?php else: ?>
+                                    <span class="badge badge-secondary" style="font-size:0.75rem;"><?= h($p['status']) ?></span>
+                                <?php endif; ?>
+                                · <?= formatarDataCompleta($p['criado_em']) ?> por <?= h($p['criador_nome']) ?>
+                            </span>
                             <?php if ($p['devolvido_motivo']): ?>
                                 <small class="text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Devolvido: <?= h($p['devolvido_motivo']) ?></small>
                             <?php endif; ?>
@@ -925,13 +949,13 @@ require_once __DIR__ . '/../../includes/header.php';
                             <a class="btn btn-secondary btn-sm" target="_blank" href="<?= APP_URL ?>analises-planos/parecer-pdf?id=<?= urlencode($p['id']) ?>">
                                 <i class="fas fa-file-pdf text-danger"></i> PDF Oficial
                             </a>
-                            <?php if ($p['status'] === 'AGUARDANDO_ASSINATURA_ANALISTA' && $cargo === 'ANALISTA' && $p['criado_por'] === $usuario): ?>
+                            <?php if ($p['status'] === 'AGUARDANDO_ASSINATURA_ANALISTA' && (($cargo === 'ANALISTA' && ($p['criado_por'] === $usuario || $a['analista_id'] === $usuario)) || $cargo === 'ADMIN')): ?>
                                 <form method="post" action="<?= APP_URL ?>analises-planos/actions" style="display:inline">
                                     <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                                     <input type="hidden" name="action" value="assinar_parecer">
                                     <input type="hidden" name="analise_id" value="<?= h($id) ?>">
                                     <input type="hidden" name="parecer_id" value="<?= h($p['id']) ?>">
-                                    <button class="btn btn-success btn-sm"><i class="fas fa-signature"></i> Assinar Tecnicamente</button>
+                                    <button class="btn btn-success btn-sm"><i class="fas fa-signature"></i> Assinar e Finalizar Documento</button>
                                 </form>
                             <?php endif; ?>
                             <?php if ($p['status'] === 'AGUARDANDO_APROVACAO_ADMIN' && $cargo === 'ADMIN'): ?>

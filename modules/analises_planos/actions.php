@@ -280,65 +280,191 @@ try {
     }
 
     if ($acao === 'criar_parecer') {
-        analiseAcaoExigirTecnico($analise);if(!in_array($analise['status'],['EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true))throw new RuntimeException('O processo precisa estar em análise.');
-        $resultado=trim($_POST['resultado']??'');if(!in_array($resultado,['EXIGENCIAS','APROVADO','REPROVADO'],true))throw new InvalidArgumentException('Resultado inválido. Não é permitida conclusão com exigências.');
-        if(!$analise['tipo_processo']||!$analise['enquadramento'])throw new RuntimeException('Conclua o enquadramento antes do parecer.');
-        $resumo=trim($_POST['resumo']??'');$conclusao=trim($_POST['conclusao']??'');if(!$resumo||!$conclusao)throw new InvalidArgumentException('Informe resumo e conclusão.');
-        $submissaoId=trim($_POST['submissao_id']??'');if($submissaoId==='')throw new InvalidArgumentException('Selecione a revisão documental analisada neste ciclo.');
-        $q=$pdo->prepare('SELECT id FROM analise_planos_submissoes WHERE id=:submissao AND analise_id=:analise');$q->execute([':submissao'=>$submissaoId,':analise'=>$analiseId]);if(!$q->fetchColumn())throw new RuntimeException('A revisão selecionada não pertence a este processo.');
-        $q=$pdo->prepare("SELECT COUNT(*) FROM analise_planos_arquivos WHERE submissao_id=:id AND classificacao='RECEBIDO'");$q->execute([':id'=>$submissaoId]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Classifique todos os arquivos da revisão antes de emitir o relatório.');
-        $q=$pdo->prepare('SELECT * FROM analise_planos_exigencias WHERE analise_id=:id ORDER BY ordem,id');$q->execute([':id'=>$analiseId]);$exigenciasCiclo=$q->fetchAll(PDO::FETCH_ASSOC);
-        if($resultado==='EXIGENCIAS'&&!$exigenciasCiclo)throw new RuntimeException('Cadastre ao menos uma exigência.');
-        $resultadosEx=$_POST['baixa_resultado']??[];$manifestacoes=$_POST['baixa_manifestacao']??[];
-        foreach($exigenciasCiclo as $ex){$r=$resultadosEx[$ex['id']]??'';$m=trim($manifestacoes[$ex['id']]??'');if(!in_array($r,['CUMPRIDA','PARCIAL','NAO_CUMPRIDA'],true)||$m==='')throw new RuntimeException('Informe o resultado e a manifestação técnica de todas as exigências.');if($resultado==='APROVADO'&&$r!=='CUMPRIDA')throw new RuntimeException('O relatório conclusivo exige baixa integral de todas as exigências.');}
-        if($resultado==='APROVADO'){
-            $pdo->prepare("UPDATE analise_planos_itens SET resultado='CONFORME' WHERE analise_id=:id AND resultado NOT IN ('CONFORME','NAO_APLICA')")->execute([':id'=>$analiseId]);
-            $q=$pdo->prepare("SELECT COUNT(*) FROM analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id WHERE s.analise_id=:id AND ar.classificacao IN ('RECEBIDO','REJEITADO')");$q->execute([':id'=>$analiseId]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Resolva todos os arquivos recebidos ou rejeitados antes do relatório conclusivo.');
+        analiseAcaoExigirTecnico($analise);
+        if (!in_array($analise['status'], ['EM_ANALISE', 'AGUARDANDO_DOCUMENTOS'], true)) {
+            throw new RuntimeException('O processo precisa estar em análise.');
         }
-        $responsavel=analiseAcaoResponsavelDoAnalista($pdo,$analise);
-        $pdo->beginTransaction();$q=$pdo->prepare('SELECT id FROM analise_planos_pareceres WHERE analise_id=:id AND status NOT IN ("PUBLICADO","DEVOLVIDO","CANCELADO") FOR UPDATE');$q->execute([':id'=>$analiseId]);if($q->fetchColumn())throw new RuntimeException('Já existe um relatório aberto neste processo.');
-        $q=$pdo->prepare('SELECT id FROM analise_planos_pareceres WHERE analise_id=:id AND status="PUBLICADO" ORDER BY versao DESC LIMIT 1 FOR UPDATE');$q->execute([':id'=>$analiseId]);$anterior=$q->fetchColumn()?:null;
-        $q=$pdo->prepare('SELECT COALESCE(MAX(versao),0)+1 FROM analise_planos_pareceres WHERE analise_id=:id FOR UPDATE');$q->execute([':id'=>$analiseId]);$versao=(int)$q->fetchColumn();
-        $numero=gerarNumeroDocumento('RAP-REL','AM-RAP-REL');$parecerId=gerarUUID();$finalidade=$resultado==='APROVADO'?'CONCLUSIVO':($anterior?'CUMPRIMENTO_EXIGENCIAS':'ANALISE_INICIAL');$snapshot=analisePlanosSnapshot($pdo,$analise,$submissaoId);
-        $pdo->prepare("INSERT INTO analise_planos_pareceres(id,numero,analise_id,versao,finalidade,submissao_id,relatorio_anterior_id,norma_versao_id,resultado,resumo,conclusao,snapshot_json,status,responsavel_assinatura_id,criado_por)VALUES(:id,:numero,:analise,:versao,:finalidade,:submissao,:anterior,:norma,:resultado,:resumo,:conclusao,:snapshot,'AGUARDANDO_ASSINATURA_ANALISTA',:responsavel,:usuario)")->execute([':id'=>$parecerId,':numero'=>$numero,':analise'=>$analiseId,':versao'=>$versao,':finalidade'=>$finalidade,':submissao'=>$submissaoId,':anterior'=>$anterior,':norma'=>$analise['norma_versao_id']??null,':resultado'=>$resultado,':resumo'=>$resumo,':conclusao'=>$conclusao,':snapshot'=>json_encode($snapshot,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),':responsavel'=>$responsavel['id'],':usuario'=>$usuario]);
-        $ins=$pdo->prepare('INSERT INTO analise_planos_relatorio_exigencias(id,relatorio_id,exigencia_id,submissao_id,resultado,manifestacao_tecnica,descricao_snapshot,referencia_snapshot,criado_por)VALUES(UUID(),:relatorio,:exigencia,:submissao,:resultado,:manifestacao,:descricao,:referencia,:usuario)');
-        foreach($exigenciasCiclo as $ex){$ins->execute([':relatorio'=>$parecerId,':exigencia'=>$ex['id'],':submissao'=>$submissaoId,':resultado'=>$resultadosEx[$ex['id']],':manifestacao'=>trim($manifestacoes[$ex['id']]),':descricao'=>$ex['descricao'],':referencia'=>$ex['referencia_normativa'],':usuario'=>$usuario]);}
-        $pdo->prepare("UPDATE analises_planos SET status='AGUARDANDO_ASSINATURA_ANALISTA',responsavel_assinatura_id=:responsavel WHERE id=:id")->execute([':responsavel'=>$responsavel['id'],':id'=>$analiseId]);analisePlanosHistorico($pdo,$analiseId,'RELATORIO_CICLO_PREPARADO',$analise['status'],'AGUARDANDO_ASSINATURA_ANALISTA',$numero.' preparado.');analisePlanosAuditarNorma($pdo,$analiseId,'RELATORIO_CICLO_PREPARADO',$analise['status'],'AGUARDANDO_ASSINATURA_ANALISTA',$numero);$pdo->commit();
-        setMensagem('success','Relatório '.$numero.' preparado. Assine tecnicamente com sua própria identidade.');redirecionar($retorno($analiseId).'#pareceres');
+        $resultado = trim($_POST['resultado'] ?? '');
+        if (!in_array($resultado, ['EXIGENCIAS', 'APROVADO', 'REPROVADO'], true)) {
+            throw new InvalidArgumentException('Resultado inválido. Não é permitida conclusão com exigências.');
+        }
+        if (!$analise['tipo_processo'] || !$analise['enquadramento']) {
+            throw new RuntimeException('Conclua o enquadramento antes do parecer.');
+        }
+        $resumo = trim($_POST['resumo'] ?? '');
+        $conclusao = trim($_POST['conclusao'] ?? '');
+        if (!$resumo || !$conclusao) {
+            throw new InvalidArgumentException('Informe resumo e conclusão.');
+        }
+        $submissaoId = trim($_POST['submissao_id'] ?? '');
+        if ($submissaoId === '') {
+            throw new InvalidArgumentException('Selecione a revisão documental analisada neste ciclo.');
+        }
+        $q = $pdo->prepare('SELECT id FROM analise_planos_submissoes WHERE id=:submissao AND analise_id=:analise');
+        $q->execute([':submissao' => $submissaoId, ':analise' => $analiseId]);
+        if (!$q->fetchColumn()) throw new RuntimeException('A revisão selecionada não pertence a este processo.');
+        $q = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_arquivos WHERE submissao_id=:id AND classificacao='RECEBIDO'");
+        $q->execute([':id' => $submissaoId]);
+        if ((int)$q->fetchColumn() > 0) throw new RuntimeException('Classifique todos os arquivos da revisão antes de emitir o relatório.');
+        $q = $pdo->prepare('SELECT * FROM analise_planos_exigencias WHERE analise_id=:id ORDER BY ordem,id');
+        $q->execute([':id' => $analiseId]);
+        $exigenciasCiclo = $q->fetchAll(PDO::FETCH_ASSOC);
+        if ($resultado === 'EXIGENCIAS' && !$exigenciasCiclo) throw new RuntimeException('Cadastre ao menos uma exigência.');
+        $resultadosEx = $_POST['baixa_resultado'] ?? [];
+        $manifestacoes = $_POST['baixa_manifestacao'] ?? [];
+        foreach ($exigenciasCiclo as $ex) {
+            $r = $resultadosEx[$ex['id']] ?? '';
+            $m = trim($manifestacoes[$ex['id']] ?? '');
+            if (!in_array($r, ['CUMPRIDA', 'PARCIAL', 'NAO_CUMPRIDA'], true) || $m === '') {
+                throw new RuntimeException('Informe o resultado e a manifestação técnica de todas as exigências.');
+            }
+            if ($resultado === 'APROVADO' && $r !== 'CUMPRIDA') {
+                throw new RuntimeException('O relatório conclusivo exige baixa integral de todas as exigências.');
+            }
+        }
+        if ($resultado === 'APROVADO') {
+            analisePlanosValidarConclusao($pdo, $analiseId);
+            $pdo->prepare("UPDATE analise_planos_itens SET resultado='CONFORME' WHERE analise_id=:id AND resultado NOT IN ('CONFORME','NAO_APLICA')")->execute([':id' => $analiseId]);
+            $q = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id WHERE s.analise_id=:id AND ar.classificacao IN ('RECEBIDO','REJEITADO')");
+            $q->execute([':id' => $analiseId]);
+            if ((int)$q->fetchColumn() > 0) throw new RuntimeException('Resolva todos os arquivos recebidos ou rejeitados antes do relatório conclusivo.');
+        }
+
+        $responsavel = analiseAcaoResponsavelDoAnalista($pdo, $analise);
+        $pdo->beginTransaction();
+        $q = $pdo->prepare('SELECT id FROM analise_planos_pareceres WHERE analise_id=:id AND status NOT IN ("PUBLICADO","DEVOLVIDO","CANCELADO") FOR UPDATE');
+        $q->execute([':id' => $analiseId]);
+        if ($q->fetchColumn()) throw new RuntimeException('Já existe um relatório aberto neste processo.');
+        $q = $pdo->prepare('SELECT id FROM analise_planos_pareceres WHERE analise_id=:id AND status="PUBLICADO" ORDER BY versao DESC LIMIT 1 FOR UPDATE');
+        $q->execute([':id' => $analiseId]);
+        $anterior = $q->fetchColumn() ?: null;
+        $q = $pdo->prepare('SELECT COALESCE(MAX(versao),0)+1 FROM analise_planos_pareceres WHERE analise_id=:id FOR UPDATE');
+        $q->execute([':id' => $analiseId]);
+        $versao = (int)$q->fetchColumn();
+        $numero = gerarNumeroDocumento('RAP-REL','AM-RAP-REL');
+        $parecerId = gerarUUID();
+        $finalidade = $resultado === 'APROVADO' ? 'CONCLUSIVO' : ($anterior ? 'CUMPRIMENTO_EXIGENCIAS' : 'ANALISE_INICIAL');
+        $snapshot = analisePlanosSnapshot($pdo, $analise, $submissaoId);
+
+        $assinarAgora = !empty($_POST['assinar_agora']);
+        $statusInicial = $assinarAgora ? 'PUBLICADO' : 'AGUARDANDO_ASSINATURA_ANALISTA';
+        $ip = obterIpCliente();
+
+        $pdo->prepare("INSERT INTO analise_planos_pareceres(
+            id,numero,analise_id,versao,finalidade,submissao_id,relatorio_anterior_id,
+            norma_versao_id,resultado,resumo,conclusao,snapshot_json,status,
+            responsavel_assinatura_id,criado_por,assinado_analista_em,assinatura_analista_ip,
+            publicado_em,validado_em,validado_por
+        ) VALUES (
+            :id,:numero,:analise,:versao,:finalidade,:submissao,:anterior,
+            :norma,:resultado,:resumo,:conclusao,:snapshot,:status,
+            :responsavel,:usuario,:assinado_em,:ip,:publicado_em,:validado_em,:validado_por
+        )")->execute([
+            ':id' => $parecerId,
+            ':numero' => $numero,
+            ':analise' => $analiseId,
+            ':versao' => $versao,
+            ':finalidade' => $finalidade,
+            ':submissao' => $submissaoId,
+            ':anterior' => $anterior,
+            ':norma' => $analise['norma_versao_id'] ?? null,
+            ':resultado' => $resultado,
+            ':resumo' => $resumo,
+            ':conclusao' => $conclusao,
+            ':snapshot' => json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ':status' => $statusInicial,
+            ':responsavel' => $responsavel['id'],
+            ':usuario' => $usuario,
+            ':assinado_em' => $assinarAgora ? date('Y-m-d H:i:s') : null,
+            ':ip' => $assinarAgora ? $ip : null,
+            ':publicado_em' => $assinarAgora ? date('Y-m-d H:i:s') : null,
+            ':validado_em' => $assinarAgora ? date('Y-m-d H:i:s') : null,
+            ':validado_por' => $assinarAgora ? $usuario : null,
+        ]);
+
+        $ins = $pdo->prepare('INSERT INTO analise_planos_relatorio_exigencias(id,relatorio_id,exigencia_id,submissao_id,resultado,manifestacao_tecnica,descricao_snapshot,referencia_snapshot,criado_por) VALUES (UUID(),:relatorio,:exigencia,:submissao,:resultado,:manifestacao,:descricao,:referencia,:usuario)');
+        foreach ($exigenciasCiclo as $ex) {
+            $ins->execute([
+                ':relatorio' => $parecerId,
+                ':exigencia' => $ex['id'],
+                ':submissao' => $submissaoId,
+                ':resultado' => $resultadosEx[$ex['id']],
+                ':manifestacao' => trim($manifestacoes[$ex['id']]),
+                ':descricao' => $ex['descricao'],
+                ':referencia' => $ex['referencia_normativa'],
+                ':usuario' => $usuario
+            ]);
+        }
+
+        if ($assinarAgora) {
+            $parecerDados = [
+                'id' => $parecerId,
+                'numero' => $numero,
+                'resultado' => $resultado,
+                'finalidade' => $finalidade
+            ];
+            $novoStatus = analiseAcaoFinalizarParecer($pdo, $analise, $parecerDados, $responsavel, $usuario);
+            $pdo->commit();
+            setMensagem('success', $resultado === 'APROVADO' ? "Relatório {$numero} assinado e finalizado! Minuta da Licença gerada." : "Relatório {$numero} assinado e finalizado com sucesso.");
+        } else {
+            $pdo->prepare("UPDATE analises_planos SET status='AGUARDANDO_ASSINATURA_ANALISTA',responsavel_assinatura_id=:responsavel WHERE id=:id")
+                ->execute([':responsavel' => $responsavel['id'], ':id' => $analiseId]);
+            analisePlanosHistorico($pdo, $analiseId, 'RELATORIO_CICLO_PREPARADO', $analise['status'], 'AGUARDANDO_ASSINATURA_ANALISTA', $numero . ' preparado.');
+            analisePlanosAuditarNorma($pdo, $analiseId, 'RELATORIO_CICLO_PREPARADO', $analise['status'], 'AGUARDANDO_ASSINATURA_ANALISTA', $numero);
+            $pdo->commit();
+            setMensagem('success', "Relatório {$numero} preparado. Clique em 'Assinar e Finalizar Documento' para concluir.");
+        }
+        redirecionar($retorno($analiseId) . '#pareceres');
     }
 
     if ($acao === 'assinar_parecer') {
-        if($cargo!=='ANALISTA'||$analise['analista_id']!==$usuario)throw new RuntimeException('Somente o analista atribuído pode assinar.');
-        $parecerId=trim($_POST['parecer_id']??'');$responsavel=analiseAcaoResponsavelDoAnalista($pdo,$analise);
-        $pdo->beginTransaction();$stmt=$pdo->prepare("UPDATE analise_planos_pareceres SET status='AGUARDANDO_APROVACAO_ADMIN',assinado_analista_em=NOW(),assinatura_analista_ip=:ip WHERE id=:id AND analise_id=:analise AND criado_por=:usuario AND responsavel_assinatura_id=:responsavel AND status='AGUARDANDO_ASSINATURA_ANALISTA'");
-        $stmt->execute([':ip'=>obterIpCliente(),':id'=>$parecerId,':analise'=>$analiseId,':usuario'=>$usuario,':responsavel'=>$responsavel['id']]);if($stmt->rowCount()!==1)throw new RuntimeException('Parecer não está disponível para sua assinatura.');
-        $pdo->prepare("UPDATE analises_planos SET status='AGUARDANDO_APROVACAO_ADMIN' WHERE id=:id")->execute([':id'=>$analiseId]);analisePlanosHistorico($pdo,$analiseId,'RELATORIO_ASSINADO_ANALISTA','AGUARDANDO_ASSINATURA_ANALISTA','AGUARDANDO_APROVACAO_ADMIN');analisePlanosAuditarNorma($pdo,$analiseId,'RELATORIO_ASSINADO_ANALISTA','AGUARDANDO_ASSINATURA_ANALISTA','AGUARDANDO_APROVACAO_ADMIN',$parecerId);analisePlanosNotificarAdmins($pdo,'PARECER_AGUARDANDO_ADMIN','Relatório aguardando validação',$analise['numero'].' foi assinado pelo analista.',$analiseId);$pdo->commit();
-        setMensagem('success','Parecer assinado e enviado ao admin.');redirecionar($retorno($analiseId).'#pareceres');
+        if (!in_array($cargo, ['ANALISTA', 'ADMIN'], true) || ($cargo === 'ANALISTA' && $analise['analista_id'] !== $usuario)) {
+            throw new RuntimeException('Somente o analista atribuído pode assinar o relatório.');
+        }
+        $parecerId = trim($_POST['parecer_id'] ?? '');
+        $responsavel = analiseAcaoResponsavelDoAnalista($pdo, $analise);
+
+        $pdo->beginTransaction();
+        $q = $pdo->prepare("SELECT * FROM analise_planos_pareceres WHERE id=:id AND analise_id=:analise AND status='AGUARDANDO_ASSINATURA_ANALISTA' FOR UPDATE");
+        $q->execute([':id' => $parecerId, ':analise' => $analiseId]);
+        $parecer = $q->fetch(PDO::FETCH_ASSOC);
+        if (!$parecer) throw new RuntimeException('Parecer não está disponível para assinatura.');
+
+        $novoStatus = analiseAcaoFinalizarParecer($pdo, $analise, $parecer, $responsavel, $usuario);
+        $pdo->commit();
+
+        setMensagem('success', $parecer['resultado'] === 'APROVADO' ? "Relatório {$parecer['numero']} assinado e finalizado! Minuta da Licença gerada." : "Relatório {$parecer['numero']} assinado e finalizado com sucesso.");
+        redirecionar($retorno($analiseId) . '#pareceres');
     }
 
     if ($acao === 'publicar') {
-        if($cargo!=='ADMIN')throw new RuntimeException('Somente o admin pode publicar ou devolver.');
+        if ($cargo !== 'ADMIN') throw new RuntimeException('Somente o admin pode publicar ou devolver.');
         $pdo->beginTransaction();
-        $parecerId=trim($_POST['parecer_id']??'');$stmt=$pdo->prepare("SELECT * FROM analise_planos_pareceres WHERE id=:id AND analise_id=:analise AND status='AGUARDANDO_APROVACAO_ADMIN' FOR UPDATE");$stmt->execute([':id'=>$parecerId,':analise'=>$analiseId]);$parecer=$stmt->fetch(PDO::FETCH_ASSOC);if(!$parecer)throw new RuntimeException('Parecer não está aguardando o admin.');
-        if(!empty($_POST['devolver'])){$motivo=trim($_POST['motivo']??'');if($motivo==='')throw new InvalidArgumentException('Informe o motivo da devolução.');$pdo->prepare("UPDATE analise_planos_pareceres SET status='DEVOLVIDO',devolvido_motivo=:motivo WHERE id=:id")->execute([':motivo'=>$motivo,':id'=>$parecerId]);$pdo->prepare("UPDATE analises_planos SET status='EM_ANALISE' WHERE id=:id")->execute([':id'=>$analiseId]);analisePlanosHistorico($pdo,$analiseId,'RELATORIO_DEVOLVIDO','AGUARDANDO_APROVACAO_ADMIN','EM_ANALISE',$motivo);analisePlanosAuditarNorma($pdo,$analiseId,'RELATORIO_DEVOLVIDO','AGUARDANDO_APROVACAO_ADMIN','EM_ANALISE',$motivo);analisePlanosNotificar($pdo,$analise['analista_id'],'PARECER_DEVOLVIDO','Relatório devolvido pelo admin',$motivo,$analiseId,'analises-planos/form?id='.urlencode($analiseId));$pdo->commit();setMensagem('success','Relatório devolvido ao analista.');redirecionar($retorno($analiseId).'#pareceres');}
-        $responsavel=analiseAcaoResponsavelDoAnalista($pdo,$analise);
-        $novoStatus=match($parecer['resultado']){'EXIGENCIAS'=>'AGUARDANDO_DOCUMENTOS','REPROVADO'=>'REPROVADA',default=>'CONCLUIDA'};
-        $resultados=$pdo->prepare('SELECT exigencia_id,resultado FROM analise_planos_relatorio_exigencias WHERE relatorio_id=:id');$resultados->execute([':id'=>$parecerId]);
-        $updEx=$pdo->prepare("UPDATE analise_planos_exigencias SET status=:status,saneamento_pendente=0,observacao_cumprimento=CONCAT(COALESCE(observacao_cumprimento,''),:nota) WHERE id=:id AND analise_id=:analise");
-        foreach($resultados->fetchAll(PDO::FETCH_ASSOC) as $r){$updEx->execute([':status'=>$r['resultado']==='NAO_CUMPRIDA'?'NAO_CUMPRIDA':$r['resultado'],':nota'=>"\nBaixa registrada no relatório ".$parecer['numero'].'.',':id'=>$r['exigencia_id'],':analise'=>$analiseId]);}
-        if($parecer['resultado']==='APROVADO')analisePlanosValidarConclusao($pdo,$analiseId);
-        $pdo->prepare("UPDATE analise_planos_pareceres SET status='PUBLICADO',publicado_em=NOW(),validado_em=NOW(),validado_por=:usuario WHERE id=:id")->execute([':usuario'=>$usuario,':id'=>$parecerId]);
-        if($parecer['resultado']==='APROVADO'){
-            if(!empty($analise['legado_sem_proposta']) && (empty($analise['proposta_id'])||empty($analise['servico_id'])||empty($analise['vendedor_origem_id']))) {
-                throw new RuntimeException('Vincule a origem comercial do processo legado antes de publicar uma nova licença.');
-            }
-            analiseAcaoCriarLicenca($pdo,$analise,$responsavel);
+        $parecerId = trim($_POST['parecer_id'] ?? '');
+        $stmt = $pdo->prepare("SELECT * FROM analise_planos_pareceres WHERE id=:id AND analise_id=:analise AND status IN ('AGUARDANDO_APROVACAO_ADMIN','AGUARDANDO_ASSINATURA_ANALISTA') FOR UPDATE");
+        $stmt->execute([':id' => $parecerId, ':analise' => $analiseId]);
+        $parecer = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$parecer) throw new RuntimeException('Parecer não encontrado para validação.');
+
+        if (!empty($_POST['devolver'])) {
+            $motivo = trim($_POST['motivo'] ?? '');
+            if ($motivo === '') throw new InvalidArgumentException('Informe o motivo da devolução.');
+            $pdo->prepare("UPDATE analise_planos_pareceres SET status='DEVOLVIDO',devolvido_motivo=:motivo WHERE id=:id")->execute([':motivo' => $motivo, ':id' => $parecerId]);
+            $pdo->prepare("UPDATE analises_planos SET status='EM_ANALISE' WHERE id=:id")->execute([':id' => $analiseId]);
+            analisePlanosHistorico($pdo, $analiseId, 'RELATORIO_DEVOLVIDO', $analise['status'], 'EM_ANALISE', $motivo);
+            analisePlanosAuditarNorma($pdo, $analiseId, 'RELATORIO_DEVOLVIDO', $analise['status'], 'EM_ANALISE', $motivo);
+            analisePlanosNotificar($pdo, $analise['analista_id'], 'PARECER_DEVOLVIDO', 'Relatório devolvido pelo admin', $motivo, $analiseId, 'analises-planos/form?id=' . urlencode($analiseId));
+            $pdo->commit();
+            setMensagem('success', 'Relatório devolvido ao analista.');
+            redirecionar($retorno($analiseId) . '#pareceres');
         }
-        $pdo->prepare('UPDATE analises_planos SET status=:status WHERE id=:id')->execute([':status'=>$novoStatus,':id'=>$analiseId]);analisePlanosHistorico($pdo,$analiseId,'RELATORIO_CICLO_PUBLICADO','AGUARDANDO_APROVACAO_ADMIN',$novoStatus,$parecer['numero'].' publicado pelo admin.');analisePlanosAuditarNorma($pdo,$analiseId,'RELATORIO_CICLO_PUBLICADO','AGUARDANDO_APROVACAO_ADMIN',$novoStatus,$parecer['numero']);
-        analiseAcaoPersistirParecerPdf($pdo,$parecerId,$analiseId);
+
+        $responsavel = analiseAcaoResponsavelDoAnalista($pdo, $analise);
+        $novoStatus = analiseAcaoFinalizarParecer($pdo, $analise, $parecer, $responsavel, $usuario);
         $pdo->commit();
-        setMensagem('success',$parecer['resultado']==='APROVADO'?'Relatório conclusivo publicado e minuta da licença criada.':'Relatório de ciclo publicado.');
-        redirecionar($retorno($analiseId).'#pareceres');
+
+        setMensagem('success', $parecer['resultado'] === 'APROVADO' ? 'Relatório conclusivo publicado e minuta da licença criada.' : 'Relatório publicado com sucesso.');
+        redirecionar($retorno($analiseId) . '#pareceres');
     }
 
     throw new RuntimeException('Ação inválida.');
