@@ -438,7 +438,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 <div class="analise-card__actions-head">
                     <?php if ($analiseAberta): ?>
                         <button type="button" class="btn btn-success" onclick="abrirModalBancoNormam()">
-                            <i class="fa-solid fa-book-bookmark"></i> Inserir do Banco NORMAM (221 Modelos)
+                            <i class="fa-solid fa-book-bookmark"></i> Inserir do Banco NORMAM (<?= count($todasReferenciasPreload) ?> Modelos)
                         </button>
                     <?php endif; ?>
                     <a href="<?= APP_URL ?>analises-planos/referencias" target="_blank" class="btn btn-outline-secondary btn-sm" title="Gerenciar acervo de exigências e normas da Autoridade Marítima">
@@ -560,7 +560,7 @@ require_once __DIR__ . '/../../includes/header.php';
                                 <small class="text-muted d-block">Clique nos atalhos rápidos de categoria ou busque diretamente no Banco NORMAM:</small>
                             </div>
                             <button type="button" class="btn btn-outline-success btn-sm" onclick="abrirModalBancoNormam()">
-                                <i class="fa-solid fa-book-bookmark"></i> Consultar Banco NORMAM (221 Itens)
+                                <i class="fa-solid fa-book-bookmark"></i> Consultar Banco NORMAM (<?= count($todasReferenciasPreload) ?> Itens)
                             </button>
                         </div>
 
