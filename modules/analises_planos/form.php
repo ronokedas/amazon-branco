@@ -346,8 +346,8 @@ require_once __DIR__ . '/../../includes/header.php';
                 <div class="kpi-box__icon is-exigencias"><i class="fa-solid fa-triangle-exclamation"></i></div>
                 <div class="kpi-box__content">
                     <small>Exigências NORMAM</small>
-                    <strong><?= (int)$exigenciasPendentes ?> pendente(s)</strong>
-                    <span><?= (int)$exigenciasCumpridas ?> de <?= (int)$totalExigencias ?> cumprida(s)</span>
+                    <strong id="kpiExigenciasPendentes"><?= (int)$exigenciasPendentes ?> pendente(s)</strong>
+                    <span id="kpiExigenciasCumpridas"><?= (int)$exigenciasCumpridas ?> de <?= (int)$totalExigencias ?> cumprida(s)</span>
                 </div>
             </article>
 
@@ -387,11 +387,9 @@ require_once __DIR__ . '/../../includes/header.php';
     <nav class="analise-tabs-bar">
         <button type="button" class="analise-tab-btn <?= $abaAtiva === 'exigencias' ? 'active' : '' ?>" onclick="trocarAbaAnalise('exigencias')">
             <i class="fa-solid fa-triangle-exclamation"></i> Exigências & Banco NORMAM
-            <?php if ($exigenciasPendentes > 0): ?>
-                <span class="badge bg-warning text-dark"><?= $exigenciasPendentes ?></span>
-            <?php else: ?>
-                <span class="badge bg-success"><i class="fa-solid fa-check"></i></span>
-            <?php endif; ?>
+            <span id="badgeAbaExigencias" class="badge <?= $exigenciasPendentes > 0 ? 'bg-warning text-dark' : 'bg-success' ?>">
+                <?= $exigenciasPendentes > 0 ? $exigenciasPendentes : '<i class="fa-solid fa-check"></i>' ?>
+            </span>
         </button>
 
         <button type="button" class="analise-tab-btn <?= $abaAtiva === 'arquivos' ? 'active' : '' ?>" onclick="trocarAbaAnalise('arquivos')">
@@ -443,8 +441,25 @@ require_once __DIR__ . '/../../includes/header.php';
                 <input type="hidden" name="action" value="salvar_exigencias">
                 <input type="hidden" name="analise_id" value="<?= h($id) ?>">
 
+                <!-- Toolbar da Tabela de Exigências -->
+                <div class="tabela-exigencias-toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                    <div style="font-size:0.86rem; color:#475569;">
+                        Total: <strong id="totalExigenciasBadge" class="badge bg-light text-dark" style="font-size:0.85rem; border:1px solid #cbd5e1;"><?= count($exigencias) ?></strong> exigência(s) técnica(s)
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <span id="statusSalvoExigencias" style="font-size:0.82rem; font-weight:600; color:#059669; opacity:0; transition:opacity 0.3s ease;">
+                            <i class="fa-solid fa-circle-check"></i> Alterações salvas!
+                        </span>
+                        <?php if ($analiseAberta): ?>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="btnSalvarExigenciasInline" onclick="salvarExigenciasAjax(this)" <?= empty($exigencias) ? 'style="display:none;"' : '' ?>>
+                                <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações na Tabela
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <div class="table-responsive">
-                    <table class="tabela-exigencias-moderna">
+                    <table class="tabela-exigencias-moderna" id="tabelaExigencias">
                         <thead>
                             <tr>
                                 <th style="width:45px; text-align:center;">#</th>
@@ -455,9 +470,9 @@ require_once __DIR__ . '/../../includes/header.php';
                                 <?php if ($analiseAberta): ?><th style="width:70px; text-align:center;">Ação</th><?php endif; ?>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="tabelaExigenciasBody">
                             <?php if (!$exigencias): ?>
-                                <tr>
+                                <tr id="rowExigenciasVazia">
                                     <td colspan="<?= $analiseAberta ? 6 : 5 ?>" class="exigencias-empty-cell">
                                         <div class="empty-exigencias-box">
                                             <i class="fa-solid fa-circle-check text-success"></i>
@@ -468,15 +483,15 @@ require_once __DIR__ . '/../../includes/header.php';
                                 </tr>
                             <?php endif; ?>
                             <?php foreach ($exigencias as $i => $ex): ?>
-                                <tr>
+                                <tr id="row-exigencia-<?= h($ex['id']) ?>">
                                     <td style="vertical-align:middle; text-align:center;">
-                                        <strong><?= $i + 1 ?></strong>
+                                        <strong class="exigencia-num"><?= $i + 1 ?></strong>
                                         <input type="hidden" name="exigencia_id[]" value="<?= h($ex['id']) ?>">
                                     </td>
                                     <td>
                                         <select name="exigencia_categoria[]" class="form-control form-control-sm" <?= $analiseAberta ? '' : 'disabled' ?>>
                                             <?php 
-                                            $catAtual = trim($ex['categoria'] ?? 'GERAL') ?: 'GERAL';
+                                             $catAtual = trim($ex['categoria'] ?? 'GERAL') ?: 'GERAL';
                                             foreach ($categoriasNormam as $cNome): ?>
                                                 <option value="<?= h($cNome) ?>" <?= $catAtual === $cNome ? 'selected' : '' ?>><?= h($cNome) ?></option>
                                             <?php endforeach; ?>
@@ -507,7 +522,7 @@ require_once __DIR__ . '/../../includes/header.php';
                                     <?php if ($analiseAberta): ?>
                                         <td style="vertical-align:middle; text-align:center;">
                                             <?php if ($ex['status'] === 'PENDENTE'): ?>
-                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="excluirExigencia('<?= h($ex['id']) ?>')" title="Remover exigência não homologada">
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="excluirExigenciaAjax('<?= h($ex['id']) ?>', this)" title="Remover exigência não homologada">
                                                     <i class="fa-solid fa-trash"></i>
                                                 </button>
                                             <?php else: ?>
@@ -523,10 +538,13 @@ require_once __DIR__ . '/../../includes/header.php';
 
                 <?php if ($analiseAberta): ?>
                     <!-- Bloco Rápido e Autodidático para Adicionar Exigência -->
-                    <div class="card-nova-exigencia">
+                    <div class="card-nova-exigencia" id="cardNovaExigencia">
                         <div class="card-nova-exigencia__header">
                             <div>
                                 <strong><i class="fa-solid fa-circle-plus text-primary"></i> Cadastrar Nova Exigência Técnica</strong>
+                                <span class="badge bg-light text-dark ms-2" style="font-size:0.75rem; border:1px solid #cbd5e1; vertical-align:middle;">
+                                    <i class="fa-solid fa-keyboard"></i> Dica: Ctrl+Enter adiciona na hora
+                                </span>
                                 <small class="text-muted d-block">Clique nos atalhos rápidos de categoria ou busque diretamente no Banco NORMAM:</small>
                             </div>
                             <button type="button" class="btn btn-outline-success btn-sm" onclick="abrirModalBancoNormam()">
@@ -593,15 +611,23 @@ require_once __DIR__ . '/../../includes/header.php';
                         </div>
 
                         <div class="form-group">
-                            <label for="nova_exigencia" class="form-label-bold">Descrição Técnica da Exigência</label>
+                            <label for="nova_exigencia" class="form-label-bold">Descrição Técnica da Exigência *</label>
                             <textarea name="nova_exigencia" id="nova_exigencia" rows="3" class="form-control" placeholder="Descreva tecnicamente o que o armador/engenheiro projetista deve corrigir na prancha ou cálculo naval..."></textarea>
                             <small class="text-muted">Seja claro e específico para agilizar o atendimento da exigência pelo projetista naval.</small>
                         </div>
 
-                        <div class="card-nova-exigencia__footer">
-                            <button type="submit" class="btn btn-primary btn-salvar-exigencia">
-                                <i class="fas fa-save"></i> Salvar e Registrar Exigências
-                            </button>
+                        <div class="card-nova-exigencia__footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <span class="text-muted" style="font-size:0.8rem;">
+                                <i class="fa-solid fa-bolt text-warning"></i> Adiciona na tabela sem recarregar a tela
+                            </span>
+                            <div style="display:flex; gap:8px;">
+                                <button type="button" class="btn btn-primary btn-salvar-exigencia" id="btnAdicionarExigenciaInline" onclick="adicionarExigenciaRapidaAjax(this)">
+                                    <i class="fa-solid fa-circle-plus"></i> Adicionar Exigência ao Processo (Ctrl+Enter)
+                                </button>
+                                <button type="submit" class="btn btn-outline-secondary btn-sm" id="btnSalvarFallback" style="display:none;" title="Salvar recarregando a página">
+                                    Salvar Tradicional
+                                </button>
+                            </div>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -1293,7 +1319,7 @@ require_once __DIR__ . '/../../includes/header.php';
         <div class="modal-normam-header">
             <div>
                 <h3 style="margin:0; font-size:1.15rem; color:#0f172a;"><i class="fa-solid fa-book-bookmark text-success"></i> Banco de Referências NORMAM-202/DPC</h3>
-                <small style="color:#64748b;">Selecione uma exigência padronizada da Autoridade Marítima para aplicar com 1 clique.</small>
+                <small style="color:#64748b;">Selecione várias exigências para inserir em lote no processo ou clique em "+ Inserir" em qualquer item.</small>
             </div>
             <button type="button" class="btn-fechar-modal" onclick="fecharModalBancoNormam()">&times;</button>
         </div>
@@ -1312,6 +1338,22 @@ require_once __DIR__ . '/../../includes/header.php';
             </div>
         </div>
 
+        <!-- Barra de Ações em Lote (Multi-seleção NORMAM) -->
+        <div class="modal-normam-batch-bar" id="modalNormamBatchBar">
+            <div class="modal-batch-left">
+                <label class="custom-control-label-batch">
+                    <input type="checkbox" id="modalNormamSelectAll" onchange="alternarSelecionarTodasNormas(this.checked)">
+                    <span>Marcar visíveis (<span id="modalNormamVisiveisCount">0</span>)</span>
+                </label>
+                <span class="badge-selecionadas" id="badgeSelecionadas">0 selecionada(s)</span>
+            </div>
+            <div class="modal-batch-right">
+                <button type="button" class="btn btn-success btn-sm btn-inserir-lote" id="btnInserirNormasLote" onclick="inserirNormasSelecionadasLote(this)" disabled>
+                    <i class="fa-solid fa-bolt"></i> Inserir Selecionadas no Processo (<span id="countInserirBtn">0</span>)
+                </button>
+            </div>
+        </div>
+
         <div id="modalNormamLista" class="modal-normam-lista">
             <div style="text-align:center; padding:30px; color:#64748b;">
                 <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;"></i>
@@ -1321,7 +1363,12 @@ require_once __DIR__ . '/../../includes/header.php';
 
         <div class="modal-normam-footer">
             <span id="modalContadorNormas" style="font-size:0.84rem; color:#64748b;"></span>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalBancoNormam()">Fechar</button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button type="button" class="btn btn-success btn-sm btn-inserir-lote" id="btnInserirNormasLoteFooter" onclick="inserirNormasSelecionadasLote(this)" disabled>
+                    <i class="fa-solid fa-bolt"></i> Inserir Selecionadas (<span id="countInserirBtnFooter">0</span>)
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalBancoNormam()">Fechar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -1874,6 +1921,60 @@ require_once __DIR__ . '/../../includes/header.php';
     border-bottom: 1px solid #e2e8f0;
     flex-wrap: wrap;
 }
+/* Modal Normam Batch Bar */
+.modal-normam-batch-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.modal-batch-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.custom-control-label-batch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.86rem;
+    color: #1e293b;
+    margin: 0;
+    user-select: none;
+}
+.custom-control-label-batch input[type="checkbox"],
+.normam-item-select-col input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #059669;
+}
+.badge-selecionadas {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.btn-inserir-lote {
+    font-weight: 600 !important;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+    transition: all 0.2s ease;
+}
+.btn-inserir-lote:disabled {
+    opacity: 0.6;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
 .modal-normam-lista {
     flex: 1;
     overflow-y: auto;
@@ -1893,6 +1994,11 @@ require_once __DIR__ . '/../../includes/header.php';
     border-color: #10b981;
     box-shadow: 0 2px 8px rgba(16,185,129,0.12);
 }
+.normam-item-card.is-selected {
+    border-color: #059669;
+    background: #f0fdf4;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.15);
+}
 .normam-item-header {
     display: flex;
     justify-content: space-between;
@@ -1900,6 +2006,11 @@ require_once __DIR__ . '/../../includes/header.php';
     margin-bottom: 6px;
     flex-wrap: wrap;
     gap: 6px;
+}
+.normam-item-select-col {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 .normam-item-cat {
     font-size: 0.75rem;
@@ -1923,6 +2034,13 @@ require_once __DIR__ . '/../../includes/header.php';
 .normam-item-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
+    align-items: center;
+}
+.btn-xs {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+    border-radius: 4px;
 }
 .modal-normam-footer {
     display: flex;
@@ -1931,6 +2049,55 @@ require_once __DIR__ . '/../../includes/header.php';
     padding: 12px 20px;
     border-top: 1px solid #e2e8f0;
     background: #f8fafc;
+}
+
+/* Animação para nova linha inserida */
+@keyframes highlightRowGreen {
+    0% { background-color: #bbf7d0; }
+    100% { background-color: transparent; }
+}
+.row-anim-insert {
+    animation: highlightRowGreen 2.5s ease-out;
+}
+
+/* Toast Flutuante Naval */
+.toast-container-naval {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 1000000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+.toast-naval {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.18);
+    transform: translateY(-20px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast-naval.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+.toast-naval.toast-success {
+    background: #064e3b;
+    color: #ecfdf5;
+    border-left: 4px solid #34d399;
+}
+.toast-naval.toast-error {
+    background: #7f1d1d;
+    color: #fef2f2;
+    border-left: 4px solid #f87171;
 }
 
 /* Timeline & Pareceres */
@@ -2032,9 +2199,13 @@ function setQuickRef(texto) {
     }
 }
 
-// Modal do Banco NORMAM
+// Modal do Banco NORMAM & Gestão Ágil de Exigências
+const listaCategoriasNormam = <?= json_encode($categoriasNormam, JSON_UNESCAPED_UNICODE) ?> || [];
+const csrfTokenGlobal = '<?= gerarCSRF() ?>';
+const analiseIdGlobal = '<?= addslashes($id) ?>';
 let bancoNormasCache = <?= json_encode($todasReferenciasPreload, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?> || [];
 let ultimosItensFiltrados = [];
+let normasSelecionadasIndices = new Set();
 
 function abrirModalBancoNormam() {
     const modal = document.getElementById('modalBancoNormam');
@@ -2094,6 +2265,8 @@ function filtrarNormasModal() {
     const contador = document.getElementById('modalContadorNormas');
     if (contador) contador.textContent = `${ultimosItensFiltrados.length} referência(s) encontrada(s)`;
 
+    atualizarBarraSelecaoNormas();
+
     if (ultimosItensFiltrados.length === 0) {
         lista.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b;"><i class="fa-solid fa-folder-open" style="font-size:1.6rem; margin-bottom:8px; display:block;"></i>Nenhuma referência normativa corresponde aos filtros.</div>';
         return;
@@ -2103,17 +2276,24 @@ function filtrarNormasModal() {
         const cat = escapeHtml(item.categoria || 'GERAL');
         const ref = escapeHtml(item.referencia_normativa || '');
         const desc = escapeHtml(item.descricao_padrao || item.titulo || '');
+        const isSelected = normasSelecionadasIndices.has(idx);
         
         return `
-            <div class="normam-item-card">
+            <div class="normam-item-card ${isSelected ? 'is-selected' : ''}" id="normam-card-${idx}">
                 <div class="normam-item-header">
-                    <span class="normam-item-cat">${cat}</span>
+                    <div class="normam-item-select-col">
+                        <input type="checkbox" class="normam-item-checkbox" data-idx="${idx}" ${isSelected ? 'checked' : ''} onchange="toggleSelecaoNorma(${idx}, this.checked)">
+                        <span class="normam-item-cat">${cat}</span>
+                    </div>
                     <span class="normam-item-ref"><i class="fa-solid fa-scale-balanced"></i> ${ref}</span>
                 </div>
                 <p class="normam-item-desc">${desc}</p>
                 <div class="normam-item-actions">
-                    <button type="button" class="btn btn-success btn-sm" onclick="aplicarReferenciaPorIndex(${idx})">
-                        <i class="fa-solid fa-check"></i> Aplicar nesta Exigência
+                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="aplicarReferenciaPorIndex(${idx})" title="Preencher campos abaixo sem inserir agora">
+                        <i class="fa-solid fa-pen-to-square"></i> Preencher
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm btn-inserir-card" id="btn-inserir-card-${idx}" onclick="inserirNormaIndividual(${idx}, this)">
+                        <i class="fa-solid fa-plus"></i> Inserir no Processo
                     </button>
                 </div>
             </div>
@@ -2121,6 +2301,460 @@ function filtrarNormasModal() {
     }).join('');
 }
 
+function toggleSelecaoNorma(idx, isChecked) {
+    if (isChecked) {
+        normasSelecionadasIndices.add(idx);
+    } else {
+        normasSelecionadasIndices.delete(idx);
+    }
+    const card = document.getElementById(`normam-card-${idx}`);
+    if (card) {
+        if (isChecked) card.classList.add('is-selected');
+        else card.classList.remove('is-selected');
+    }
+    atualizarBarraSelecaoNormas();
+}
+
+function alternarSelecionarTodasNormas(isChecked) {
+    ultimosItensFiltrados.forEach((_, idx) => {
+        if (isChecked) {
+            normasSelecionadasIndices.add(idx);
+        } else {
+            normasSelecionadasIndices.delete(idx);
+        }
+        const chk = document.querySelector(`.normam-item-checkbox[data-idx="${idx}"]`);
+        if (chk) chk.checked = isChecked;
+        const card = document.getElementById(`normam-card-${idx}`);
+        if (card) {
+            if (isChecked) card.classList.add('is-selected');
+            else card.classList.remove('is-selected');
+        }
+    });
+    atualizarBarraSelecaoNormas();
+}
+
+function atualizarBarraSelecaoNormas() {
+    const totalVisiveis = ultimosItensFiltrados.length;
+    const totalSel = normasSelecionadasIndices.size;
+
+    const countVisiveisEl = document.getElementById('modalNormamVisiveisCount');
+    if (countVisiveisEl) countVisiveisEl.textContent = totalVisiveis;
+
+    const badgeSel = document.getElementById('badgeSelecionadas');
+    if (badgeSel) badgeSel.textContent = `${totalSel} selecionada(s)`;
+
+    const btnLote = document.getElementById('btnInserirNormasLote');
+    const btnLoteFooter = document.getElementById('btnInserirNormasLoteFooter');
+    const countInserirBtn = document.getElementById('countInserirBtn');
+    const countInserirBtnFooter = document.getElementById('countInserirBtnFooter');
+
+    if (countInserirBtn) countInserirBtn.textContent = totalSel;
+    if (countInserirBtnFooter) countInserirBtnFooter.textContent = totalSel;
+
+    if (btnLote) btnLote.disabled = totalSel === 0;
+    if (btnLoteFooter) btnLoteFooter.disabled = totalSel === 0;
+
+    const selectAllChk = document.getElementById('modalNormamSelectAll');
+    if (selectAllChk) {
+        selectAllChk.checked = totalVisiveis > 0 && totalSel >= totalVisiveis;
+    }
+}
+
+// Inserir Múltiplas Exigências Selecionadas no Processo via AJAX
+function inserirNormasSelecionadasLote(btnEl) {
+    if (normasSelecionadasIndices.size === 0) return;
+
+    const itens = [];
+    normasSelecionadasIndices.forEach(idx => {
+        const it = ultimosItensFiltrados[idx];
+        if (it) {
+            itens.push({
+                categoria: it.categoria || 'GERAL',
+                descricao: it.descricao_padrao || it.titulo || '',
+                referencia_normativa: it.referencia_normativa || ''
+            });
+        }
+    });
+
+    if (itens.length === 0) return;
+
+    const textoOriginal = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Inserindo...';
+    }
+
+    const formData = new FormData();
+    formData.append('csrf_token', csrfTokenGlobal);
+    formData.append('action', 'inserir_exigencias_lote');
+    formData.append('analise_id', analiseIdGlobal);
+    formData.append('itens_json', JSON.stringify(itens));
+    formData.append('is_ajax', '1');
+
+    fetch('<?= APP_URL ?>analises-planos/actions', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.error || 'Falha ao inserir exigências');
+        }
+
+        // Anexar itens na tabela
+        anexarItensNaTabela(data.itens);
+        atualizarContadoresExigencias(data.total_geral);
+
+        // Limpar seleção
+        normasSelecionadasIndices.clear();
+        atualizarBarraSelecaoNormas();
+
+        // Fechar modal e exibir feedback
+        fecharModalBancoNormam();
+        mostrarToast(data.mensagem, 'success');
+        trocarAbaAnalise('exigencias');
+    })
+    .catch(err => {
+        console.error('Erro ao inserir exigências em lote:', err);
+        mostrarToast(err.message || 'Erro de conexão ao salvar exigências.', 'error');
+    })
+    .finally(() => {
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = textoOriginal;
+        }
+    });
+}
+
+// Inserir Exigência Individual com 1 Clique (sem fechar modal)
+function inserirNormaIndividual(idx, btnEl) {
+    const it = ultimosItensFiltrados[idx];
+    if (!it) return;
+
+    const textoOriginal = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+    const item = {
+        categoria: it.categoria || 'GERAL',
+        descricao: it.descricao_padrao || it.titulo || '',
+        referencia_normativa: it.referencia_normativa || ''
+    };
+
+    const formData = new FormData();
+    formData.append('csrf_token', csrfTokenGlobal);
+    formData.append('action', 'inserir_exigencias_lote');
+    formData.append('analise_id', analiseIdGlobal);
+    formData.append('itens_json', JSON.stringify([item]));
+    formData.append('is_ajax', '1');
+
+    fetch('<?= APP_URL ?>analises-planos/actions', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.error || 'Falha ao inserir');
+        }
+
+        anexarItensNaTabela(data.itens);
+        atualizarContadoresExigencias(data.total_geral);
+
+        // Marcar botão como inserido com sucesso
+        btnEl.outerHTML = '<span class="badge bg-success" style="font-size:0.75rem; padding:5px 9px;"><i class="fa-solid fa-check"></i> Inserido!</span>';
+
+        if (normasSelecionadasIndices.has(idx)) {
+            normasSelecionadasIndices.delete(idx);
+            atualizarBarraSelecaoNormas();
+        }
+
+        mostrarToast('Exigência técnica inserida no processo!', 'success');
+    })
+    .catch(err => {
+        console.error('Erro ao inserir exigência:', err);
+        mostrarToast(err.message || 'Erro ao registrar exigência.', 'error');
+        btnEl.disabled = false;
+        btnEl.innerHTML = textoOriginal;
+    });
+}
+
+// Cadastrar Exigência Manual Inline sem Recarregar (Ctrl+Enter ou Botão)
+function adicionarExigenciaRapidaAjax(btnEl) {
+    const selectCat = document.getElementById('nova_exigencia_categoria');
+    const inputRef = document.getElementById('nova_exigencia_referencia');
+    const textDesc = document.getElementById('nova_exigencia');
+
+    const desc = (textDesc?.value || '').trim();
+    if (!desc) {
+        mostrarToast('Descreva tecnicamente a exigência antes de adicionar.', 'error');
+        textDesc?.focus();
+        return;
+    }
+
+    const cat = selectCat?.value || 'GERAL';
+    const ref = (inputRef?.value || '').trim();
+
+    const textoOriginal = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
+    }
+
+    const item = {
+        categoria: cat,
+        descricao: desc,
+        referencia_normativa: ref
+    };
+
+    const formData = new FormData();
+    formData.append('csrf_token', csrfTokenGlobal);
+    formData.append('action', 'inserir_exigencias_lote');
+    formData.append('analise_id', analiseIdGlobal);
+    formData.append('itens_json', JSON.stringify([item]));
+    formData.append('is_ajax', '1');
+
+    fetch('<?= APP_URL ?>analises-planos/actions', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.error || 'Falha ao registrar');
+        }
+
+        anexarItensNaTabela(data.itens);
+        atualizarContadoresExigencias(data.total_geral);
+
+        // Limpar campo de descrição e focar para a próxima
+        if (textDesc) {
+            textDesc.value = '';
+            textDesc.focus();
+        }
+
+        mostrarToast('Exigência cadastrada com sucesso!', 'success');
+    })
+    .catch(err => {
+        console.error('Erro ao adicionar exigência manual:', err);
+        mostrarToast(err.message || 'Erro ao salvar exigência.', 'error');
+    })
+    .finally(() => {
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = textoOriginal;
+        }
+    });
+}
+
+// Salvar Alterações nas Linhas Existentes da Tabela via AJAX
+function salvarExigenciasAjax(btnEl) {
+    const form = document.getElementById('formExigencias');
+    if (!form) return;
+
+    const textoOriginal = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+    }
+
+    const formData = new FormData(form);
+    formData.append('is_ajax', '1');
+
+    fetch('<?= APP_URL ?>analises-planos/actions', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.error || 'Falha ao salvar');
+        }
+
+        const statusEl = document.getElementById('statusSalvoExigencias');
+        if (statusEl) {
+            statusEl.style.opacity = '1';
+            setTimeout(() => { statusEl.style.opacity = '0'; }, 3000);
+        }
+
+        mostrarToast('Alterações salvas com sucesso!', 'success');
+    })
+    .catch(err => {
+        console.error('Erro ao salvar exigências:', err);
+        mostrarToast(err.message || 'Erro ao salvar alterações.', 'error');
+    })
+    .finally(() => {
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = textoOriginal;
+        }
+    });
+}
+
+// Excluir Exigência via AJAX sem Recarregar
+function excluirExigenciaAjax(id, btnEl) {
+    if (!confirm('Deseja realmente remover esta exigência pendente?')) return;
+
+    const row = document.getElementById(`row-exigencia-${id}`);
+    if (btnEl) btnEl.disabled = true;
+
+    const formData = new FormData();
+    formData.append('csrf_token', csrfTokenGlobal);
+    formData.append('action', 'excluir_exigencia');
+    formData.append('analise_id', analiseIdGlobal);
+    formData.append('exigencia_id', id);
+    formData.append('is_ajax', '1');
+
+    fetch('<?= APP_URL ?>analises-planos/actions', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.error || 'Falha ao excluir');
+        }
+
+        if (row) {
+            row.style.transition = 'all 0.3s ease';
+            row.style.opacity = '0';
+            row.style.transform = 'translateX(-20px)';
+            setTimeout(() => {
+                row.remove();
+                reindexarTabelaExigencias();
+                atualizarContadoresExigencias(data.total_geral);
+            }, 300);
+        }
+
+        mostrarToast('Exigência removida com sucesso.', 'success');
+    })
+    .catch(err => {
+        console.error('Erro ao excluir exigência:', err);
+        mostrarToast(err.message || 'Erro ao excluir exigência.', 'error');
+        if (btnEl) btnEl.disabled = false;
+    });
+}
+
+// Anexar Linhas Novas no Corpo da Tabela
+function anexarItensNaTabela(itens) {
+    if (!itens || !Array.isArray(itens) || itens.length === 0) return;
+
+    const tbody = document.getElementById('tabelaExigenciasBody');
+    if (!tbody) return;
+
+    // Remover placeholder vazio se existir
+    const rowVazia = document.getElementById('rowExigenciasVazia');
+    if (rowVazia) rowVazia.remove();
+
+    // Exibir botão de salvar inline se estava oculto
+    const btnSalvarInline = document.getElementById('btnSalvarExigenciasInline');
+    if (btnSalvarInline) btnSalvarInline.style.display = 'inline-block';
+
+    itens.forEach(it => {
+        const tr = document.createElement('tr');
+        tr.id = `row-exigencia-${it.id}`;
+        tr.className = 'row-anim-insert';
+
+        // Opções do select de categoria
+        const opcoesCat = listaCategoriasNormam.map(c => 
+            `<option value="${escapeHtml(c)}" ${it.categoria === c ? 'selected' : ''}>${escapeHtml(c)}</option>`
+        ).join('');
+
+        tr.innerHTML = `
+            <td style="vertical-align:middle; text-align:center;">
+                <strong class="exigencia-num">${it.ordem || ''}</strong>
+                <input type="hidden" name="exigencia_id[]" value="${escapeHtml(it.id)}">
+            </td>
+            <td>
+                <select name="exigencia_categoria[]" class="form-control form-control-sm">
+                    ${opcoesCat}
+                </select>
+            </td>
+            <td>
+                <textarea name="exigencia_descricao[]" rows="2" class="form-control" style="font-size:0.88rem;">${escapeHtml(it.descricao)}</textarea>
+            </td>
+            <td>
+                <input name="exigencia_referencia[]" class="form-control form-control-sm" value="${escapeHtml(it.referencia_normativa || '')}" placeholder="Ex.: NORMAM-202/DPC, Anexo 3-F">
+            </td>
+            <td style="vertical-align:middle; text-align:center;">
+                <span class="badge badge-warning">PENDENTE</span>
+            </td>
+            <td style="vertical-align:middle; text-align:center;">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="excluirExigenciaAjax('${escapeHtml(it.id)}', this)" title="Remover exigência">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+
+    reindexarTabelaExigencias();
+}
+
+// Reindexar Números de Ordem na Tabela
+function reindexarTabelaExigencias() {
+    const rows = document.querySelectorAll('#tabelaExigenciasBody tr[id^="row-exigencia-"]');
+    rows.forEach((r, idx) => {
+        const numEl = r.querySelector('.exigencia-num');
+        if (numEl) numEl.textContent = idx + 1;
+    });
+
+    const totalEl = document.getElementById('totalExigenciasBadge');
+    if (totalEl) totalEl.textContent = rows.length;
+
+    // Se não sobrar nenhuma linha, restaurar mensagem vazia
+    if (rows.length === 0) {
+        const tbody = document.getElementById('tabelaExigenciasBody');
+        const btnSalvarInline = document.getElementById('btnSalvarExigenciasInline');
+        if (btnSalvarInline) btnSalvarInline.style.display = 'none';
+
+        if (tbody && !document.getElementById('rowExigenciasVazia')) {
+            const trVazia = document.createElement('tr');
+            trVazia.id = 'rowExigenciasVazia';
+            trVazia.innerHTML = `
+                <td colspan="6" class="exigencias-empty-cell">
+                    <div class="empty-exigencias-box">
+                        <i class="fa-solid fa-circle-check text-success"></i>
+                        <h4>Nenhuma exigência técnica pendente</h4>
+                        <p>O projeto naval está sem pendências ativas cadastradas. Caso encontre inconformidades nos planos, utilize o <strong>Banco NORMAM</strong> ou o formulário abaixo.</p>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(trVazia);
+        }
+    }
+}
+
+// Atualizar Badges e Contadores de Exigências
+function atualizarContadoresExigencias(totalGeral) {
+    const rows = document.querySelectorAll('#tabelaExigenciasBody tr[id^="row-exigencia-"]');
+    const total = typeof totalGeral === 'number' ? totalGeral : rows.length;
+
+    const badgeAba = document.getElementById('badgeAbaExigencias');
+    if (badgeAba) {
+        if (total > 0) {
+            badgeAba.className = 'badge bg-warning text-dark';
+            badgeAba.textContent = total;
+        } else {
+            badgeAba.className = 'badge bg-success';
+            badgeAba.innerHTML = '<i class="fa-solid fa-check"></i>';
+        }
+    }
+
+    const kpiPendentes = document.getElementById('kpiExigenciasPendentes');
+    if (kpiPendentes) kpiPendentes.textContent = `${total} pendente(s)`;
+
+    const totalBadge = document.getElementById('totalExigenciasBadge');
+    if (totalBadge) totalBadge.textContent = total;
+}
+
+// Aplicar Referência no Formulário sem Inserir (Legado / Pré-preenchimento)
 function aplicarReferenciaPorIndex(idx) {
     const item = ultimosItensFiltrados[idx];
     if (!item) return;
@@ -2128,7 +2762,6 @@ function aplicarReferenciaPorIndex(idx) {
 }
 
 function aplicarReferenciaNormam(item) {
-    // Garantir que a aba de exigências está visível
     trocarAbaAnalise('exigencias');
 
     const selectCat = document.getElementById('nova_exigencia_categoria');
@@ -2137,7 +2770,6 @@ function aplicarReferenciaNormam(item) {
 
     if (selectCat && item.categoria) {
         selectCat.value = item.categoria;
-        // Atualizar visual do chip
         document.querySelectorAll('.chip-category-btn').forEach(b => {
             if (b.textContent.trim() === item.categoria || item.categoria.includes(b.textContent.trim())) {
                 b.classList.add('is-selected');
@@ -2154,17 +2786,44 @@ function aplicarReferenciaNormam(item) {
     }
 
     fecharModalBancoNormam();
-
-    // Scroll suave até o bloco de cadastro e focar na descrição
     textDesc?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => textDesc?.focus(), 300);
 }
 
-function excluirExigencia(id) {
-    if (!confirm('Deseja realmente remover esta exigência pendente?')) return;
-    document.getElementById('excluir_exigencia_id').value = id;
-    document.getElementById('formExcluirExigencia').submit();
+// Notificações Toast Flutuantes
+function mostrarToast(mensagem, tipo = 'success') {
+    let container = document.getElementById('toastContainerNaval');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainerNaval';
+        container.className = 'toast-container-naval';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast-naval toast-${tipo}`;
+    const icon = tipo === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation';
+    toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${escapeHtml(mensagem)}</span>`;
+
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
 }
+
+// Atalho de Teclado: Ctrl+Enter no campo de exigência rápida
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        const active = document.activeElement;
+        if (active && (active.id === 'nova_exigencia' || active.id === 'nova_exigencia_referencia')) {
+            e.preventDefault();
+            adicionarExigenciaRapidaAjax(document.getElementById('btnAdicionarExigenciaInline'));
+        }
+    }
+});
 
 function escapeHtml(str) {
     return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

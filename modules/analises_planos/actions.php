@@ -4,7 +4,17 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/analise_planos.php';
 analisePlanosExigirAcesso();
+$isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') 
+       || !empty($_POST['is_ajax']) 
+       || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verificarCSRF($_POST['csrf_token'] ?? '')) {
+    if ($isAjax) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Sessão expirada. Recarregue a página.']);
+        exit;
+    }
     setMensagem('error', 'Sessão expirada. Tente novamente.');
     redirecionar(APP_URL . 'analises-planos');
 }
@@ -249,6 +259,103 @@ try {
         analisePlanosHistorico($pdo,$analiseId,'MATRIZ_ATUALIZADA',$analise['status'],$analise['status']);$pdo->commit();setMensagem('success','Matriz atualizada.');redirecionar($retorno($analiseId));
     }
 
+    if ($acao === 'inserir_exigencias_lote') {
+        analiseAcaoExigirTecnico($analise);
+        if (!in_array($analise['status'], ['EM_ANALISE', 'AGUARDANDO_DOCUMENTOS'], true)) {
+            throw new RuntimeException('Exigências não podem ser alteradas neste estado.');
+        }
+
+        $itensParaInserir = [];
+        if (!empty($_POST['itens_json'])) {
+            $dec = json_decode($_POST['itens_json'], true);
+            if (is_array($dec)) {
+                $itensParaInserir = $dec;
+            }
+        } elseif (!empty($_POST['itens']) && is_array($_POST['itens'])) {
+            $itensParaInserir = $_POST['itens'];
+        } elseif (!empty($_POST['nova_exigencia'])) {
+            $itensParaInserir[] = [
+                'categoria' => trim($_POST['nova_exigencia_categoria'] ?? 'GERAL') ?: 'GERAL',
+                'descricao' => trim($_POST['nova_exigencia']),
+                'referencia_normativa' => trim($_POST['nova_exigencia_referencia'] ?? '') ?: null,
+            ];
+        }
+
+        if (empty($itensParaInserir)) {
+            throw new InvalidArgumentException('Nenhuma exigência técnica foi selecionada ou informada.');
+        }
+
+        $qOrdem = $pdo->prepare("SELECT COALESCE(MAX(ordem), 0) FROM analise_planos_exigencias WHERE analise_id = :analise");
+        $qOrdem->execute([':analise' => $analiseId]);
+        $ordemAtual = (int)$qOrdem->fetchColumn();
+
+        $pdo->beginTransaction();
+        $stmtInsert = $pdo->prepare("INSERT INTO analise_planos_exigencias (
+            id, analise_id, ordem, descricao, referencia_normativa, categoria, status, criado_por
+        ) VALUES (
+            :id, :analise, :ordem, :descricao, :referencia, :categoria, 'PENDENTE', :usuario
+        )");
+
+        $inseridos = [];
+        foreach ($itensParaInserir as $it) {
+            $desc = trim($it['descricao'] ?? $it['descricao_padrao'] ?? $it['titulo'] ?? '');
+            if ($desc === '') continue;
+
+            $cat = trim($it['categoria'] ?? 'GERAL') ?: 'GERAL';
+            $ref = trim($it['referencia_normativa'] ?? $it['referencia'] ?? '') ?: null;
+            $ordemAtual++;
+            $novoId = gerarUUID();
+
+            $stmtInsert->execute([
+                ':id' => $novoId,
+                ':analise' => $analiseId,
+                ':ordem' => $ordemAtual,
+                ':descricao' => $desc,
+                ':referencia' => $ref,
+                ':categoria' => $cat,
+                ':usuario' => $usuario,
+            ]);
+
+            $inseridos[] = [
+                'id' => $novoId,
+                'ordem' => $ordemAtual,
+                'categoria' => $cat,
+                'descricao' => $desc,
+                'referencia_normativa' => $ref ?: '',
+                'status' => 'PENDENTE'
+            ];
+        }
+
+        if (empty($inseridos)) {
+            throw new InvalidArgumentException('Nenhuma exigência válida para inclusão.');
+        }
+
+        $totalInseridos = count($inseridos);
+        analisePlanosHistorico($pdo, $analiseId, 'EXIGENCIAS_ATUALIZADAS', $analise['status'], $analise['status'], "{$totalInseridos} exigência(s) inserida(s) no processo.");
+        $pdo->commit();
+
+        $qTotal = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias WHERE analise_id = :analise");
+        $qTotal->execute([':analise' => $analiseId]);
+        $totalGeral = (int)$qTotal->fetchColumn();
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'mensagem' => $totalInseridos === 1 
+                    ? 'Exigência técnica inserida com sucesso!' 
+                    : "{$totalInseridos} exigências inseridas com sucesso!",
+                'total_inseridos' => $totalInseridos,
+                'total_geral' => $totalGeral,
+                'itens' => $inseridos,
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        setMensagem('success', "{$totalInseridos} exigência(s) registrada(s) com sucesso.");
+        redirecionar($retorno($analiseId) . '#pane-exigencias');
+    }
+
     if ($acao === 'salvar_exigencias') {
         analiseAcaoExigirTecnico($analise);if(!in_array($analise['status'],['EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true))throw new RuntimeException('Exigências não podem ser alteradas neste estado.');
         $ids=$_POST['exigencia_id']??[];
@@ -263,7 +370,23 @@ try {
             $novaCat = trim($_POST['nova_exigencia_categoria'] ?? '') ?: 'GERAL';
             $pdo->prepare('INSERT INTO analise_planos_exigencias(id,analise_id,ordem,descricao,referencia_normativa,categoria,status,criado_por)VALUES(UUID(),:analise,:ordem,:descricao,:referencia,:categoria,"PENDENTE",:usuario)')->execute([':analise'=>$analiseId,':ordem'=>count($ids)+1,':descricao'=>trim($_POST['nova_exigencia']),':referencia'=>trim($_POST['nova_exigencia_referencia']??'')?:null,':categoria'=>$novaCat,':usuario'=>$usuario]);
         }
-        analisePlanosHistorico($pdo,$analiseId,'EXIGENCIAS_ATUALIZADAS',$analise['status'],$analise['status']);$pdo->commit();setMensagem('success','Exigências atualizadas.');redirecionar($retorno($analiseId));
+        analisePlanosHistorico($pdo,$analiseId,'EXIGENCIAS_ATUALIZADAS',$analise['status'],$analise['status']);$pdo->commit();
+
+        $qTotal = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias WHERE analise_id = :analise");
+        $qTotal->execute([':analise' => $analiseId]);
+        $totalGeral = (int)$qTotal->fetchColumn();
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'mensagem' => 'Exigências atualizadas com sucesso.',
+                'total_geral' => $totalGeral,
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        setMensagem('success','Exigências atualizadas.');redirecionar($retorno($analiseId));
     }
 
     if ($acao === 'excluir_exigencia') {
@@ -276,6 +399,22 @@ try {
         }
         $pdo->prepare('DELETE FROM analise_planos_exigencias WHERE id=:id AND analise_id=:analise AND status="PENDENTE"')->execute([':id'=>$exId, ':analise'=>$analiseId]);
         analisePlanosHistorico($pdo,$analiseId,'EXIGENCIA_EXCLUIDA',$analise['status'],$analise['status']);
+
+        $qTotal = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias WHERE analise_id = :analise");
+        $qTotal->execute([':analise' => $analiseId]);
+        $totalGeral = (int)$qTotal->fetchColumn();
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'mensagem' => 'Exigência excluída com sucesso.',
+                'exigencia_id' => $exId,
+                'total_geral' => $totalGeral,
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         setMensagem('success','Exigência excluída.');redirecionar($retorno($analiseId));
     }
 
@@ -471,6 +610,12 @@ try {
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     error_log('Erro em Análise de Planos: '.$e->getMessage());
+    if ($isAjax) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        exit;
+    }
     setMensagem('error',$e->getMessage());
     redirecionar($retorno($analiseId));
 }
