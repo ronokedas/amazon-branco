@@ -452,6 +452,7 @@ function analisePlanosCategoriasPadrao(): array
         'ART',
         'FOLHA DE ROSTO',
         'DECLARAÇÃO',
+        'MEMORIAL DESCRITIVO',
         'MEMORIAL DESCRITO',
         'NOTAS DE ARQUEAÇÃO',
         'NOTAS DE BORDA LIVRE',

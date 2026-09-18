@@ -763,7 +763,7 @@ require_once __DIR__ . '/../../includes/header.php';
             </div>
 
             <?php if ($analiseAberta): ?>
-                <form method="post" enctype="multipart/form-data" action="<?= APP_URL ?>analises-planos/actions" class="form-upload-revisao">
+                <form method="post" enctype="multipart/form-data" action="<?= APP_URL ?>analises-planos/actions" class="form-upload-revisao" data-no-dirty-warning="true" onsubmit="window.isAnyFormSubmitting = true;">
                     <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                     <input type="hidden" name="action" value="adicionar_submissao">
                     <input type="hidden" name="analise_id" value="<?= h($id) ?>">
@@ -771,77 +771,197 @@ require_once __DIR__ . '/../../includes/header.php';
 
                     <div class="form-row">
                         <div class="form-group col-3">
-                            <label>Categoria da Revisão</label>
-                            <select name="categoria" class="form-control form-control-sm">
+                            <label class="form-label-bold"><i class="fa-solid fa-folder-open text-primary"></i> Categoria da Revisão *</label>
+                            <select name="categoria" class="form-control form-control-sm" required>
                                 <?php foreach (analisePlanosCategoriasPadrao() as $cat): ?>
                                     <option value="<?= h($cat) ?>"><?= h($cat) ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <small class="text-muted">Disciplina naval dos documentos que serão anexados</small>
                         </div>
                         <div class="form-group col-3">
-                            <label>Data de Recebimento *</label>
+                            <label class="form-label-bold"><i class="fa-regular fa-calendar"></i> Data de Recebimento *</label>
                             <input type="date" name="recebido_em" value="<?= date('Y-m-d') ?>" required class="form-control form-control-sm">
+                            <small class="text-muted">Data em que os arquivos foram entregues/recebidos</small>
                         </div>
                         <div class="form-group col-6">
-                            <label>Descrição / Observações da Revisão</label>
+                            <label class="form-label-bold"><i class="fa-regular fa-comment-dots"></i> Descrição / Observações da Revisão</label>
                             <input name="descricao" placeholder="Ex.: Pranchas revisadas atendendo às exigências do ciclo 1" class="form-control form-control-sm">
+                            <small class="text-muted">Breve anotação técnica sobre este lote de arquivos</small>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Selecionar Arquivos (PDF, DWG, DXF, Word, Excel) *</label>
+                    <div class="form-group" style="margin-top:10px;">
+                        <label class="form-label-bold"><i class="fa-solid fa-paperclip"></i> Selecionar Arquivos (PDF, DWG, DXF, Word, Excel) *</label>
                         <input type="file" name="arquivos[]" multiple required accept=".pdf,.jpg,.jpeg,.png,.dwg,.dxf,.doc,.docx,.xls,.xlsx" class="form-control">
-                        <small class="text-muted">Suporte a uploads simultâneos de pranchas, memoriais e arquivos CAD.</small>
+                        <small class="text-muted">Suporte a uploads simultâneos de pranchas, memoriais descritivos, ARTs e arquivos CAD.</small>
                     </div>
 
-                    <button class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" onclick="window.isAnyFormSubmitting = true;">
                         <i class="fas fa-upload"></i> Salvar e Registrar Nova Revisão
                     </button>
                 </form>
             <?php endif; ?>
 
-            <!-- Classificação Técnica dos Arquivos -->
-            <div style="margin-top:20px;">
-                <h4 style="font-size:0.95rem; color:#0f172a; margin-bottom:12px;"><i class="fa-solid fa-list-check"></i> Todas as Revisões Registradas</h4>
+            <!-- Acervo de Todas as Revisões Registradas -->
+            <div style="margin-top:28px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                    <h4 style="font-size:1.05rem; font-weight:700; color:#0f172a; margin:0;">
+                        <i class="fa-solid fa-folder-tree text-primary"></i> Acervo de Revisões & Pranchas do Projeto
+                    </h4>
+                    <span class="badge bg-light text-muted" style="border:1px solid #cbd5e1; font-size:0.8rem;">
+                        <?= count($submissoes) ?> revisão(ões) registrada(s) · <?= $totalArquivos ?> arquivo(s)
+                    </span>
+                </div>
+
                 <?php if (!$submissoes): ?>
-                    <p class="text-muted">Nenhuma revisão cadastrada.</p>
+                    <div class="empty-box-card" style="padding:28px; text-align:center; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px;">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size:2rem; color:#94a3b8; margin-bottom:8px;"></i>
+                        <p class="text-muted mb-0">Nenhuma revisão cadastrada até o momento.</p>
+                    </div>
                 <?php endif; ?>
+
                 <?php foreach ($submissoes as $s): ?>
-                    <div class="revision-block">
-                        <div class="revisao-block-header">
-                            <strong>Revisão <?= $s['revisao'] ?> · <?= h($s['origem']) ?></strong>
-                            <span><?= formatarData($s['recebido_em']) ?> · <?= h($s['usuario_nome'] ?: $s['portal_nome'] ?: 'Origem não informada') ?></span>
-                        </div>
-                        <?php foreach ($s['arquivos'] as $arq): ?>
-                            <div class="file-review">
-                                <a class="file-pill" href="<?= APP_URL ?>analises-planos/arquivo?id=<?= urlencode($arq['id']) ?>" target="_blank">
-                                    <i class="fas fa-file"></i> <?= h($arq['nome_original']) ?>
-                                </a>
-                                <span class="badge"><?= h($arq['classificacao']) ?></span>
-                                <?php if ($analiseAberta): ?>
-                                    <form method="post" action="<?= APP_URL ?>analises-planos/actions" class="form-classificar-inline">
-                                        <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
-                                        <input type="hidden" name="action" value="classificar_arquivo">
-                                        <input type="hidden" name="analise_id" value="<?= h($id) ?>">
-                                        <input type="hidden" name="arquivo_id" value="<?= h($arq['id']) ?>">
-                                        <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
-                                        <select name="item_id" class="form-control form-control-sm" style="max-width:180px;">
-                                            <option value="">Sem item</option>
-                                            <?php foreach ($itens as $item): ?>
-                                                <option value="<?= h($item['id']) ?>" <?= $arq['item_id'] === $item['id'] ? 'selected' : '' ?>><?= h($item['documento']) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <select name="classificacao" class="form-control form-control-sm" style="max-width:140px;">
-                                            <?php foreach (['ACEITO','SUBSTITUIDO','REJEITADO'] as $cl): ?>
-                                                <option <?= $arq['classificacao'] === $cl ? 'selected' : '' ?>><?= $cl ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <input name="justificativa" value="<?= h($arq['justificativa_classificacao']) ?>" placeholder="Justificativa (obrigatória ao rejeitar)" class="form-control form-control-sm">
-                                        <button class="btn btn-secondary btn-sm">Classificar</button>
-                                    </form>
-                                <?php endif; ?>
+                    <div class="revision-card-modern">
+                        <!-- Cabeçalho da Revisão -->
+                        <div class="revision-card-modern__header">
+                            <div class="revision-header-left">
+                                <span class="revision-number-badge">
+                                    <i class="fa-solid fa-code-branch"></i> Revisão <?= (int)$s['revisao'] ?>
+                                </span>
+                                <span class="revision-origin-badge origin-<?= strtolower($s['origem']) ?>">
+                                    <?= $s['origem'] === 'PORTAL' ? '<i class="fa-solid fa-globe"></i> Portal do Armador' : '<i class="fa-solid fa-user-gear"></i> Analista Naval' ?>
+                                </span>
+                                <span class="revision-meta-info">
+                                    <i class="fa-regular fa-calendar"></i> <?= formatarData($s['recebido_em']) ?>
+                                    · <i class="fa-regular fa-user"></i> <?= h($s['usuario_nome'] ?: $s['portal_nome'] ?: 'Origem Técnica') ?>
+                                </span>
                             </div>
-                        <?php endforeach; ?>
+                            <?php if (!empty($s['descricao'])): ?>
+                                <div class="revision-header-desc" title="<?= h($s['descricao']) ?>">
+                                    <i class="fa-regular fa-message text-muted"></i> <strong>Obs:</strong> <?= h($s['descricao']) ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Lista de Arquivos da Revisão -->
+                        <div class="revision-card-modern__body">
+                            <?php if (empty($s['arquivos'])): ?>
+                                <div class="p-3 text-muted" style="font-size:0.85rem;">Nenhum arquivo anexado nesta revisão.</div>
+                            <?php endif; ?>
+                            <?php foreach ($s['arquivos'] as $arq): ?>
+                                <?php
+                                $ext = strtolower($arq['extensao'] ?? pathinfo($arq['nome_original'], PATHINFO_EXTENSION) ?: 'pdf');
+                                $iconeArq = match($ext) {
+                                    'pdf' => 'fa-file-pdf text-danger',
+                                    'dwg', 'dxf' => 'fa-drafting-compass text-primary',
+                                    'doc', 'docx' => 'fa-file-word text-info',
+                                    'xls', 'xlsx' => 'fa-file-excel text-success',
+                                    'jpg', 'jpeg', 'png' => 'fa-file-image text-warning',
+                                    default => 'fa-file-lines text-secondary'
+                                };
+                                $tamBytes = (int)($arq['tamanho_bytes'] ?? 0);
+                                $tamFormatado = $tamBytes < 1024 ? $tamBytes . ' B' : ($tamBytes < 1048576 ? round($tamBytes / 1024, 1) . ' KB' : round($tamBytes / 1048576, 2) . ' MB');
+                                $classif = $arq['classificacao'] ?: 'RECEBIDO';
+                                $classifBadgeClass = match($classif) {
+                                    'ACEITO' => 'badge-status-aceito',
+                                    'SUBSTITUIDO' => 'badge-status-substituido',
+                                    'REJEITADO' => 'badge-status-rejeitado',
+                                    default => 'badge-status-recebido'
+                                };
+                                $categoriaDoc = $arq['categoria'] ?: 'Projeto';
+                                ?>
+                                <div class="file-item-card">
+                                    <div class="file-item-card__main">
+                                        <!-- Ícone e Informações do Arquivo -->
+                                        <div class="file-info-col">
+                                            <div class="file-type-icon">
+                                                <i class="fa-solid <?= $iconeArq ?>"></i>
+                                            </div>
+                                            <div class="file-details">
+                                                <div class="file-title-row">
+                                                    <a href="<?= APP_URL ?>analises-planos/arquivo?id=<?= urlencode($arq['id']) ?>" target="_blank" class="file-name-link" title="Clique para abrir e visualizar">
+                                                        <?= h($arq['nome_original']) ?>
+                                                    </a>
+                                                    <span class="file-badge-categoria" title="Categoria técnica definida">
+                                                        <i class="fa-solid fa-tag"></i> Categoria: <strong><?= h($categoriaDoc) ?></strong>
+                                                    </span>
+                                                    <span class="file-size-badge"><?= $tamFormatado ?></span>
+                                                    <span class="file-status-badge <?= $classifBadgeClass ?>">
+                                                        <i class="fa-solid <?= $classif === 'ACEITO' ? 'fa-check' : ($classif === 'REJEITADO' ? 'fa-times' : 'fa-clock') ?>"></i> <?= h($classif) ?>
+                                                    </span>
+                                                </div>
+                                                <?php if (!empty($arq['item_documento']) || !empty($arq['justificativa_classificacao'])): ?>
+                                                    <div class="file-vinculo-row">
+                                                        <?php if (!empty($arq['item_documento'])): ?>
+                                                            <span class="item-vinculado-pill">
+                                                                <i class="fa-solid fa-list-check"></i> Matriz: <?= h($arq['item_documento']) ?>
+                                                            </span>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($arq['justificativa_classificacao'])): ?>
+                                                            <span class="justificativa-text">
+                                                                <i class="fa-solid fa-triangle-exclamation text-warning"></i> <?= h($arq['justificativa_classificacao']) ?>
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+
+                                        <!-- Botões de Ação Imediata em Alta Visibilidade -->
+                                        <div class="file-actions-col">
+                                            <a href="<?= APP_URL ?>analises-planos/arquivo?id=<?= urlencode($arq['id']) ?>" target="_blank" class="btn btn-abrir-documento" title="Abrir e visualizar documento em nova guia">
+                                                <i class="fa-solid fa-arrow-up-right-from-square"></i> Visualizar Arquivo
+                                            </a>
+                                            <a href="<?= APP_URL ?>analises-planos/arquivo?id=<?= urlencode($arq['id']) ?>&download=1" class="btn btn-baixar-documento" title="Baixar arquivo original">
+                                                <i class="fa-solid fa-download"></i> Baixar
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <!-- Classificação Técnica Rápida pelo Analista -->
+                                    <?php if ($analiseAberta): ?>
+                                        <div class="file-item-card__classification">
+                                            <form method="post" action="<?= APP_URL ?>analises-planos/actions" class="form-classificar-modern" data-no-dirty-warning="true" onsubmit="window.isAnyFormSubmitting = true;">
+                                                <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
+                                                <input type="hidden" name="action" value="classificar_arquivo">
+                                                <input type="hidden" name="analise_id" value="<?= h($id) ?>">
+                                                <input type="hidden" name="arquivo_id" value="<?= h($arq['id']) ?>">
+                                                <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
+
+                                                <div class="classificar-field-group" style="min-width:200px;">
+                                                    <label><i class="fa-solid fa-link"></i> Item da Matriz:</label>
+                                                    <select name="item_id" class="form-control form-control-sm">
+                                                        <option value="">Sem item vinculado</option>
+                                                        <?php foreach ($itens as $item): ?>
+                                                            <option value="<?= h($item['id']) ?>" <?= $arq['item_id'] === $item['id'] ? 'selected' : '' ?>><?= h($item['documento']) ?></option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+
+                                                <div class="classificar-field-group" style="width:140px;">
+                                                    <label><i class="fa-solid fa-clipboard-check"></i> Situação:</label>
+                                                    <select name="classificacao" class="form-control form-control-sm">
+                                                        <?php foreach (['ACEITO','SUBSTITUIDO','REJEITADO'] as $cl): ?>
+                                                            <option value="<?= $cl ?>" <?= $arq['classificacao'] === $cl ? 'selected' : '' ?>><?= $cl ?></option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+
+                                                <div class="classificar-field-group" style="flex:1; min-width:240px;">
+                                                    <label><i class="fa-solid fa-comment"></i> Justificativa (obrigatória ao rejeitar):</label>
+                                                    <input name="justificativa" value="<?= h($arq['justificativa_classificacao']) ?>" placeholder="Ex.: Aprovado sem ressalvas ou motivo da recusa..." class="form-control form-control-sm">
+                                                </div>
+
+                                                <button type="submit" class="btn btn-salvar-classificacao">
+                                                    <i class="fa-solid fa-check"></i> Gravar Parecer
+                                                </button>
+                                            </form>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -2226,6 +2346,332 @@ require_once __DIR__ . '/../../includes/header.php';
     margin: 4px 0 0 0;
     font-size: 0.85rem;
     color: #334155;
+}
+
+/* ==========================================================================
+   ACERVO DE REVISÕES & ARQUIVOS TÉCNICOS (DESIGN SYSTEM NAVAL)
+   ========================================================================== */
+.revision-card-modern {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+.revision-card-modern:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.revision-card-modern__header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.revision-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.revision-number-badge {
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    letter-spacing: 0.02em;
+}
+.revision-origin-badge {
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.revision-origin-badge.origin-portal {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+.revision-origin-badge.origin-analista {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+.revision-meta-info {
+    font-size: 0.82rem;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.revision-header-desc {
+    font-size: 0.82rem;
+    color: #334155;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 3px 10px;
+    border-radius: 6px;
+    max-width: 450px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.revision-card-modern__body {
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Card Individual de Arquivo */
+.file-item-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.file-item-card:hover {
+    border-color: #0284c7;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
+}
+.file-item-card__main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+.file-info-col {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 280px;
+}
+.file-type-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+.file-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+.file-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.file-name-link {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0f172a;
+    text-decoration: none;
+    transition: color 0.15s;
+    word-break: break-all;
+}
+.file-name-link:hover {
+    color: #0284c7;
+    text-decoration: underline;
+}
+.file-badge-categoria {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    font-size: 0.76rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.file-size-badge {
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 6px;
+}
+.file-status-badge {
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.badge-status-aceito {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+.badge-status-substituido {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.badge-status-rejeitado {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+.badge-status-recebido {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.file-vinculo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+}
+.item-vinculado-pill {
+    color: #0284c7;
+    background: #f0f9ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+.justificativa-text {
+    color: #b45309;
+    background: #fffbeb;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+/* Coluna de Ações com Botões em Destaque */
+.file-actions-col {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.btn-abrir-documento {
+    background: #0284c7;
+    color: #ffffff !important;
+    border: 1px solid #0284c7;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 5px rgba(2, 132, 199, 0.25);
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+.btn-abrir-documento:hover {
+    background: #0369a1;
+    border-color: #0369a1;
+    box-shadow: 0 4px 8px rgba(2, 132, 199, 0.35);
+    transform: translateY(-1px);
+}
+.btn-baixar-documento {
+    background: #f8fafc;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+.btn-baixar-documento:hover {
+    background: #e2e8f0;
+    color: #0f172a !important;
+    border-color: #94a3b8;
+}
+
+/* Classificação Técnica Inline */
+.file-item-card__classification {
+    border-top: 1px dashed #e2e8f0;
+    padding-top: 10px;
+    margin-top: 2px;
+}
+.form-classificar-modern {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+.classificar-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.classificar-field-group label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 0;
+}
+.classificar-field-group select,
+.classificar-field-group input {
+    font-size: 0.84rem;
+    height: 34px;
+}
+.btn-salvar-classificacao {
+    background: #10b981;
+    color: #ffffff;
+    border: 1px solid #059669;
+    font-size: 0.82rem;
+    font-weight: 700;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+.btn-salvar-classificacao:hover {
+    background: #059669;
+    border-color: #047857;
 }
 
 @media (max-width: 992px) {

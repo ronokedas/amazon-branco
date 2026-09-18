@@ -201,6 +201,13 @@
         });
     }
 
+    let isAnyFormSubmitting = false;
+    window.isAnyFormSubmitting = false;
+    document.addEventListener('submit', () => {
+        isAnyFormSubmitting = true;
+        window.isAnyFormSubmitting = true;
+    }, true);
+
     function enhanceForms(root) {
         root.querySelectorAll('form').forEach(form => {
             if (form.dataset.noDirtyWarning !== undefined || form.method.toLowerCase() === 'get') return;
@@ -208,9 +215,14 @@
             let submitting = false;
             form.addEventListener('input', () => { dirty = true; }, { passive: true });
             form.addEventListener('change', () => { dirty = true; }, { passive: true });
-            form.addEventListener('submit', () => { submitting = true; dirty = false; });
+            form.addEventListener('submit', () => {
+                submitting = true;
+                dirty = false;
+                isAnyFormSubmitting = true;
+                window.isAnyFormSubmitting = true;
+            });
             window.addEventListener('beforeunload', event => {
-                if (!dirty || submitting) return;
+                if (isAnyFormSubmitting || window.isAnyFormSubmitting || !dirty || submitting) return;
                 event.preventDefault();
                 event.returnValue = '';
             });
