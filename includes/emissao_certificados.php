@@ -91,14 +91,69 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
     }
 
     $vistoriaId = trim((string)($dados['vistoria_id'] ?? ''));
+    $analiseId = trim((string)($dados['analise_id'] ?? ''));
     $tipo = trim((string)($dados['tipo'] ?? 'Definitivo'));
     if ($tipo === '') {
         $tipo = 'Definitivo';
     }
 
-    // 1. Resolver e Carregar Dados da Vistoria e Embarcação
+    // 1. Resolver e Carregar Dados da Vistoria / Análise de Planos e Embarcação
     $dadosEmb = [];
-    if ($vistoriaId !== '') {
+    if ($modelo === 'LC' && $analiseId !== '') {
+        // Validação da Análise de Planos (RAP)
+        $stmtAn = $pdo->prepare("SELECT ap.*, e.nome emb_nome, e.registro emb_registro, e.tipo_embarcacao emb_tipo,
+            e.comprimento_total emb_comprimento_total, e.boca_moldada emb_boca_moldada, e.pontal_moldado emb_pontal_moldado,
+            e.calado_maximo emb_calado_maximo, e.porte_bruto emb_porte_bruto, e.material_casco emb_material_casco,
+            c.nome cli_nome, c.cpf_cnpj cli_cpf_cnpj, c.endereco cli_endereco
+            FROM analises_planos ap
+            LEFT JOIN embarcacoes e ON e.id = ap.embarcacao_id
+            LEFT JOIN clientes c ON c.id = ap.solicitante_id
+            WHERE ap.id = :id LIMIT 1");
+        $stmtAn->execute([':id' => $analiseId]);
+        $dadosAn = $stmtAn->fetch(PDO::FETCH_ASSOC);
+        if (!$dadosAn) {
+            throw new RuntimeException('Processo de Análise de Planos (RAP) não encontrado.');
+        }
+
+        // Validação das regras da NORMAM-202 para Análise de Planos:
+        // 1. Deve ter ao menos uma versão do relatório RAP publicada
+        $stmtPar = $pdo->prepare("SELECT numero FROM analise_planos_pareceres 
+            WHERE analise_id = :id AND status = 'PUBLICADO' 
+            ORDER BY versao DESC LIMIT 1");
+        $stmtPar->execute([':id' => $analiseId]);
+        $relatorioPublicado = $stmtPar->fetchColumn();
+        if (!$relatorioPublicado && $dadosAn['status'] !== 'CONCLUIDA') {
+            throw new RuntimeException('A licença exige que ao menos um relatório técnico (RAP) esteja publicado.');
+        }
+
+        // 2. Não pode ter exigências graves do tipo A/S pendentes
+        $stmtExAS = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias 
+            WHERE analise_id = :id AND as_impeditivo = 1 AND (status <> 'CUMPRIDA' OR saneamento_pendente = 1)");
+        $stmtExAS->execute([':id' => $analiseId]);
+        $pendenciasAS = (int)$stmtExAS->fetchColumn();
+        if ($pendenciasAS > 0) {
+            throw new RuntimeException("Emissão bloqueada: o processo possui {$pendenciasAS} exigência(s) com condição grave A/S pendente(s). Exigências do tipo A/S suspendem a emissão de licenças e certificados até seu cumprimento.");
+        }
+
+        // Preenche dadosEmb a partir da análise se não houver vistoria
+        $dadosEmb = [
+            'embarcacao_id' => $dadosAn['embarcacao_id'],
+            'cliente_id' => $dadosAn['solicitante_id'],
+            'nome' => $dadosAn['emb_nome'] ?: $dadosAn['embarcacao_nome'],
+            'registro' => $dadosAn['emb_registro'],
+            'tipo_embarcacao' => $dadosAn['emb_tipo'],
+            'comprimento_total' => $dadosAn['emb_comprimento_total'],
+            'boca_moldada' => $dadosAn['emb_boca_moldada'],
+            'pontal_moldado' => $dadosAn['emb_pontal_moldado'],
+            'calado_maximo_m' => $dadosAn['emb_calado_maximo'],
+            'porte_bruto' => $dadosAn['emb_porte_bruto'],
+            'material_casco' => $dadosAn['emb_material_casco'],
+            'proprietario_nome_cadastro' => $dadosAn['cli_nome'],
+            'proprietario_cpf_cnpj_cadastro' => $dadosAn['cli_cpf_cnpj'],
+            'proprietario_endereco_cadastro' => $dadosAn['cli_endereco'],
+            'relatorio_numero' => $dadosAn['numero'] . ($relatorioPublicado ? ' / ' . $relatorioPublicado : ''),
+        ];
+    } elseif ($vistoriaId !== '') {
         $dadosEmb = buscarDadosVistoriaCertificado($pdo, $vistoriaId);
         if (!$dadosEmb) {
             throw new RuntimeException('Relatório de vistoria selecionado não foi encontrado ou é inválido.');
@@ -754,7 +809,7 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                             estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco,
                             data_emissao, data_validade, local_emissao, relatorio_numero,
                             assinante_nome, assinante_titulo, assinante_registro,
-                            status, ativo, criado_por, vistoria_id, responsavel_assinatura_id
+                            status, ativo, criado_por, vistoria_id, analise_id, responsavel_assinatura_id
                         ) VALUES (
                             :id, :numero_lc, :embarcacao_id, :cliente_id, :token_assinatura, :tipo_licenca,
                             :data_termino_construcao, :nome_embarcacao, :tipo_embarcacao,
@@ -766,7 +821,7 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                             :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco,
                             :data_emissao, :data_validade, :local_emissao, :relatorio_numero,
                             :assinante_nome, :assinante_titulo, :assinante_registro,
-                            :status, 1, :criado_por, :vistoria_id, :responsavel_assinatura_id
+                            :status, 1, :criado_por, :vistoria_id, :analise_id, :responsavel_assinatura_id
                         )";
 
                 $stmtLC = $pdo->prepare($sqlLC);
@@ -811,6 +866,7 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                     ':status' => $dados['status'] ?? 'emitido',
                     ':criado_por' => $usuarioId ?: null,
                     ':vistoria_id' => $vistoriaId ?: null,
+                    ':analise_id' => $analiseId ?: null,
                     ':responsavel_assinatura_id' => $respData ? (int)$respData['id'] : null,
                 ]);
 

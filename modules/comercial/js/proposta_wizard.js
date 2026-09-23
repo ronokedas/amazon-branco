@@ -173,7 +173,10 @@ function carregarPasso2() {
             const primeiraComServico = data.embarcacoes.find(emb => {
                 return Object.keys(servicosSelecionadosPorEmbarcacao[emb.id] || {}).length > 0;
             });
-            embarcacaoSelecionadaId = primeiraComServico?.id || null;
+            const embUrl = (typeof EMBARCACAO_URL_INICIAL !== 'undefined' && EMBARCACAO_URL_INICIAL)
+                ? data.embarcacoes.find(e => e.id === EMBARCACAO_URL_INICIAL)
+                : null;
+            embarcacaoSelecionadaId = primeiraComServico?.id || embUrl?.id || data.embarcacoes[0]?.id || null;
             clientePasso2CarregadoId = clienteSelecionadoData.id;
             construirGradeServicos(data.embarcacoes);
         })

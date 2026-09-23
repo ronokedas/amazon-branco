@@ -31,13 +31,19 @@ if ($action === 'embarcacoes_cliente') {
 
     try {
         $stmt = $pdo->prepare("
-            SELECT e.id, e.nome, e.registro
+            SELECT DISTINCT e.id, e.nome, COALESCE(e.numero_inscricao, e.registro, '') as registro
             FROM embarcacoes e
-            INNER JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND ce.status='ATIVO'
-            WHERE ce.cliente_id = :cliente_id AND e.ativo = 1
+            LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND ce.status = 'ATIVO'
+            WHERE (ce.cliente_id = :cid1 OR e.proprietario_id = :cid2 OR e.cliente_id = :cid3)
+              AND (e.ativo = 1 OR e.ativo IS NULL)
+              AND e.excluido_em IS NULL
             ORDER BY e.nome ASC
         ");
-        $stmt->execute([':cliente_id' => $cliente_id]);
+        $stmt->execute([
+            ':cid1' => $cliente_id,
+            ':cid2' => $cliente_id,
+            ':cid3' => $cliente_id
+        ]);
         $embarcacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode(['embarcacoes' => $embarcacoes]);
@@ -497,13 +503,13 @@ if ($action !== '') {
             $stmtCliente = $pdo->prepare("
                 SELECT id, nome
                 FROM clientes
-                WHERE id = :id AND status = 'ATIVO' AND perfil = 'proprietario'
+                WHERE id = :id AND (status = 'ATIVO' OR status IS NULL) AND (ativo = 1 OR ativo IS NULL) AND excluido_em IS NULL
                 LIMIT 1
             ");
             $stmtCliente->execute([':id' => $clienteId]);
             $cliente = $stmtCliente->fetch(PDO::FETCH_ASSOC);
             if (!$cliente) {
-                throw new RuntimeException('O proprietário selecionado não está disponível.');
+                throw new RuntimeException('O cliente selecionado não está disponível.');
             }
 
             $stmtPrecosAntigos = $pdo->prepare("

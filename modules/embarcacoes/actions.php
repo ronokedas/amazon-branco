@@ -35,6 +35,7 @@ switch ($action) {
 
         $id = trim($_POST['id'] ?? '');
         $nome = trim($_POST['nome'] ?? '');
+        $proprietario_id = trim($_POST['proprietario_id'] ?? '');
         $tipo_embarcacao_id = trim($_POST['tipo_embarcacao_id'] ?? '');
         $ano = trim($_POST['ano'] ?? '');
         $porto_inscricao = trim($_POST['porto_inscricao'] ?? '');
@@ -230,9 +231,20 @@ switch ($action) {
             }
         }
 
+        // Recuperar nome do proprietário se selecionado
+        $proprietario_nome = null;
+        if (!empty($proprietario_id)) {
+            $stmtPropNome = $pdo->prepare("SELECT nome FROM clientes WHERE id = :id LIMIT 1");
+            $stmtPropNome->execute([':id' => $proprietario_id]);
+            $proprietario_nome = $stmtPropNome->fetchColumn() ?: null;
+        }
+
         // Preparar dados
         $dados = [
             ':nome' => $nome,
+            ':proprietario_id' => $proprietario_id ?: null,
+            ':cliente_id' => $proprietario_id ?: null,
+            ':proprietario' => $proprietario_nome,
             ':registro' => null,
             ':tipo_embarcacao_id' => $tipo_embarcacao_id ?: null,
             ':tipo_embarcacao' => $tipo_embarcacao,
@@ -302,6 +314,9 @@ switch ($action) {
                 // Atualizar
                 $sql = "UPDATE embarcacoes SET 
                     nome = :nome, 
+                    proprietario_id = :proprietario_id,
+                    cliente_id = :cliente_id,
+                    proprietario = :proprietario,
                     registro = :registro, 
                     tipo_embarcacao_id = :tipo_embarcacao_id,
                     tipo_embarcacao = :tipo_embarcacao, 
@@ -368,14 +383,20 @@ switch ($action) {
                     sgqRegistrarAuditoriaCadastral($pdo, 'EMBARCACAO', $id, 'ALTERACAO', $dadosAntigos, $dados, $_POST['motivo_alteracao'] ?? 'Edição de cadastro técnico da embarcação');
                 }
 
+                // Sincronizar vínculo na tabela clientes_embarcacoes
+                require_once __DIR__ . '/../../includes/cliente_vinculos.php';
+                if (!empty($proprietario_id)) {
+                    sincronizarClienteEmbarcacoes($pdo, $proprietario_id, [$id], $_SESSION['usuario_id'] ?? null);
+                }
+
                 setMensagem('success', 'Embarcacao atualizada com sucesso!');
             } else {
                 // Criar
                 $novoId = gerarUUID();
                 $sql = "INSERT INTO embarcacoes (
-                    id, nome, registro, tipo_embarcacao_id, tipo_embarcacao, cnbl_tipo_embarcacao, ano, porto_inscricao, numero_inscricao, indicativo_chamada, observacoes, possui_propulsao, fabricante_motor, modelo_motor, numero_motor, potencia_kw, material_casco, tipo_navegacao, area_navegacao, cnbl_area_navegacao, tipo_servico, autorizado_carga, numero_tripulantes, numero_passageiros_n1, numero_passageiros_n2, obs_passageiros, acessibilidade, comprimento_total, comprimento_casco, comprimento_lpp, pontal_moldado, boca_moldada, boca_maxima, arqueacao_bruta, arqueacao_liquida, metodo_arqueacao, cnarq_data_quilha, cnarq_calado_moldado_m, cnarq_espacos_incluidos_ab, cnarq_espacos_incluidos_al, cnarq_espacos_excluidos_m3, cnarq_data_local_arqueacao_original, cnarq_data_local_ultima_rearqueacao, local_construcao, numero_casco, porte_bruto, estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco, borda_livre_mm, borda_livre_tipo, calado_maximo_m, aresta_superior_linha_conves, centro_disco_situado, acrescimo_agua_salgada, dist_linha_conves_bico_proa, dist_linha_conves_abaixo_disco, marca_linha_carga_area1, marca_linha_carga_area2, criado_por
+                    id, nome, proprietario_id, cliente_id, proprietario, registro, tipo_embarcacao_id, tipo_embarcacao, cnbl_tipo_embarcacao, ano, porto_inscricao, numero_inscricao, indicativo_chamada, observacoes, possui_propulsao, fabricante_motor, modelo_motor, numero_motor, potencia_kw, material_casco, tipo_navegacao, area_navegacao, cnbl_area_navegacao, tipo_servico, autorizado_carga, numero_tripulantes, numero_passageiros_n1, numero_passageiros_n2, obs_passageiros, acessibilidade, comprimento_total, comprimento_casco, comprimento_lpp, pontal_moldado, boca_moldada, boca_maxima, arqueacao_bruta, arqueacao_liquida, metodo_arqueacao, cnarq_data_quilha, cnarq_calado_moldado_m, cnarq_espacos_incluidos_ab, cnarq_espacos_incluidos_al, cnarq_espacos_excluidos_m3, cnarq_data_local_arqueacao_original, cnarq_data_local_ultima_rearqueacao, local_construcao, numero_casco, porte_bruto, estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco, borda_livre_mm, borda_livre_tipo, calado_maximo_m, aresta_superior_linha_conves, centro_disco_situado, acrescimo_agua_salgada, dist_linha_conves_bico_proa, dist_linha_conves_abaixo_disco, marca_linha_carga_area1, marca_linha_carga_area2, criado_por
                 ) VALUES (
-                    :id, :nome, :registro, :tipo_embarcacao_id, :tipo_embarcacao, :cnbl_tipo_embarcacao, :ano, :porto_inscricao, :numero_inscricao, :indicativo_chamada, :observacoes, :possui_propulsao, :fabricante_motor, :modelo_motor, :numero_motor, :potencia_kw, :material_casco, :tipo_navegacao, :area_navegacao, :cnbl_area_navegacao, :tipo_servico, :autorizado_carga, :numero_tripulantes, :numero_passageiros_n1, :numero_passageiros_n2, :obs_passageiros, :acessibilidade, :comprimento_total, :comprimento_casco, :comprimento_lpp, :pontal_moldado, :boca_moldada, :boca_maxima, :arqueacao_bruta, :arqueacao_liquida, :metodo_arqueacao, :cnarq_data_quilha, :cnarq_calado_moldado_m, :cnarq_espacos_incluidos_ab, :cnarq_espacos_incluidos_al, :cnarq_espacos_excluidos_m3, :cnarq_data_local_arqueacao_original, :cnarq_data_local_ultima_rearqueacao, :local_construcao, :numero_casco, :porte_bruto, :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco, :borda_livre_mm, :borda_livre_tipo, :calado_maximo_m, :aresta_superior_linha_conves, :centro_disco_situado, :acrescimo_agua_salgada, :dist_linha_conves_bico_proa, :dist_linha_conves_abaixo_disco, :marca_linha_carga_area1, :marca_linha_carga_area2, :criado_por
+                    :id, :nome, :proprietario_id, :cliente_id, :proprietario, :registro, :tipo_embarcacao_id, :tipo_embarcacao, :cnbl_tipo_embarcacao, :ano, :porto_inscricao, :numero_inscricao, :indicativo_chamada, :observacoes, :possui_propulsao, :fabricante_motor, :modelo_motor, :numero_motor, :potencia_kw, :material_casco, :tipo_navegacao, :area_navegacao, :cnbl_area_navegacao, :tipo_servico, :autorizado_carga, :numero_tripulantes, :numero_passageiros_n1, :numero_passageiros_n2, :obs_passageiros, :acessibilidade, :comprimento_total, :comprimento_casco, :comprimento_lpp, :pontal_moldado, :boca_moldada, :boca_maxima, :arqueacao_bruta, :arqueacao_liquida, :metodo_arqueacao, :cnarq_data_quilha, :cnarq_calado_moldado_m, :cnarq_espacos_incluidos_ab, :cnarq_espacos_incluidos_al, :cnarq_espacos_excluidos_m3, :cnarq_data_local_arqueacao_original, :cnarq_data_local_ultima_rearqueacao, :local_construcao, :numero_casco, :porte_bruto, :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco, :borda_livre_mm, :borda_livre_tipo, :calado_maximo_m, :aresta_superior_linha_conves, :centro_disco_situado, :acrescimo_agua_salgada, :dist_linha_conves_bico_proa, :dist_linha_conves_abaixo_disco, :marca_linha_carga_area1, :marca_linha_carga_area2, :criado_por
                 )";
                 $stmt = $pdo->prepare($sql);
                 $dados[':id'] = $novoId;
@@ -384,6 +405,12 @@ switch ($action) {
 
                 if (function_exists('sgqRegistrarAuditoriaCadastral')) {
                     sgqRegistrarAuditoriaCadastral($pdo, 'EMBARCACAO', $novoId, 'CRIACAO', null, $dados, 'Cadastro inicial da embarcação');
+                }
+
+                // Sincronizar vínculo na tabela clientes_embarcacoes
+                require_once __DIR__ . '/../../includes/cliente_vinculos.php';
+                if (!empty($proprietario_id)) {
+                    sincronizarClienteEmbarcacoes($pdo, $proprietario_id, [$novoId], $_SESSION['usuario_id'] ?? null);
                 }
 
                 setMensagem('success', 'Embarcacao cadastrada com sucesso!');

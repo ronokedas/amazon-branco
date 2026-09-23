@@ -68,35 +68,47 @@
             <?php if (empty($clientes)): ?>
                 <div class="tabela-vazia">
                     <i class="fas fa-user-tie"></i>
-                    <h3>Nenhum proprietário cadastrado</h3>
-                    <p>Cadastre um proprietário antes de criar uma proposta.</p>
-                    <a href="<?php echo APP_URL; ?>proprietarios/form" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Novo Proprietário
+                    <h3>Nenhum cliente cadastrado</h3>
+                    <p>Cadastre um proprietário ou armador antes de criar uma proposta.</p>
+                    <a href="<?php echo APP_URL; ?>clientes/form" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Novo Cliente / Proprietário
                     </a>
                 </div>
             <?php else: ?>
                 <div class="filtros" style="margin-bottom: 15px;">
                     <div class="form-group" style="margin-bottom: 0; flex: 1;">
-                        <label><i class="fas fa-search"></i> Buscar proprietário</label>
-                        <input type="text" id="buscaClienteWizard" placeholder="Nome, CPF/CNPJ..." onkeyup="filtrarClientes()">
+                        <label><i class="fas fa-search"></i> Buscar cliente (proprietário, armador, CPF/CNPJ...)</label>
+                        <input type="text" id="buscaClienteWizard" placeholder="Nome, CPF/CNPJ, perfil..." onkeyup="filtrarClientes()">
                     </div>
                 </div>
                 <div class="cliente-grid" id="clienteGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; max-height: 400px; overflow-y: auto; padding: 5px;">
                     <?php foreach ($clientes as $c): ?>
-                    <?php $clienteMarcado = $clientePreSelecionadoEncontrado && $clientePreSelecionadoId === $c['id']; ?>
+                    <?php 
+                        $clienteMarcado = $clientePreSelecionadoEncontrado && $clientePreSelecionadoId === $c['id']; 
+                        $perfilLabel = match($c['perfil'] ?? 'proprietario') {
+                            'armador' => 'Armador',
+                            'despachante' => 'Despachante',
+                            default => 'Proprietário'
+                        };
+                        $perfilIcon = match($c['perfil'] ?? 'proprietario') {
+                            'armador' => 'fa-building-user',
+                            'despachante' => 'fa-briefcase',
+                            default => 'fa-user-tie'
+                        };
+                    ?>
                     <label class="cliente-card<?php echo $clienteMarcado ? ' is-selected' : ''; ?>" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--cor-fundo); border: 2px solid var(--cor-borda); border-radius: 10px; cursor: pointer; transition: all 0.2s;">
                         <input type="radio" name="cliente_id" value="<?php echo h($c['id']); ?>"
                                data-nome="<?php echo h($c['nome']); ?>"
-                               data-perfil="Proprietário"
+                               data-perfil="<?php echo h($perfilLabel); ?>"
                                data-cpfcnpj="<?php echo h($c['cpf_cnpj'] ?? '-'); ?>"
                                <?php echo $clienteMarcado ? 'checked' : ''; ?>
                                onchange="clienteSelecionado(this)" style="display: none;">
                         <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(46,204,113,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <i class="fas fa-user-tie" style="color: var(--cor-destaque);"></i>
+                            <i class="fas <?php echo $perfilIcon; ?>" style="color: var(--cor-destaque);"></i>
                         </div>
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-weight: 600; color: var(--cor-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($c['nome']); ?></div>
-                            <small style="color: var(--cor-texto-secundario);">Proprietário &middot; <?php echo h($c['cpf_cnpj'] ?? 'N/I'); ?></small>
+                            <small style="color: var(--cor-texto-secundario);"><?php echo h($perfilLabel); ?> &middot; <?php echo h($c['cpf_cnpj'] ?? 'N/I'); ?></small>
                         </div>
                         <span class="cliente-check-indicator"><i class="fas fa-check"></i><em>Selecionado</em></span>
                     </label>

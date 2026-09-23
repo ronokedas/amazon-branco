@@ -437,6 +437,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         </button>
                                     <?php endif; ?>
 
+                                    <!-- BOTÃO GERAR PROPOSTA -->
+                                    <a href="<?php echo APP_URL; ?>comercial/nova?cliente_id=<?php echo urlencode($c['id']); ?>" 
+                                       class="btn btn-outline-primary btn-sm" 
+                                       title="Criar proposta para este cliente">
+                                        <i class="fas fa-file-invoice-dollar"></i>
+                                    </a>
+
                                     <!-- BOTÃO EDITAR -->
                                     <a href="<?php echo APP_URL; ?>clientes/form?id=<?php echo urlencode($c['id']); ?>" 
                                        class="btn btn-secondary btn-sm" 

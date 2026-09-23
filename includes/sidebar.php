@@ -79,10 +79,10 @@ if (!function_exists('isActive')) {
         <button class="btn-sidebar-toggle" id="sidebar-toggle" title="Recolher / Expandir Menu"><i class="fa-solid fa-chevron-left"></i></button>
     </div>
 
-    <!-- Campo de Busca Rápida no Menu (Ctrl+K) -->
+    <!-- Campo de Busca Rápida no Menu (/) -->
     <div class="sidebar-search-wrap">
         <i class="fa-solid fa-magnifying-glass sidebar-search-icon"></i>
-        <input type="text" class="sidebar-search-input" id="sidebarSearch" placeholder="Buscar no menu (Ctrl+K)..." autocomplete="off" spellcheck="false">
+        <input type="text" class="sidebar-search-input" id="sidebarSearch" placeholder="Filtrar menu (/)..." autocomplete="off" spellcheck="false">
         <button type="button" class="sidebar-search-clear" id="sidebarSearchClear" aria-label="Limpar busca"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
@@ -139,8 +139,9 @@ if (!function_exists('isActive')) {
                         <a href="<?= APP_URL ?>documentacao/certificados" class="nav-item nav-subitem<?= isActive('documentacao/certificados',$pagina_atual) ?>">Certificados (CSN)</a>
                         <a href="<?= APP_URL ?>documentacao/cnbl" class="nav-item nav-subitem<?= isActive('documentacao/cnbl',$pagina_atual) ?>">CNBL</a>
                         <a href="<?= APP_URL ?>documentacao/cnarq" class="nav-item nav-subitem<?= isActive('documentacao/cnarq',$pagina_atual) ?>">CNARQ</a>
+                        <a href="<?= APP_URL ?>documentacao/nar" class="nav-item nav-subitem<?= (strpos($pagina_atual,'documentacao/nar')===0) ? ' active' : '' ?>">Notas de Arqueação (NAR)</a>
                         <a href="<?= APP_URL ?>documentacao/lp" class="nav-item nav-subitem<?= isActive('documentacao/lp',$pagina_atual) ?>">LP</a>
-                        <a href="<?= APP_URL ?>documentacao/lc" class="nav-item nav-subitem<?= isActive('documentacao/lc',$pagina_atual) ?>">LC</a>
+                        <a href="<?= APP_URL ?>documentacao/lc" class="nav-item nav-subitem<?= (strpos($pagina_atual,'documentacao/lc')===0) ? ' active' : '' ?>">Licenças (LC, LA, LR, LCEC)</a>
                         <a href="<?= APP_URL ?>documentacao/cht" class="nav-item nav-subitem<?= isActive('documentacao/cht',$pagina_atual) ?>">CHT</a>
                     </div>
                 </div>
@@ -431,7 +432,7 @@ if (!function_exists('isActive')) {
             }
 
             document.addEventListener('keydown', function(e) {
-                if ((e.ctrlKey && e.key.toLowerCase() === 'k') || (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA')) {
+                if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
                     e.preventDefault();
                     searchInput.focus();
                     searchInput.select();

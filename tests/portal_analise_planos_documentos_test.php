@@ -45,7 +45,7 @@ $esperadas = [
     'ART',
     'FOLHA DE ROSTO',
     'DECLARAÇÃO',
-    'MEMORIAL DESCRITO',
+    'MEMORIAL DESCRITIVO',
     'NOTAS DE ARQUEAÇÃO',
     'NOTAS DE BORDA LIVRE',
     'DADOS DE ENTRADA OU COTAS',

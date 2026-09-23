@@ -9,7 +9,7 @@ $clienteId=(string)clientePortalId();$analiseId=trim($_POST['analise_id']??'');
 try{
     $ids=clientePortalEmbarcacaoIds($pdo,$clienteId);if(!$ids)throw new RuntimeException('Nenhuma embarcação vinculada.');
     $params=[':id'=>$analiseId];$in=clientePortalSqlIn($ids,'upload_emb_',$params);
-    $stmt=$pdo->prepare("SELECT ap.* FROM analises_planos ap WHERE ap.id=:id AND ap.embarcacao_id IN ({$in}) AND ap.status IN ('AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS') LIMIT 1");
+    $stmt=$pdo->prepare("SELECT ap.* FROM analises_planos ap WHERE ap.id=:id AND ap.embarcacao_id IN ({$in}) AND ap.status IN ('AGUARDANDO_AGENDAMENTO','AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS') LIMIT 1");
     $stmt->execute($params);$analise=$stmt->fetch(PDO::FETCH_ASSOC);if(!$analise)throw new RuntimeException('Análise indisponível ou sem vínculo ativo.');
     $arquivos=$_FILES['arquivos']??null;if(!$arquivos||!is_array($arquivos['name']??null))throw new RuntimeException('Selecione pelo menos um arquivo.');
     $preparados=[];foreach($arquivos['name'] as $i=>$nome){if(($arquivos['error'][$i]??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE)continue;$arquivo=['name'=>$nome,'type'=>$arquivos['type'][$i]??'','tmp_name'=>$arquivos['tmp_name'][$i]??'','error'=>$arquivos['error'][$i]??UPLOAD_ERR_NO_FILE,'size'=>$arquivos['size'][$i]??0];$preparados[]=[$arquivo,analisePlanosValidarUpload($arquivo)];}

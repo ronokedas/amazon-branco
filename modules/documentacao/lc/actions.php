@@ -86,13 +86,13 @@ if ($action === 'salvar') {
         redirecionar(APP_URL . 'documentacao/lc/form' . ($editando ? "?id={$id}" : ''));
     }
 
-    $vistoria_id = $_POST['vistoria_id'] ?? null;
-    $analise_id = null;
+    $vistoria_id = !empty($_POST['vistoria_id']) ? $_POST['vistoria_id'] : null;
+    $analise_id = !empty($_POST['analise_id']) ? $_POST['analise_id'] : null;
     if ($editando) {
         $stmtOrigem = $pdo->prepare('SELECT analise_id,tipo_licenca FROM certificados_lc WHERE id=:id LIMIT 1');
         $stmtOrigem->execute([':id'=>$id]);
         $origemDocumento = $stmtOrigem->fetch(PDO::FETCH_ASSOC);
-        $analise_id = $origemDocumento['analise_id'] ?? null;
+        $analise_id = $origemDocumento['analise_id'] ?? $analise_id;
         if ($analise_id && $tipo_licenca !== $origemDocumento['tipo_licenca']) {
             setMensagem('error', 'O tipo da licença vinculada à análise não pode ser alterado.');
             redirecionar(APP_URL . 'documentacao/lc/form?id=' . urlencode($id));
@@ -101,15 +101,15 @@ if ($action === 'salvar') {
     if ($analise_id) {
         $stmtAnalise = $pdo->prepare("SELECT ap.status,ap.tipo_processo,
             EXISTS(SELECT 1 FROM analise_planos_pareceres p WHERE p.analise_id=ap.id
-                AND p.status='PUBLICADO' AND p.resultado='APROVADO' AND p.finalidade='CONCLUSIVO') parecer_valido,
+                AND p.status='PUBLICADO') tem_rap_publicado,
             EXISTS(SELECT 1 FROM analise_planos_exigencias x WHERE x.analise_id=ap.id
-                AND (x.status<>'CUMPRIDA' OR x.saneamento_pendente=1)) pendencia_impeditiva
+                AND x.as_impeditivo=1 AND (x.status<>'CUMPRIDA' OR x.saneamento_pendente=1)) pendencia_as_impeditiva
             FROM analises_planos ap WHERE ap.id=:id LIMIT 1");
         $stmtAnalise->execute([':id'=>$analise_id]);
         $origemAnalise = $stmtAnalise->fetch(PDO::FETCH_ASSOC);
-        if (!$origemAnalise || $origemAnalise['status']!=='CONCLUIDA' || !(int)$origemAnalise['parecer_valido'] || (int)$origemAnalise['pendencia_impeditiva']) {
-            setMensagem('error', 'A cadeia da análise de planos ainda não autoriza a licença.');
-            redirecionar(APP_URL . 'documentacao/lc/form?id=' . urlencode($id));
+        if (!$origemAnalise || !(int)$origemAnalise['tem_rap_publicado'] || (int)$origemAnalise['pendencia_as_impeditiva']) {
+            setMensagem('error', 'A cadeia da análise de planos ainda não autoriza a licença: é necessário ter ao menos um relatório técnico (RAP) publicado e nenhuma exigência grave do tipo A/S pendente.');
+            redirecionar(APP_URL . 'documentacao/lc/form' . ($editando ? "?id=" . urlencode($id) : "?analise_id=" . urlencode($analise_id)));
         }
     } elseif ($vistoria_id) {
         $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
@@ -119,7 +119,7 @@ if ($action === 'salvar') {
         }
     }
     if (empty($analise_id) && empty($vistoria_id)) {
-        setMensagem('error', 'É obrigatório selecionar um relatório aprovado para emitir o certificado.');
+        setMensagem('error', 'É obrigatório selecionar um relatório aprovado (RAP ou Vistoria) para emitir o certificado.');
         redirecionar(APP_URL . 'documentacao/lc/form' . ($editando ? "?id={$id}" : ''));
     } elseif (!$analise_id) {
         $stmtStatus = $pdo->prepare("SELECT status FROM vistorias WHERE id = :vid");
@@ -168,19 +168,20 @@ if ($action === 'salvar') {
     if (!$editando) {
         try {
             require_once __DIR__ . '/../../../includes/emissao_certificados.php';
-            // Integridade relacional garantida no motor: :embarcacao_id, :cliente_id
+            // Integridade relacional garantida no motor: :embarcacao_id, :cliente_id, :analise_id
             $dadosEmissao = array_merge($_POST, [
                 'embarcacao_id' => $embarcacao_id,
                 'cliente_id' => $cliente_id,
                 'vistoria_id' => $vistoria_id,
+                'analise_id' => $analise_id,
             ]);
             $res = emitirCertificadoUnificado($pdo, 'LC', $dadosEmissao, (string)($_SESSION['usuario_id'] ?? ''));
             $numero = $res['numero'];
-            setMensagem('success', 'Licença de Construção criada com sucesso. Número: ' . $numero);
+            setMensagem('success', "Licença {$tipo_licenca} criada com sucesso. Número: " . $numero);
             redirecionar(APP_URL . 'documentacao/lc');
         } catch (Throwable $e) {
-            setMensagem('error', 'Não foi possível salvar a Licença de Construção: ' . $e->getMessage());
-            redirecionar(APP_URL . 'documentacao/lc/form');
+            setMensagem('error', 'Não foi possível salvar a Licença: ' . $e->getMessage());
+            redirecionar(APP_URL . 'documentacao/lc/form' . (!empty($analise_id) ? '?analise_id=' . urlencode($analise_id) : ''));
         }
     }
     

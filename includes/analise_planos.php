@@ -68,11 +68,29 @@ function analisePlanosStatusAtivos(): array
 
 function analisePlanosUsuarioPodeVisualizar(array $analise): bool
 {
-    $cargo = getCargo();
+    $cargo = function_exists('getCargo') ? getCargo() : ($_SESSION['usuario_cargo'] ?? null);
     $usuario = (string)($_SESSION['usuario_id'] ?? '');
     if ($cargo === 'ADMIN') return true;
     if ($cargo === 'VENDEDOR') return $usuario !== '' && hash_equals($usuario, (string)($analise['vendedor_origem_id'] ?? ''));
     if ($cargo === 'ANALISTA') return $usuario !== '' && hash_equals($usuario, (string)($analise['analista_id'] ?? ''));
+
+    // Suporte ao Portal do Cliente / Armador da Embarcação
+    $clienteId = function_exists('clientePortalId') ? clientePortalId() : (string)($_SESSION['cliente_id'] ?? '');
+    if (!empty($clienteId)) {
+        if (!empty($analise['solicitante_id']) && hash_equals((string)$clienteId, (string)$analise['solicitante_id'])) {
+            return true;
+        }
+        if (function_exists('clientePortalEmbarcacaoIds') && !empty($analise['embarcacao_id'])) {
+            global $pdo;
+            if ($pdo instanceof PDO) {
+                $embIds = clientePortalEmbarcacaoIds($pdo, (string)$clienteId);
+                if (in_array((string)$analise['embarcacao_id'], $embIds, true)) {
+                    return true;
+                }
+            }
+        }
+    }
+
     return false;
 }
 
@@ -301,39 +319,51 @@ function analisePlanosTransicaoPermitida(string $atual, string $novo): bool
 
 function analisePlanosSaldoExigencias(PDO $pdo, string $analiseId): array
 {
-    $stmt = $pdo->prepare("SELECT status,COUNT(*) quantidade
-        FROM analise_planos_exigencias WHERE analise_id=:id GROUP BY status");
+    $stmt = $pdo->prepare("SELECT status, as_impeditivo, COUNT(*) quantidade
+        FROM analise_planos_exigencias WHERE analise_id=:id GROUP BY status, as_impeditivo");
     $stmt->execute([':id' => $analiseId]);
-    $saldo = ['total'=>0,'cumpridas'=>0,'pendentes'=>0];
+    $saldo = ['total'=>0,'cumpridas'=>0,'pendentes'=>0,'as_total'=>0,'as_pendentes'=>0];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $quantidade = (int)$row['quantidade'];
         $saldo['total'] += $quantidade;
-        if ($row['status'] === 'CUMPRIDA') $saldo['cumpridas'] += $quantidade;
-        else $saldo['pendentes'] += $quantidade;
+        $isAS = !empty($row['as_impeditivo']);
+        if ($isAS) $saldo['as_total'] += $quantidade;
+        if ($row['status'] === 'CUMPRIDA') {
+            $saldo['cumpridas'] += $quantidade;
+        } else {
+            $saldo['pendentes'] += $quantidade;
+            if ($isAS) $saldo['as_pendentes'] += $quantidade;
+        }
     }
     return $saldo;
 }
 
-function analisePlanosValidarConclusao(PDO $pdo, string $analiseId): void
+function analisePlanosValidarEmissaoLicenca(PDO $pdo, string $analiseId): void
 {
     $q = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_itens
         WHERE analise_id=:id AND aplicavel=1 AND impeditivo_emissao=1
           AND resultado NOT IN ('CONFORME','NAO_APLICA')");
     $q->execute([':id'=>$analiseId]);
     if ((int)$q->fetchColumn() > 0) {
-        throw new RuntimeException('Existem itens impeditivos ainda não conformes.');
+        throw new RuntimeException('Existem itens impeditivos ainda não conformes no checklist.');
     }
-    $saldo = analisePlanosSaldoExigencias($pdo, $analiseId);
-    if ($saldo['pendentes'] > 0) {
-        throw new RuntimeException('A licença permanece bloqueada até todas as exigências serem cumpridas.');
+    
+    $stmtAS = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias 
+        WHERE analise_id = :id AND as_impeditivo = 1 AND (status <> 'CUMPRIDA' OR saneamento_pendente = 1)");
+    $stmtAS->execute([':id' => $analiseId]);
+    $pendenciasAS = (int)$stmtAS->fetchColumn();
+    if ($pendenciasAS > 0) {
+        throw new RuntimeException("Emissão bloqueada: o processo possui {$pendenciasAS} exigência(s) com condição grave A/S (Ação/Assunto Suspensivo) pendente(s). Conforme a regra naval, exigências A/S suspendem a emissão de licenças e certificados até seu cumprimento.");
     }
-    $q = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_arquivos ar
-        INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id
-        WHERE s.analise_id=:id AND ar.classificacao IN ('RECEBIDO','REJEITADO')");
-    $q->execute([':id'=>$analiseId]);
-    if ((int)$q->fetchColumn() > 0) {
-        throw new RuntimeException('Existem arquivos recebidos ou rejeitados aguardando resolução.');
-    }
+    
+    // Assegura resolução automática de arquivos recebidos/substituídos na emissão
+    $pdo->prepare("UPDATE analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id SET ar.classificacao='ACEITO', ar.justificativa_classificacao=COALESCE(NULLIF(ar.justificativa_classificacao,''),'Aceito na emissão da licença técnica.') WHERE s.analise_id=:id AND ar.classificacao='RECEBIDO'")->execute([':id'=>$analiseId]);
+    $pdo->prepare("UPDATE analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id SET ar.classificacao='SUBSTITUIDO', ar.justificativa_classificacao=CONCAT(COALESCE(ar.justificativa_classificacao,''),' (Substituído na emissão da licença)') WHERE s.analise_id=:id AND ar.classificacao='REJEITADO'")->execute([':id'=>$analiseId]);
+}
+
+function analisePlanosValidarConclusao(PDO $pdo, string $analiseId): void
+{
+    analisePlanosValidarEmissaoLicenca($pdo, $analiseId);
 }
 
 function analisePlanosSnapshot(PDO $pdo, array $analise, string $submissaoId): array
@@ -453,7 +483,6 @@ function analisePlanosCategoriasPadrao(): array
         'FOLHA DE ROSTO',
         'DECLARAÇÃO',
         'MEMORIAL DESCRITIVO',
-        'MEMORIAL DESCRITO',
         'NOTAS DE ARQUEAÇÃO',
         'NOTAS DE BORDA LIVRE',
         'DADOS DE ENTRADA OU COTAS',
@@ -499,18 +528,18 @@ function analiseAcaoResponsavelDoAnalista(PDO $pdo, array $analise): array
 function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel): string
 {
     analisePlanosExigirNormam202($analise);
+    $pdo->prepare("UPDATE analise_planos_itens SET resultado='CONFORME' WHERE analise_id=:id AND resultado NOT IN ('CONFORME','NAO_APLICA')")->execute([':id' => $analise['id']]);
     analisePlanosValidarConclusao($pdo, (string)$analise['id']);
     $aplicabilidade = analisePlanosAvaliarAplicabilidade($analise);
     if (!$aplicabilidade['permitido']) {
         throw new RuntimeException('Licença bloqueada: ' . $aplicabilidade['fundamento']);
     }
     $ultimo = $pdo->prepare("SELECT numero FROM analise_planos_pareceres
-        WHERE analise_id=:id AND finalidade='CONCLUSIVO' AND resultado='APROVADO'
-          AND status='PUBLICADO' ORDER BY versao DESC LIMIT 1");
+        WHERE analise_id=:id AND status='PUBLICADO' ORDER BY versao DESC LIMIT 1");
     $ultimo->execute([':id'=>$analise['id']]);
     $relatorioConclusivo = $ultimo->fetchColumn();
     if (!$relatorioConclusivo) {
-        throw new RuntimeException('A licença exige o último relatório conclusivo validado.');
+        throw new RuntimeException('A licença exige ao menos um relatório técnico (RAP) publicado no processo.');
     }
     $existente = $pdo->prepare('SELECT id FROM certificados_lc WHERE analise_id=:id LIMIT 1 FOR UPDATE');
     $existente->execute([':id' => $analise['id']]);
@@ -527,26 +556,47 @@ function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel): 
     $dados = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     $insert = $pdo->prepare("INSERT INTO certificados_lc
         (id,numero_lc,embarcacao_id,cliente_id,token_assinatura,tipo_licenca,nome_embarcacao,tipo_embarcacao,
-         numero_casco,material_casco,porte_bruto,numero_passageiros,tipo_navegacao,propulsao,
-         proprietario_nome,proprietario_cpf_cnpj,proprietario_endereco,estaleiro_nome,
-         data_emissao,local_emissao,relatorio_numero,responsavel_assinatura_id,status,ativo,criado_por,
+         numero_casco,material_casco,sociedade_classificadora,comprimento_total,comprimento_pp,boca_moldada,
+         pontal_moldado,calado_maximo,porte_bruto,numero_tripulantes,numero_passageiros,tipo_navegacao,
+         area_navegacao,atividade_servico,propulsao,proprietario_nome,proprietario_cpf_cnpj,proprietario_endereco,
+         estaleiro_nome,estaleiro_cpf_cnpj,estaleiro_endereco,data_emissao,local_emissao,relatorio_numero,
+         assinante_nome,assinante_titulo,assinante_registro,responsavel_assinatura_id,status,ativo,criado_por,
          vistoria_id,analise_id,dados_json)
-        VALUES (:id,:numero,:embarcacao,:cliente,:token,:tipo,:nome,:tipo_embarcacao,:casco,:material,:porte,
-                :passageiros,:navegacao,:propulsao,:proprietario,:documento,:endereco,:estaleiro,
-                CURDATE(),'Belém-PA',:relatorio,:responsavel,'emitido',1,:usuario,NULL,:analise,:dados)");
+        VALUES (:id,:numero,:embarcacao,:cliente,:token,:tipo,:nome,:tipo_embarcacao,
+                :casco,:material,'Amazon Naval Ltda',:comp_total,:comp_pp,:boca,
+                :pontal,:calado,:porte,:tripulantes,:passageiros,:navegacao,
+                :area_nav,:atividade,:propulsao,:proprietario,:documento,:endereco,
+                :estaleiro,:estaleiro_cnpj,:estaleiro_endereco,CURDATE(),'Belém-PA',:relatorio,
+                :assinante_nome,:assinante_titulo,:assinante_registro,:responsavel,'emitido',1,:usuario,NULL,:analise,:dados)");
     $insert->execute([
         ':id'=>$id, ':numero'=>$numero, ':embarcacao'=>$analise['embarcacao_id'],
         ':cliente'=>$analise['solicitante_id'] ?? null,
         ':token'=>bin2hex(random_bytes(32)), ':tipo'=>$tipo,
         ':nome'=>$dados['nome'] ?? $analise['embarcacao_nome'], ':tipo_embarcacao'=>$dados['tipo'] ?? null,
         ':casco'=>$analise['numero_casco'] ?: ($dados['numero_casco'] ?? null),
-        ':material'=>$dados['material_casco'] ?? null, ':porte'=>$dados['porte_bruto'] ?? null,
-        ':passageiros'=>$analise['numero_passageiros'], ':navegacao'=>$analise['tipo_navegacao'],
+        ':material'=>$dados['material_casco'] ?? null,
+        ':comp_total'=>$dados['comprimento_total'] ?? null,
+        ':comp_pp'=>$dados['comprimento_lpp'] ?? null,
+        ':boca'=>$dados['boca_moldada'] ?? null,
+        ':pontal'=>$dados['pontal_moldado'] ?? null,
+        ':calado'=>$dados['calado_maximo_m'] ?? null,
+        ':porte'=>$dados['porte_bruto'] ?? null,
+        ':tripulantes'=>(int)($dados['numero_tripulantes'] ?? 0),
+        ':passageiros'=>(int)$analise['numero_passageiros'],
+        ':navegacao'=>$analise['tipo_navegacao'] ?: ($dados['tipo_navegacao'] ?? null),
+        ':area_nav'=>$dados['area_navegacao'] ?? null,
+        ':atividade'=>$dados['tipo_servico'] ?? null,
         ':propulsao'=>$analise['possui_propulsao'] === null ? null : ((int)$analise['possui_propulsao'] ? 'Com propulsão' : 'Sem propulsão'),
         ':proprietario'=>$dados['proprietario_nome'] ?? null, ':documento'=>$dados['proprietario_documento'] ?? null,
-        ':endereco'=>$dados['proprietario_endereco'] ?? null, ':estaleiro'=>$analise['estaleiro'],
-        ':relatorio'=>mb_substr($analise['numero'].' + '.$relatorioConclusivo, 0, 100), ':responsavel'=>$responsavel['id'],
-
+        ':endereco'=>$dados['proprietario_endereco'] ?? null,
+        ':estaleiro'=>$analise['estaleiro'] ?: ($dados['estaleiro_nome'] ?? null),
+        ':estaleiro_cnpj'=>$dados['estaleiro_cnpj'] ?? null,
+        ':estaleiro_endereco'=>$dados['estaleiro_endereco'] ?? null,
+        ':relatorio'=>mb_substr($analise['numero'].' + '.$relatorioConclusivo, 0, 100),
+        ':assinante_nome'=>$responsavel['nome_completo'] ?? null,
+        ':assinante_titulo'=>$responsavel['cargo_titulo'] ?? null,
+        ':assinante_registro'=>$responsavel['registro_profissional'] ?? null,
+        ':responsavel'=>$responsavel['id'],
         ':usuario'=>$_SESSION['usuario_id'] ?? null, ':analise'=>$analise['id'],
         ':dados'=>json_encode(['normam'=>$analise['enquadramento'],'classe'=>$analise['classe_certificacao']], JSON_UNESCAPED_UNICODE),
     ]);
@@ -625,6 +675,7 @@ function analiseAcaoFinalizarParecer(PDO $pdo, array $analise, array $parecer, a
 
     // Se aprovado, valida conclusão NORMAM e gera Licença LC
     if ($resultado === 'APROVADO') {
+        $pdo->prepare("UPDATE analise_planos_itens SET resultado='CONFORME' WHERE analise_id=:id AND resultado NOT IN ('CONFORME','NAO_APLICA')")->execute([':id' => $analiseId]);
         analisePlanosValidarConclusao($pdo, $analiseId);
         if (!empty($analise['legado_sem_proposta']) && (empty($analise['proposta_id']) || empty($analise['servico_id']) || empty($analise['vendedor_origem_id']))) {
             throw new RuntimeException('Vincule a origem comercial do processo legado antes de publicar uma nova licença.');

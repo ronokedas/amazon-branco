@@ -32,6 +32,8 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
 // Gerar próximo número
 $proximo_numero = '';
 $proximo_numero_ec = '';
+$proximo_numero_la = '';
+$proximo_numero_lr = '';
 if (!$editando) {
     $ano = date('y');
     $ano4 = date('Y');
@@ -41,6 +43,8 @@ if (!$editando) {
     $seq = $total + 1;
     $proximo_numero = "AM-LC-{$seq}/{$ano}";
     $proximo_numero_ec = "AM-EC-{$seq}/{$ano}";
+    $proximo_numero_la = "AM-LA-{$seq}/{$ano}";
+    $proximo_numero_lr = "AM-LR-{$seq}/{$ano}";
 }
 
 // Embarcações
@@ -48,26 +52,120 @@ $stmt_emb = $pdo->prepare("SELECT * FROM embarcacoes WHERE ativo = 1 ORDER BY no
 $stmt_emb->execute();
 $embarcacoes = $stmt_emb->fetchAll(PDO::FETCH_ASSOC);
 
-// --- PRE-PREENCHIMENTO VIA AGENDAMENTO ---
+// --- PRE-PREENCHIMENTO ---
 $preenchimento = [
-    'embarcacao_id'      => '',
-    'nome_embarcacao'    => '',
-    'numero_inscricao'   => '',
-    'indicativo_chamada' => '',
-    'atividades_servicos'=> '',
-    'tipo_embarcacao'    => '',
-    'ano_construcao'     => '',
-    'comprimento_total'  => '',
-    'comprimento_casco'  => '',
-    'boca_moldada'       => '',
-    'pontal_moldado'     => '',
-    'arqueacao_bruta'    => '',
-    'material_casco'     => '',
-    'relatorio_numero'   => '',
-    'proprietario'       => ''
+    'embarcacao_id'        => '',
+    'nome_embarcacao'      => '',
+    'numero_inscricao'     => '',
+    'indicativo_chamada'   => '',
+    'atividades_servicos'  => '',
+    'tipo_embarcacao'      => '',
+    'ano_construcao'       => '',
+    'comprimento_total'    => '',
+    'comprimento_casco'    => '',
+    'comprimento_pp'       => '',
+    'boca_moldada'         => '',
+    'pontal_moldado'       => '',
+    'calado_maximo'        => '',
+    'porte_bruto'          => '',
+    'arqueacao_bruta'      => '',
+    'material_casco'       => '',
+    'numero_casco'         => '',
+    'numero_tripulantes'   => '',
+    'numero_passageiros'   => '',
+    'tipo_navegacao'       => '',
+    'area_navegacao'       => '',
+    'atividade_servico'    => '',
+    'propulsao'            => '',
+    'relatorio_numero'     => '',
+    'proprietario'         => '',
+    'proprietario_nome'    => '',
+    'proprietario_cpf_cnpj'=> '',
+    'proprietario_endereco'=> '',
+    'estaleiro_nome'       => '',
+    'estaleiro_cpf_cnpj'   => '',
+    'estaleiro_endereco'   => '',
+    'tipo_licenca'         => 'LC',
+    'assinante_nome'       => '',
+    'assinante_titulo'     => '',
+    'assinante_registro'   => '',
 ];
 $dadosPre = null;
-if (!$editando && !empty($_GET['agendamento_id'])) {
+$analise_id = $_GET['analise_id'] ?? ($licenca['analise_id'] ?? '');
+$analise_dados = null;
+$bloqueio_exigencias = false;
+$total_pendencias = 0;
+$relatorio_conclusivo_aprovado = false;
+
+// 1. Pré-preenchimento via Análise de Planos (RAP)
+if (!$editando && !empty($analise_id)) {
+    $stmtAn = $pdo->prepare("SELECT ap.*, e.nome emb_nome, e.registro emb_registro, e.tipo_embarcacao emb_tipo,
+        e.comprimento_total emb_comprimento_total, e.comprimento_casco emb_comprimento_casco,
+        e.boca_moldada emb_boca_moldada, e.pontal_moldado emb_pontal_moldado, e.calado_maximo emb_calado_maximo,
+        e.porte_bruto emb_porte_bruto, e.material_casco emb_material_casco, e.ano emb_ano,
+        e.proprietario emb_proprietario, e.indicativo_chamada emb_indicativo, e.arqueacao_bruta emb_ab,
+        c.nome cli_nome, c.cpf_cnpj cli_cpf_cnpj, c.endereco cli_endereco
+        FROM analises_planos ap
+        LEFT JOIN embarcacoes e ON e.id = ap.embarcacao_id
+        LEFT JOIN clientes c ON c.id = ap.solicitante_id
+        WHERE ap.id = :id LIMIT 1");
+    $stmtAn->execute([':id' => $analise_id]);
+    $analise_dados = $stmtAn->fetch(PDO::FETCH_ASSOC);
+
+    if ($analise_dados) {
+        $tipo_processo_an = $analise_dados['tipo_processo'] ?? 'LC';
+        $preenchimento['embarcacao_id']      = (string)($analise_dados['embarcacao_id'] ?? '');
+        $preenchimento['nome_embarcacao']    = (string)($analise_dados['emb_nome'] ?: ($analise_dados['embarcacao_nome'] ?? ''));
+        $preenchimento['numero_inscricao']   = (string)($analise_dados['emb_registro'] ?? '');
+        $preenchimento['indicativo_chamada'] = (string)($analise_dados['emb_indicativo'] ?? '');
+        $preenchimento['tipo_navegacao']     = (string)($analise_dados['tipo_navegacao'] ?? '');
+        $preenchimento['atividades_servicos']= (string)($analise_dados['tipo_navegacao'] ?? '');
+        $preenchimento['tipo_embarcacao']    = (string)($analise_dados['emb_tipo'] ?? '');
+        $preenchimento['ano_construcao']     = (string)($analise_dados['emb_ano'] ?? '');
+        $preenchimento['comprimento_total']  = (string)($analise_dados['emb_comprimento_total'] ?? '');
+        $preenchimento['comprimento_casco']  = (string)($analise_dados['emb_comprimento_casco'] ?? '');
+        $preenchimento['boca_moldada']       = (string)($analise_dados['emb_boca_moldada'] ?? '');
+        $preenchimento['pontal_moldado']     = (string)($analise_dados['emb_pontal_moldado'] ?? '');
+        $preenchimento['calado_maximo']      = (string)($analise_dados['emb_calado_maximo'] ?? '');
+        $preenchimento['porte_bruto']        = (string)($analise_dados['emb_porte_bruto'] ?? '');
+        $preenchimento['material_casco']     = (string)($analise_dados['emb_material_casco'] ?? '');
+        $preenchimento['numero_casco']       = (string)($analise_dados['numero_casco'] ?? '');
+        $preenchimento['arqueacao_bruta']    = (string)($analise_dados['emb_ab'] ?? '');
+        $preenchimento['numero_passageiros'] = (string)($analise_dados['numero_passageiros'] ?? '');
+        $preenchimento['propulsao']          = $analise_dados['possui_propulsao'] === null ? '' : ((int)$analise_dados['possui_propulsao'] ? 'Com Propulsão' : 'Sem Propulsão');
+        $preenchimento['relatorio_numero']   = (string)($analise_dados['numero'] ?? '');
+        $preenchimento['proprietario']       = (string)($analise_dados['cli_nome'] ?: ($analise_dados['emb_proprietario'] ?? ''));
+        $preenchimento['proprietario_nome']  = (string)($analise_dados['cli_nome'] ?: ($analise_dados['emb_proprietario'] ?? ''));
+        $preenchimento['proprietario_cpf_cnpj'] = (string)($analise_dados['cli_cpf_cnpj'] ?? '');
+        $preenchimento['proprietario_endereco'] = (string)($analise_dados['cli_endereco'] ?? '');
+        $preenchimento['estaleiro_nome']     = (string)($analise_dados['estaleiro'] ?? '');
+        $preenchimento['tipo_licenca']       = in_array($tipo_processo_an, ['LC','LA','LR','LCEC'], true) ? $tipo_processo_an : 'LC';
+
+        // Checar se há parecer conclusivo aprovado
+        $stmtPar = $pdo->prepare("SELECT numero, resultado, finalidade FROM analise_planos_pareceres WHERE analise_id = :id AND status = 'PUBLICADO' ORDER BY versao DESC LIMIT 1");
+        $stmtPar->execute([':id' => $analise_id]);
+        $ultimoRap = $stmtPar->fetch(PDO::FETCH_ASSOC);
+        if ($ultimoRap || $analise_dados['status'] === 'CONCLUIDA') {
+            $relatorio_conclusivo_aprovado = true;
+            if ($ultimoRap) {
+                $preenchimento['relatorio_numero'] .= ' / ' . $ultimoRap['numero'];
+            }
+        }
+
+        // Checar exigências graves A/S pendentes
+        $stmtExAS = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias WHERE analise_id = :id AND as_impeditivo = 1 AND (status <> 'CUMPRIDA' OR saneamento_pendente = 1)");
+        $stmtExAS->execute([':id' => $analise_id]);
+        $total_pendencias_as = (int)$stmtExAS->fetchColumn();
+        if ($total_pendencias_as > 0) {
+            $bloqueio_exigencias = true;
+        }
+
+        $stmtEx = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias WHERE analise_id = :id AND (status <> 'CUMPRIDA' OR saneamento_pendente = 1)");
+        $stmtEx->execute([':id' => $analise_id]);
+        $total_pendencias = (int)$stmtEx->fetchColumn();
+    }
+} elseif (!$editando && !empty($_GET['agendamento_id'])) {
+    // 2. Pré-preenchimento via Agendamento / Vistoria
     $stmtPre = $pdo->prepare("
         SELECT 
             e.id as embarcacao_id, e.nome as emb_nome, e.registro, e.indicativo_chamada, e.tipo_embarcacao, e.ano as emb_ano,
@@ -98,6 +196,20 @@ if (!$editando && !empty($_GET['agendamento_id'])) {
         $preenchimento['material_casco']     = h($dadosPre['material_casco'] ?? '');
         $preenchimento['relatorio_numero']   = h($dadosPre['relatorio_numero'] ?? '');
         $preenchimento['proprietario']       = h($dadosPre['proprietario'] ?? '');
+        $preenchimento['proprietario_nome']  = h($dadosPre['proprietario'] ?? '');
+    }
+}
+
+// Preenchimento do Responsável Técnico / Assinante padrão caso seja analista logado
+$usuario_logado_id = (string)($_SESSION['usuario_id'] ?? '');
+if (!$editando && !empty($usuario_logado_id)) {
+    $stmtR = $pdo->prepare("SELECT * FROM responsaveis_assinatura WHERE usuario_id = :u AND ativo = 1 LIMIT 1");
+    $stmtR->execute([':u' => $usuario_logado_id]);
+    $resp_analista = $stmtR->fetch(PDO::FETCH_ASSOC);
+    if ($resp_analista) {
+        $preenchimento['assinante_nome'] = $resp_analista['nome_completo'];
+        $preenchimento['assinante_titulo'] = $resp_analista['cargo_titulo'];
+        $preenchimento['assinante_registro'] = $resp_analista['registro_profissional'];
     }
 }
 
@@ -117,6 +229,22 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
         <a href="<?php echo APP_URL; ?>documentacao/lc" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
     </div>
 
+    <?php if ($bloqueio_exigencias): ?>
+        <div class="alert alert-danger mb-3" style="border-radius: 8px; font-weight: 500;">
+            <i class="fas fa-ban"></i> <strong>Emissão Bloqueada por Condição A/S:</strong>
+            O Relatório de Análise de Planos vinculado (<?= h($preenchimento['relatorio_numero']) ?>) possui <strong><?= (int)$total_pendencias_as ?> exigência(s) com condição grave A/S pendente(s)</strong>.
+            Conforme a regra naval, exigências marcadas como <strong>A/S (Ação/Assunto Suspensivo)</strong> suspendem e impedem a emissão de licenças e certificados da embarcação até seu cumprimento integral.
+        </div>
+    <?php elseif (!empty($analise_id) && $analise_dados): ?>
+        <div class="alert alert-success mb-3" style="border-radius: 8px;">
+            <i class="fas fa-check-circle"></i> <strong>Vinculado à Análise de Planos:</strong>
+            Processo <strong><?= h($analise_dados['numero']) ?></strong> · Embarcação: <strong><?= h($preenchimento['nome_embarcacao']) ?></strong>
+            · Status: <span class="badge badge-success"><?= h($analise_dados['status']) ?></span>
+            <?= $relatorio_conclusivo_aprovado ? '· Relatório RAP Vinculado' : '' ?>
+            <?= $total_pendencias > 0 ? " · ({$total_pendencias} exigência(s) regular(es) em acompanhamento)" : '' ?>
+        </div>
+    <?php endif; ?>
+
     <?php if ($editando && $licenca['assinado']): ?>
         <div class="card mb-3" style="border-left: 4px solid var(--cor-destaque);">
             <div class="card-body">
@@ -135,6 +263,14 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
             <input type="hidden" name="embarcacao_id" value="<?php echo h($licenca['embarcacao_id'] ?? ''); ?>">
             <input type="hidden" name="cliente_id" value="<?php echo h($licenca['cliente_id'] ?? ''); ?>">
             <input type="hidden" name="vistoria_id" value="<?php echo h($licenca['vistoria_id'] ?? ''); ?>">
+            <input type="hidden" name="analise_id" value="<?php echo h($licenca['analise_id'] ?? ''); ?>">
+        <?php else: ?>
+            <?php if (!empty($analise_id)): ?>
+                <input type="hidden" name="analise_id" value="<?php echo h($analise_id); ?>">
+            <?php endif; ?>
+            <?php if (!empty($_GET['vistoria_id'])): ?>
+                <input type="hidden" name="vistoria_id" value="<?php echo h($_GET['vistoria_id']); ?>">
+            <?php endif; ?>
         <?php endif; ?>
 
         <!-- Seção 1: Identificação -->
@@ -142,19 +278,30 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
             <div class="card-header"><h3><i class="fas fa-id-card"></i> Identificação</h3></div>
             <div class="card-body">
                 <div class="grid-2">
+                    <?php
+                    $current = $editando ? $licenca['tipo_licenca'] : ($preenchimento['tipo_licenca'] ?? 'LC');
+                    $numero_inicial = $proximo_numero;
+                    if ($current === 'LCEC') $numero_inicial = $proximo_numero_ec;
+                    elseif ($current === 'LA') $numero_inicial = $proximo_numero_la;
+                    elseif ($current === 'LR') $numero_inicial = $proximo_numero_lr;
+                    ?>
                     <div class="form-group">
                         <label>Número da Licença</label>
                         <input type="text" class="form-control" id="numero_lc_display" 
-                               value="<?php echo $editando ? h($licenca['numero_lc']) : h($proximo_numero); ?>" readonly 
+                               value="<?php echo $editando ? h($licenca['numero_lc']) : h($numero_inicial); ?>" readonly 
                                style="background: var(--cor-sidebar); font-weight: bold;">
-                        <small class="text-muted">Para LCEC o número será AM-EC:{n}/{ano}</small>
+                        <small class="text-muted">LC (AM-LC), LA (AM-LA), LR (AM-LR) ou LCEC (AM-EC)</small>
                     </div>
                     <div class="form-group">
                         <label for="tipo_licenca">Tipo de Licença *</label>
                         <select name="tipo_licenca" id="tipo_licenca" class="form-control" required onchange="atualizarNumero()">
                             <?php
-                            $tipos = ['LC'=>'LC - Licença de Construção','LA'=>'LA - Licença de Alteração','LR'=>'LR - Licença de Reclassificação','LCEC'=>'LCEC - Exploração Comercial'];
-                            $current = $editando ? $licenca['tipo_licenca'] : 'LC';
+                            $tipos = [
+                                'LC'   => 'LC - Licença de Construção',
+                                'LA'   => 'LA - Licença de Alteração',
+                                'LR'   => 'LR - Licença de Reclassificação',
+                                'LCEC' => 'LCEC - Construção Embarcação Classificada'
+                            ];
                             foreach ($tipos as $val => $label): ?>
                                 <option value="<?php echo $val; ?>" <?php echo $current === $val ? 'selected' : ''; ?>><?php echo $label; ?></option>
                             <?php endforeach; ?>
@@ -241,7 +388,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="numero_casco">Número do Casco</label>
                         <input type="text" name="numero_casco" id="numero_casco" class="form-control"
-                               value="<?php echo $editando ? h($licenca['numero_casco'] ?? '') : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['numero_casco'] ?? '') : h($preenchimento['numero_casco'] ?? ''); ?>">
                     </div>
                 </div>
                 <div class="grid-2">
@@ -253,7 +400,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="sociedade_classificadora">Sociedade Classificadora</label>
                         <input type="text" name="sociedade_classificadora" id="sociedade_classificadora" class="form-control"
-                               value="<?php echo $editando ? h($licenca['sociedade_classificadora']) : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['sociedade_classificadora'] ?? 'Amazon Naval Ltda') : 'Amazon Naval Ltda'; ?>">
                     </div>
                 </div>
 
@@ -268,7 +415,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="comprimento_pp">Comp. PP (m)</label>
                         <input type="number" name="comprimento_pp" id="comprimento_pp" class="form-control" step="0.01"
-                               value="<?php echo $editando ? h($licenca['comprimento_pp'] ?? '') : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['comprimento_pp'] ?? '') : h($preenchimento['comprimento_pp'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
                         <label for="boca_moldada">Boca Mold. (m)</label>
@@ -283,7 +430,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="calado_maximo">Calado Máx. (m)</label>
                         <input type="number" name="calado_maximo" id="calado_maximo" class="form-control" step="0.01"
-                               value="<?php echo $editando ? h($licenca['calado_maximo'] ?? '') : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['calado_maximo'] ?? '') : h($preenchimento['calado_maximo'] ?? ''); ?>">
                     </div>
                 </div>
 
@@ -293,17 +440,17 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="porte_bruto">Porte Bruto (PB)</label>
                         <input type="number" name="porte_bruto" id="porte_bruto" class="form-control" step="0.01"
-                               value="<?php echo $editando ? h($licenca['porte_bruto'] ?? '') : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['porte_bruto'] ?? '') : h($preenchimento['porte_bruto'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
                         <label for="numero_tripulantes">Nº Tripulantes</label>
                         <input type="number" name="numero_tripulantes" id="numero_tripulantes" class="form-control" min="0"
-                               value="<?php echo $editando ? h($licenca['numero_tripulantes'] ?? '') : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['numero_tripulantes'] ?? '') : h($preenchimento['numero_tripulantes'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
                         <label for="numero_passageiros">Nº Passageiros</label>
                         <input type="number" name="numero_passageiros" id="numero_passageiros" class="form-control" min="0"
-                               value="<?php echo $editando ? h($licenca['numero_passageiros'] ?? '') : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['numero_passageiros'] ?? '') : h($preenchimento['numero_passageiros'] ?? ''); ?>">
                     </div>
                 </div>
 
@@ -313,22 +460,22 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="tipo_navegacao">Tipo de Navegação</label>
                         <input type="text" name="tipo_navegacao" id="tipo_navegacao" class="form-control" placeholder="Ex: Interior, Mar Aberto"
-                               value="<?php echo $editando ? h($licenca['tipo_navegacao'] ?? '') : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['tipo_navegacao'] ?? '') : h($preenchimento['tipo_navegacao'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
                         <label for="area_navegacao">Área de Navegação</label>
                         <input type="text" name="area_navegacao" id="area_navegacao" class="form-control" placeholder="Ex: Área 1, Cabotagem"
-                               value="<?php echo $editando ? h($licenca['area_navegacao'] ?? '') : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['area_navegacao'] ?? '') : h($preenchimento['area_navegacao'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
                         <label for="atividade_servico">Atividade/Serviço</label>
                         <input type="text" name="atividade_servico" id="atividade_servico" class="form-control" placeholder="Ex: Transporte de Passageiros"
-                               value="<?php echo $editando ? h($licenca['atividade_servico'] ?? '') : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['atividade_servico'] ?? '') : h($preenchimento['atividade_servico'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
                         <label for="propulsao">Propulsão</label>
                         <input type="text" name="propulsao" id="propulsao" class="form-control" placeholder="Ex: Motor Diesel"
-                               value="<?php echo $editando ? h($licenca['propulsao'] ?? '') : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['propulsao'] ?? '') : h($preenchimento['propulsao'] ?? ''); ?>">
                     </div>
                 </div>
             </div>
@@ -342,17 +489,17 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="proprietario_nome">Nome / Razão Social</label>
                         <input type="text" name="proprietario_nome" id="proprietario_nome" class="form-control"
-                               value="<?php echo $editando ? h($licenca['proprietario_nome']) : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['proprietario_nome']) : h($preenchimento['proprietario_nome'] ?? $preenchimento['proprietario'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
                         <label for="proprietario_cpf_cnpj">CPF / CNPJ</label>
                         <input type="text" name="proprietario_cpf_cnpj" id="proprietario_cpf_cnpj" class="form-control"
-                               value="<?php echo $editando ? h($licenca['proprietario_cpf_cnpj']) : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['proprietario_cpf_cnpj']) : h($preenchimento['proprietario_cpf_cnpj'] ?? ''); ?>">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="proprietario_endereco">Endereço</label>
-                    <textarea name="proprietario_endereco" id="proprietario_endereco" class="form-control" rows="2"><?php echo $editando ? h($licenca['proprietario_endereco']) : ''; ?></textarea>
+                    <textarea name="proprietario_endereco" id="proprietario_endereco" class="form-control" rows="2"><?php echo $editando ? h($licenca['proprietario_endereco']) : h($preenchimento['proprietario_endereco'] ?? ''); ?></textarea>
                 </div>
             </div>
         </div>
@@ -365,17 +512,17 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="estaleiro_nome">Nome / Razão Social</label>
                         <input type="text" name="estaleiro_nome" id="estaleiro_nome" class="form-control"
-                               value="<?php echo $editando ? h($licenca['estaleiro_nome']) : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['estaleiro_nome']) : h($preenchimento['estaleiro_nome'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
                         <label for="estaleiro_cpf_cnpj">CPF / CNPJ</label>
                         <input type="text" name="estaleiro_cpf_cnpj" id="estaleiro_cpf_cnpj" class="form-control"
-                               value="<?php echo $editando ? h($licenca['estaleiro_cpf_cnpj']) : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['estaleiro_cpf_cnpj']) : h($preenchimento['estaleiro_cpf_cnpj'] ?? ''); ?>">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="estaleiro_endereco">Endereço</label>
-                    <textarea name="estaleiro_endereco" id="estaleiro_endereco" class="form-control" rows="2"><?php echo $editando ? h($licenca['estaleiro_endereco']) : ''; ?></textarea>
+                    <textarea name="estaleiro_endereco" id="estaleiro_endereco" class="form-control" rows="2"><?php echo $editando ? h($licenca['estaleiro_endereco']) : h($preenchimento['estaleiro_endereco'] ?? ''); ?></textarea>
                 </div>
             </div>
         </div>
@@ -388,17 +535,17 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="assinante_nome">Nome Completo</label>
                         <input type="text" name="assinante_nome" id="assinante_nome" class="form-control"
-                               value="<?php echo $editando ? h($licenca['assinante_nome']) : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['assinante_nome']) : h($preenchimento['assinante_nome'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
                         <label for="assinante_titulo">Título/Cargo</label>
-                        <input type="text" name="assinante_titulo" id="assinante_titulo" class="form-control" placeholder="Ex: Engenheira Naval"
-                               value="<?php echo $editando ? h($licenca['assinante_titulo']) : ''; ?>">
+                        <input type="text" name="assinante_titulo" id="assinante_titulo" class="form-control" placeholder="Ex: Engenheiro Naval / Analista Técnico"
+                               value="<?php echo $editando ? h($licenca['assinante_titulo']) : h($preenchimento['assinante_titulo'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
                         <label for="assinante_registro">Registro Profissional</label>
                         <input type="text" name="assinante_registro" id="assinante_registro" class="form-control" placeholder="Ex: CREA: 22.482"
-                               value="<?php echo $editando ? h($licenca['assinante_registro']) : ''; ?>">
+                               value="<?php echo $editando ? h($licenca['assinante_registro']) : h($preenchimento['assinante_registro'] ?? ''); ?>">
                     </div>
                 </div>
             </div>
@@ -406,15 +553,42 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
 
         <!-- Botões -->
         <div class="card mb-3">
-            <div class="card-footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+            <div class="card-footer" style="display: flex; gap: 10px; justify-content: flex-end; align-items: center;">
                 <a href="<?php echo APP_URL; ?>documentacao/lc" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
-                <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> <?php echo $editando ? 'Atualizar' : 'Salvar'; ?> Licença</button>
+                <?php if ($bloqueio_exigencias): ?>
+                    <button type="button" class="btn btn-danger" disabled title="Bloqueado por exigências pendentes no RAP">
+                        <i class="fas fa-ban"></i> Emissão Bloqueada (Exigências Pendentes)
+                    </button>
+                <?php else: ?>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> <?php echo $editando ? 'Atualizar' : 'Salvar e Emitir'; ?> Licença
+                    </button>
+                <?php endif; ?>
             </div>
         </div>
     </form>
 </div>
 
 <script>
+function atualizarNumero() {
+    const select = document.getElementById('tipo_licenca');
+    if (!select) return;
+    const tipo = select.value;
+    const input = document.getElementById('numero_lc_display');
+    const termGroup = document.getElementById('lc_term_group');
+    if (termGroup) {
+        termGroup.style.display = tipo === 'LCEC' ? '' : 'none';
+    }
+    <?php if (!$editando): ?>
+    if (input) {
+        if (tipo === 'LCEC') input.value = <?php echo json_encode($proximo_numero_ec); ?>;
+        else if (tipo === 'LA') input.value = <?php echo json_encode($proximo_numero_la); ?>;
+        else if (tipo === 'LR') input.value = <?php echo json_encode($proximo_numero_lr); ?>;
+        else input.value = <?php echo json_encode($proximo_numero); ?>;
+    }
+    <?php endif; ?>
+}
+
 function carregarDadosEmbarcacao(embarcacaoId) {
     if (!embarcacaoId) return;
     
@@ -438,21 +612,22 @@ function carregarDadosEmbarcacao(embarcacaoId) {
     
     for (const [fieldId, dataAttr] of Object.entries(campos)) {
         const input = document.getElementById(fieldId);
-        if (input) {
+        if (input && (!input.value || input.value === '')) {
             const value = option.dataset[dataAttr] || '';
             input.value = value;
         }
     }
 }
 
-<?php if (!empty($_GET['agendamento_id'])): ?>
 document.addEventListener('DOMContentLoaded', function() {
+    atualizarNumero();
+    <?php if (!empty($_GET['agendamento_id'])): ?>
     const select = document.getElementById('embarcacao_id');
     if (select && select.value) {
         carregarDadosEmbarcacao(select.value);
     }
+    <?php endif; ?>
 });
-<?php endif; ?>
 </script>
 
 <?php require_once __DIR__ . '/../../../includes/footer.php'; ?>

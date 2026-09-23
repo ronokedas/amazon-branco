@@ -22,16 +22,24 @@ function sincronizarClienteEmbarcacoes(PDO $pdo, string $clienteId, array $embar
     $desativar = array_diff(array_keys($atuaisPorEmbarcacao), $validos);
     if ($desativar) {
         $stmt = $pdo->prepare("UPDATE clientes_embarcacoes SET status='INATIVO', vinculo_ativo_chave=NULL, desvinculado_em=NOW(), desvinculado_por=:usuario WHERE cliente_id=:cliente AND embarcacao_id=:embarcacao AND status='ATIVO'");
+        $stmtDesvEmb = $pdo->prepare("UPDATE embarcacoes SET proprietario_id = NULL, cliente_id = NULL WHERE id = :embarcacao AND (proprietario_id = :cliente1 OR cliente_id = :cliente2)");
         foreach ($desativar as $embarcacaoId) {
             $stmt->execute([':usuario' => $usuarioId, ':cliente' => $clienteId, ':embarcacao' => $embarcacaoId]);
+            $stmtDesvEmb->execute([':cliente1' => $clienteId, ':cliente2' => $clienteId, ':embarcacao' => $embarcacaoId]);
         }
     }
 
     $ativar = array_diff($validos, array_keys($atuaisPorEmbarcacao));
     if ($ativar) {
+        $stmtNomeCli = $pdo->prepare("SELECT nome FROM clientes WHERE id = :cliente LIMIT 1");
+        $stmtNomeCli->execute([':cliente' => $clienteId]);
+        $nomeCliente = $stmtNomeCli->fetchColumn() ?: null;
+
         $stmt = $pdo->prepare("INSERT INTO clientes_embarcacoes (id, cliente_id, embarcacao_id, status, vinculo_ativo_chave, vinculado_em, vinculado_por) VALUES (UUID(), :cliente, :embarcacao, 'ATIVO', concat(:cliente_chave, ':', :embarcacao_chave), NOW(), :usuario)");
+        $stmtSyncEmb = $pdo->prepare("UPDATE embarcacoes SET proprietario_id = :prop_id, cliente_id = :cli_id, proprietario = :nome_cliente WHERE id = :embarcacao");
         foreach ($ativar as $embarcacaoId) {
             $stmt->execute([':cliente' => $clienteId, ':embarcacao' => $embarcacaoId, ':cliente_chave'=>$clienteId, ':embarcacao_chave'=>$embarcacaoId, ':usuario' => $usuarioId]);
+            $stmtSyncEmb->execute([':prop_id' => $clienteId, ':cli_id' => $clienteId, ':nome_cliente' => $nomeCliente, ':embarcacao' => $embarcacaoId]);
         }
     }
 }

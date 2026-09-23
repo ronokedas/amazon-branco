@@ -157,7 +157,7 @@ require_once __DIR__ . '/../../includes/portal_header.php';
         'ART',
         'FOLHA DE ROSTO',
         'DECLARAÇÃO',
-        'MEMORIAL DESCRITO',
+        'MEMORIAL DESCRITIVO',
         'NOTAS DE ARQUEAÇÃO',
         'NOTAS DE BORDA LIVRE',
         'PLANO DE ARRANJO GERAL, LUZES, SEGURANÇA E CAPACIDADE.',
@@ -386,7 +386,10 @@ require_once __DIR__ . '/../../includes/portal_header.php';
                                         </div>
                                     </div>
                                 </div>
-                                <div style="flex-shrink: 0;">
+                                <div style="flex-shrink: 0; display: flex; align-items: center; gap: 8px;">
+                                    <a href="<?php echo APP_URL; ?>analises-planos/arquivo?id=<?php echo urlencode($histArq['arquivo_id']); ?>" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size: 0.78rem; padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; text-decoration: none;" title="Abrir e baixar este arquivo">
+                                        <i class="fa-solid fa-cloud-arrow-down"></i> Baixar
+                                    </a>
                                     <span class="badge" style="background: #e2e8f0; color: #334155; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px;">
                                         <i class="fa-solid fa-check"></i> <?php echo h($histArq['classificacao'] ?: 'Recebido / Em análise'); ?>
                                     </span>

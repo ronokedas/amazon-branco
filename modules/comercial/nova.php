@@ -76,15 +76,45 @@ if (!in_array($escritorioProposta, $idsEscritoriosProposta, true)) $escritorioPr
 $selecionarEscritorioProposta = financeiroEhAdmin() || count($escritoriosProposta) > 1;
 $escritorioPropostaDisponivel = $escritorioProposta !== '';
 
-// Buscar proprietarios ativos
+// Buscar clientes ativos (Proprietários, Armadores e Despachantes)
 try {
-    $stmtClientes = $pdo->query("SELECT id, nome, perfil, cpf_cnpj FROM clientes WHERE status = 'ATIVO' AND perfil = 'proprietario' ORDER BY nome ASC");
+    $stmtClientes = $pdo->query("
+        SELECT id, nome, perfil, cpf_cnpj 
+        FROM clientes 
+        WHERE (status = 'ATIVO' OR status IS NULL) 
+          AND (ativo = 1 OR ativo IS NULL) 
+          AND excluido_em IS NULL 
+        ORDER BY criado_em DESC, nome ASC
+    ");
     $clientes = $stmtClientes->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $clientes = [];
 }
 
+$embarcacaoPreSelecionadaId = trim($_GET['embarcacao_id'] ?? '');
 $clientePreSelecionadoId = $modoEdicao ? (string)$propostaEdicao['cliente_id'] : ($_GET['cliente_id'] ?? '');
+
+// Se foi passada a embarcação e nenhum cliente, resolver automaticamente o proprietário/armador da embarcação
+if (empty($clientePreSelecionadoId) && !empty($embarcacaoPreSelecionadaId)) {
+    try {
+        $stmtOwner = $pdo->prepare("
+            SELECT COALESCE(ce.cliente_id, e.proprietario_id, e.cliente_id) as cid
+            FROM embarcacoes e
+            LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND ce.status = 'ATIVO'
+            WHERE e.id = :emb_id
+            ORDER BY ce.vinculado_em DESC
+            LIMIT 1
+        ");
+        $stmtOwner->execute([':emb_id' => $embarcacaoPreSelecionadaId]);
+        $cid = $stmtOwner->fetchColumn();
+        if (!empty($cid)) {
+            $clientePreSelecionadoId = (string)$cid;
+        }
+    } catch (Exception $e) {
+        error_log('Erro ao resolver proprietário da embarcação para proposta: ' . $e->getMessage());
+    }
+}
+
 $clientePreSelecionadoEncontrado = false;
 
 if (!empty($clientes)) {
@@ -95,7 +125,13 @@ if (!empty($clientes)) {
         }
     }
 
-    if (!$clientePreSelecionadoEncontrado && count($clientes) === 1) {
+    if ($clientePreSelecionadoEncontrado) {
+        usort($clientes, function($a, $b) use ($clientePreSelecionadoId) {
+            if ($a['id'] === $clientePreSelecionadoId) return -1;
+            if ($b['id'] === $clientePreSelecionadoId) return 1;
+            return 0;
+        });
+    } elseif (count($clientes) === 1) {
         $clientePreSelecionadoId = $clientes[0]['id'];
         $clientePreSelecionadoEncontrado = true;
     }
@@ -152,6 +188,7 @@ const ESCRITORIO_DISPONIVEL = <?php echo $escritorioPropostaDisponivel ? 'true' 
 const ALL_SERVICOS = <?php echo json_encode($servicos, JSON_UNESCAPED_UNICODE); ?>;
 const MODO_EDICAO = <?php echo $modoEdicao ? 'true' : 'false'; ?>;
 const SERVICOS_EDICAO_INICIAIS = <?php echo json_encode($servicosEdicaoIniciais, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+const EMBARCACAO_URL_INICIAL = <?php echo json_encode($embarcacaoPreSelecionadaId); ?>;
 </script>
 <script src="<?php echo APP_URL; ?>modules/comercial/js/proposta_wizard.js"></script>
 

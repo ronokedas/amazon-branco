@@ -177,7 +177,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <th>Número de Inscrição</th>
                         <th>Proprietário</th>
                         <th>Ano</th>
-                        <th>Ações</th>
+                        <th style="min-width: 180px;">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -194,7 +194,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <td><?php echo h($e['proprietario'] ?? '-'); ?></td>
                         <td><?php echo h($e['ano'] ?? '-'); ?></td>
                         <td>
-                            <div class="d-flex gap-1">
+                            <div class="d-flex gap-1" style="white-space: nowrap;">
+                                <a href="<?php echo APP_URL; ?>comercial/nova?embarcacao_id=<?php echo urlencode($e['id']); ?>" 
+                                   class="btn btn-primary btn-sm" 
+                                   title="Gerar Proposta Comercial para esta embarcação"
+                                   style="display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
+                                    <i class="fas fa-file-invoice-dollar"></i> Proposta
+                                </a>
                                 <a href="<?php echo APP_URL; ?>embarcacoes/form?id=<?php echo urlencode($e['id']); ?>" 
                                    class="btn btn-secondary btn-sm" title="Editar">
                                     <i class="fas fa-edit"></i>

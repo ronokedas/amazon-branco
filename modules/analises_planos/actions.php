@@ -130,7 +130,7 @@ try {
     }
 
     if ($analiseId === '') throw new RuntimeException('Análise não informada.');
-    $analise = analisePlanosCarregar($pdo, $analiseId, in_array($acao, ['agendar','iniciar','assinar_parecer','publicar'], true));
+    $analise = analisePlanosCarregar($pdo, $analiseId, in_array($acao, ['agendar','iniciar','assinar_parecer','publicar','emitir_licenca'], true));
     $cargo = getCargo();
     $usuario = (string)($_SESSION['usuario_id'] ?? '');
 
@@ -234,7 +234,7 @@ try {
 
     if ($acao === 'adicionar_submissao') {
         analiseAcaoExigirTecnico($analise);
-        if(!in_array($analise['status'],['EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true))throw new RuntimeException('O processo não aceita revisão neste estado.');
+        if(!in_array($analise['status'],['AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true))throw new RuntimeException('O processo não aceita revisão neste estado.');
         $arquivos=$_FILES['arquivos']??null;if(!$arquivos||!is_array($arquivos['name']??null))throw new RuntimeException('Selecione pelo menos um arquivo.');
         $preparados=[];foreach($arquivos['name'] as $i=>$nome){if(($arquivos['error'][$i]??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE)continue;$arq=['name'=>$nome,'type'=>$arquivos['type'][$i]??'','tmp_name'=>$arquivos['tmp_name'][$i]??'','error'=>$arquivos['error'][$i]??UPLOAD_ERR_NO_FILE,'size'=>$arquivos['size'][$i]??0];$preparados[]=[$arq,analisePlanosValidarUpload($arq)];}
         if(!$preparados)throw new RuntimeException('Selecione pelo menos um arquivo válido.');
@@ -255,6 +255,29 @@ try {
         $stmt->execute([':item'=>$itemId,':classificacao'=>$classificacao,':justificativa'=>$justificativa?:null,':usuario'=>$usuario,':arquivo'=>$arquivoId,':analise'=>$analiseId]);if($stmt->rowCount()!==1)throw new RuntimeException('Arquivo não encontrado ou classificação inalterada.');
         analisePlanosHistorico($pdo,$analiseId,'ARQUIVO_CLASSIFICADO',$analise['status'],$analise['status'],$classificacao.($justificativa?' · '.$justificativa:''));
         setMensagem('success','Arquivo classificado.');redirecionar($retorno($analiseId, 'arquivos'));
+    }
+
+    if ($acao === 'aceitar_todos_arquivos') {
+        analiseAcaoExigirTecnico($analise);
+        if (!in_array($analise['status'], ['EM_ANALISE', 'AGUARDANDO_DOCUMENTOS'], true)) {
+            throw new RuntimeException('Arquivos não podem ser alterados neste estado.');
+        }
+        $subId = trim($_POST['submissao_id'] ?? '');
+        if ($subId) {
+            $stmt = $pdo->prepare("UPDATE analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id SET ar.classificacao='ACEITO', ar.justificativa_classificacao=COALESCE(NULLIF(ar.justificativa_classificacao,''),'Aceito pelo analista.'), ar.classificado_por=:usuario, ar.classificado_em=NOW() WHERE ar.submissao_id=:sub AND s.analise_id=:analise AND ar.classificacao='RECEBIDO'");
+            $stmt->execute([':sub' => $subId, ':analise' => $analiseId, ':usuario' => $usuario]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id SET ar.classificacao='ACEITO', ar.justificativa_classificacao=COALESCE(NULLIF(ar.justificativa_classificacao,''),'Aceito pelo analista.'), ar.classificado_por=:usuario, ar.classificado_em=NOW() WHERE s.analise_id=:analise AND ar.classificacao='RECEBIDO'");
+            $stmt->execute([':analise' => $analiseId, ':usuario' => $usuario]);
+        }
+        analisePlanosHistorico($pdo, $analiseId, 'ARQUIVOS_ACEITOS_LOTE', $analise['status'], $analise['status'], 'Arquivos recebidos classificados como Aceitos em lote.');
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => true, 'mensagem' => 'Todos os arquivos foram aceitos com sucesso.']);
+            exit;
+        }
+        setMensagem('success', 'Todos os arquivos foram classificados como Aceitos.');
+        redirecionar($retorno($analiseId, 'arquivos'));
     }
 
     if ($acao === 'salvar_itens') {
@@ -296,9 +319,9 @@ try {
 
         $pdo->beginTransaction();
         $stmtInsert = $pdo->prepare("INSERT INTO analise_planos_exigencias (
-            id, analise_id, ordem, descricao, referencia_normativa, categoria, status, criado_por
+            id, analise_id, ordem, descricao, referencia_normativa, categoria, as_impeditivo, status, criado_por
         ) VALUES (
-            :id, :analise, :ordem, :descricao, :referencia, :categoria, 'PENDENTE', :usuario
+            :id, :analise, :ordem, :descricao, :referencia, :categoria, :as_impeditivo, 'PENDENTE', :usuario
         )");
 
         $inseridos = [];
@@ -308,6 +331,7 @@ try {
 
             $cat = trim($it['categoria'] ?? 'GERAL') ?: 'GERAL';
             $ref = trim($it['referencia_normativa'] ?? $it['referencia'] ?? '') ?: null;
+            $asVal = (!empty($it['as_impeditivo']) || !empty($it['as']) || !empty($_POST['nova_exigencia_as'])) ? 1 : 0;
             $ordemAtual++;
             $novoId = gerarUUID();
 
@@ -318,6 +342,7 @@ try {
                 ':descricao' => $desc,
                 ':referencia' => $ref,
                 ':categoria' => $cat,
+                ':as_impeditivo' => $asVal,
                 ':usuario' => $usuario,
             ]);
 
@@ -327,6 +352,7 @@ try {
                 'categoria' => $cat,
                 'descricao' => $desc,
                 'referencia_normativa' => $ref ?: '',
+                'as_impeditivo' => $asVal,
                 'status' => 'PENDENTE'
             ];
         }
@@ -339,6 +365,7 @@ try {
         analisePlanosHistorico($pdo, $analiseId, 'EXIGENCIAS_ATUALIZADAS', $analise['status'], $analise['status'], "{$totalInseridos} exigência(s) inserida(s) no processo.");
         $pdo->commit();
 
+        $saldo = analisePlanosSaldoExigencias($pdo, $analiseId);
         $qTotal = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias WHERE analise_id = :analise");
         $qTotal->execute([':analise' => $analiseId]);
         $totalGeral = (int)$qTotal->fetchColumn();
@@ -353,6 +380,7 @@ try {
                 'total_inseridos' => $totalInseridos,
                 'total_geral' => $totalGeral,
                 'itens' => $inseridos,
+                'saldo' => $saldo
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
@@ -362,21 +390,53 @@ try {
     }
 
     if ($acao === 'salvar_exigencias') {
-        analiseAcaoExigirTecnico($analise);if(!in_array($analise['status'],['EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true))throw new RuntimeException('Exigências não podem ser alteradas neste estado.');
-        $ids=$_POST['exigencia_id']??[];
-        $categorias=$_POST['exigencia_categoria']??[];
+        analiseAcaoExigirTecnico($analise);
+        if (!in_array($analise['status'], ['EM_ANALISE', 'AGUARDANDO_DOCUMENTOS'], true)) {
+            throw new RuntimeException('Exigências não podem ser alteradas neste estado.');
+        }
+        $ids = $_POST['exigencia_id'] ?? [];
+        $categorias = $_POST['exigencia_categoria'] ?? [];
+        $statusList = $_POST['exigencia_status'] ?? [];
+        $asList = $_POST['exigencia_as'] ?? [];
         $pdo->beginTransaction();
-        $upd=$pdo->prepare('UPDATE analise_planos_exigencias SET ordem=:ordem,descricao=:descricao,referencia_normativa=:referencia,categoria=:categoria WHERE id=:id AND analise_id=:analise AND status<>"CUMPRIDA"');
-        foreach($ids as $i=>$exId){
+        $upd = $pdo->prepare('UPDATE analise_planos_exigencias 
+            SET ordem=:ordem, descricao=:descricao, referencia_normativa=:referencia, 
+                categoria=:categoria, status=:status, as_impeditivo=:as_impeditivo, saneamento_pendente=:saneamento 
+            WHERE id=:id AND analise_id=:analise');
+        foreach ($ids as $i => $exId) {
             $cat = trim($categorias[$i] ?? '') ?: 'GERAL';
-            $upd->execute([':ordem'=>$i+1,':descricao'=>trim($_POST['exigencia_descricao'][$i]??''),':referencia'=>trim($_POST['exigencia_referencia'][$i]??'')?:null,':categoria'=>$cat,':id'=>$exId,':analise'=>$analiseId]);
+            $st = trim($statusList[$i] ?? '') ?: 'PENDENTE';
+            $asItem = !empty($asList[$exId]) || !empty($asList[$i]) ? 1 : 0;
+            if (!in_array($st, ['PENDENTE', 'PARCIAL', 'CUMPRIDA', 'NAO_CUMPRIDA'], true)) $st = 'PENDENTE';
+            $upd->execute([
+                ':ordem' => $i + 1,
+                ':descricao' => trim($_POST['exigencia_descricao'][$i] ?? ''),
+                ':referencia' => trim($_POST['exigencia_referencia'][$i] ?? '') ?: null,
+                ':categoria' => $cat,
+                ':status' => $st,
+                ':as_impeditivo' => $asItem,
+                ':saneamento' => ($st === 'CUMPRIDA' ? 0 : 1),
+                ':id' => $exId,
+                ':analise' => $analiseId
+            ]);
         }
-        if(trim($_POST['nova_exigencia']??'')!==''){
+        if (trim($_POST['nova_exigencia'] ?? '') !== '') {
             $novaCat = trim($_POST['nova_exigencia_categoria'] ?? '') ?: 'GERAL';
-            $pdo->prepare('INSERT INTO analise_planos_exigencias(id,analise_id,ordem,descricao,referencia_normativa,categoria,status,criado_por)VALUES(UUID(),:analise,:ordem,:descricao,:referencia,:categoria,"PENDENTE",:usuario)')->execute([':analise'=>$analiseId,':ordem'=>count($ids)+1,':descricao'=>trim($_POST['nova_exigencia']),':referencia'=>trim($_POST['nova_exigencia_referencia']??'')?:null,':categoria'=>$novaCat,':usuario'=>$usuario]);
+            $novaAS = !empty($_POST['nova_exigencia_as']) ? 1 : 0;
+            $pdo->prepare('INSERT INTO analise_planos_exigencias(id,analise_id,ordem,descricao,referencia_normativa,categoria,as_impeditivo,status,criado_por) VALUES (UUID(),:analise,:ordem,:descricao,:referencia,:categoria,:as_impeditivo,"PENDENTE",:usuario)')->execute([
+                ':analise' => $analiseId,
+                ':ordem' => count($ids) + 1,
+                ':descricao' => trim($_POST['nova_exigencia']),
+                ':referencia' => trim($_POST['nova_exigencia_referencia'] ?? '') ?: null,
+                ':categoria' => $novaCat,
+                ':as_impeditivo' => $novaAS,
+                ':usuario' => $usuario
+            ]);
         }
-        analisePlanosHistorico($pdo,$analiseId,'EXIGENCIAS_ATUALIZADAS',$analise['status'],$analise['status']);$pdo->commit();
+        analisePlanosHistorico($pdo, $analiseId, 'EXIGENCIAS_ATUALIZADAS', $analise['status'], $analise['status']);
+        $pdo->commit();
 
+        $saldo = analisePlanosSaldoExigencias($pdo, $analiseId);
         $qTotal = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias WHERE analise_id = :analise");
         $qTotal->execute([':analise' => $analiseId]);
         $totalGeral = (int)$qTotal->fetchColumn();
@@ -387,11 +447,99 @@ try {
                 'success' => true,
                 'mensagem' => 'Exigências atualizadas com sucesso.',
                 'total_geral' => $totalGeral,
+                'saldo' => $saldo
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
-        setMensagem('success','Exigências atualizadas.');redirecionar($retorno($analiseId, 'exigencias'));
+        setMensagem('success', 'Exigências atualizadas.');
+        redirecionar($retorno($analiseId, 'exigencias'));
+    }
+
+    if ($acao === 'toggle_as_exigencia') {
+        analiseAcaoExigirTecnico($analise);
+        if (!in_array($analise['status'], ['EM_ANALISE', 'AGUARDANDO_DOCUMENTOS'], true)) {
+            throw new RuntimeException('Exigências não podem ser alteradas neste estado.');
+        }
+        $exId = trim($_POST['exigencia_id'] ?? '');
+        $valor = isset($_POST['as_impeditivo']) ? (!empty($_POST['as_impeditivo']) ? 1 : 0) : null;
+        
+        $pdo->beginTransaction();
+        if ($valor === null) {
+            $pdo->prepare('UPDATE analise_planos_exigencias SET as_impeditivo = IF(as_impeditivo=1, 0, 1) WHERE id=:id AND analise_id=:analise')
+                ->execute([':id' => $exId, ':analise' => $analiseId]);
+        } else {
+            $pdo->prepare('UPDATE analise_planos_exigencias SET as_impeditivo = :val WHERE id=:id AND analise_id=:analise')
+                ->execute([':val' => $valor, ':id' => $exId, ':analise' => $analiseId]);
+        }
+        
+        $stmtAS = $pdo->prepare('SELECT as_impeditivo FROM analise_planos_exigencias WHERE id=:id AND analise_id=:analise');
+        $stmtAS->execute([':id' => $exId, ':analise' => $analiseId]);
+        $novoAS = (int)$stmtAS->fetchColumn();
+        
+        analisePlanosHistorico($pdo, $analiseId, 'EXIGENCIA_AS_ALTERADA', $analise['status'], $analise['status'], "Exigência {$exId} condição A/S alterada para " . ($novoAS ? 'SIM' : 'NÃO') . ".");
+        $pdo->commit();
+
+        $saldo = analisePlanosSaldoExigencias($pdo, $analiseId);
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'mensagem' => $novoAS ? 'Exigência marcada como A/S (Grave - suspende emissão).' : 'Condição A/S removida da exigência.',
+                'exigencia_id' => $exId,
+                'as_impeditivo' => $novoAS,
+                'saldo' => $saldo
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        setMensagem('success', 'Condição A/S atualizada.');
+        redirecionar($retorno($analiseId, 'exigencias'));
+    }
+
+    if ($acao === 'baixa_rapida_exigencia') {
+        analiseAcaoExigirTecnico($analise);
+        if (!in_array($analise['status'], ['EM_ANALISE', 'AGUARDANDO_DOCUMENTOS'], true)) {
+            throw new RuntimeException('Exigências não podem ser alteradas neste estado.');
+        }
+        $exId = trim($_POST['exigencia_id'] ?? '');
+        $novoStatus = trim($_POST['status'] ?? 'CUMPRIDA');
+        if (!in_array($novoStatus, ['PENDENTE', 'PARCIAL', 'CUMPRIDA', 'NAO_CUMPRIDA'], true)) {
+            $novoStatus = 'CUMPRIDA';
+        }
+
+        $pdo->beginTransaction();
+        $upd = $pdo->prepare('UPDATE analise_planos_exigencias 
+            SET status=:status, saneamento_pendente=:saneamento,
+                observacao_cumprimento=CONCAT(COALESCE(observacao_cumprimento,""), :nota)
+            WHERE id=:id AND analise_id=:analise');
+        $upd->execute([
+            ':status' => $novoStatus,
+            ':saneamento' => ($novoStatus === 'CUMPRIDA' ? 0 : 1),
+            ':nota' => "\nAlteração rápida para " . $novoStatus . " por " . $usuario . " em " . date('d/m/Y H:i') . ".",
+            ':id' => $exId,
+            ':analise' => $analiseId
+        ]);
+        analisePlanosHistorico($pdo, $analiseId, 'EXIGENCIA_STATUS_ALTERADO', $analise['status'], $analise['status'], "Exigência alterada para {$novoStatus}.");
+        $pdo->commit();
+
+        $saldo = analisePlanosSaldoExigencias($pdo, $analiseId);
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'mensagem' => "Exigência marcada como {$novoStatus}.",
+                'exigencia_id' => $exId,
+                'novo_status' => $novoStatus,
+                'saldo' => $saldo
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        setMensagem('success', "Situação da exigência atualizada para {$novoStatus}.");
+        redirecionar($retorno($analiseId, 'exigencias'));
     }
 
     if ($acao === 'excluir_exigencia') {
@@ -428,28 +576,19 @@ try {
         if (!in_array($analise['status'], ['EM_ANALISE', 'AGUARDANDO_DOCUMENTOS'], true)) {
             throw new RuntimeException('O processo precisa estar em análise.');
         }
+        $submissaoId = trim($_POST['submissao_id'] ?? '');
         $resultado = trim($_POST['resultado'] ?? '');
-        if (!in_array($resultado, ['EXIGENCIAS', 'APROVADO', 'REPROVADO'], true)) {
-            throw new InvalidArgumentException('Resultado inválido. Não é permitida conclusão com exigências.');
-        }
-        if (!$analise['tipo_processo'] || !$analise['enquadramento']) {
-            throw new RuntimeException('Conclua o enquadramento antes do parecer.');
-        }
         $resumo = trim($_POST['resumo'] ?? '');
         $conclusao = trim($_POST['conclusao'] ?? '');
-        if (!$resumo || !$conclusao) {
-            throw new InvalidArgumentException('Informe resumo e conclusão.');
+        if (!$submissaoId || !in_array($resultado, ['APROVADO', 'EXIGENCIAS', 'REPROVADO'], true) || !$resumo || !$conclusao) {
+            throw new InvalidArgumentException('Preencha os campos obrigatórios do relatório técnico.');
         }
-        $submissaoId = trim($_POST['submissao_id'] ?? '');
-        if ($submissaoId === '') {
-            throw new InvalidArgumentException('Selecione a revisão documental analisada neste ciclo.');
-        }
-        $q = $pdo->prepare('SELECT id FROM analise_planos_submissoes WHERE id=:submissao AND analise_id=:analise');
-        $q->execute([':submissao' => $submissaoId, ':analise' => $analiseId]);
-        if (!$q->fetchColumn()) throw new RuntimeException('A revisão selecionada não pertence a este processo.');
-        $q = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_arquivos WHERE submissao_id=:id AND classificacao='RECEBIDO'");
-        $q->execute([':id' => $submissaoId]);
-        if ((int)$q->fetchColumn() > 0) throw new RuntimeException('Classifique todos os arquivos da revisão antes de emitir o relatório.');
+        $q = $pdo->prepare('SELECT id FROM analise_planos_submissoes WHERE id=:id AND analise_id=:analise');
+        $q->execute([':id' => $submissaoId, ':analise' => $analiseId]);
+        if (!$q->fetchColumn()) throw new RuntimeException('Revisão informada não pertence ao processo.');
+        // Classifica automaticamente os arquivos recebidos desta revisão como ACEITO
+        $pdo->prepare("UPDATE analise_planos_arquivos SET classificacao='ACEITO', justificativa_classificacao=COALESCE(NULLIF(justificativa_classificacao,''),'Aceito na emissão do relatório técnico.'), classificado_por=:usuario, classificado_em=NOW() WHERE submissao_id=:id AND classificacao='RECEBIDO'")->execute([':id' => $submissaoId, ':usuario' => $usuario]);
+
         $q = $pdo->prepare('SELECT * FROM analise_planos_exigencias WHERE analise_id=:id ORDER BY ordem,id');
         $q->execute([':id' => $analiseId]);
         $exigenciasCiclo = $q->fetchAll(PDO::FETCH_ASSOC);
@@ -467,11 +606,10 @@ try {
             }
         }
         if ($resultado === 'APROVADO') {
-            analisePlanosValidarConclusao($pdo, $analiseId);
-            $pdo->prepare("UPDATE analise_planos_itens SET resultado='CONFORME' WHERE analise_id=:id AND resultado NOT IN ('CONFORME','NAO_APLICA')")->execute([':id' => $analiseId]);
-            $q = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id WHERE s.analise_id=:id AND ar.classificacao IN ('RECEBIDO','REJEITADO')");
-            $q->execute([':id' => $analiseId]);
-            if ((int)$q->fetchColumn() > 0) throw new RuntimeException('Resolva todos os arquivos recebidos ou rejeitados antes do relatório conclusivo.');
+            // Em conclusão aprovada, aceita quaisquer arquivos ainda pendentes na análise
+            $pdo->prepare("UPDATE analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id SET ar.classificacao='ACEITO', ar.justificativa_classificacao=COALESCE(NULLIF(ar.justificativa_classificacao,''),'Aceito na aprovação conclusiva dos planos.'), ar.classificado_por=:usuario, ar.classificado_em=NOW() WHERE s.analise_id=:id AND ar.classificacao='RECEBIDO'")->execute([':id' => $analiseId, ':usuario' => $usuario]);
+            // E marca arquivos rejeitados de revisões anteriores como substituídos
+            $pdo->prepare("UPDATE analise_planos_arquivos ar INNER JOIN analise_planos_submissoes s ON s.id=ar.submissao_id SET ar.classificacao='SUBSTITUIDO', ar.justificativa_classificacao=CONCAT(COALESCE(ar.justificativa_classificacao,''),' (Substituído na aprovação conclusiva)') WHERE s.analise_id=:id AND ar.classificacao='REJEITADO'")->execute([':id' => $analiseId]);
         }
 
         $responsavel = analiseAcaoResponsavelDoAnalista($pdo, $analise);
@@ -526,18 +664,83 @@ try {
             ':validado_por' => $assinarAgora ? $usuario : null,
         ]);
 
-        $ins = $pdo->prepare('INSERT INTO analise_planos_relatorio_exigencias(id,relatorio_id,exigencia_id,submissao_id,resultado,manifestacao_tecnica,descricao_snapshot,referencia_snapshot,criado_por) VALUES (UUID(),:relatorio,:exigencia,:submissao,:resultado,:manifestacao,:descricao,:referencia,:usuario)');
+        $ins = $pdo->prepare('INSERT INTO analise_planos_relatorio_exigencias(id,relatorio_id,exigencia_id,submissao_id,resultado,manifestacao_tecnica,as_snapshot,descricao_snapshot,referencia_snapshot,criado_por) VALUES (UUID(),:relatorio,:exigencia,:submissao,:resultado,:manifestacao,:as_snapshot,:descricao,:referencia,:usuario)');
+        $updEx = $pdo->prepare("UPDATE analise_planos_exigencias SET status=:status, as_impeditivo=:as_impeditivo, saneamento_pendente=:saneamento, observacao_cumprimento=CONCAT(COALESCE(observacao_cumprimento,''), :nota) WHERE id=:id AND analise_id=:analise");
+        $baixaAS = $_POST['baixa_as'] ?? [];
+        $baixaASSubmetido = !empty($_POST['baixa_as_submetido']);
         foreach ($exigenciasCiclo as $ex) {
+            $rEx = $resultadosEx[$ex['id']];
+            $mEx = trim($manifestacoes[$ex['id']]);
+            if ($baixaASSubmetido) {
+                $asEx = !empty($baixaAS[$ex['id']]) ? 1 : 0;
+            } else {
+                $asEx = isset($baixaAS[$ex['id']]) ? (!empty($baixaAS[$ex['id']]) ? 1 : 0) : (int)($ex['as_impeditivo'] ?? 0);
+            }
             $ins->execute([
                 ':relatorio' => $parecerId,
                 ':exigencia' => $ex['id'],
                 ':submissao' => $submissaoId,
-                ':resultado' => $resultadosEx[$ex['id']],
-                ':manifestacao' => trim($manifestacoes[$ex['id']]),
+                ':resultado' => $rEx,
+                ':manifestacao' => $mEx,
+                ':as_snapshot' => $asEx,
                 ':descricao' => $ex['descricao'],
                 ':referencia' => $ex['referencia_normativa'],
                 ':usuario' => $usuario
             ]);
+            $updEx->execute([
+                ':status' => $rEx,
+                ':as_impeditivo' => $asEx,
+                ':saneamento' => ($rEx === 'CUMPRIDA' ? 0 : 1),
+                ':nota' => "\nBaixa no relatório " . $numero . " (" . $rEx . ($asEx ? ' - A/S' : '') . "): " . $mEx,
+                ':id' => $ex['id'],
+                ':analise' => $analiseId
+            ]);
+        }
+
+        // Inserção de novas exigências adicionadas diretamente neste ciclo de RAP
+        $novasEx = [];
+        if (!empty($_POST['novas_exigencias']) && is_array($_POST['novas_exigencias'])) {
+            $novasEx = $_POST['novas_exigencias'];
+        } elseif (!empty($_POST['novo_item_descricao'])) {
+            $novasEx[] = [
+                'descricao' => trim($_POST['novo_item_descricao']),
+                'categoria' => trim($_POST['novo_item_categoria'] ?? 'GERAL') ?: 'GERAL',
+                'referencia' => trim($_POST['novo_item_referencia'] ?? '') ?: null,
+                'as' => !empty($_POST['novo_item_as']) ? 1 : 0,
+                'resultado' => trim($_POST['novo_item_resultado'] ?? 'NAO_CUMPRIDA'),
+                'manifestacao' => trim($_POST['novo_item_manifestacao'] ?? 'Apontada neste ciclo.'),
+            ];
+        }
+        foreach ($novasEx as $nx) {
+            $descNx = trim($nx['descricao'] ?? '');
+            if ($descNx === '') continue;
+            $catNx = trim($nx['categoria'] ?? 'GERAL') ?: 'GERAL';
+            $refNx = trim($nx['referencia'] ?? $nx['referencia_normativa'] ?? '') ?: null;
+            $asNx = (!empty($nx['as']) || !empty($nx['as_impeditivo'])) ? 1 : 0;
+            $rNx = in_array($nx['resultado'] ?? '', ['CUMPRIDA','PARCIAL','NAO_CUMPRIDA'], true) ? $nx['resultado'] : 'NAO_CUMPRIDA';
+            $mNx = trim($nx['manifestacao'] ?? '') ?: 'Nova exigência registrada na conferência documental deste ciclo.';
+            $novoId = gerarUUID();
+            $qMaxOrd = $pdo->prepare("SELECT COALESCE(MAX(ordem),0)+1 FROM analise_planos_exigencias WHERE analise_id=:analise");
+            $qMaxOrd->execute([':analise' => $analiseId]);
+            $proxOrd = (int)$qMaxOrd->fetchColumn();
+
+            $pdo->prepare("INSERT INTO analise_planos_exigencias (id, analise_id, ordem, categoria, descricao, referencia_normativa, as_impeditivo, status, saneamento_pendente, observacao_cumprimento, criado_por) VALUES (:id, :analise, :ordem, :categoria, :descricao, :referencia, :as, :status, :saneamento, :obs, :usuario)")
+                ->execute([
+                    ':id' => $novoId, ':analise' => $analiseId, ':ordem' => $proxOrd, ':categoria' => $catNx,
+                    ':descricao' => $descNx, ':referencia' => $refNx, ':as' => $asNx, ':status' => $rNx,
+                    ':saneamento' => ($rNx === 'CUMPRIDA' ? 0 : 1),
+                    ':obs' => "\nRegistrada no relatório {$numero}: {$mNx}", ':usuario' => $usuario
+                ]);
+
+            $ins->execute([
+                ':relatorio' => $parecerId, ':exigencia' => $novoId, ':submissao' => $submissaoId,
+                ':resultado' => $rNx, ':manifestacao' => $mNx, ':as_snapshot' => $asNx,
+                ':descricao' => $descNx, ':referencia' => $refNx, ':usuario' => $usuario
+            ]);
+        }
+
+        if ($resultado === 'APROVADO') {
+            $pdo->prepare("UPDATE analise_planos_itens SET resultado='CONFORME' WHERE analise_id=:id AND resultado NOT IN ('CONFORME','NAO_APLICA')")->execute([':id' => $analiseId]);
         }
 
         if ($assinarAgora) {
@@ -609,6 +812,52 @@ try {
 
         setMensagem('success', $parecer['resultado'] === 'APROVADO' ? 'Relatório conclusivo publicado e minuta da licença criada.' : 'Relatório publicado com sucesso.');
         redirecionar($retorno($analiseId, 'pareceres'));
+    }
+
+    if ($acao === 'emitir_licenca') {
+        if (!in_array($cargo, ['ANALISTA', 'ADMIN'], true) || ($cargo === 'ANALISTA' && $analise['analista_id'] !== $usuario)) {
+            throw new RuntimeException('Somente o analista naval atribuído ao processo pode emitir a licença oficial.');
+        }
+
+        // Validação de ao menos um relatório técnico (RAP) publicado
+        $stmtPar = $pdo->prepare("SELECT id, numero, finalidade, resultado, status FROM analise_planos_pareceres
+            WHERE analise_id = :id AND status = 'PUBLICADO'
+            ORDER BY versao DESC LIMIT 1");
+        $stmtPar->execute([':id' => $analiseId]);
+        $parecerPublicado = $stmtPar->fetch(PDO::FETCH_ASSOC);
+
+        if (!$parecerPublicado && $analise['status'] !== 'CONCLUIDA') {
+            throw new RuntimeException('A emissão da licença exige que ao menos uma versão do relatório técnico (RAP) esteja emitida e publicada.');
+        }
+
+        // Validação estrita de zero exigências do tipo A/S pendentes
+        $stmtExAS = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias 
+            WHERE analise_id = :id AND as_impeditivo = 1 AND (status <> 'CUMPRIDA' OR saneamento_pendente = 1)");
+        $stmtExAS->execute([':id' => $analiseId]);
+        $pendenciasAS = (int)$stmtExAS->fetchColumn();
+        if ($pendenciasAS > 0) {
+            throw new RuntimeException("Emissão bloqueada: o processo possui {$pendenciasAS} exigência(s) com condição grave A/S pendente(s). Conforme a regra naval, exigências A/S suspendem a emissão da licença até seu cumprimento integral.");
+        }
+
+        $pdo->beginTransaction();
+        $responsavel = analiseAcaoResponsavelDoAnalista($pdo, $analise);
+        $licencaId = analiseAcaoCriarLicenca($pdo, $analise, $responsavel);
+
+        $stmtPendGeral = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias WHERE analise_id = :id AND (status <> 'CUMPRIDA' OR saneamento_pendente = 1)");
+        $stmtPendGeral->execute([':id' => $analiseId]);
+        $totalRestante = (int)$stmtPendGeral->fetchColumn();
+
+        if ($totalRestante === 0 && $analise['status'] !== 'CONCLUIDA') {
+            $pdo->prepare("UPDATE analises_planos SET status = 'CONCLUIDA' WHERE id = :id")->execute([':id' => $analiseId]);
+            analisePlanosHistorico($pdo, $analiseId, 'PROCESSO_CONCLUIDO_LICENCA', $analise['status'], 'CONCLUIDA', 'Licença oficial emitida e vinculada ao RAP conclusivo.');
+        } else {
+            analisePlanosHistorico($pdo, $analiseId, 'LICENCA_EMITIDA_CONDICIONAL', $analise['status'], $analise['status'], "Licença oficial emitida com {$totalRestante} exigência(s) regular(es) em acompanhamento.");
+        }
+
+        $pdo->commit();
+
+        setMensagem('success', "Licença Oficial ({$analise['tipo_processo']}) gerada e vinculada com sucesso ao RAP {$analise['numero']}!");
+        redirecionar(APP_URL . 'documentacao/lc/form?id=' . urlencode($licencaId));
     }
 
     throw new RuntimeException('Ação inválida.');

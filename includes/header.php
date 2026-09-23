@@ -101,16 +101,19 @@ header('Content-Type: text/html; charset=UTF-8');
             <!-- Header Superior (Topbar) -->
             <?php $isAdminDashboard = getCargo() === 'ADMIN' && preg_match('#/dashboard/?(?:\?.*)?$#', $_SERVER['REQUEST_URI'] ?? ''); ?>
             <header class="topbar<?= $isAdminDashboard ? ' topbar--admin-dashboard' : '' ?>">
-                <?php if ($isAdminDashboard): ?>
-                <div class="topbar-page-title"><i class="fa-solid fa-bars"></i><strong>Dashboard Administrativo</strong></div>
-                <?php else: ?>
-                <div class="topbar-search" style="position: relative;">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="buscaGlobal" placeholder="Buscar cliente, embarcacao, certificado..." autocomplete="off">
-                    <span class="search-shortcut">Ctrl K</span>
-                    <div class="search-results" id="searchResults"></div>
+                <div class="topbar-left">
+                    <?php if ($isAdminDashboard): ?>
+                    <div class="topbar-page-title"><i class="fa-solid fa-gauge-high"></i><strong>Dashboard</strong></div>
+                    <?php endif; ?>
+                    <div class="topbar-search" style="position: relative;">
+                        <i class="fa-solid fa-magnifying-glass topbar-search-main-icon"></i>
+                        <input type="text" id="buscaGlobal" placeholder="Buscar certificado, documento, cliente, barco..." autocomplete="off" spellcheck="false">
+                        <button type="button" id="buscaClear" class="search-clear-btn" aria-label="Limpar busca" style="display: none;" title="Limpar pesquisa"><i class="fa-solid fa-xmark"></i></button>
+                        <i class="fa-solid fa-spinner fa-spin search-spinner" id="buscaSpinner" style="display: none;"></i>
+                        <span class="search-shortcut">Ctrl K</span>
+                        <div class="search-results" id="searchResults"></div>
+                    </div>
                 </div>
-                <?php endif; ?>
                 <div class="topbar-right">
                     <?php if ($isAdminDashboard): ?><time class="topbar-current-date"><i class="fa-regular fa-calendar"></i><?= date('d/m/Y') ?></time><div class="topbar-separator"></div><?php endif; ?>
                     <?php
@@ -184,80 +187,233 @@ header('Content-Type: text/html; charset=UTF-8');
             ?>
 
     <script>
-    // Busca Global
-    let buscaTimeout;
-    const buscaInput = document.getElementById('buscaGlobal');
-    const buscaResults = document.getElementById('searchResults');
+    // Busca Global Unificada Multi-Entidade
+    (function() {
+        let buscaTimeout;
+        let abortController = null;
+        let selectedIndex = -1;
+        const buscaInput = document.getElementById('buscaGlobal');
+        const buscaResults = document.getElementById('searchResults');
+        const buscaClear = document.getElementById('buscaClear');
+        const buscaSpinner = document.getElementById('buscaSpinner');
 
-    if (buscaInput) {
-        buscaInput.addEventListener('input', function() {
-            clearTimeout(buscaTimeout);
-            const q = this.value.trim();
+        if (!buscaInput || !buscaResults) return;
+
+        const baseUrl = '<?php echo APP_URL; ?>';
+        const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+        })[char]);
+
+        function atualizarClearBtn() {
+            if (buscaClear) {
+                buscaClear.style.display = buscaInput.value.trim().length > 0 ? 'flex' : 'none';
+            }
+        }
+
+        function setSpinner(ativo) {
+            if (buscaSpinner) {
+                buscaSpinner.style.display = ativo ? 'inline-block' : 'none';
+            }
+        }
+
+        function fecharResultados() {
+            buscaResults.classList.remove('show');
+            selectedIndex = -1;
+        }
+
+        function destacarItem(index) {
+            const itens = buscaResults.querySelectorAll('.search-result-item');
+            if (!itens.length) return;
+            itens.forEach((el, i) => {
+                if (i === index) {
+                    el.classList.add('is-selected');
+                    el.scrollIntoView({ block: 'nearest' });
+                } else {
+                    el.classList.remove('is-selected');
+                }
+            });
+        }
+
+        function executarBusca() {
+            const q = buscaInput.value.trim();
+            atualizarClearBtn();
             if (q.length < 2) {
-                buscaResults.classList.remove('show');
+                fecharResultados();
                 return;
             }
-            buscaTimeout = setTimeout(() => {
-                fetch('<?php echo APP_URL; ?>busca-global?q=' + encodeURIComponent(q))
-                    .then(r => {
-                        if (!r.ok) throw new Error('Erro HTTP');
-                        return r.json();
-                    })
-                    .then(data => {
-                        if (data.erro || !data || data.length === 0) {
-                            buscaResults.innerHTML = '<div class="search-result-empty">Nenhum resultado encontrado</div>';
-                            buscaResults.classList.add('show');
-                            return;
-                        }
-                        const baseUrl = '<?php echo APP_URL; ?>';
-                        const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
-                            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-                        })[char]);
-                        buscaResults.innerHTML = data.map(item => {
-                            const icones = { embarcacao: 'fa-ship', proprietario: 'fa-user', armador: 'fa-anchor', despachante: 'fa-briefcase', vistoria: 'fa-clipboard-check' };
-                            const icon = icones[item.tipo] || 'fa-search';
-                            return '<a href="' + baseUrl + encodeURI(item.url) + '" class="search-result-item">' +
-                                '<i class="fa-solid ' + icon + '"></i>' +
-                                '<span class="search-result-nome">' + escapeHtml(item.nome) + '</span>' +
-                                '<span class="search-result-tipo">' + escapeHtml(item.tipo) + '</span>' +
-                                '</a>';
-                        }).join('');
-                        buscaResults.classList.add('show');
-                    })
-                    .catch(() => {
-                        buscaResults.innerHTML = '<div class="search-result-empty">Erro ao buscar</div>';
-                        buscaResults.classList.add('show');
+
+            if (abortController) {
+                abortController.abort();
+            }
+            abortController = new AbortController();
+            setSpinner(true);
+
+            fetch(baseUrl + 'busca-global?q=' + encodeURIComponent(q), {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+                signal: abortController.signal
+            })
+            .then(r => {
+                if (!r.ok) throw new Error('Erro HTTP ' + r.status);
+                return r.json();
+            })
+            .then(data => {
+                setSpinner(false);
+                selectedIndex = -1;
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    buscaResults.innerHTML = `
+                        <div class="search-result-empty">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <strong>Nenhum resultado para "${escapeHtml(q)}"</strong>
+                            <p>Tente buscar por número (ex: AM-CSN, AM-LC, AM-PROT, AM-RAP), nome da embarcação, armador ou CPF/CNPJ.</p>
+                        </div>
+                    `;
+                    buscaResults.classList.add('show');
+                    return;
+                }
+
+                // Agrupar por categoria mantendo ordem
+                const grupos = {};
+                data.forEach(item => {
+                    const cat = item.categoria || 'Outros Resultados';
+                    if (!grupos[cat]) grupos[cat] = [];
+                    grupos[cat].push(item);
+                });
+
+                let html = '';
+                let itemGlobalIndex = 0;
+
+                for (const [categoria, itens] of Object.entries(grupos)) {
+                    html += `
+                        <div class="search-category-group">
+                            <div class="search-category-header">
+                                <span class="search-category-title">${escapeHtml(categoria)}</span>
+                                <span class="search-category-count">${itens.length}</span>
+                            </div>
+                    `;
+
+                    itens.forEach(item => {
+                        const icon = item.icone || 'fa-magnifying-glass';
+                        const slug = item.categoria_slug || item.tipo || 'geral';
+                        const titulo = item.titulo || item.nome;
+                        const subtitulo = item.subtitulo || '';
+                        const badge = item.badge ? `<span class="search-result-badge ${escapeHtml(item.badge_class || 'badge-neutral')}">${escapeHtml(item.badge)}</span>` : '';
+                        const itemUrl = baseUrl + encodeURI(item.url);
+
+                        html += `
+                            <a href="${itemUrl}" class="search-result-item" data-index="${itemGlobalIndex}">
+                                <div class="search-result-icon-box ${escapeHtml(slug)}">
+                                    <i class="fa-solid ${escapeHtml(icon)}"></i>
+                                </div>
+                                <div class="search-result-info">
+                                    <div class="search-result-title-row">
+                                        <span class="search-result-titulo">${escapeHtml(titulo)}</span>
+                                        ${badge}
+                                    </div>
+                                    ${subtitulo ? `<span class="search-result-subtitulo">${escapeHtml(subtitulo)}</span>` : ''}
+                                </div>
+                                <i class="fa-solid fa-chevron-right search-result-arrow"></i>
+                            </a>
+                        `;
+                        itemGlobalIndex++;
                     });
-            }, 300);
+
+                    html += `</div>`;
+                }
+
+                html += `
+                    <div class="search-results-footer">
+                        <span><kbd>↑</kbd> <kbd>↓</kbd> navegar</span>
+                        <span><kbd>Enter</kbd> abrir</span>
+                        <span><kbd>Esc</kbd> fechar</span>
+                    </div>
+                `;
+
+                buscaResults.innerHTML = html;
+                buscaResults.classList.add('show');
+            })
+            .catch(err => {
+                if (err.name === 'AbortError') return;
+                setSpinner(false);
+                buscaResults.innerHTML = '<div class="search-result-empty"><i class="fa-solid fa-triangle-exclamation"></i><strong>Erro ao buscar</strong><p>Verifique a conexão ou tente novamente.</p></div>';
+                buscaResults.classList.add('show');
+            });
+        }
+
+        buscaInput.addEventListener('input', function() {
+            clearTimeout(buscaTimeout);
+            buscaTimeout = setTimeout(executarBusca, 260);
         });
 
+        buscaInput.addEventListener('focus', function() {
+            if (this.value.trim().length >= 2 && buscaResults.innerHTML.trim() !== '') {
+                buscaResults.classList.add('show');
+            }
+        });
+
+        if (buscaClear) {
+            buscaClear.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                buscaInput.value = '';
+                atualizarClearBtn();
+                fecharResultados();
+                buscaInput.focus();
+            });
+        }
+
         buscaInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                const primeiro = buscaResults.querySelector('.search-result-item');
-                if (primeiro) {
-                    window.location.href = primeiro.getAttribute('href');
+            const itens = buscaResults.querySelectorAll('.search-result-item');
+            const totalItens = itens.length;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (!buscaResults.classList.contains('show') && totalItens > 0) {
+                    buscaResults.classList.add('show');
+                    selectedIndex = 0;
+                } else if (totalItens > 0) {
+                    selectedIndex = (selectedIndex + 1) % totalItens;
                 }
+                destacarItem(selectedIndex);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (totalItens > 0) {
+                    selectedIndex = (selectedIndex - 1 + totalItens) % totalItens;
+                    destacarItem(selectedIndex);
+                }
+            } else if (e.key === 'Enter') {
+                if (selectedIndex >= 0 && itens[selectedIndex]) {
+                    e.preventDefault();
+                    window.location.href = itens[selectedIndex].getAttribute('href');
+                } else if (itens.length > 0) {
+                    e.preventDefault();
+                    window.location.href = itens[0].getAttribute('href');
+                }
+            } else if (e.key === 'Escape') {
+                fecharResultados();
+                buscaInput.blur();
             }
         });
 
         document.addEventListener('click', function(e) {
             if (!buscaInput.parentElement.contains(e.target)) {
-                buscaResults.classList.remove('show');
+                fecharResultados();
             }
         });
 
-        // Atalho Ctrl+K / ⌘K
+        // Atalho Ctrl+K / ⌘K global
         document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
                 buscaInput.focus();
-            }
-            if (e.key === 'Escape') {
-                buscaResults.classList.remove('show');
-                buscaInput.blur();
+                buscaInput.select();
+                if (buscaInput.value.trim().length >= 2 && buscaResults.children.length > 0) {
+                    buscaResults.classList.add('show');
+                }
             }
         });
-    }
+    })();
     </script>
 
     <script>

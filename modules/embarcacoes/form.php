@@ -59,6 +59,26 @@ if (!empty($valoresPreservados)) {
     }
 }
 
+// Buscar clientes (proprietarios e armadores) ativos para vinculo direto
+$clientesProprietarios = [];
+try {
+    $stmtCli = $pdo->query("SELECT id, nome, perfil, cpf_cnpj FROM clientes WHERE (status = 'ATIVO' OR status IS NULL) AND (ativo = 1 OR ativo IS NULL) AND excluido_em IS NULL ORDER BY criado_em DESC, nome ASC");
+    $clientesProprietarios = $stmtCli->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log('Erro ao buscar clientes no form de embarcacao: ' . $e->getMessage());
+}
+
+$clienteVinculadoId = $embarcacao['proprietario_id'] ?? $embarcacao['cliente_id'] ?? '';
+if (empty($clienteVinculadoId) && !empty($embarcacao['id'])) {
+    try {
+        $stmtCe = $pdo->prepare("SELECT cliente_id FROM clientes_embarcacoes WHERE embarcacao_id = :emb_id AND status = 'ATIVO' ORDER BY vinculado_em DESC LIMIT 1");
+        $stmtCe->execute([':emb_id' => $embarcacao['id']]);
+        $clienteVinculadoId = $stmtCe->fetchColumn() ?: '';
+    } catch (Exception $e) {
+        // ignore
+    }
+}
+
 // Gerar CSRF token
 $csrf = gerarCSRF();
 
@@ -326,8 +346,28 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                     <?php endif; ?>
                     <div class="grid-2">
                         <div class="form-group">
-                            <label for="nome"><i class="fas fa-ship"></i> Nome da embarcacao *</label>
-                            <input type="text" id="nome" name="nome" required maxlength="150" value="<?php echo h($embarcacao['nome'] ?? ''); ?>">
+                            <label for="nome"><i class="fas fa-ship"></i> Nome da embarcação *</label>
+                            <input type="text" id="nome" name="nome" required maxlength="150" value="<?php echo h($embarcacao['nome'] ?? ''); ?>" placeholder="Ex: FB AMAZON I">
+                        </div>
+                        <div class="form-group">
+                            <label for="proprietario_id"><i class="fas fa-user-tie"></i> Proprietário / Armador Responsável</label>
+                            <select id="proprietario_id" name="proprietario_id" class="form-control">
+                                <option value="">-- Selecione o Proprietário / Armador (opcional) --</option>
+                                <?php foreach ($clientesProprietarios as $cp): ?>
+                                    <?php 
+                                        $cpPerfil = match($cp['perfil'] ?? 'proprietario') {
+                                            'armador' => 'Armador',
+                                            'despachante' => 'Despachante',
+                                            default => 'Proprietário'
+                                        };
+                                        $selected = ((string)$clienteVinculadoId === (string)$cp['id']) ? 'selected' : '';
+                                    ?>
+                                    <option value="<?php echo h($cp['id']); ?>" <?php echo $selected; ?>>
+                                        <?php echo h($cp['nome']); ?> (<?php echo h($cpPerfil); ?><?php echo !empty($cp['cpf_cnpj']) ? ' - ' . h($cp['cpf_cnpj']) : ''; ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="text-muted"><i class="fas fa-info-circle"></i> Vincula diretamente a embarcação ao cliente para elaboração de propostas e vistorias.</small>
                         </div>
                     </div>
 

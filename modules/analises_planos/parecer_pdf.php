@@ -59,7 +59,7 @@ if (!isset($salvar_pdf_caminho)) {
 }
 
 // Buscar exigências do relatório agrupadas por categoria
-$ex = $pdo->prepare("SELECT re.*, e.ordem, COALESCE(NULLIF(TRIM(e.categoria), ''), 'GERAL') AS categoria, e.descricao AS desc_original, e.referencia_normativa AS ref_original
+$ex = $pdo->prepare("SELECT re.*, COALESCE(re.as_snapshot, e.as_impeditivo, 0) AS as_impeditivo, e.ordem, COALESCE(NULLIF(TRIM(e.categoria), ''), 'GERAL') AS categoria, e.descricao AS desc_original, e.referencia_normativa AS ref_original
     FROM analise_planos_relatorio_exigencias re
     INNER JOIN analise_planos_exigencias e ON e.id=re.exigencia_id
     WHERE re.relatorio_id=:id
@@ -120,73 +120,96 @@ if (!class_exists('RelatorioAnalisePlanosPdf')) {
         }
 
         public function Footer() {
-            $this->SetY(-13);
-            $this->SetDrawColor(200, 210, 205);
-            $this->SetLineWidth(0.2);
-            $this->Line(15, $this->GetY(), 195, $this->GetY());
-            $this->SetY(-11);
-            $this->SetFont('helvetica', '', 7);
-            $this->SetTextColor(100, 115, 110);
-            $this->Cell(95, 4, 'Amazon Certificadora Naval · Sistema de Gestão Técnica NORMAM-202/DPC', 0, 0, 'L');
-            $this->Cell(85, 4, 'Página ' . $this->getAliasNumPage() . ' de ' . $this->getAliasNbPages(), 0, 0, 'R');
+            $this->SetY(-15);
+            $this->SetFont('helvetica', '', 7.5);
+            $this->SetTextColor(120, 130, 125);
+            $this->Cell(0, 5, 'Página ' . $this->getAliasNumPage() . ' de ' . $this->getAliasNbPages() . ' · Documento emitido em conformidade com as diretrizes da DPC/Marinha do Brasil (NORMAM-202).', 0, 0, 'C');
         }
     }
 }
 
-$pdf = new RelatorioAnalisePlanosPdf('P', 'mm', 'A4', true, 'UTF-8');
+$pdf = new RelatorioAnalisePlanosPdf('P', 'mm', 'A4', true, 'UTF-8', false);
 $pdf->codigoOficial = $codigoOficial;
-$pdf->embarcacaoNome = $embarcacaoNome;
+$pdf->embarcacaoNome = (string)$embarcacaoNome;
 $pdf->SetCreator('Amazon Certificadora Naval');
-$pdf->SetTitle('RAP ' . $numeroRap . ' - ' . $embarcacaoNome);
-$pdf->SetMargins(15, 26, 15);
-$pdf->SetAutoPageBreak(true, 15);
+$pdf->SetAuthor('Amazon Certificadora Naval');
+$pdf->SetTitle('Relatório de Análise de Planos - ' . $codigoOficial);
+$pdf->SetSubject('Relatório Técnico de Engenharia Naval - NORMAM-202');
+$pdf->SetKeywords('NORMAM-202, RAP, Análise de Planos, Marinha do Brasil, Engenharia Naval');
+$pdf->SetMargins(15, 42, 15);
+$pdf->SetAutoPageBreak(true, 18);
+$pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
+$pdf->SetFont('helvetica', '', 8.5);
 $pdf->AddPage();
-$pdf->SetY(38);
 
 // Variáveis de Dimensões
 $compTotal = !empty($p['comprimento_total']) ? number_format((float)$p['comprimento_total'], 2, ',', '.') : (!empty($p['comprimento_casco']) ? number_format((float)$p['comprimento_casco'], 2, ',', '.') : '-');
 $bocaMold = !empty($p['boca_moldada']) ? number_format((float)$p['boca_moldada'], 2, ',', '.') : (!empty($p['boca_maxima']) ? number_format((float)$p['boca_maxima'], 2, ',', '.') : '-');
 $pontalMold = !empty($p['pontal_moldado']) ? number_format((float)$p['pontal_moldado'], 2, ',', '.') : '-';
-$abVal = !empty($p['analise_ab']) ? number_format((float)$p['analise_ab'], 2, ',', '.') : (!empty($p['embarcacao_ab']) ? number_format((float)$p['embarcacao_ab'], 2, ',', '.') : '-');
+$abVal = !empty($p['analise_ab']) ? number_format((float)$p['analise_ab'], 2, ',', '.') : (!empty($p['embarcacao_ab']) ? number_format((float)$p['embarcacao_ab'], 1, ',', '.') : '-');
 
 $tipoEmb = $p['tipo_embarcacao'] ?: ($p['embarcacao_tipo'] ?: 'NAVAL');
 $dataInscricao = date('d/m/Y', strtotime($p['publicado_em'] ?: $p['criado_em']));
 $registroInscricao = $p['registro'] ?: ($p['numero_inscricao'] ?: 'A DEFINIR');
 
-// 1. Bloco de Identificação da Embarcação e Armador
-$html = '
-<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse; width:100%; border-color:#0D4941; margin-bottom:8px;">
-  <tr style="font-size:8.5pt;">
-    <td width="58%" style="line-height:1.4;">
-      <b>EMBARCAÇÃO:</b> ' . h(strtoupper($p['embarcacao_nome'])) . '<br>
-      <b>ARMADOR:</b> ' . h(strtoupper($p['solicitante_nome'] ?: 'NÃO INFORMADO')) . '<br>
-      <b>TIPO / CLASSIFICAÇÃO:</b> ' . h(strtoupper($tipoEmb)) . '
-    </td>
-    <td width="42%" style="line-height:1.4;">
-      <b>Nº INSCRIÇÃO:</b> ' . h($registroInscricao) . '<br>
-      <b>DATA:</b> ' . h($dataInscricao) . '<br>
-      <b>PROCESSO:</b> ' . h($p['tipo_processo']) . ' (' . h($p['enquadramento']) . ')
-    </td>
-  </tr>
-</table>
+$tipoDescricao = match($p['tipo_processo']) {
+    'LC' => 'CONSTRUÇÃO (LC)',
+    'LA' => 'ALTERAÇÃO (LA)',
+    'LR' => 'RECLASSIFICAÇÃO (LR)',
+    'LCEC' => 'EMBARCAÇÃO JÁ CONSTRUÍDA (LCEC)',
+    default => $p['tipo_processo']
+};
 
-<!-- Seção 1: Características Principais -->
-<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse; width:100%; border-color:#0D4941; margin-bottom:8px;">
+// Conteúdo HTML do Relatório
+$html = '
+<style>
+  th { font-family: helvetica; }
+  td { font-family: helvetica; }
+</style>
+
+<table border="1" cellpadding="3.5" cellspacing="0" style="border-collapse:collapse; width:100%; border-color:#0D4941; margin-bottom:8px;">
   <tr style="background-color:#0D4941; color:#ffffff; font-weight:bold; font-size:9pt;">
-    <th colspan="4" style="text-align:left;"> 1. CARACTERÍSTICAS PRINCIPAIS DA EMBARCAÇÃO</th>
+    <th colspan="4" style="text-align:left;"> 1. IDENTIFICAÇÃO DO PROCESSO E DA EMBARCAÇÃO</th>
   </tr>
-  <tr style="font-size:8.2pt; text-align:center; background-color:#f8fafc;">
-    <td width="25%"><b>COMPRIMENTO TOTAL (Ct):</b><br>' . $compTotal . ' m</td>
-    <td width="25%"><b>BOCA MOLDADA (B):</b><br>' . $bocaMold . ' m</td>
-    <td width="25%"><b>PONTAL MOLDADO (P):</b><br>' . $pontalMold . ' m</td>
-    <td width="25%"><b>ARQUEAÇÃO BRUTA (AB):</b><br>' . $abVal . '</td>
+  <tr style="font-size:8pt;">
+    <td width="22%" style="background-color:#F1F5F3; font-weight:bold;">Embarcação:</td>
+    <td width="43%"><b>' . h($p['embarcacao_nome']) . '</b></td>
+    <td width="15%" style="background-color:#F1F5F3; font-weight:bold;">Nº Inscrição:</td>
+    <td width="20%">' . h($registroInscricao) . '</td>
+  </tr>
+  <tr style="font-size:8pt;">
+    <td style="background-color:#F1F5F3; font-weight:bold;">Tipo de Processo:</td>
+    <td>' . h($tipoDescricao) . '</td>
+    <td style="background-color:#F1F5F3; font-weight:bold;">Enquadramento:</td>
+    <td>' . h($p['enquadramento'] ?: 'NORMAM-202') . ' (' . h($p['classe_certificacao'] ?: 'EC1') . ')</td>
+  </tr>
+  <tr style="font-size:8pt;">
+    <td style="background-color:#F1F5F3; font-weight:bold;">Proprietário / Armador:</td>
+    <td>' . h($p['solicitante_nome'] ?: 'Não informado') . '</td>
+    <td style="background-color:#F1F5F3; font-weight:bold;">Nº Casco / Estaleiro:</td>
+    <td>' . h($p['numero_casco'] ?: '-') . ' / ' . h($p['estaleiro'] ?: '-') . '</td>
+  </tr>
+  <tr style="font-size:8pt;">
+    <td style="background-color:#F1F5F3; font-weight:bold;">Autor do Projeto:</td>
+    <td>' . h($p['responsavel_projeto_nome'] ?: 'Engenheiro Naval') . '</td>
+    <td style="background-color:#F1F5F3; font-weight:bold;">ART / CREA:</td>
+    <td>' . h($p['art_numero'] ?: '-') . '</td>
+  </tr>
+  <tr style="font-size:8pt;">
+    <td style="background-color:#F1F5F3; font-weight:bold;">Dimensões Principais:</td>
+    <td colspan="3">
+      Comp. Total: <b>' . ($compTotal !== '-' ? $compTotal . ' m' : '-') . '</b> &nbsp;|&nbsp;
+      Boca Moldada: <b>' . ($bocaMold !== '-' ? $bocaMold . ' m' : '-') . '</b> &nbsp;|&nbsp;
+      Pontal Moldado: <b>' . ($pontalMold !== '-' ? $pontalMold . ' m' : '-') . '</b> &nbsp;|&nbsp;
+      AB: <b>' . $abVal . '</b>
+    </td>
   </tr>
 </table>
 
 <!-- Seção 2: Exigências para Aprovação -->
-<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse; width:100%; border-color:#0D4941; margin-bottom:4px;">
+<table border="1" cellpadding="3.5" cellspacing="0" style="border-collapse:collapse; width:100%; border-color:#0D4941; margin-bottom:4px;">
   <tr style="background-color:#0D4941; color:#ffffff; font-weight:bold; font-size:9pt;">
-    <th style="text-align:left;"> 2. EXIGÊNCIAS PARA APROVAÇÃO</th>
+    <th style="text-align:left;"> 2. RESULTADO DA ANÁLISE DE PLANOS E EXIGÊNCIAS TÉCNICAS</th>
   </tr>
 </table>
 <div style="font-size:8pt; margin-top:2px; margin-bottom:6px; color:#334155;">
@@ -209,12 +232,13 @@ if (!empty($exigenciasPorCategoria)) {
         $html .= '
         <table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse; width:100%; border-color:#0D4941; margin-bottom:8px;">
           <tr style="background-color:#EAF0EB; color:#0D4941; font-weight:bold; font-size:8.5pt;">
-            <th colspan="4" style="text-align:center;">' . h(strtoupper($catNome)) . '</th>
+            <th colspan="5" style="text-align:center;">' . h(strtoupper($catNome)) . '</th>
           </tr>
           <tr style="background-color:#F1F5F3; color:#0D4941; font-weight:bold; font-size:7.8pt; text-align:center;">
-            <th width="8%">ITEM</th>
-            <th width="53%" style="text-align:left;">DESCRIÇÃO</th>
-            <th width="24%" style="text-align:left;">REFERÊNCIA</th>
+            <th width="7%">ITEM</th>
+            <th width="11%">CONDIÇÃO</th>
+            <th width="45%" style="text-align:left;">DESCRIÇÃO</th>
+            <th width="22%" style="text-align:left;">REFERÊNCIA</th>
             <th width="15%">VENCIMENTO</th>
           </tr>';
         foreach ($itensCat as $k => $itemEx) {
@@ -222,30 +246,41 @@ if (!empty($exigenciasPorCategoria)) {
             $ref = $itemEx['referencia_snapshot'] ?: ($itemEx['ref_original'] ?: 'NORMAM-202/DPC');
             $numExib = str_pad((string)$globalItemNum, 2, '0', STR_PAD_LEFT);
             $globalItemNum++;
+            $isAS = !empty($itemEx['as_impeditivo']);
+            $colCondicao = $isAS 
+                ? '<span style="color:#b91c1c; font-weight:bold;">A/S (Grave)</span>' 
+                : '<span style="color:#475569;">Comum</span>';
+            $bgRow = $isAS ? 'background-color:#fff5f5;' : '';
             $html .= '
-          <tr nobr="true" style="font-size:7.8pt;">
-            <td width="8%" style="text-align:center; font-weight:bold;">' . $numExib . '</td>
-            <td width="53%" style="text-align:justify; line-height:1.3;">' . nl2br(h($desc)) . '</td>
-            <td width="24%" style="line-height:1.3;">' . h($ref) . '</td>
+          <tr nobr="true" style="font-size:7.8pt; ' . $bgRow . '">
+            <td width="7%" style="text-align:center; font-weight:bold;">' . $numExib . '</td>
+            <td width="11%" style="text-align:center;">' . $colCondicao . '</td>
+            <td width="45%" style="text-align:justify; line-height:1.3;">' . nl2br(h($desc)) . '</td>
+            <td width="22%" style="line-height:1.3;">' . h($ref) . '</td>
             <td width="15%" style="text-align:center;">Ver OBS. 3</td>
           </tr>';
         }
         $html .= '</table>';
     }
+    $html .= '<div style="font-size:6.8pt; color:#475569; margin-top:-4px; margin-bottom:8px; line-height:1.3;">
+      <b>* Legenda da Condição A/S:</b> Exigência de caráter grave (Ação/Assunto Suspensivo) que <u>suspende e impede a emissão de licenças e certificados da embarcação</u> até o seu cumprimento e saneamento integral. Exigências comuns não suspendem a emissão da licença operacional da embarcação.
+    </div>';
 } else {
     // Relatório Conclusivo Sem Exigências
     $html .= '
     <table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse; width:100%; border-color:#0D4941; margin-bottom:8px;">
       <tr style="background-color:#F1F5F3; color:#0D4941; font-weight:bold; font-size:7.8pt; text-align:center;">
-        <th width="8%">ITEM</th>
-        <th width="53%" style="text-align:left;">DESCRIÇÃO</th>
-        <th width="24%" style="text-align:left;">REFERÊNCIA</th>
+        <th width="7%">ITEM</th>
+        <th width="11%">CONDIÇÃO</th>
+        <th width="45%" style="text-align:left;">DESCRIÇÃO</th>
+        <th width="22%" style="text-align:left;">REFERÊNCIA</th>
         <th width="15%">VENCIMENTO</th>
       </tr>
       <tr nobr="true" style="font-size:8pt;">
-        <td width="8%" style="text-align:center; font-weight:bold;">01</td>
-        <td width="53%" style="color:#059669; font-weight:bold;">Sem Exigências</td>
-        <td width="24%" style="text-align:center;">-</td>
+        <td width="7%" style="text-align:center; font-weight:bold;">01</td>
+        <td width="11%" style="text-align:center; color:#059669; font-weight:bold;">Regular</td>
+        <td width="45%" style="color:#059669; font-weight:bold;">Sem Exigências Pendentes</td>
+        <td width="22%" style="text-align:center;">-</td>
         <td width="15%" style="text-align:center;">-</td>
       </tr>
     </table>';

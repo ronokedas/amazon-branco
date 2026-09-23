@@ -22,16 +22,19 @@ $filtro_status = $_GET['status'] ?? '';
 $filtro_tipo = $_GET['tipo_licenca'] ?? '';
 
 $sql = "SELECT c.id, c.numero_lc, c.nome_embarcacao, c.tipo_licenca, 
-               c.data_emissao, c.data_validade, c.status, c.assinado, c.criado_em
+               c.data_emissao, c.data_validade, c.status, c.assinado, c.criado_em,
+               c.analise_id, ap.numero as relatorio_rap_numero
         FROM certificados_lc c
+        LEFT JOIN analises_planos ap ON ap.id = c.analise_id
         WHERE c.ativo = 1";
 
 $params = [];
 
 if (!empty($busca)) {
-    $sql .= " AND (c.numero_lc LIKE :busca OR c.nome_embarcacao LIKE :busca2)";
+    $sql .= " AND (c.numero_lc LIKE :busca OR c.nome_embarcacao LIKE :busca2 OR ap.numero LIKE :busca3)";
     $params[':busca'] = "%{$busca}%";
     $params[':busca2'] = "%{$busca}%";
+    $params[':busca3'] = "%{$busca}%";
 }
 
 if (!empty($filtro_status) && in_array($filtro_status, ['rascunho', 'emitido', 'assinado', 'cancelado'])) {
@@ -57,12 +60,21 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
 
 <div class="conteudo-principal">
     <div class="tabela-header">
-        <h2><i class="fas fa-file-certificate"></i> Licenças de Construção / LCEC</h2>
+        <h2><i class="fas fa-file-certificate"></i> Licenças Estatutárias (LC, LA, LR, LCEC)</h2>
         <div class="d-flex gap-2">
-            <a href="<?php echo APP_URL; ?>certificados/wizard?modelo=LC" class="btn btn-success">
+            <a href="<?php echo APP_URL; ?>documentacao/lc/form" class="btn btn-success">
                 <i class="fas fa-plus"></i> Nova Licença
             </a>
         </div>
+    </div>
+
+    <!-- Filtros rápidos por modalidade naval em 1 clique -->
+    <div class="mb-3 d-flex gap-2 flex-wrap">
+        <a href="<?php echo APP_URL; ?>documentacao/lc" class="btn btn-sm <?php echo empty($filtro_tipo) ? 'btn-primary' : 'btn-outline-secondary'; ?>">Todas as Licenças</a>
+        <a href="<?php echo APP_URL; ?>documentacao/lc?tipo_licenca=LC" class="btn btn-sm <?php echo $filtro_tipo === 'LC' ? 'btn-primary' : 'btn-outline-secondary'; ?>">LC · Construção</a>
+        <a href="<?php echo APP_URL; ?>documentacao/lc?tipo_licenca=LA" class="btn btn-sm <?php echo $filtro_tipo === 'LA' ? 'btn-primary' : 'btn-outline-secondary'; ?>">LA · Alteração</a>
+        <a href="<?php echo APP_URL; ?>documentacao/lc?tipo_licenca=LR" class="btn btn-sm <?php echo $filtro_tipo === 'LR' ? 'btn-primary' : 'btn-outline-secondary'; ?>">LR · Reclassificação</a>
+        <a href="<?php echo APP_URL; ?>documentacao/lc?tipo_licenca=LCEC" class="btn btn-sm <?php echo $filtro_tipo === 'LCEC' ? 'btn-primary' : 'btn-outline-secondary'; ?>">LCEC · Já Construída</a>
     </div>
 
     <div class="card mb-3">
@@ -71,17 +83,17 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                 <div class="form-group" style="flex: 1; min-width: 250px;">
                     <label for="busca"><i class="fas fa-search"></i> Buscar</label>
                     <input type="text" id="busca" name="busca" class="form-control" 
-                           placeholder="Número ou nome da embarcação..." 
+                           placeholder="Número, embarcação ou RAP..." 
                            value="<?php echo h($busca); ?>">
                 </div>
-                <div class="form-group" style="min-width: 180px;">
+                <div class="form-group" style="min-width: 220px;">
                     <label for="tipo_licenca"><i class="fas fa-tag"></i> Tipo</label>
                     <select id="tipo_licenca" name="tipo_licenca" class="form-control">
-                        <option value="">Todos</option>
+                        <option value="">Todos os tipos</option>
                         <option value="LC" <?php echo $filtro_tipo === 'LC' ? 'selected' : ''; ?>>LC - Construção</option>
                         <option value="LA" <?php echo $filtro_tipo === 'LA' ? 'selected' : ''; ?>>LA - Alteração</option>
                         <option value="LR" <?php echo $filtro_tipo === 'LR' ? 'selected' : ''; ?>>LR - Reclassificação</option>
-                        <option value="LCEC" <?php echo $filtro_tipo === 'LCEC' ? 'selected' : ''; ?>>LCEC - Exploração Comercial</option>
+                        <option value="LCEC" <?php echo $filtro_tipo === 'LCEC' ? 'selected' : ''; ?>>LCEC - Construção Embarcação Classificada</option>
                     </select>
                 </div>
                 <div class="form-group" style="min-width: 180px;">
@@ -118,6 +130,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                         <th>Número</th>
                         <th>Embarcação</th>
                         <th>Tipo</th>
+                        <th>Origem (RAP)</th>
                         <th>Emissão</th>
                         <th>Validade</th>
                         <th>Status</th>
@@ -130,7 +143,16 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                         <tr>
                             <td><strong><?php echo h($c['numero_lc']); ?></strong></td>
                             <td><?php echo h($c['nome_embarcacao']); ?></td>
-                            <td><?php echo h($c['tipo_licenca']); ?></td>
+                            <td><span class="badge badge-light" style="font-weight: 600;"><?php echo h($c['tipo_licenca']); ?></span></td>
+                            <td>
+                                <?php if (!empty($c['relatorio_rap_numero'])): ?>
+                                    <a href="<?php echo APP_URL; ?>analises-planos/form?id=<?php echo urlencode($c['analise_id']); ?>" class="badge badge-info" title="Abrir Relatório RAP">
+                                        <i class="fas fa-drafting-compass"></i> <?php echo h($c['relatorio_rap_numero']); ?>
+                                    </a>
+                                <?php else: ?>
+                                    <span class="text-muted" style="font-size:0.8rem;">-</span>
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo formatarData($c['data_emissao']); ?></td>
                             <td><?php echo formatarData($c['data_validade']); ?></td>
                             <td>
