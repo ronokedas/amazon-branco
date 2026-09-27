@@ -53,6 +53,13 @@ function todasPermissoesSistema(): array {
         'certificados',
         'vencimentos_certificados',
         'documentacao',
+        'doc_csn',
+        'doc_cnbl',
+        'doc_cnarq',
+        'doc_nar',
+        'doc_lp',
+        'doc_lc',
+        'doc_cht',
         'clientes',
         'embarcacoes',
         'armadores',
@@ -99,8 +106,8 @@ function exigirAcessoOuSub(string $moduloPai, string $subModulo, string $destino
 /** Módulos iniciais mínimos e essenciais para cada cargo naval. O administrador pode personalizar depois. */
 function permissoesPadraoCargo(string $cargo): array {
     return match ($cargo) {
-        'VISTORIADOR' => ['dashboard', 'vistorias', 'agendamentos', 'clientes', 'embarcacoes', 'documentacao', 'configuracoes_normam202', 'vencimentos_certificados'],
-        'ANALISTA' => ['dashboard', 'analise_planos', 'relatorios_aprovacao', 'protocolos_documentais', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'vistorias', 'certificados', 'vencimentos_certificados', 'documentacao', 'configuracoes_normam202'],
+        'VISTORIADOR' => ['dashboard', 'vistorias', 'agendamentos', 'clientes', 'embarcacoes', 'documentacao', 'doc_csn', 'doc_cnbl', 'doc_cnarq', 'doc_nar', 'doc_lp', 'doc_lc', 'doc_cht', 'configuracoes_normam202', 'vencimentos_certificados'],
+        'ANALISTA' => ['dashboard', 'analise_planos', 'doc_nar', 'doc_lp', 'doc_lc', 'configuracoes_normam202'],
         'VENDEDOR' => ['dashboard', 'comercial', 'servicos', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails', 'vencimentos_certificados'],
         'ADMIN' => todasPermissoesSistema(),
         default => ['dashboard'],
@@ -155,14 +162,55 @@ function podeAcessar(string $modulo): bool {
             $stmt = $pdo->prepare('SELECT permitido FROM usuario_permissoes WHERE usuario_id = :usuario_id AND permissao = :permissao LIMIT 1');
             $stmt->execute([':usuario_id' => $usuarioId, ':permissao' => $modulo]);
             $valor = $stmt->fetchColumn();
-            if ($valor !== false) return (int)$valor === 1;
+            if ($valor !== false) {
+                if ((int)$valor === 1) return true;
+                // Se modulo for 'documentacao' e estiver 0 no banco, verifica se algum submodulo doc_* está ativo
+                if ($modulo === 'documentacao') {
+                    $submodulosDocs = ['doc_csn', 'doc_cnbl', 'doc_cnarq', 'doc_nar', 'doc_lp', 'doc_lc', 'doc_cht'];
+                    foreach ($submodulosDocs as $sDoc) {
+                        if (podeAcessar($sDoc)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
         } catch (Throwable $e) {
             // Compatibilidade enquanto a tabela de permissões ainda não existe.
         }
     }
 
-    // Mantém as permissões atuais até o administrador salvar a matriz de acesso.
     $cargo = getCargo();
+
+    // Se o cargo possui algum submódulo documental, herda acesso ao módulo-pai
+    if ($modulo === 'documentacao') {
+        $submodulosDocs = ['doc_csn', 'doc_cnbl', 'doc_cnarq', 'doc_nar', 'doc_lp', 'doc_lc', 'doc_cht'];
+        foreach ($submodulosDocs as $sDoc) {
+            if (podeAcessar($sDoc)) {
+                return true;
+            }
+        }
+    }
+
+    // Fallback inteligente para submódulos de documentação estatutária ('doc_*')
+    if (str_starts_with($modulo, 'doc_')) {
+        if ($cargo === 'ANALISTA') {
+            return in_array($modulo, permissoesPadraoCargo('ANALISTA'), true);
+        }
+        // Para outros cargos, se tiver permissão legada em 'documentacao', herda como fallback retrocompatível
+        try {
+            if ($usuarioId && $pdo) {
+                $stmt = $pdo->prepare('SELECT permitido FROM usuario_permissoes WHERE usuario_id = :usuario_id AND permissao = "documentacao" LIMIT 1');
+                $stmt->execute([':usuario_id' => $usuarioId]);
+                $valDoc = $stmt->fetchColumn();
+                if ($valDoc !== false && (int)$valDoc === 1) return true;
+            }
+        } catch (Throwable $e) {
+            // Silenciar
+        }
+    }
+
+    // Mantém as permissões atuais até o administrador salvar a matriz de acesso.
     if (in_array($modulo, ['documentacao', 'financeiro'], true)) {
         try {
             $coluna = 'acesso_' . $modulo;
@@ -251,8 +299,10 @@ function podeAcessarLegado($modulo) {
         case 'ANALISTA':
             $modulosPermitidos = [
                 'dashboard',
-                'vistorias',
-                'documentacao'
+                'analise_planos',
+                'doc_nar',
+                'doc_lp',
+                'doc_lc'
             ];
             return in_array($modulo, $modulosPermitidos, true);
 

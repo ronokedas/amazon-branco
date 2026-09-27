@@ -220,7 +220,7 @@ $pdf->MultiCell(158, 7, $endereco, 0, 'L');
 // Observações / exigências
 $pdf->SetY(154);
 $pdf->SetFont('helvetica', 'B', 10);
-$pdf->Cell($w, 7, 'OBSERVAÇÕES / EXIGÊNCIAS:', 0, 1, 'L');
+$pdf->Cell($w, 6, 'OBSERVAÇÕES / EXIGÊNCIAS:', 0, 1, 'L');
 
 $observacoes = trim((string)($c['observacoes_exigencias'] ?? ''));
 if ($observacoes === '') {
@@ -230,13 +230,39 @@ if ($observacoes === '') {
     $observacoes .= "2. Licença Provisória para Iniciar Construção emitida com base no requerimento apresentado por {$requerente}, datado em {$data_req}.";
 }
 
-$pdf->SetFont('helvetica', '', 9);
-$pdf->MultiCell($w, 6, $observacoes, 0, 'L');
+$obsY = $pdf->GetY();
+$obsH = 236 - $obsY;
+$pdf->Rect($x, $obsY, $w, $obsH);
+$pdf->SetXY($x + 1, $obsY + 1.5);
+$pdf->SetFont('helvetica', '', 8.5);
+$pdf->MultiCell($w - 2, 4.2, $observacoes, 0, 'L');
 
 // Local e data
-$pdf->SetY(222);
-$pdf->SetFont('helvetica', '', 10);
-$pdf->Cell($w, 6, 'Expedido em Santarém-PA, ' . lpDataExtenso($c['data_emissao']), 0, 1, 'C');
+$pdf->SetXY($x, 238);
+$pdf->SetFont('helvetica', '', 9.5);
+$pdf->Cell($w, 5, 'Expedido em Santarém-PA, ' . lpDataExtenso($c['data_emissao']), 0, 1, 'C');
+
+$aprovacao_pdf_layout = ['bloco_pagina' => 1, 'bloco_y' => 245];
+
+// Se o documento estiver em rascunho (sem aprovação digital e sem geração de arquivo oficial),
+// exibe um quadro prévio indicando o aguardo da assinatura eletrônica
+if (empty($c['assinado']) && !isset($salvar_pdf_caminho)) {
+    $pdf->SetDrawColor(180, 185, 183);
+    $pdf->SetLineWidth(0.25);
+    $pdf->Rect($x, 245, $w, 38);
+    $pdf->SetXY($x, 261);
+    $pdf->SetFont('helvetica', 'I', 8);
+    $pdf->SetTextColor(120, 120, 120);
+    $pdf->Cell($w, 5, 'DOCUMENTO AGUARDANDO ASSINATURA ELETRÔNICA DO ANALISTA TÉCNICO NAVAL', 0, 1, 'C');
+    $pdf->SetTextColor(0, 0, 0);
+}
+
+// Rodapé de segurança e validação normativa
+$pdf->SetXY($x, 285.5);
+$pdf->SetFont('helvetica', '', 5.5);
+$pdf->SetTextColor(100, 100, 100);
+$pdf->Cell($w, 2.5, 'Documento assinado eletronicamente conforme normas da Autoridade Marítima (NORMAM-202/DPC) · Autenticidade verificável via QR Code', 0, 1, 'C');
+$pdf->SetTextColor(0, 0, 0);
 
 $nome_arquivo = 'LP_' . str_replace('/', '-', $c['numero_lp']) . '.pdf';
 

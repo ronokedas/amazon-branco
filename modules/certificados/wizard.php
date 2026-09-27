@@ -24,7 +24,7 @@ $modelo_nomes = [
     'CNARQ' => 'Certificado Nacional de Arqueação',
     'LP' => 'Licença Provisória',
     'LC' => 'Licença de Construção',
-    'CHT' => 'Certificado de Habilitação ao Transporte',
+    'CHT' => 'Certificado de Homologação Técnica',
 ];
 
 $modelo_nome = $modelo_nomes[$modelo] ?? $modelo;
@@ -125,22 +125,22 @@ $tipos = [
         'valor' => 'Provisório',
         'titulo' => 'Provisório',
         'icone' => 'fa-hourglass-half',
-        'resumo' => 'Ideal quando ainda existem condicionantes a cumprir.',
-        'descricao' => 'Possui validade reduzida e quadro de observações com exigências do relatório. Se as exigências não forem cumpridas, o certificado pode ser cancelado.',
+        'resumo' => 'Validade total de 6 meses (180 dias) a contar da vistoria em seco.',
+        'descricao' => 'Exige projeto técnico (RAP) aprovado e todas as exigências físicas cumpridas, restando apenas exigências de inscrição (TI/PRPM). Abate os dias já utilizados em Certificado Condicional anterior.',
     ],
     [
         'valor' => 'Condicional',
         'titulo' => 'Condicional',
         'icone' => 'fa-triangle-exclamation',
-        'resumo' => 'Usado quando o documento depende de condições específicas.',
-        'descricao' => 'Semelhante ao provisório, mas identificado como condicional. Mantém vínculo com exigências ou restrições até a emissão definitiva.',
+        'resumo' => 'Validade de 60 ou 90 dias (máximo 90 dias NORMAM).',
+        'descricao' => 'Permite exigências comuns pendentes tanto na Vistoria quanto no RAP, desde que nenhuma seja A.S. (Ação Suspensiva). Usado para operar temporariamente enquanto as exigências físicas são sanadas.',
     ],
     [
         'valor' => 'Definitivo',
         'titulo' => 'Definitivo',
         'icone' => 'fa-circle-check',
-        'resumo' => 'Para relatório aprovado sem pendências impeditivas.',
-        'descricao' => 'Usado quando não há pendências impeditivas. Pode conter o quadro completo de convalidações anuais e intermediárias.',
+        'resumo' => 'Validade plena conforme o serviço (balsas 10 anos, empurradores 8 anos, outros 5 anos).',
+        'descricao' => 'Para projeto aprovado e vistoria 100% cumprida sem nenhuma pendência, com a inscrição já regularizada na Capitania dos Portos. Inclui o quadro de convalidações anuais.',
     ],
 ];
 
@@ -251,7 +251,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
         <aside class="cert-help-panel">
             <strong>Como decidir?</strong>
-            <p>Se o relatório foi aprovado com exigências, use Provisório ou Condicional. Para Definitivo, o relatório precisa estar aprovado sem pendências impeditivas.</p>
+            <p><strong>Condicional (60 a 90d):</strong> Quando há exigências físicas comuns sem A/S.<br><strong>Provisório (máx. 180d):</strong> Projeto RAP aprovado e restando apenas exigências de inscrição (TI/PRPM).<br><strong>Definitivo (5 a 10 anos):</strong> Projeto aprovado e 100% das exigências cumpridas.</p>
             <div class="cert-help-note">
                 <i class="fas fa-lightbulb"></i>
                 <span>Na próxima etapa o sistema bloqueia combinações inválidas para reduzir erro operacional.</span>

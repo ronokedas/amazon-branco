@@ -28,8 +28,8 @@ echo "1. Verificando estrutura do banco de dados...\n";
 $stmt = $pdo->query("SHOW TABLES LIKE 'analise_planos_referencias_normam'");
 assertNormam((bool)$stmt->fetch(), "Tabela analise_planos_referencias_normam existe no banco");
 
-$totalNormas = (int)$pdo->query("SELECT COUNT(*) FROM analise_planos_referencias_normam")->fetchColumn();
-assertNormam($totalNormas >= 200, "Banco contém pelo menos 200 normas NORMAM cadastradas (atual: {$totalNormas})");
+$totalNormas = (int)$pdo->query("SELECT COUNT(*) FROM analise_planos_referencias_normam WHERE ativo=1")->fetchColumn();
+assertNormam($totalNormas >= 600, "Banco contém catálogo completo com mais de 600 modelos NORMAM exclusivos do analista (atual: {$totalNormas})");
 
 // Verificar se coluna categoria existe em analise_planos_exigencias
 $colCat = $pdo->query("SHOW COLUMNS FROM analise_planos_exigencias LIKE 'categoria'")->fetch(PDO::FETCH_ASSOC);

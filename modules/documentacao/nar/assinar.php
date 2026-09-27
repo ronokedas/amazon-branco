@@ -28,6 +28,102 @@ if (!$nar) {
     die('Nota de Arqueação não encontrada.');
 }
 
+$meuResp = null;
+if (!empty($_SESSION['usuario_id'])) {
+    $stmtMe = $pdo->prepare("SELECT * FROM responsaveis_assinatura WHERE usuario_id = :uid AND ativo = 1 LIMIT 1");
+    $stmtMe->execute([':uid' => $_SESSION['usuario_id']]);
+    $meuResp = $stmtMe->fetch(PDO::FETCH_ASSOC);
+}
+
+// Processar assinatura via POST com perfil cadastrado
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['acao'] === 'confirmar_assinatura_perfil') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    if (!empty($nar['assinado'])) {
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Esta Nota de Arqueação já foi assinada.']);
+        exit;
+    }
+
+    if (!$meuResp || empty($meuResp['assinatura_arquivo'])) {
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Perfil de assinatura digital não localizado ou incompleto.']);
+        exit;
+    }
+
+    $sigFile = __DIR__ . '/../../../' . ltrim(str_replace(['../', '..\\'], '', (string)$meuResp['assinatura_arquivo']), '/\\');
+    if (!is_file($sigFile)) {
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Arquivo de assinatura não encontrado no servidor.']);
+        exit;
+    }
+
+    $bytes = file_get_contents($sigFile);
+    if ($bytes === false) {
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Falha ao ler o arquivo de assinatura digital.']);
+        exit;
+    }
+    $assinatura_imagem = 'data:image/png;base64,' . base64_encode($bytes);
+
+    try {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $agora = date('Y-m-d H:i:s');
+
+        $diretorioDestino = __DIR__ . '/../../../storage/private/certificados/nar';
+        if (!is_dir($diretorioDestino)) {
+            mkdir($diretorioDestino, 0755, true);
+        }
+
+        $nomeArquivo = 'AM-NAR-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $nar['numero']) . '-assinado.pdf';
+        $salvar_pdf_caminho = $diretorioDestino . '/' . $nomeArquivo;
+
+        $stmtUpdate = $pdo->prepare("UPDATE certificados_nar SET
+            status = 'assinado',
+            assinado = 1,
+            responsavel_assinatura_id = :resp_id,
+            assinante_nome = :resp_nome,
+            assinante_titulo = :resp_titulo,
+            assinante_registro = :resp_reg,
+            assinatura_imagem = :img,
+            assinatura_ip = :ip,
+            assinatura_em = :agora,
+            caminho_arquivo_pdf = :caminho
+            WHERE id = :id");
+
+        $caminhoRelativo = 'storage/private/certificados/nar/' . $nomeArquivo;
+        $stmtUpdate->execute([
+            ':resp_id' => $meuResp['id'],
+            ':resp_nome' => $meuResp['nome_completo'],
+            ':resp_titulo' => $meuResp['cargo_titulo'],
+            ':resp_reg' => $meuResp['registro_profissional'],
+            ':img' => $assinatura_imagem,
+            ':ip' => $ip,
+            ':agora' => $agora,
+            ':caminho' => $caminhoRelativo,
+            ':id' => $nar['id']
+        ]);
+
+        ob_start();
+        $id = $nar['id'];
+        require __DIR__ . '/pdf.php';
+        ob_end_clean();
+
+        if (is_file($salvar_pdf_caminho)) {
+            $hashPdf = hash_file('sha256', $salvar_pdf_caminho);
+            $pdo->prepare("UPDATE certificados_nar SET hash_arquivo_pdf = :hash WHERE id = :id")
+                ->execute([':hash' => $hashPdf, ':id' => $nar['id']]);
+        }
+
+        echo json_encode([
+            'sucesso' => true,
+            'mensagem' => 'Nota de Arqueação assinada digitalmente com seu perfil cadastrado!',
+            'url_pdf' => APP_URL . 'documentacao/nar/pdf?id=' . urlencode($nar['id'])
+        ]);
+        exit;
+    } catch (Throwable $e) {
+        error_log('Erro ao assinar NAR com perfil cadastrado: ' . $e->getMessage());
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Erro ao processar assinatura: ' . $e->getMessage()]);
+        exit;
+    }
+}
+
 // Processar assinatura via POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['acao'] === 'confirmar_assinatura') {
     header('Content-Type: application/json; charset=utf-8');
@@ -153,6 +249,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
                 </div>
             </div>
 
+            <?php if ($meuResp && !empty($meuResp['assinatura_arquivo'])): ?>
+                <div style="background: rgba(14, 165, 233, 0.12); border: 1px solid #0284c7; border-radius: 8px; padding: 16px; margin-bottom: 20px; text-align: center;">
+                    <div style="font-size: 0.88rem; color: #7dd3fc; margin-bottom: 10px;">
+                        <i class="fa-solid fa-id-card-clip"></i> Responsável Técnico Autenticado: <strong><?= h($meuResp['nome_completo']) ?></strong>
+                        <div style="font-size: 0.78rem; color: #94a3b8;"><?= h($meuResp['cargo_titulo']) ?> &bull; <?= h($meuResp['registro_profissional']) ?></div>
+                    </div>
+                    <button type="button" class="btn-sign" id="btnAssinarPerfil" style="background: #0284c7;" onclick="assinarComPerfilCadastrado()">
+                        <i class="fa-solid fa-stamp"></i> Assinar com Minha Assinatura Digital Cadastrada
+                    </button>
+                </div>
+                <div style="text-align: center; color: #64748b; font-size: 0.8rem; margin: 12px 0 16px;">— ou desenhe manualmente no quadro abaixo —</div>
+            <?php endif; ?>
+
             <label style="font-size:0.85rem; font-weight:700; color:#e2e8f0;">Desenhe sua assinatura no quadro abaixo:</label>
             <div class="canvas-container">
                 <canvas id="signatureCanvas" width="540" height="160" style="width:100%; height:160px;"></canvas>
@@ -244,6 +353,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             alert('Erro de conexão ao processar assinatura.');
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-signature"></i> Confirmar e Assinar Nota de Arqueação';
+        });
+    }
+
+    function assinarComPerfilCadastrado() {
+        const btn = document.getElementById('btnAssinarPerfil');
+        if (!confirm('Deseja assinar esta Nota de Arqueação utilizando seu perfil de assinatura digital cadastrado no sistema?')) {
+            return;
+        }
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Assinando com Perfil...';
+        }
+
+        const formData = new FormData();
+        formData.append('acao', 'confirmar_assinatura_perfil');
+
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.sucesso) {
+                alert(res.mensagem);
+                window.location.reload();
+            } else {
+                alert(res.mensagem || 'Falha ao assinar.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-stamp"></i> Assinar com Minha Assinatura Digital Cadastrada';
+                }
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Erro de conexão ao processar assinatura.');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-stamp"></i> Assinar com Minha Assinatura Digital Cadastrada';
+            }
         });
     }
     </script>

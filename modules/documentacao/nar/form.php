@@ -7,9 +7,11 @@
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../includes/functions.php';
+require_once __DIR__ . '/../../../includes/analise_planos.php';
+require_once __DIR__ . '/../../../includes/aprovacao_ui.php';
 
 verificar_sessao();
-if (!podeAcessar('documentacao')) {
+if (!podeAcessar('doc_nar')) {
     header('Location: ' . APP_URL . 'dashboard?erro=sem_permissao');
     exit;
 }
@@ -35,22 +37,30 @@ $embarcacao_id_get = trim($_GET['embarcacao_id'] ?? '');
 $dadosPreload = [];
 if (!$editando) {
     if (!empty($analise_id_get)) {
-        $stmtAn = $pdo->prepare("SELECT ap.*, e.nome AS emb_nome, e.tipo AS emb_tipo, e.registro, e.numero_inscricao,
-                                         e.comprimento_total, e.comprimento_regra, e.comprimento_casco, e.comprimento_lpp,
-                                         e.boca_moldada, e.pontal_moldado, e.calado_leve, e.calado_maximo,
-                                         e.deslocamento_leve, e.deslocamento_carregado, e.porte_bruto,
-                                         e.material_casco, e.porto_inscricao, e.ano_construcao,
-                                         e.arqueacao_bruta, e.arqueacao_liquida, e.tripulantes, e.passageiros,
+        $stmtAn = $pdo->prepare("SELECT ap.*, e.id AS emb_id, e.nome AS emb_nome, e.tipo AS emb_tipo, e.registro, e.numero_inscricao,
+                                         e.comprimento_total, e.comprimento_casco AS comprimento_regra, e.comprimento_casco, e.comprimento_lpp,
+                                         e.boca_moldada, e.pontal_moldado, e.calado_maximo_m AS calado_maximo,
+                                         e.porte_bruto,
+                                         e.material_casco, e.porto_inscricao, e.ano AS ano_construcao,
+                                         e.arqueacao_bruta AS emb_arqueacao_bruta, e.arqueacao_liquida,
+                                         e.numero_tripulantes AS tripulantes,
+                                         (COALESCE(e.numero_passageiros_n1, 0) + COALESCE(e.numero_passageiros_n2, 0)) AS passageiros,
                                          c.nome AS cliente_nome, ra.id AS resp_id, ra.nome_completo AS resp_nome
                                   FROM analises_planos ap
-                                  INNER JOIN embarcacoes e ON e.id = ap.embarcacao_id
+                                  LEFT JOIN embarcacoes e ON e.id = COALESCE(ap.embarcacao_id, :emb_id)
                                   LEFT JOIN clientes c ON c.id = ap.solicitante_id
                                   LEFT JOIN responsaveis_assinatura ra ON ra.id = ap.responsavel_assinatura_id
                                   WHERE ap.id = :id");
-        $stmtAn->execute([':id' => $analise_id_get]);
+        $stmtAn->execute([':id' => $analise_id_get, ':emb_id' => $embarcacao_id_get ?: null]);
         $dadosPreload = $stmtAn->fetch(PDO::FETCH_ASSOC) ?: [];
     } elseif (!empty($embarcacao_id_get)) {
-        $stmtEmb = $pdo->prepare("SELECT e.*, e.nome AS emb_nome, e.tipo AS emb_tipo, c.nome AS cliente_nome, c.id AS cliente_id
+        $stmtEmb = $pdo->prepare("SELECT e.*, e.id AS emb_id, e.nome AS emb_nome, e.tipo AS emb_tipo,
+                                         e.comprimento_casco AS comprimento_regra,
+                                         e.calado_maximo_m AS calado_maximo,
+                                         e.ano AS ano_construcao,
+                                         e.numero_tripulantes AS tripulantes,
+                                         (COALESCE(e.numero_passageiros_n1, 0) + COALESCE(e.numero_passageiros_n2, 0)) AS passageiros,
+                                         c.nome AS cliente_nome, c.id AS cliente_id
                                   FROM embarcacoes e
                                   LEFT JOIN clientes c ON c.id = e.cliente_id
                                   WHERE e.id = :id");
@@ -66,7 +76,7 @@ $embarcacoes = $pdo->query("SELECT id, nome, registro, numero_inscricao, tipo, c
 $responsaveis = $pdo->query("SELECT id, nome_completo, cargo_titulo, registro_profissional FROM responsaveis_assinatura WHERE ativo = 1 ORDER BY nome_completo ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Valores de campo pré-carregados
-$embIdAtual = $nar['embarcacao_id'] ?? $dadosPreload['embarcacao_id'] ?? $dadosPreload['id'] ?? $embarcacao_id_get;
+$embIdAtual = $nar['embarcacao_id'] ?? $dadosPreload['embarcacao_id'] ?? $dadosPreload['emb_id'] ?? $embarcacao_id_get;
 $analiseIdAtual = $nar['analise_id'] ?? $analise_id_get;
 $clienteIdAtual = $nar['cliente_id'] ?? $dadosPreload['solicitante_id'] ?? $dadosPreload['cliente_id'] ?? '';
 
@@ -79,7 +89,7 @@ $tipoEmbarcacao = $nar['tipo_embarcacao'] ?? $dadosPreload['emb_tipo'] ?? $dados
 $atividadeServico = $nar['atividade_servico'] ?? $dadosPreload['atividade_servico'] ?? 'EMPURRADOR / TRANSPORTE DE CARGA';
 $classificacao = $nar['classificacao'] ?? $dadosPreload['classificacao'] ?? 'CARGA GERAL / INTERIOR';
 $portoInscricao = $nar['porto_inscricao'] ?? $dadosPreload['porto_inscricao'] ?? 'BELÉM - PA';
-$dataConstrucao = $nar['data_construcao_quilha'] ?? $dadosPreload['ano_construcao'] ?? date('Y');
+$dataConstrucao = $nar['data_construcao_quilha'] ?? $dadosPreload['ano_construcao'] ?? $dadosPreload['ano'] ?? date('Y');
 
 $ct = $nar['comprimento_total_ct'] ?? $dadosPreload['comprimento_total'] ?? '';
 $l = $nar['comprimento_regra_l'] ?? $dadosPreload['comprimento_regra'] ?? $dadosPreload['comprimento_casco'] ?? '';
@@ -93,11 +103,11 @@ $caladoLeveMed = $nar['calado_leve_medio'] ?? $dadosPreload['calado_leve'] ?? '0
 
 $caladoCarrAv = $nar['calado_carregado_av'] ?? '1.766';
 $caladoCarrAr = $nar['calado_carregado_ar'] ?? '1.765';
-$caladoCarrMed = $nar['calado_carregado_medio'] ?? $dadosPreload['calado_maximo'] ?? '1.765';
+$caladoCarrMed = $nar['calado_carregado_medio'] ?? $dadosPreload['calado_maximo'] ?? $dadosPreload['calado_maximo_m'] ?? '1.765';
 
-$tripulantes = $nar['numero_tripulantes'] ?? $dadosPreload['tripulantes'] ?? 0;
-$n1 = $nar['n1_passageiros_camarotes'] ?? $dadosPreload['passageiros'] ?? 0;
-$n2 = $nar['n2_demais_passageiros'] ?? 0;
+$tripulantes = $nar['numero_tripulantes'] ?? $dadosPreload['tripulantes'] ?? $dadosPreload['numero_tripulantes'] ?? 0;
+$n1 = $nar['n1_passageiros_camarotes'] ?? $dadosPreload['passageiros'] ?? $dadosPreload['numero_passageiros'] ?? $dadosPreload['numero_passageiros_n1'] ?? 0;
+$n2 = $nar['n2_demais_passageiros'] ?? $dadosPreload['numero_passageiros_n2'] ?? 0;
 
 $deslocCarregado = $nar['deslocamento_carregado'] ?? $dadosPreload['deslocamento_carregado'] ?? '';
 $deslocLeve = $nar['deslocamento_leve'] ?? $dadosPreload['deslocamento_leve'] ?? '';
@@ -110,7 +120,7 @@ $volCarga = $nar['volume_espacos_carga_vc'] ?? '0.00';
 
 $volTotal = $nar['volume_total_fechado_v'] ?? '';
 $k1 = $nar['coeficiente_k1'] ?? '';
-$ab = $nar['arqueacao_bruta_ab'] ?? $dadosPreload['arqueacao_bruta'] ?? '';
+$ab = $nar['arqueacao_bruta_ab'] ?? $dadosPreload['arqueacao_bruta'] ?? $dadosPreload['emb_arqueacao_bruta'] ?? '';
 $k2 = $nar['coeficiente_k2'] ?? '';
 $al = $nar['arqueacao_liquida_al'] ?? $dadosPreload['arqueacao_liquida'] ?? '';
 
@@ -605,9 +615,14 @@ require_once __DIR__ . '/../../../includes/header.php';
             <a href="<?= APP_URL ?>documentacao/nar" class="btn btn-secondary">
                 <i class="fas fa-times"></i> Cancelar
             </a>
-            <button type="submit" class="btn btn-success btn-lg">
-                <i class="fas fa-save"></i> <?= $editando ? 'Salvar Alterações da NAR' : 'Gerar e Emitir Nota de Arqueação (AM-NAR)' ?>
-            </button>
+            <div class="d-flex gap-2">
+                <?php if ($editando && ($nar['status'] ?? '') === 'emitido' && empty($nar['assinado'])): ?>
+                    <?php renderBotaoAprovacaoDocumento($pdo, 'NAR', $nar['id'], $nar['status'], (bool)$nar['assinado'], (int)($nar['responsavel_assinatura_id'] ?: 0)); ?>
+                <?php endif; ?>
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="fas fa-save"></i> <?= $editando ? 'Salvar Alterações da NAR' : 'Gerar e Emitir Nota de Arqueação (AM-NAR)' ?>
+                </button>
+            </div>
         </div>
     </form>
 </div>
@@ -772,4 +787,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<?php require_once __DIR__ . '/../../../includes/footer.php'; ?>
+<?php renderAprovacaoUi($pdo); require_once __DIR__ . '/../../../includes/footer.php'; ?>

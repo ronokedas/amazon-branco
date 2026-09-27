@@ -23,8 +23,15 @@ echo "   [✓] Padrão VISTORIADOR validado com sucesso.\n";
 
 $padraoAnalista = permissoesPadraoCargo('ANALISTA');
 assertPerm(in_array('analise_planos', $padraoAnalista, true), 'Analista deve ter analise_planos');
-assertPerm(in_array('relatorios_aprovacao', $padraoAnalista, true), 'Analista deve ter relatorios_aprovacao');
-assertPerm(in_array('protocolos_documentais', $padraoAnalista, true), 'Analista deve ter protocolos_documentais');
+assertPerm(in_array('doc_nar', $padraoAnalista, true), 'Analista deve ter doc_nar');
+assertPerm(in_array('doc_lp', $padraoAnalista, true), 'Analista deve ter doc_lp');
+assertPerm(in_array('doc_lc', $padraoAnalista, true), 'Analista deve ter doc_lc');
+assertPerm(!in_array('doc_csn', $padraoAnalista, true), 'Analista NÃO deve ter doc_csn');
+assertPerm(!in_array('doc_cnbl', $padraoAnalista, true), 'Analista NÃO deve ter doc_cnbl');
+assertPerm(!in_array('doc_cnarq', $padraoAnalista, true), 'Analista NÃO deve ter doc_cnarq');
+assertPerm(!in_array('embarcacoes', $padraoAnalista, true), 'Analista NÃO deve ter embarcacoes');
+assertPerm(!in_array('clientes', $padraoAnalista, true), 'Analista NÃO deve ter clientes');
+assertPerm(!in_array('protocolos_documentais', $padraoAnalista, true), 'Analista NÃO deve ter protocolos_documentais');
 assertPerm(!in_array('financeiro', $padraoAnalista, true), 'Analista NÃO deve ter financeiro');
 assertPerm(!in_array('usuarios', $padraoAnalista, true), 'Analista NÃO deve ter usuarios');
 echo "   [✓] Padrão ANALISTA validado com sucesso.\n";

@@ -11,7 +11,7 @@ require_once __DIR__ . '/../../../includes/aprovacao_ui.php';
 
 // Verificar permissão
 verificar_sessao();
-if (!podeAcessar('documentacao')) {
+if (!podeAcessar('doc_cnbl')) {
     header('Location: ' . APP_URL . 'dashboard?erro=sem_permissao');
     exit;
 }

@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../includes/functions.php';
 
 verificar_sessao();
-if (!podeAcessar('documentacao')) {
+if (!podeAcessar('doc_lc')) {
     header('Location: ' . APP_URL . 'dashboard?erro=sem_permissao');
     exit;
 }
@@ -62,6 +62,19 @@ if ($action === 'salvar') {
     $assinante_titulo = trim($_POST['assinante_titulo'] ?? '');
     $assinante_registro = trim($_POST['assinante_registro'] ?? '');
     
+    $observacoes = trim($_POST['observacoes'] ?? '');
+    if ($observacoes === '') {
+        $observacoes = gerarObservacoesPadraoLicenca(array_merge($_POST, [
+            'tipo_licenca' => $tipo_licenca,
+            'nome_embarcacao' => $nome_embarcacao,
+            'comprimento_total' => $comprimento_total,
+            'comprimento_casco' => $_POST['comprimento_casco'] ?? $comprimento_pp,
+            'numero_tripulantes' => $numero_tripulantes,
+            'numero_passageiros' => $numero_passageiros,
+            'porte_bruto' => $porte_bruto,
+        ]), $tipo_licenca);
+    }
+
     $despachante_id = $_POST['despachante_id'] ?? null;
     if(empty($despachante_id)) $despachante_id = null;
 
@@ -174,6 +187,7 @@ if ($action === 'salvar') {
                 'cliente_id' => $cliente_id,
                 'vistoria_id' => $vistoria_id,
                 'analise_id' => $analise_id,
+                'observacoes' => $observacoes,
             ]);
             $res = emitirCertificadoUnificado($pdo, 'LC', $dadosEmissao, (string)($_SESSION['usuario_id'] ?? ''));
             $numero = $res['numero'];
@@ -220,7 +234,8 @@ if ($action === 'salvar') {
                         assinante_titulo = :assinante_titulo,
                         assinante_registro = :assinante_registro,
                         status = :status, vistoria_id = :vistoria_id, despachante_id = :despachante_id,
-                        embarcacao_id = :embarcacao_id, cliente_id = :cliente_id WHERE id = :id";
+                        embarcacao_id = :embarcacao_id, cliente_id = :cliente_id,
+                        observacoes = :observacoes, dados_json = :dados_json WHERE id = :id";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -260,6 +275,8 @@ if ($action === 'salvar') {
                 ':status' => $status,
                 ':vistoria_id' => $vistoria_id,
                 ':despachante_id' => $despachante_id,
+                ':observacoes' => $observacoes,
+                ':dados_json' => json_encode(['observacoes' => $observacoes], JSON_UNESCAPED_UNICODE),
                 ':id' => $id,
             ]);
             
@@ -284,7 +301,8 @@ if ($action === 'salvar') {
                         estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco,
                         data_emissao, data_validade, data_termino_construcao, local_emissao,
                         assinante_nome, assinante_titulo, assinante_registro,
-                        status, criado_por, vistoria_id, despachante_id) VALUES (
+                        status, criado_por, vistoria_id, despachante_id,
+                        observacoes, dados_json) VALUES (
                         :id, :numero_lc, :token_assinatura, :embarcacao_id, :cliente_id,
                         :tipo_licenca, :nome_embarcacao, :tipo_embarcacao, :numero_casco,
                         :material_casco, :sociedade_classificadora,
@@ -295,7 +313,8 @@ if ($action === 'salvar') {
                         :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco,
                         :data_emissao, :data_validade, :data_termino_construcao, :local_emissao,
                         :assinante_nome, :assinante_titulo, :assinante_registro,
-                        :status, :criado_por, :vistoria_id, :despachante_id)";
+                        :status, :criado_por, :vistoria_id, :despachante_id,
+                        :observacoes, :dados_json)";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -339,6 +358,8 @@ if ($action === 'salvar') {
                 ':vistoria_id' => $vistoria_id,
                 ':criado_por' => $_SESSION['usuario_id'] ?? null,
                 ':despachante_id' => $despachante_id,
+                ':observacoes' => $observacoes,
+                ':dados_json' => json_encode(['observacoes' => $observacoes], JSON_UNESCAPED_UNICODE),
             ]);
         }
 
@@ -377,6 +398,153 @@ if ($action === 'enviar_certificado') {
     if ($r['success']) { log_atividade('licenca_lc_enviada_email', "LC ID: {$id}"); setMensagem('success', $r['message']); }
     else { setMensagem('error', $r['message']); }
     redirecionar(APP_URL . 'documentacao/lc');
+}
+
+// ============================================
+// SALVAR MODELO DE OBSERVAÇÃO DO ANALISTA (AJAX / POST)
+// ============================================
+if ($action === 'salvar_modelo_observacao') {
+    if (!verificarCSRF($_POST['csrf_token'] ?? '')) {
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || (isset($_POST['ajax']) && $_POST['ajax'] == '1')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['sucesso' => false, 'mensagem' => 'Token CSRF de segurança inválido.']);
+            exit;
+        }
+        setMensagem('error', 'Token de segurança inválido.');
+        redirecionar(APP_URL . 'documentacao/lc');
+    }
+
+    $tipo = strtoupper(trim($_POST['tipo_licenca'] ?? 'LC'));
+    if (!in_array($tipo, ['LC', 'LA', 'LR', 'LCEC'], true)) {
+        $tipo = 'LC';
+    }
+
+    $conteudo = trim($_POST['conteudo_template'] ?? '');
+    if ($conteudo === '') {
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || (isset($_POST['ajax']) && $_POST['ajax'] == '1')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['sucesso' => false, 'mensagem' => 'O conteúdo do modelo não pode estar vazio.']);
+            exit;
+        }
+        setMensagem('error', 'O conteúdo do modelo não pode estar vazio.');
+        redirecionar(APP_URL . 'documentacao/lc');
+    }
+
+    $usuarioId = $_SESSION['usuario_id'] ?? null;
+    $titulo = trim($_POST['titulo'] ?? ("Modelo Padrão {$tipo} - Analista"));
+
+    try {
+        $stmtExiste = $pdo->prepare("SELECT id FROM modelos_observacoes_licenca WHERE usuario_id = :uid AND tipo_licenca = :tipo LIMIT 1");
+        $stmtExiste->execute([':uid' => $usuarioId, ':tipo' => $tipo]);
+        $idExistente = $stmtExiste->fetchColumn();
+
+        if ($idExistente) {
+            $stmtUp = $pdo->prepare("UPDATE modelos_observacoes_licenca 
+                                     SET conteudo_template = :conteudo, titulo = :titulo, ativo = 1, atualizado_em = NOW() 
+                                     WHERE id = :id");
+            $stmtUp->execute([':conteudo' => $conteudo, ':titulo' => $titulo, ':id' => $idExistente]);
+        } else {
+            $novoId = gerarUUID();
+            $stmtIn = $pdo->prepare("INSERT INTO modelos_observacoes_licenca 
+                                     (id, usuario_id, tipo_licenca, titulo, conteudo_template, ativo, criado_em, atualizado_em) 
+                                     VALUES (:id, :uid, :tipo, :titulo, :conteudo, 1, NOW(), NOW())");
+            $stmtIn->execute([
+                ':id' => $novoId,
+                ':uid' => $usuarioId,
+                ':tipo' => $tipo,
+                ':titulo' => $titulo,
+                ':conteudo' => $conteudo,
+            ]);
+        }
+
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || (isset($_POST['ajax']) && $_POST['ajax'] == '1')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'sucesso' => true,
+                'mensagem' => "Modelo {$tipo} personalizado pelo Analista salvo com sucesso!",
+                'tipo' => $tipo,
+                'conteudo' => $conteudo
+            ]);
+            exit;
+        }
+
+        setMensagem('success', "Modelo {$tipo} personalizado salvo com sucesso.");
+        redirecionar(APP_URL . 'documentacao/lc/form');
+    } catch (Throwable $e) {
+        error_log('Erro ao salvar modelo de observações: ' . $e->getMessage());
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || (isset($_POST['ajax']) && $_POST['ajax'] == '1')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['sucesso' => false, 'mensagem' => 'Erro ao salvar modelo: ' . $e->getMessage()]);
+            exit;
+        }
+        setMensagem('error', 'Erro ao salvar modelo: ' . $e->getMessage());
+        redirecionar(APP_URL . 'documentacao/lc/form');
+    }
+}
+
+// ============================================
+// RESTAURAR MODELO DE OBSERVAÇÃO AO PADRÃO NORMAM
+// ============================================
+if ($action === 'restaurar_modelo_observacao') {
+    if (!verificarCSRF($_POST['csrf_token'] ?? '')) {
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || (isset($_POST['ajax']) && $_POST['ajax'] == '1')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['sucesso' => false, 'mensagem' => 'Token CSRF inválido.']);
+            exit;
+        }
+        setMensagem('error', 'Token inválido.');
+        redirecionar(APP_URL . 'documentacao/lc');
+    }
+
+    $tipo = strtoupper(trim($_POST['tipo_licenca'] ?? 'LC'));
+    $usuarioId = $_SESSION['usuario_id'] ?? null;
+
+    try {
+        $stmtDel = $pdo->prepare("DELETE FROM modelos_observacoes_licenca WHERE usuario_id = :uid AND tipo_licenca = :tipo");
+        $stmtDel->execute([':uid' => $usuarioId, ':tipo' => $tipo]);
+
+        $padroes = modelosObservacoesLicencaPadrao();
+        $padraoNormam = $padroes[$tipo] ?? $padroes['LC'];
+
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || (isset($_POST['ajax']) && $_POST['ajax'] == '1')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'sucesso' => true,
+                'mensagem' => "Modelo {$tipo} restaurado para o padrão original da NORMAM-202!",
+                'tipo' => $tipo,
+                'conteudo' => $padraoNormam
+            ]);
+            exit;
+        }
+
+        setMensagem('success', "Modelo {$tipo} restaurado para o padrão oficial da NORMAM.");
+        redirecionar(APP_URL . 'documentacao/lc/form');
+    } catch (Throwable $e) {
+        error_log('Erro ao restaurar modelo: ' . $e->getMessage());
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || (isset($_POST['ajax']) && $_POST['ajax'] == '1')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['sucesso' => false, 'mensagem' => 'Erro ao restaurar modelo: ' . $e->getMessage()]);
+            exit;
+        }
+        setMensagem('error', 'Erro ao restaurar modelo: ' . $e->getMessage());
+        redirecionar(APP_URL . 'documentacao/lc/form');
+    }
+}
+
+// ============================================
+// OBTER TODOS OS MODELOS DE OBSERVAÇÕES (JSON)
+// ============================================
+if ($action === 'obter_modelos_observacoes') {
+    header('Content-Type: application/json; charset=utf-8');
+    $usuarioId = $_SESSION['usuario_id'] ?? null;
+    $todos = obterTodosTemplatesObservacoesLicenca($usuarioId);
+    $padroesNormam = modelosObservacoesLicencaPadrao();
+    echo json_encode([
+        'sucesso' => true,
+        'modelos' => $todos,
+        'padroes_normam' => $padroesNormam
+    ]);
+    exit;
 }
 
 setMensagem('error', 'Ação inválida.');

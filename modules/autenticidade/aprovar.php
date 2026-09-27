@@ -13,9 +13,10 @@ header('Content-Type: application/json; charset=UTF-8');
 
 try {
     verificar_sessao();
-    if (getCargo() !== 'ADMIN') {
+    $cargo = getCargo();
+    if (!in_array($cargo, ['ADMIN', 'ANALISTA'], true)) {
         http_response_code(403);
-        throw new RuntimeException('Apenas administradores podem aprovar e assinar documentos.');
+        throw new RuntimeException('Apenas administradores e analistas podem aprovar e assinar documentos.');
     }
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         http_response_code(405);
@@ -25,9 +26,28 @@ try {
         http_response_code(419);
         throw new RuntimeException('Sessao expirada. Atualize a pagina e tente novamente.');
     }
-    if (strtoupper(trim((string)($_POST['documento_tipo'] ?? ''))) === 'RELATORIO') {
+    $tipo = strtoupper(trim((string)($_POST['documento_tipo'] ?? '')));
+    if ($tipo === 'RELATORIO') {
         http_response_code(422);
         throw new RuntimeException('Relatorios de vistoria sao aprovados diretamente na revisao administrativa e nao exigem assinatura eletronica.');
+    }
+
+    if ($cargo === 'ANALISTA') {
+        $tiposPermitidosAnalista = ['LC', 'LA', 'LR', 'LCEC', 'LP', 'NAR'];
+        if (!in_array($tipo, $tiposPermitidosAnalista, true)) {
+            http_response_code(403);
+            throw new RuntimeException('O perfil de Analista somente pode assinar licenças técnicas (LC, LA, LR, LCEC), LP e NAR.');
+        }
+
+        // Garante que o analista assina utilizando seu próprio perfil de assinatura ativo
+        $stmtResp = $pdo->prepare("SELECT id FROM responsaveis_assinatura WHERE usuario_id = :uid AND ativo = 1 LIMIT 1");
+        $stmtResp->execute([':uid' => $_SESSION['usuario_id']]);
+        $analistaRespId = (int)$stmtResp->fetchColumn();
+        if ($analistaRespId <= 0) {
+            http_response_code(422);
+            throw new RuntimeException('Você não possui um perfil de assinatura técnica ativo cadastrado no sistema.');
+        }
+        $_POST['responsavel_id'] = $analistaRespId;
     }
 
     $result = aprovarDocumentoEletronicamente($pdo, $_POST);

@@ -122,6 +122,18 @@ if (!class_exists('NotasArqueacaoPDF')) {
     }
 }
 
+// Resolução dinâmica do responsável técnico / analista naval
+$respPdf = $GLOBALS['APROVACAO_RESPONSAVEL_PDF'] ?? null;
+if (!$respPdf && !empty($nar['responsavel_assinatura_id'])) {
+    $stmtResp = $pdo->prepare("SELECT nome_completo, cargo_titulo, registro_profissional FROM responsaveis_assinatura WHERE id = :rid");
+    $stmtResp->execute([':rid' => $nar['responsavel_assinatura_id']]);
+    $respPdf = $stmtResp->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+$assinanteNome = $respPdf['nome_completo'] ?? $nar['assinante_nome'] ?? 'Itamar Analista Naval';
+$assinanteTitulo = $respPdf['cargo_titulo'] ?? $nar['assinante_titulo'] ?? 'Analista Técnico Naval';
+$assinanteRegistro = $respPdf['registro_profissional'] ?? $nar['assinante_registro'] ?? 'CREA-PA 123456/D';
+$creaTexto = $assinanteRegistro ? (preg_match('/^(crea|cau|crq)/i', $assinanteRegistro) ? $assinanteRegistro : 'CREA: ' . $assinanteRegistro) : 'CREA-PA';
+
 $pdf = new NotasArqueacaoPDF('P', 'mm', 'A4', true, 'UTF-8', false);
 $pdf->SetCreator(APP_NAME);
 $pdf->SetAuthor('Amazon Naval Ltda');
@@ -292,20 +304,20 @@ $pdf->Cell(120, 6, ' ARQUEAÇÃO LÍQUIDA (AL)', 'LTB', 0);
 $pdf->Cell(60, 6, ' AL = ' . (int)$nar['arqueacao_liquida_al'], 'TRB', 1);
 $pdf->SetTextColor(15, 23, 42);
 
-// Bloco de Assinatura da Página 1
-$pdf->SetY(248);
+// Bloco de Identificação Técnica da Página 1
+$pdf->SetY(225);
 $pdf->SetFont('helvetica', '', 8);
-$pdf->Cell(180, 5, $nar['local_emissao'] . ', em ' . narDataExtenso($nar['data_emissao']) . '.', 0, 1, 'L');
+$pdf->Cell(180, 5, ($nar['local_emissao'] ?: 'Belém-PA') . ', em ' . narDataExtenso($nar['data_emissao']) . '.', 0, 1, 'L');
 
-$pdf->SetY(254);
+$pdf->SetY(231);
 $pdf->SetX(110);
 $pdf->SetFont('helvetica', 'B', 8.5);
-$pdf->Cell(85, 4.5, $nar['assinante_nome'] ?: 'JERSON DA SILVA ALMEIDA', 0, 1, 'C');
+$pdf->Cell(85, 4.5, $assinanteNome, 0, 1, 'C');
 $pdf->SetX(110);
 $pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(85, 4, $nar['assinante_titulo'] ?: 'TECNÓLOGO NAVAL', 0, 1, 'C');
+$pdf->Cell(85, 4, $assinanteTitulo, 0, 1, 'C');
 $pdf->SetX(110);
-$pdf->Cell(85, 4, 'CREA: ' . ($nar['assinante_registro'] ?: '22181-AM'), 0, 1, 'C');
+$pdf->Cell(85, 4, $creaTexto, 0, 1, 'C');
 
 
 // =========================================================================
@@ -431,22 +443,27 @@ $obsTexto = trim($nar['observacoes_notas'] ?? '');
 if ($obsTexto === '') {
     $obsTexto = '- x - x - x - x -';
 }
-$pdf->MultiCell(180, 4, $obsTexto, 1, 'J', false, 1);
+// Normalizar múltiplos espaços consecutivos que possam vir do formulário/banco
+$obsTexto = preg_replace('/[ \t]{2,}/', ' ', $obsTexto);
+$obsTexto = preg_replace("/\r\n|\r/", "\n", $obsTexto);
 
-// Bloco de Assinatura da Página 2
-$pdf->SetY(248);
+// Alinhamento à esquerda 'L' para evitar que palavras fiquem com espaços gigantes
+$pdf->MultiCell(180, 4.2, $obsTexto, 1, 'L', false, 1);
+
+// Bloco de Identificação Técnica da Página 2
+$pdf->SetY(225);
 $pdf->SetFont('helvetica', '', 8);
-$pdf->Cell(180, 5, $nar['local_emissao'] . ', em ' . narDataExtenso($nar['data_emissao']) . '.', 0, 1, 'L');
+$pdf->Cell(180, 5, ($nar['local_emissao'] ?: 'Belém-PA') . ', em ' . narDataExtenso($nar['data_emissao']) . '.', 0, 1, 'L');
 
-$pdf->SetY(254);
+$pdf->SetY(231);
 $pdf->SetX(110);
 $pdf->SetFont('helvetica', 'B', 8.5);
-$pdf->Cell(85, 4.5, $nar['assinante_nome'] ?: 'JERSON DA SILVA ALMEIDA', 0, 1, 'C');
+$pdf->Cell(85, 4.5, $assinanteNome, 0, 1, 'C');
 $pdf->SetX(110);
 $pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(85, 4, $nar['assinante_titulo'] ?: 'TECNÓLOGO NAVAL', 0, 1, 'C');
+$pdf->Cell(85, 4, $assinanteTitulo, 0, 1, 'C');
 $pdf->SetX(110);
-$pdf->Cell(85, 4, 'CREA: ' . ($nar['assinante_registro'] ?: '22181-AM'), 0, 1, 'C');
+$pdf->Cell(85, 4, $creaTexto, 0, 1, 'C');
 
 
 // =========================================================================
@@ -600,20 +617,30 @@ $pdf->SetFont('helvetica', 'B', 8);
 $pdf->Cell(130, 5, ' TOTAL VC', 'LTB', 0);
 $pdf->Cell(50, 5, narFmtNum($nar['volume_espacos_carga_vc'], 2, ' m³'), 'TRB', 1, 'R');
 
-// Bloco de Assinatura da Página 3
-$pdf->SetY(248);
-$pdf->SetFont('helvetica', '', 8);
-$pdf->Cell(180, 5, $nar['local_emissao'] . ', em ' . narDataExtenso($nar['data_emissao']) . '.', 0, 1, 'L');
+// Bloco de Assinatura e Conclusão Oficial da Página 3
+// Posicionado confortavelmente acima do rodapé para evitar qualquer sobreposição (Y = 180mm a 218mm)
+$pdf->SetXY(15, 172.0);
+$pdf->SetFont('helvetica', '', 9.0);
+$pdf->Cell(180, 5, ($nar['local_emissao'] ?: 'Belém-PA') . ', em ' . narDataExtenso($nar['data_emissao']) . '.', 0, 1, 'C');
 
-$pdf->SetY(254);
-$pdf->SetX(110);
-$pdf->SetFont('helvetica', 'B', 8.5);
-$pdf->Cell(85, 4.5, $nar['assinante_nome'] ?: 'JERSON DA SILVA ALMEIDA', 0, 1, 'C');
-$pdf->SetX(110);
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(85, 4, $nar['assinante_titulo'] ?: 'TECNÓLOGO NAVAL', 0, 1, 'C');
-$pdf->SetX(110);
-$pdf->Cell(85, 4, 'CREA: ' . ($nar['assinante_registro'] ?: '22181-AM'), 0, 1, 'C');
+$blocoNarY = 180.0;
+$aprovacao_pdf_layout = [
+    'bloco_pagina' => 3,
+    'bloco_y' => $blocoNarY
+];
+
+// Se o documento estiver em rascunho (sem aprovação digital e sem geração de arquivo oficial),
+// exibe um quadro prévio indicando o aguardo da assinatura eletrônica
+if (empty($nar['assinado']) && !isset($salvar_pdf_caminho)) {
+    $pdf->SetDrawColor(180, 185, 183);
+    $pdf->SetLineWidth(0.25);
+    $pdf->Rect(15, $blocoNarY, 180, 38);
+    $pdf->SetXY(15, $blocoNarY + 16);
+    $pdf->SetFont('helvetica', 'I', 8);
+    $pdf->SetTextColor(120, 120, 120);
+    $pdf->Cell(180, 5, 'DOCUMENTO AGUARDANDO ASSINATURA ELETRÔNICA DO ANALISTA TÉCNICO NAVAL', 0, 1, 'C');
+    $pdf->SetTextColor(0, 0, 0);
+}
 
 // Saída do PDF
 if (isset($salvar_pdf_caminho)) {

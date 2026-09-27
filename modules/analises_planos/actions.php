@@ -110,6 +110,7 @@ try {
         ]);
 
         analisePlanosSemearChecklist($pdo, $novoId, $tipoProcesso, $enquadramento, $classeCertificacao, $usuarioAtual);
+        analisePlanosGarantirSubmissaoInicial($pdo, $novoId, $usuarioAtual);
         analisePlanosHistorico($pdo, $novoId, 'CRIACAO_DIRETA', null, $statusInicial, 'Processo criado diretamente no sistema pelo usuário ' . ($_SESSION['usuario_nome'] ?? ''));
 
         if ($analistaId && $prazoAgendadoEm) {
@@ -580,12 +581,21 @@ try {
         $resultado = trim($_POST['resultado'] ?? '');
         $resumo = trim($_POST['resumo'] ?? '');
         $conclusao = trim($_POST['conclusao'] ?? '');
+
+        // Se submissão não foi informada ou veio como 'auto_inicial', garante a submissão inicial
+        if (!$submissaoId || $submissaoId === 'auto_inicial') {
+            $submissaoId = analisePlanosGarantirSubmissaoInicial($pdo, $analiseId, $usuario);
+        }
+
+        $q = $pdo->prepare('SELECT id FROM analise_planos_submissoes WHERE id=:id AND analise_id=:analise');
+        $q->execute([':id' => $submissaoId, ':analise' => $analiseId]);
+        if (!$q->fetchColumn()) {
+            $submissaoId = analisePlanosGarantirSubmissaoInicial($pdo, $analiseId, $usuario);
+        }
+
         if (!$submissaoId || !in_array($resultado, ['APROVADO', 'EXIGENCIAS', 'REPROVADO'], true) || !$resumo || !$conclusao) {
             throw new InvalidArgumentException('Preencha os campos obrigatórios do relatório técnico.');
         }
-        $q = $pdo->prepare('SELECT id FROM analise_planos_submissoes WHERE id=:id AND analise_id=:analise');
-        $q->execute([':id' => $submissaoId, ':analise' => $analiseId]);
-        if (!$q->fetchColumn()) throw new RuntimeException('Revisão informada não pertence ao processo.');
         // Classifica automaticamente os arquivos recebidos desta revisão como ACEITO
         $pdo->prepare("UPDATE analise_planos_arquivos SET classificacao='ACEITO', justificativa_classificacao=COALESCE(NULLIF(justificativa_classificacao,''),'Aceito na emissão do relatório técnico.'), classificado_por=:usuario, classificado_em=NOW() WHERE submissao_id=:id AND classificacao='RECEBIDO'")->execute([':id' => $submissaoId, ':usuario' => $usuario]);
 
@@ -870,6 +880,6 @@ try {
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         exit;
     }
-    setMensagem('error',$e->getMessage());
+    setMensagem('error', $e->getMessage(), $_POST);
     redirecionar($retorno($analiseId));
 }

@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../../includes/functions.php';
 
 // Verificar permissão
 verificar_sessao();
-if (!podeAcessar('documentacao')) {
+if (!podeAcessar('doc_csn')) {
     header('Location: ' . APP_URL . 'dashboard?erro=sem_permissao');
     exit;
 }
@@ -175,20 +175,13 @@ if ($action === 'salvar') {
         redirecionar(APP_URL . 'certificados');
     }
     if ($vistoria_id) {
-        $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
-        if (empty($liberacao['permitido'])) {
-            setMensagem('error', $liberacao['mensagem']);
+        require_once __DIR__ . '/../../../includes/emissao_certificados.php';
+        $elegibilidade = avaliarElegibilidadeModalidadeCertificado($pdo, (string)$vistoria_id, (string)$tipo, (string)$embarcacao_id);
+        if (empty($elegibilidade['permitido'])) {
+            setMensagem('error', $elegibilidade['mensagem']);
             redirecionar(APP_URL . 'documentacao/certificados/form' . ($editando ? "?id={$id}" : ''));
         }
         $relatorio_numero = relatorioNumerosReferenciaCertificado($pdo, (string)$vistoria_id);
-        if ($tipo === 'Definitivo' && ($liberacao['status'] ?? '') === 'APROVADA_COM_EXIGENCIAS') {
-            setMensagem(
-                'error',
-                (string)($liberacao['mensagem_definitivo'] ?? '')
-                    ?: 'O relatório vigente ainda possui exigências comuns pendentes. Conclua a verificação antes de emitir o Certificado Definitivo.'
-            );
-            redirecionar(APP_URL . 'documentacao/certificados/form' . ($editando ? "?id={$id}" : ''));
-        }
     }
     if (empty($vistoria_id)) {
         setMensagem('error', 'É obrigatório selecionar um relatório aprovado para emitir o certificado.');

@@ -241,9 +241,37 @@ function analisePlanosCriarDemandasProposta(PDO $pdo, array $proposta, ?string $
             if (function_exists('analisePlanosSemearChecklist')) {
                 analisePlanosSemearChecklist($pdo, $id, 'LC', 'NORMAM-202', $classe, $usuarioOrigem ?: ($analistaId ?: '00000000-0000-0000-0000-000000000001'));
             }
+            analisePlanosGarantirSubmissaoInicial($pdo, $id, $usuarioOrigem);
         }
     }
     return $criados;
+}
+
+function analisePlanosGarantirSubmissaoInicial(PDO $pdo, string $analiseId, ?string $usuarioId = null): string
+{
+    try {
+        $stmt = $pdo->prepare("SELECT id FROM analise_planos_submissoes WHERE analise_id = :id ORDER BY revisao ASC LIMIT 1");
+        $stmt->execute([':id' => $analiseId]);
+        $subId = $stmt->fetchColumn();
+        if ($subId) {
+            return (string)$subId;
+        }
+
+        $subId = gerarUUID();
+        $usuario = $usuarioId ?: ($_SESSION['usuario_id'] ?? null);
+        $pdo->prepare("INSERT INTO analise_planos_submissoes 
+            (id, analise_id, revisao, descricao, recebido_em, origem, criado_por)
+            VALUES (:id, :analise_id, 0, 'Revisão 0 (Entrada Inicial de Documentos e Pranchas do Projeto)', CURDATE(), 'ANALISTA', :criado_por)")
+            ->execute([
+                ':id' => $subId,
+                ':analise_id' => $analiseId,
+                ':criado_por' => $usuario,
+            ]);
+        return $subId;
+    } catch (Throwable $e) {
+        error_log("Erro ao garantir submissão inicial para análise {$analiseId}: " . $e->getMessage());
+        return '';
+    }
 }
 
 function analisePlanosCarregar(PDO $pdo, string $id, bool $lock = false): array
@@ -266,6 +294,10 @@ function analisePlanosCarregar(PDO $pdo, string $id, bool $lock = false): array
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$row) throw new RuntimeException('Análise de planos não encontrada.');
     if (!analisePlanosUsuarioPodeVisualizar($row)) throw new RuntimeException('Você não possui acesso a esta análise.');
+
+    // Auto-garante a submissão inicial (Revisão 0) para conferência técnica do analista
+    analisePlanosGarantirSubmissaoInicial($pdo, $id);
+
     return $row;
 }
 
@@ -513,16 +545,65 @@ function analiseAcaoExigirTecnico(array $analise): void
 
 function analiseAcaoResponsavelDoAnalista(PDO $pdo, array $analise): array
 {
+    $analistaId = (string)($analise['analista_id'] ?? '');
+    $usuarioLogado = (string)($_SESSION['usuario_id'] ?? '');
+    $cargoLogado = getCargo();
+
+    // 1. Buscar dados do analista atribuído
+    $stmtUser = $pdo->prepare("SELECT id, nome, cargo, ativo FROM usuarios WHERE id = :id");
+    $stmtUser->execute([':id' => $analistaId]);
+    $analistaUser = $stmtUser->fetch(PDO::FETCH_ASSOC);
+    $nomeAnalista = $analistaUser['nome'] ?? 'atribuído';
+
+    // 2. Buscar o registro de assinatura do analista atribuído
     $stmt = $pdo->prepare("SELECT ra.* FROM responsaveis_assinatura ra
-        WHERE ra.usuario_id=:usuario AND ra.ativo=1
-          AND ra.cpf_cnpj IS NOT NULL AND ra.cpf_cnpj<>''
-          AND ra.assinatura_arquivo IS NOT NULL AND ra.assinatura_arquivo<>''
-          AND ra.assinatura_hash IS NOT NULL AND ra.assinatura_hash<>''
+        WHERE ra.usuario_id = :usuario AND ra.excluido_em IS NULL
         LIMIT 1");
-    $stmt->execute([':usuario' => $analise['analista_id']]);
+    $stmt->execute([':usuario' => $analistaId]);
     $responsavel = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$responsavel) throw new RuntimeException('O analista precisa ter identidade técnica e assinatura válidas vinculadas à própria conta.');
-    return $responsavel;
+
+    // 3. Se analista tiver registro válido completo, retornar imediatamente
+    if ($responsavel && !empty($responsavel['ativo'])
+        && !empty($responsavel['cpf_cnpj'])
+        && !empty($responsavel['assinatura_arquivo'])
+        && !empty($responsavel['assinatura_hash'])) {
+        return $responsavel;
+    }
+
+    // 4. Se o usuário executor for Administrador e o analista estiver incompleto,
+    // verificar se o próprio Admin possui assinatura técnica válida cadastrada (assinatura substituta/autorizada)
+    if ($cargoLogado === 'ADMIN' && $usuarioLogado !== $analistaId) {
+        $stmtAdmin = $pdo->prepare("SELECT ra.* FROM responsaveis_assinatura ra
+            WHERE ra.usuario_id = :usuario AND ra.ativo = 1 AND ra.excluido_em IS NULL
+              AND ra.cpf_cnpj IS NOT NULL AND ra.cpf_cnpj <> ''
+              AND ra.assinatura_arquivo IS NOT NULL AND ra.assinatura_arquivo <> ''
+              AND ra.assinatura_hash IS NOT NULL AND ra.assinatura_hash <> ''
+            LIMIT 1");
+        $stmtAdmin->execute([':usuario' => $usuarioLogado]);
+        $respAdmin = $stmtAdmin->fetch(PDO::FETCH_ASSOC);
+        if ($respAdmin) {
+            return $respAdmin;
+        }
+    }
+
+    // 5. Diagnóstico detalhado e didático conforme AGENTS.md
+    if (!$responsavel) {
+        throw new RuntimeException("O analista responsável ({$nomeAnalista}) ainda não possui perfil de assinatura cadastrado. Acesse 'Meu Perfil' ou 'Minhas Assinaturas' para enviar a assinatura manuscrita e o CPF.");
+    }
+    if (empty($responsavel['ativo'])) {
+        throw new RuntimeException("A assinatura técnica do analista ({$nomeAnalista}) está inativa no sistema. Solicite a reativação nas configurações.");
+    }
+    if (empty($responsavel['cpf_cnpj'])) {
+        throw new RuntimeException("O analista ({$nomeAnalista}) cadastrou a assinatura, mas o CPF está em branco! O CPF é obrigatório pela NORMAM-202/DPC para fé pública e emissão do RAP. Preencha o CPF em 'Meu Perfil'.");
+    }
+    if (empty($responsavel['assinatura_arquivo'])) {
+        throw new RuntimeException("O arquivo de imagem da assinatura manuscrita do analista ({$nomeAnalista}) não foi enviado. Faça o upload da imagem em 'Meu Perfil'.");
+    }
+    if (empty($responsavel['assinatura_hash'])) {
+        throw new RuntimeException("O hash criptográfico de validação da assinatura do analista ({$nomeAnalista}) não foi gerado. Salve novamente a assinatura em 'Meu Perfil'.");
+    }
+
+    throw new RuntimeException("O analista ({$nomeAnalista}) precisa ter identidade técnica e assinatura válidas vinculadas à própria conta (NORMAM-202).");
 }
 
 function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel): string
@@ -554,6 +635,16 @@ function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel): 
         FROM embarcacoes e LEFT JOIN clientes c ON c.id=:cliente WHERE e.id=:embarcacao LIMIT 1");
     $stmt->execute([':cliente'=>$analise['solicitante_id'], ':embarcacao'=>$analise['embarcacao_id']]);
     $dados = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+    // Gerar observações oficiais completas (NORMAM-202 / Anexo 3-A)
+    $dadosObs = array_merge($dados, $analise, [
+        'relatorio_numero' => $relatorioConclusivo ?: $analise['numero'],
+        'tipo_licenca' => $tipo,
+        'ano_construcao' => $dados['ano'] ?? ($dados['ano_construcao'] ?? date('Y')),
+        'comprimento_casco' => $dados['comprimento_casco'] ?? ($dados['comprimento_lpp'] ?? null),
+    ]);
+    $observacoesLicenca = gerarObservacoesPadraoLicenca($dadosObs, $tipo);
+
     $insert = $pdo->prepare("INSERT INTO certificados_lc
         (id,numero_lc,embarcacao_id,cliente_id,token_assinatura,tipo_licenca,nome_embarcacao,tipo_embarcacao,
          numero_casco,material_casco,sociedade_classificadora,comprimento_total,comprimento_pp,boca_moldada,
@@ -561,13 +652,13 @@ function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel): 
          area_navegacao,atividade_servico,propulsao,proprietario_nome,proprietario_cpf_cnpj,proprietario_endereco,
          estaleiro_nome,estaleiro_cpf_cnpj,estaleiro_endereco,data_emissao,local_emissao,relatorio_numero,
          assinante_nome,assinante_titulo,assinante_registro,responsavel_assinatura_id,status,ativo,criado_por,
-         vistoria_id,analise_id,dados_json)
+         vistoria_id,analise_id,observacoes,dados_json)
         VALUES (:id,:numero,:embarcacao,:cliente,:token,:tipo,:nome,:tipo_embarcacao,
                 :casco,:material,'Amazon Naval Ltda',:comp_total,:comp_pp,:boca,
                 :pontal,:calado,:porte,:tripulantes,:passageiros,:navegacao,
                 :area_nav,:atividade,:propulsao,:proprietario,:documento,:endereco,
                 :estaleiro,:estaleiro_cnpj,:estaleiro_endereco,CURDATE(),'Belém-PA',:relatorio,
-                :assinante_nome,:assinante_titulo,:assinante_registro,:responsavel,'emitido',1,:usuario,NULL,:analise,:dados)");
+                :assinante_nome,:assinante_titulo,:assinante_registro,:responsavel,'emitido',1,:usuario,NULL,:analise,:observacoes,:dados)");
     $insert->execute([
         ':id'=>$id, ':numero'=>$numero, ':embarcacao'=>$analise['embarcacao_id'],
         ':cliente'=>$analise['solicitante_id'] ?? null,
@@ -598,7 +689,8 @@ function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel): 
         ':assinante_registro'=>$responsavel['registro_profissional'] ?? null,
         ':responsavel'=>$responsavel['id'],
         ':usuario'=>$_SESSION['usuario_id'] ?? null, ':analise'=>$analise['id'],
-        ':dados'=>json_encode(['normam'=>$analise['enquadramento'],'classe'=>$analise['classe_certificacao']], JSON_UNESCAPED_UNICODE),
+        ':observacoes'=>$observacoesLicenca,
+        ':dados'=>json_encode(['normam'=>$analise['enquadramento'],'classe'=>$analise['classe_certificacao'],'observacoes'=>$observacoesLicenca], JSON_UNESCAPED_UNICODE),
     ]);
     return $id;
 }
@@ -722,6 +814,44 @@ function analisePlanosCategoriasNormam(): array
 
 function analisePlanosBuscarReferenciasNormam(PDO $pdo, array $filtros = []): array
 {
+    // AUTO-HEALING NORMAM: Garante que a tabela contenha o acervo oficial completo do analista naval (> 600 modelos)
+    try {
+        $count = (int)$pdo->query("SELECT COUNT(*) FROM analise_planos_referencias_normam")->fetchColumn();
+        if ($count === 0) {
+            $sqlFile092 = __DIR__ . '/../migrations/092_analise_planos_banco_normas.sql';
+            if (file_exists($sqlFile092)) {
+                $sql = file_get_contents($sqlFile092);
+                $pdo->exec($sql);
+            }
+            $count = (int)$pdo->query("SELECT COUNT(*) FROM analise_planos_referencias_normam")->fetchColumn();
+        }
+        if ($count < 600) {
+            $sqlFile113 = __DIR__ . '/../migrations/113_analise_planos_mais_referencias_normam.sql';
+            if (file_exists($sqlFile113)) {
+                $lines = file($sqlFile113, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                $buffer = '';
+                foreach ($lines as $line) {
+                    $trimmed = trim($line);
+                    if ($trimmed === '' || str_starts_with($trimmed, '--')) continue;
+                    $buffer .= $line . "\n";
+                    if (str_ends_with($trimmed, ';')) {
+                        try {
+                            $pdo->exec(trim($buffer));
+                        } catch (Throwable $e) {}
+                        $buffer = '';
+                    }
+                }
+                if (!empty(trim($buffer))) {
+                    try {
+                        $pdo->exec(trim($buffer));
+                    } catch (Throwable $e) {}
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('Erro auto-healing banco NORMAM: ' . $e->getMessage());
+    }
+
     $where = ['ativo = 1'];
     $params = [];
     if (!empty($filtros['categoria'])) {

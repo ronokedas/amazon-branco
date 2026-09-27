@@ -163,6 +163,11 @@ $submissoes = [];
 $q = $pdo->prepare('SELECT s.*,u.nome usuario_nome,c.nome portal_nome FROM analise_planos_submissoes s LEFT JOIN usuarios u ON u.id=s.criado_por LEFT JOIN clientes c ON c.id=s.portal_cliente_id WHERE s.analise_id=:id ORDER BY s.revisao DESC');
 $q->execute([':id'=>$id]);
 $submissoes = $q->fetchAll(PDO::FETCH_ASSOC);
+if (empty($submissoes)) {
+    analisePlanosGarantirSubmissaoInicial($pdo, $id);
+    $q->execute([':id'=>$id]);
+    $submissoes = $q->fetchAll(PDO::FETCH_ASSOC);
+}
 foreach ($submissoes as &$sub) {
     $q = $pdo->prepare('SELECT ar.*,i.documento item_documento,u.nome classificador_nome FROM analise_planos_arquivos ar LEFT JOIN analise_planos_itens i ON i.id=ar.item_id LEFT JOIN usuarios u ON u.id=ar.classificado_por WHERE ar.submissao_id=:id ORDER BY ar.criado_em');
     $q->execute([':id'=>$sub['id']]);
@@ -301,6 +306,7 @@ $todasReferenciasPreload = analisePlanosBuscarReferenciasNormam($pdo);
 
 $titulo_page = $a['numero'] . ' - Análise Técnica de Planos';
 require_once __DIR__ . '/../../includes/header.php';
+$formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
 ?>
 
 <div class="conteudo-principal analise-planos-page">
@@ -336,7 +342,7 @@ require_once __DIR__ . '/../../includes/header.php';
                         <i class="fa-solid fa-certificate"></i> Licença: <?= h($licenca['numero_lc']) ?>
                     </a>
                 <?php elseif ($podeEmitirLicenca): ?>
-                    <button type="button" class="btn btn-warning" onclick="trocarAbaAnalise('pareceres')" title="Emitir Licença Oficial">
+                    <button type="button" class="btn btn-warning" onclick="trocarAbaAnalise('pareceres', true); document.getElementById('secaoLicencaTecnica')?.scrollIntoView({behavior:'smooth', block:'start'});" title="Emitir Licença Oficial">
                         <i class="fa-solid fa-certificate"></i> Emitir Licença (<?= h($a['tipo_processo']) ?>)
                     </button>
                 <?php endif; ?>
@@ -353,7 +359,13 @@ require_once __DIR__ . '/../../includes/header.php';
                     <button type="button" class="btn btn-success" onclick="abrirModalBancoNormam()">
                         <i class="fa-solid fa-book-bookmark"></i> + Banco NORMAM
                     </button>
-                    <button type="button" class="btn btn-primary" onclick="trocarAbaAnalise('pareceres')">
+                <?php endif; ?>
+                <?php if ($ultimoParecer): ?>
+                    <a class="btn btn-primary" href="<?= APP_URL ?>analises-planos/parecer-pdf?id=<?= urlencode($ultimoParecer['id']) ?>" target="_blank" title="Abrir e Visualizar Relatório RAP Oficial (PDF em nova aba)">
+                        <i class="fa-solid fa-file-pdf"></i> Ver RAP (<?= h($ultimoParecer['numero'] ?: ('v' . $ultimoParecer['versao'])) ?>)
+                    </a>
+                <?php elseif ($analiseAberta): ?>
+                    <button type="button" class="btn btn-primary" onclick="trocarAbaAnalise('pareceres', true); document.getElementById('formNovoParecer')?.scrollIntoView({behavior:'smooth', block:'start'});" title="Emitir Relatório de Análise de Planos (RAP)">
                         <i class="fa-solid fa-file-signature"></i> Relatório RAP
                     </button>
                 <?php endif; ?>
@@ -410,7 +422,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 </div>
             </article>
 
-            <article class="kpi-box" onclick="trocarAbaAnalise('pareceres')" style="cursor:pointer">
+            <article class="kpi-box" onclick="trocarAbaAnalise('pareceres', true); document.getElementById('historicoPareceresSection')?.scrollIntoView({behavior:'smooth', block:'start'});" style="cursor:pointer" title="Ver relatórios técnicos RAP e histórico">
                 <div class="kpi-box__icon is-reports"><i class="fa-solid fa-file-signature"></i></div>
                 <div class="kpi-box__content">
                     <small>Relatórios Técnicos RAP</small>
@@ -443,9 +455,10 @@ require_once __DIR__ . '/../../includes/header.php';
     <?php endif; ?>
 
     <!-- Barra de Abas Especializadas do Analista (AGENTS.md) -->
-    <nav class="analise-tabs-bar">
-        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'exigencias' ? 'active' : '' ?>" onclick="trocarAbaAnalise('exigencias')">
-            <i class="fa-solid fa-triangle-exclamation"></i> Exigências & Banco NORMAM
+    <nav class="analise-tabs-bar" role="tablist">
+        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'exigencias' ? 'active' : '' ?>" onclick="trocarAbaAnalise('exigencias')" title="Exigências Técnicas Vigentes (NORMAM-202) & Banco NORMAM">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span class="tab-title">Exigências & NORMAM</span>
             <span id="badgeAbaExigencias" class="badge <?= $exigenciasASPendentes > 0 ? 'bg-danger text-white' : ($exigenciasPendentes > 0 ? 'bg-warning text-dark' : 'bg-success') ?>">
                 <?php if ($exigenciasASPendentes > 0): ?>
                     <i class="fa-solid fa-ban"></i> <?= $exigenciasASPendentes ?> A/S
@@ -457,22 +470,26 @@ require_once __DIR__ . '/../../includes/header.php';
             </span>
         </button>
 
-        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'arquivos' ? 'active' : '' ?>" onclick="trocarAbaAnalise('arquivos')">
-            <i class="fa-solid fa-folder-open"></i> Pranchas & Arquivos do Projeto
+        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'arquivos' ? 'active' : '' ?>" onclick="trocarAbaAnalise('arquivos')" title="Pranchas Técnicas & Arquivos do Projeto Naval">
+            <i class="fa-solid fa-folder-open"></i>
+            <span class="tab-title">Pranchas & Arquivos</span>
             <span class="badge bg-secondary"><?= $totalArquivos ?></span>
         </button>
 
-        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'pareceres' ? 'active' : '' ?>" onclick="trocarAbaAnalise('pareceres')">
-            <i class="fa-solid fa-file-signature"></i> Relatórios Técnicos (RAP) & Licença
+        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'pareceres' ? 'active' : '' ?>" onclick="trocarAbaAnalise('pareceres')" title="Relatórios Técnicos de Análise de Planos (RAP) & Licença">
+            <i class="fa-solid fa-file-signature"></i>
+            <span class="tab-title">Relatórios RAP & Licença</span>
             <span class="badge bg-secondary"><?= $totalPareceres ?></span>
         </button>
 
-        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'enquadramento' ? 'active' : '' ?>" onclick="trocarAbaAnalise('enquadramento')">
-            <i class="fa-solid fa-ship"></i> Enquadramento & Características Navais
+        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'enquadramento' ? 'active' : '' ?>" onclick="trocarAbaAnalise('enquadramento')" title="Enquadramento & Características Navais (NORMAM-202)">
+            <i class="fa-solid fa-ship"></i>
+            <span class="tab-title">Enquadramento Naval</span>
         </button>
 
-        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'vistoria_tramite' ? 'active' : '' ?>" onclick="trocarAbaAnalise('vistoria_tramite')">
-            <i class="fa-solid fa-anchor"></i> Vistoria de Campo & Trâmite
+        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'vistoria_tramite' ? 'active' : '' ?>" onclick="trocarAbaAnalise('vistoria_tramite')" title="Vistoria Técnica de Campo & Trâmite Oficial na Capitania">
+            <i class="fa-solid fa-anchor"></i>
+            <span class="tab-title">Vistoria & Trâmite</span>
             <?php if (!empty($vistoriasVinculadas)): ?>
                 <span class="badge bg-info text-dark"><?= count($vistoriasVinculadas) ?></span>
             <?php endif; ?>
@@ -517,24 +534,24 @@ require_once __DIR__ . '/../../includes/header.php';
                             <i class="fa-solid fa-circle-check"></i> Alterações salvas!
                         </span>
                         <?php if ($analiseAberta): ?>
-                            <button type="button" class="btn btn-outline-primary btn-sm" id="btnSalvarExigenciasInline" onclick="salvarExigenciasAjax(this)" <?= empty($exigencias) ? 'style="display:none;"' : '' ?>>
+                            <button type="button" class="btn btn-outline-success btn-sm btn-has-text" id="btnSalvarExigenciasInline" onclick="salvarExigenciasAjax(this)" <?= empty($exigencias) ? 'style="display:none;"' : '' ?> style="font-weight:600; padding:6px 14px; border-radius:6px;">
                                 <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações na Tabela
                             </button>
                         <?php endif; ?>
                     </div>
                 </div>
 
-                <div class="table-responsive" style="overflow-x:hidden;">
-                    <table class="tabela-exigencias-moderna" id="tabelaExigencias" style="table-layout:fixed; width:100%;">
+                <div class="tabela-exigencias-wrapper">
+                    <table class="tabela-exigencias-moderna" id="tabelaExigencias">
                         <thead>
                             <tr>
-                                <th style="width:40px; text-align:center;">#</th>
-                                <th style="width:85px; text-align:center;">Condição</th>
-                                <th style="width:160px;">Categoria Técnica</th>
+                                <th style="width:38px; text-align:center;">#</th>
+                                <th style="width:95px; text-align:center;">Condição</th>
+                                <th style="width:175px;">Categoria Técnica</th>
                                 <th>Descrição da Exigência</th>
-                                <th style="width:180px;">Referência Normativa</th>
-                                <th style="width:145px; text-align:center;">Situação</th>
-                                <?php if ($analiseAberta): ?><th style="width:125px; text-align:center;">Ações Rápidas</th><?php endif; ?>
+                                <th style="width:170px;">Referência Normativa</th>
+                                <th style="width:135px; text-align:center;">Situação</th>
+                                <?php if ($analiseAberta): ?><th style="width:140px; text-align:center;">Ações Rápidas</th><?php endif; ?>
                             </tr>
                         </thead>
                         <tbody id="tabelaExigenciasBody">
@@ -557,7 +574,7 @@ require_once __DIR__ . '/../../includes/header.php';
                                     </td>
                                     <td style="vertical-align:middle; text-align:center;">
                                         <input type="hidden" name="exigencia_as[<?= h($ex['id']) ?>]" id="input-as-<?= h($ex['id']) ?>" value="<?= !empty($ex['as_impeditivo']) ? 1 : 0 ?>">
-                                        <button type="button" class="btn btn-xs <?= !empty($ex['as_impeditivo']) ? 'btn-danger' : 'btn-outline-secondary' ?> btn-toggle-as" id="btn-as-<?= h($ex['id']) ?>" onclick="toggleASExigenciaDireto('<?= h($ex['id']) ?>', this)" <?= $analiseAberta ? '' : 'disabled' ?> title="<?= !empty($ex['as_impeditivo']) ? 'Exigência Grave (A/S): Condição suspensiva que impede emissão de certificados até saneamento no RAP. Clique para alternar.' : 'Exigência Comum: Permite emissão da licença preliminar após publicação do RAP. Clique para marcar como A/S.' ?>" style="font-size:0.75rem; padding:3px 6px; font-weight:700;">
+                                        <button type="button" class="btn btn-xs <?= !empty($ex['as_impeditivo']) ? 'btn-danger' : 'btn-outline-secondary' ?> btn-toggle-as btn-has-text" id="btn-as-<?= h($ex['id']) ?>" onclick="toggleASExigenciaDireto('<?= h($ex['id']) ?>', this)" <?= $analiseAberta ? '' : 'disabled' ?> title="<?= !empty($ex['as_impeditivo']) ? 'Exigência Grave (A/S): Condição suspensiva que impede emissão de certificados até saneamento no RAP. Clique para alternar.' : 'Exigência Comum: Permite emissão da licença preliminar após publicação do RAP. Clique para marcar como A/S.' ?>" style="font-size:0.75rem; padding:3px 6px; font-weight:700;">
                                             <i class="fa-solid <?= !empty($ex['as_impeditivo']) ? 'fa-ban' : 'fa-check' ?>"></i>
                                             <span><?= !empty($ex['as_impeditivo']) ? 'A/S' : 'Comum' ?></span>
                                         </button>
@@ -593,13 +610,13 @@ require_once __DIR__ . '/../../includes/header.php';
                                     </td>
                                     <?php if ($analiseAberta): ?>
                                         <td style="vertical-align:middle; text-align:center;">
-                                            <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
-                                                <button type="button" class="btn btn-sm <?= $ex['status'] === 'CUMPRIDA' ? 'btn-outline-secondary' : 'btn-success' ?> btn-baixa-inline" id="btn-baixa-<?= h($ex['id']) ?>" onclick="baixaExigenciaDireta('<?= h($ex['id']) ?>', '<?= $ex['status'] === 'CUMPRIDA' ? 'PENDENTE' : 'CUMPRIDA' ?>', this)" title="<?= $ex['status'] === 'CUMPRIDA' ? 'Reabrir como Pendente' : 'Marcar como Cumprida em 1 clique' ?>" style="font-size:0.78rem; padding:4px 8px;">
+                                            <div class="acoes-inline-flex">
+                                                <button type="button" class="btn btn-sm <?= $ex['status'] === 'CUMPRIDA' ? 'btn-outline-secondary' : 'btn-success' ?> btn-baixa-inline btn-has-text" id="btn-baixa-<?= h($ex['id']) ?>" onclick="baixaExigenciaDireta('<?= h($ex['id']) ?>', '<?= $ex['status'] === 'CUMPRIDA' ? 'PENDENTE' : 'CUMPRIDA' ?>', this)" title="<?= $ex['status'] === 'CUMPRIDA' ? 'Reabrir como Pendente' : 'Marcar como Cumprida em 1 clique' ?>">
                                                     <i class="fa-solid <?= $ex['status'] === 'CUMPRIDA' ? 'fa-arrow-rotate-left' : 'fa-check' ?>"></i>
                                                     <span><?= $ex['status'] === 'CUMPRIDA' ? 'Reabrir' : 'Cumprida' ?></span>
                                                 </button>
                                                 <?php if ($ex['status'] === 'PENDENTE'): ?>
-                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="excluirExigenciaAjax('<?= h($ex['id']) ?>', this)" title="Remover exigência" style="font-size:0.78rem; padding:4px 8px;">
+                                                    <button type="button" class="btn btn-outline-danger btn-sm btn-excluir-inline" onclick="excluirExigenciaAjax('<?= h($ex['id']) ?>', this)" title="Remover exigência">
                                                         <i class="fa-solid fa-trash"></i>
                                                     </button>
                                                 <?php endif; ?>
@@ -1054,10 +1071,54 @@ require_once __DIR__ . '/../../includes/header.php';
 
             <!-- Formulário de Preparo do Parecer / Relatório de Ciclo -->
             <?php if ($analiseAberta): ?>
-                <div class="card-preparar-parecer">
-                    <h4 style="margin-bottom:14px; font-size:1.05rem; color:#0f172a;">
-                        <i class="fa-solid fa-file-pen text-primary"></i> Preparar Novo Relatório de Ciclo (RAP)
-                    </h4>
+                <?php
+                $analistaAssinaturaValida = false;
+                $analistaAssinaturaMsg = '';
+                $chkResp = null;
+                if (!empty($a['analista_id'])) {
+                    $stmtChk = $pdo->prepare("SELECT id, nome_completo, cpf_cnpj, cargo_titulo, registro_profissional, assinatura_arquivo, assinatura_hash, ativo FROM responsaveis_assinatura WHERE usuario_id = :uid AND excluido_em IS NULL LIMIT 1");
+                    $stmtChk->execute([':uid' => $a['analista_id']]);
+                    $chkResp = $stmtChk->fetch(PDO::FETCH_ASSOC);
+                    if (!$chkResp) {
+                        $analistaAssinaturaMsg = "O analista atribuído (" . ($a['analista_nome'] ?: 'atribuído') . ") ainda não possui perfil de assinatura cadastrado.";
+                    } elseif (empty($chkResp['ativo'])) {
+                        $analistaAssinaturaMsg = "A assinatura técnica do analista está desativada no sistema.";
+                    } elseif (empty($chkResp['cpf_cnpj'])) {
+                        $analistaAssinaturaMsg = "O CPF do analista não está cadastrado no perfil de assinatura (obrigatório pela NORMAM-202 para emissão do RAP).";
+                    } elseif (empty($chkResp['assinatura_arquivo']) || empty($chkResp['assinatura_hash'])) {
+                        $analistaAssinaturaMsg = "A imagem da assinatura manuscrita do analista ainda não foi enviada.";
+                    } else {
+                        $analistaAssinaturaValida = true;
+                    }
+                }
+                ?>
+                <div class="card-preparar-parecer" id="formNovoParecer">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                        <h4 style="margin:0; font-size:1.05rem; color:#0f172a;">
+                            <i class="fa-solid fa-file-pen text-primary"></i> Preparar Novo Relatório de Ciclo (RAP)
+                        </h4>
+                        <?php if ($analistaAssinaturaValida && $chkResp): ?>
+                            <span class="badge badge-success" style="font-size:0.75rem; padding:6px 10px;">
+                                <i class="fas fa-check-circle"></i> Assinatura Técnica Ativa: <?= h($chkResp['nome_completo']) ?> (CPF: <?= h($chkResp['cpf_cnpj']) ?>)
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if (!$analistaAssinaturaValida): ?>
+                        <div style="background:#fffbeb; border:1px solid #fde68a; border-left:4px solid #f59e0b; border-radius:8px; padding:12px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <i class="fas fa-triangle-exclamation" style="font-size:1.3rem; color:#d97706;"></i>
+                                <div>
+                                    <strong style="color:#92400e; font-size:0.88rem; display:block;">Atenção: Assinatura Técnica do Analista Pendente</strong>
+                                    <span style="color:#78350f; font-size:0.82rem;"><?= h($analistaAssinaturaMsg) ?></span>
+                                </div>
+                            </div>
+                            <a href="<?= APP_URL ?>perfil#assinatura" class="btn btn-sm btn-primary" style="background:#d97706; border-color:#d97706; display:inline-flex; align-items:center; gap:6px;">
+                                <i class="fas fa-pen-nib"></i> Configurar Assinatura no Perfil
+                            </a>
+                        </div>
+                    <?php endif; ?>
+
                     <form method="post" action="<?= APP_URL ?>analises-planos/actions" class="form-padrao">
                         <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                         <input type="hidden" name="action" value="criar_parecer">
@@ -1067,15 +1128,16 @@ require_once __DIR__ . '/../../includes/header.php';
                         <?php 
                         $todasCumpridas = !empty($exigencias) && count(array_filter($exigencias, fn($e) => $e['status'] === 'CUMPRIDA')) === count($exigencias);
                         $resultadoPadrao = $todasCumpridas ? 'APROVADO' : 'EXIGENCIAS';
-                        $ultimaSubmissaoId = !empty($submissoes) ? end($submissoes)['id'] : '';
+                        $ultimaSubmissaoId = !empty($submissoes) ? ($submissoes[0]['id'] ?? '') : '';
                         ?>
                         <div class="form-row">
                             <div class="form-group col-4">
                                 <label class="form-label-bold">Resultado do Ciclo *</label>
+                                <?php $defRes = $formValores['resultado'] ?? $resultadoPadrao; ?>
                                 <select name="resultado" id="resultado_ciclo_select" class="form-control form-control-sm" required>
-                                    <option value="APROVADO" <?= $resultadoPadrao === 'APROVADO' ? 'selected' : '' ?>>Conclusivo — Aprovado sem exigências</option>
-                                    <option value="EXIGENCIAS" <?= $resultadoPadrao === 'EXIGENCIAS' ? 'selected' : '' ?>>Exigências pendentes (Ciclo Preliminar)</option>
-                                    <option value="REPROVADO">Reprovado</option>
+                                    <option value="APROVADO" <?= $defRes === 'APROVADO' ? 'selected' : '' ?>>Conclusivo — Aprovado sem exigências</option>
+                                    <option value="EXIGENCIAS" <?= $defRes === 'EXIGENCIAS' ? 'selected' : '' ?>>Exigências pendentes (Ciclo Preliminar)</option>
+                                    <option value="REPROVADO" <?= $defRes === 'REPROVADO' ? 'selected' : '' ?>>Reprovado</option>
                                 </select>
                                 <small class="text-muted">Para "Aprovado", todas as exigências devem ser baixadas como "Cumprida".</small>
                             </div>
@@ -1083,161 +1145,164 @@ require_once __DIR__ . '/../../includes/header.php';
                             <div class="form-group col-4">
                                 <label class="form-label-bold">Revisão Documental Analisada *</label>
                                 <select name="submissao_id" id="submissao_id_select" class="form-control form-control-sm" required>
-                                    <?php foreach ($submissoes as $s): ?>
-                                        <option value="<?= h($s['id']) ?>" <?= $s['id'] === $ultimaSubmissaoId ? 'selected' : '' ?>>Revisão <?= $s['revisao'] ?> · <?= formatarData($s['recebido_em']) ?> (<?= h($s['origem']) ?>)</option>
-                                    <?php endforeach; ?>
+                                    <?php if (empty($submissoes)): ?>
+                                        <option value="auto_inicial" selected>Revisão 0 · Entrada Inicial de Documentos e Pranchas</option>
+                                    <?php else: ?>
+                                        <?php foreach ($submissoes as $s): ?>
+                                            <option value="<?= h($s['id']) ?>" <?= $s['id'] === $ultimaSubmissaoId ? 'selected' : '' ?>>
+                                                Revisão <?= (int)$s['revisao'] ?> · <?= formatarData($s['recebido_em']) ?> (<?= h($s['origem']) ?>)<?= !empty($s['descricao']) ? ' — ' . h(mb_strimwidth($s['descricao'], 0, 32, '...')) : '' ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </select>
-                                <small class="text-muted">Revisão de pranchas e documentos examinada.</small>
+                                <small class="text-muted">Revisão de pranchas e documentos examinada (NORMAM-202).</small>
                             </div>
 
                             <div class="form-group col-4">
                                 <label class="form-label-bold">Resumo Executivo *</label>
-                                <textarea name="resumo" id="resumo_parecer" required rows="2" class="form-control" placeholder="Síntese técnica da conferência documental deste ciclo..."><?= $todasCumpridas ? 'Conferência técnica documental e de pranchas concluída sem pendências.' : '' ?></textarea>
+                                <textarea name="resumo" id="resumo_parecer" required rows="2" class="form-control" placeholder="Síntese técnica da conferência documental deste ciclo..."><?= h($formValores['resumo'] ?? ($todasCumpridas ? 'Conferência técnica documental e de pranchas concluída sem pendências.' : '')) ?></textarea>
                             </div>
                         </div>
 
-                        <?php if ($exigencias): ?>
-                            <input type="hidden" name="baixa_as_submetido" value="1">
-                            <div class="baixa-guiada-secao" style="margin:20px 0; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:18px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-                                    <div>
-                                        <h5 style="font-size:0.95rem; font-weight:700; color:#0f172a; margin:0 0 2px 0;">
-                                            <i class="fa-solid fa-clipboard-check text-success"></i> Baixa Guiada das Exigências Técnicas (<?= count($exigencias) ?> itens)
-                                        </h5>
-                                        <small class="text-muted">
-                                            Avalie cada exigência técnica apontada nos ciclos anteriores. Para aprovar o relatório conclusivo, todas devem estar cumpridas.
-                                        </small>
-                                    </div>
-                                    <div style="display:flex; gap:8px;">
-                                        <button type="button" class="btn btn-sm btn-outline-success" onclick="marcarTodasBaixas('CUMPRIDA')" title="Marcar todas as exigências abaixo como Cumprida">
-                                            <i class="fa-solid fa-check-double"></i> Marcar Todas como Cumprida
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="marcarTodasBaixas('NAO_CUMPRIDA')" title="Restaurar todas como Não Cumprida">
-                                            <i class="fa-solid fa-rotate-left"></i> Marcar Todas Não Cumprida
-                                        </button>
-                                    </div>
+                        <input type="hidden" name="baixa_as_submetido" value="1">
+                        <div class="baixa-guiada-secao" id="baixaGuiadaSecao" style="margin:20px 0; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:18px; <?= empty($exigencias) ? 'display:none;' : '' ?>">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                                <div>
+                                    <h5 style="font-size:0.95rem; font-weight:700; color:#0f172a; margin:0 0 2px 0;">
+                                        <i class="fa-solid fa-clipboard-check text-success"></i> Baixa Guiada das Exigências Técnicas (<span id="totalBaixasContador"><?= count($exigencias) ?></span> itens)
+                                    </h5>
+                                    <small class="text-muted">
+                                        Avalie cada exigência técnica apontada nos ciclos anteriores. Para aprovar o relatório conclusivo, todas devem estar cumpridas.
+                                    </small>
                                 </div>
-
-                                <div class="baixa-cards-container" style="display:flex; flex-direction:column; gap:14px;">
-                                    <?php foreach ($exigencias as $idx => $ex): ?>
-                                        <article class="baixa-exigencia-card" id="baixa-card-<?= h($ex['id']) ?>" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-                                            <!-- Topo do Card da Exigência -->
-                                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
-                                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                                                    <span class="badge bg-secondary" style="font-size:0.80rem; font-weight:700;">#<?= $idx + 1 ?></span>
-                                                    <span class="badge bg-primary-subtle text-primary" style="font-size:0.80rem; border:1px solid #bfdbfe; font-weight:600;">
-                                                        <i class="fa-solid fa-tag"></i> <?= h($ex['categoria']) ?>
-                                                    </span>
-                                                    <?php if (!empty($ex['referencia_normativa'])): ?>
-                                                        <span class="badge bg-light text-dark" style="font-size:0.78rem; border:1px solid #cbd5e1;">
-                                                            <i class="fa-solid fa-book-bookmark text-muted"></i> <?= h($ex['referencia_normativa']) ?>
-                                                        </span>
-                                                    <?php endif; ?>
-                                                    <span class="badge <?= $ex['status'] === 'CUMPRIDA' ? 'badge-success' : 'badge-warning' ?>" id="baixa-badge-status-<?= h($ex['id']) ?>" style="font-size:0.75rem;">
-                                                        Status Atual: <?= h($ex['status']) ?>
-                                                    </span>
-                                                    <?php if (!empty($ex['as_impeditivo'])): ?>
-                                                        <span class="badge bg-danger" id="baixa-badge-as-<?= h($ex['id']) ?>" style="font-size:0.75rem;"><i class="fa-solid fa-ban"></i> A/S (Grave)</span>
-                                                    <?php endif; ?>
-                                                </div>
-                                                <div style="display:flex; gap:6px;">
-                                                    <button type="button" class="btn btn-xs btn-outline-success" onclick="definirBaixaItem('<?= h($ex['id']) ?>', 'CUMPRIDA')" title="Atalho rápido">
-                                                        <i class="fa-solid fa-check"></i> Cumprida
-                                                    </button>
-                                                    <button type="button" class="btn btn-xs btn-outline-warning" onclick="definirBaixaItem('<?= h($ex['id']) ?>', 'PARCIAL')">
-                                                        Parcial
-                                                    </button>
-                                                    <button type="button" class="btn btn-xs btn-outline-danger" onclick="definirBaixaItem('<?= h($ex['id']) ?>', 'NAO_CUMPRIDA')">
-                                                        Não Cumprida
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <!-- Corpo do Card: Grid de 2 colunas responsivas sem estouro horizontal -->
-                                            <div class="baixa-card-grid" style="display:grid; grid-template-columns:minmax(0, 1.35fr) minmax(320px, 1fr); gap:16px; align-items:start;">
-                                                <!-- Coluna 1: Texto detalhado da exigência -->
-                                                <div>
-                                                    <label style="font-size:0.80rem; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:4px; display:block;">
-                                                        <i class="fa-solid fa-triangle-exclamation text-warning"></i> Não-conformidade apontada:
-                                                    </label>
-                                                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; font-size:0.86rem; color:#1e293b; line-height:1.55; max-height:160px; overflow-y:auto; word-break:break-word; white-space:pre-wrap;">
-                                                        <?= h($ex['descricao']) ?>
-                                                    </div>
-                                                </div>
-
-                                                <!-- Coluna 2: Parecer e Manifestação Técnica do Analista para este ciclo -->
-                                                <div style="background:#fcfcfd; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
-                                                    <div style="margin-bottom:10px;">
-                                                        <label class="form-label-bold" style="font-size:0.82rem; margin-bottom:4px; display:block;">
-                                                            Resultado da Revisão Técnica *
-                                                        </label>
-                                                        <select name="baixa_resultado[<?= h($ex['id']) ?>]" id="baixa_res_<?= h($ex['id']) ?>" class="form-control form-control-sm select-baixa-resultado" required onchange="aoMudarResultadoBaixa('<?= h($ex['id']) ?>', this.value)" style="font-weight:600;">
-                                                            <option value="CUMPRIDA" <?= $ex['status'] === 'CUMPRIDA' ? 'selected' : '' ?>>Cumprida (Atendida integralmente)</option>
-                                                            <option value="PARCIAL" <?= $ex['status'] === 'PARCIAL' ? 'selected' : '' ?>>Parcial (Atendida em parte)</option>
-                                                            <option value="NAO_CUMPRIDA" <?= ($ex['status'] !== 'CUMPRIDA' && $ex['status'] !== 'PARCIAL') ? 'selected' : '' ?>>Não cumprida (Permanece pendente)</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label class="form-label-bold" style="font-size:0.82rem; margin-bottom:4px; display:block;">
-                                                            Manifestação Técnica do Analista *
-                                                        </label>
-                                                        <textarea name="baixa_manifestacao[<?= h($ex['id']) ?>]" id="baixa_man_<?= h($ex['id']) ?>" required rows="2" class="form-control form-control-sm textarea-baixa-manifestacao" placeholder="Indique a evidência ou prancha examinada (ex.: Atendido na folha 02/04)..."><?= h($ex['status'] === 'CUMPRIDA' ? 'Atendido conforme revisão técnica apresentada.' : '') ?></textarea>
-                                                    </div>
-                                                    <div style="margin-top:10px; padding:8px 10px; background:<?= !empty($ex['as_impeditivo']) ? '#fff1f2' : '#f8fafc' ?>; border:1px solid <?= !empty($ex['as_impeditivo']) ? '#fecdd3' : '#e2e8f0' ?>; border-radius:6px;">
-                                                        <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer; font-size:0.80rem; font-weight:700; color:<?= !empty($ex['as_impeditivo']) ? '#991b1b' : '#334155' ?>;">
-                                                            <input type="checkbox" name="baixa_as[<?= h($ex['id']) ?>]" value="1" <?= !empty($ex['as_impeditivo']) ? 'checked' : '' ?> style="width:16px; height:16px; accent-color:#dc2626;">
-                                                            <span><i class="fa-solid fa-ban text-danger"></i> Condição Suspensiva "A/S" (Exigência Grave)</span>
-                                                        </label>
-                                                        <small class="text-muted d-block" style="font-size:0.73rem; margin-top:2px; margin-left:24px;">
-                                                            Desmarque se a gravidade foi sanada/atenuada para exigência comum, liberando a licença técnica.
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </article>
-                                    <?php endforeach; ?>
-                                </div>
-
-                                <!-- Adicionar Nova Exigência Diretamente neste Ciclo de RAP -->
-                                <div style="margin-top:14px; background:#ffffff; border:1px dashed #94a3b8; border-radius:8px; padding:14px 16px;">
-                                    <details>
-                                        <summary style="font-weight:700; color:#0369a1; cursor:pointer; font-size:0.88rem; outline:none;">
-                                            <i class="fa-solid fa-circle-plus text-primary"></i> + Adicionar Nova Exigência Técnica neste Ciclo de Análise (RAP)
-                                        </summary>
-                                        <div style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">
-                                            <div class="form-row">
-                                                <div class="form-group col-4">
-                                                    <label class="form-label-bold" style="font-size:0.82rem;">Categoria da Nova Exigência</label>
-                                                    <select name="novo_item_categoria" class="form-control form-control-sm">
-                                                        <?php foreach ($categoriasNormam as $cNome): ?>
-                                                            <option value="<?= h($cNome) ?>"><?= h($cNome) ?></option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </div>
-                                                <div class="form-group col-5">
-                                                    <label class="form-label-bold" style="font-size:0.82rem;">Referência Normativa NORMAM</label>
-                                                    <input name="novo_item_referencia" class="form-control form-control-sm" placeholder="Ex.: NORMAM-202/DPC, Anexo 3-F">
-                                                </div>
-                                                <div class="form-group col-3" style="display:flex; align-items:center; padding-top:20px;">
-                                                    <label style="font-size:0.82rem; font-weight:700; color:#991b1b; display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
-                                                        <input type="checkbox" name="novo_item_as" value="1" style="width:16px; height:16px; accent-color:#dc2626;">
-                                                        <span><i class="fa-solid fa-ban text-danger"></i> Condição A/S</span>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label-bold" style="font-size:0.82rem;">Descrição Técnica da Nova Exigência</label>
-                                                <textarea name="novo_item_descricao" rows="2" class="form-control form-control-sm" placeholder="Descreva a não-conformidade constatada neste ciclo..."></textarea>
-                                            </div>
-                                        </div>
-                                    </details>
+                                <div style="display:flex; gap:8px;">
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="marcarTodasBaixas('CUMPRIDA')" title="Marcar todas as exigências abaixo como Cumprida">
+                                        <i class="fa-solid fa-check-double"></i> Marcar Todas como Cumprida
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="marcarTodasBaixas('NAO_CUMPRIDA')" title="Restaurar todas como Não Cumprida">
+                                        <i class="fa-solid fa-rotate-left"></i> Marcar Todas Não Cumprida
+                                    </button>
                                 </div>
                             </div>
-                        <?php endif; ?>
+
+                            <div class="baixa-cards-container" id="baixaCardsContainer" style="display:flex; flex-direction:column; gap:14px;">
+                                <?php foreach ($exigencias as $idx => $ex): ?>
+                                    <article class="baixa-exigencia-card" id="baixa-card-<?= h($ex['id']) ?>" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                                        <!-- Topo do Card da Exigência -->
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+                                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                                <span class="badge bg-secondary baixa-card-num" style="font-size:0.80rem; font-weight:700;">#<?= $idx + 1 ?></span>
+                                                <span class="badge bg-primary-subtle text-primary baixa-card-cat" style="font-size:0.80rem; border:1px solid #bfdbfe; font-weight:600;">
+                                                    <i class="fa-solid fa-tag"></i> <span class="baixa-card-cat-txt"><?= h($ex['categoria']) ?></span>
+                                                </span>
+                                                <span class="badge bg-light text-dark baixa-card-ref" style="font-size:0.78rem; border:1px solid #cbd5e1; <?= empty($ex['referencia_normativa']) ? 'display:none;' : '' ?>">
+                                                    <i class="fa-solid fa-book-bookmark text-muted"></i> <span class="baixa-card-ref-txt"><?= h($ex['referencia_normativa'] ?? '') ?></span>
+                                                </span>
+                                                <span class="badge <?= $ex['status'] === 'CUMPRIDA' ? 'badge-success' : 'badge-warning' ?>" id="baixa-badge-status-<?= h($ex['id']) ?>" style="font-size:0.75rem;">
+                                                    Status Atual: <span class="baixa-status-txt"><?= h($ex['status']) ?></span>
+                                                </span>
+                                                <span class="badge bg-danger baixa-card-as-badge" id="baixa-badge-as-<?= h($ex['id']) ?>" style="font-size:0.75rem; <?= empty($ex['as_impeditivo']) ? 'display:none;' : '' ?>">
+                                                    <i class="fa-solid fa-ban"></i> A/S (Grave)
+                                                </span>
+                                            </div>
+                                            <div style="display:flex; gap:6px;">
+                                                <button type="button" class="btn btn-xs btn-outline-success" onclick="definirBaixaItem('<?= h($ex['id']) ?>', 'CUMPRIDA')" title="Atalho rápido">
+                                                    <i class="fa-solid fa-check"></i> Cumprida
+                                                </button>
+                                                <button type="button" class="btn btn-xs btn-outline-warning" onclick="definirBaixaItem('<?= h($ex['id']) ?>', 'PARCIAL')">
+                                                    Parcial
+                                                </button>
+                                                <button type="button" class="btn btn-xs btn-outline-danger" onclick="definirBaixaItem('<?= h($ex['id']) ?>', 'NAO_CUMPRIDA')">
+                                                    Não Cumprida
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Corpo do Card: Grid de 2 colunas responsivas sem estouro horizontal -->
+                                        <div class="baixa-card-grid" style="display:grid; grid-template-columns:minmax(0, 1.35fr) minmax(320px, 1fr); gap:16px; align-items:start;">
+                                            <!-- Coluna 1: Texto detalhado da exigência -->
+                                            <div>
+                                                <label style="font-size:0.80rem; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:4px; display:block;">
+                                                    <i class="fa-solid fa-triangle-exclamation text-warning"></i> Não-conformidade apontada:
+                                                </label>
+                                                <div class="baixa-card-desc" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; font-size:0.86rem; color:#1e293b; line-height:1.55; max-height:160px; overflow-y:auto; word-break:break-word; white-space:pre-wrap;"><?= h($ex['descricao']) ?></div>
+                                            </div>
+
+                                            <!-- Coluna 2: Parecer e Manifestação Técnica do Analista para este ciclo -->
+                                            <div style="background:#fcfcfd; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+                                                <div style="margin-bottom:10px;">
+                                                    <label class="form-label-bold" style="font-size:0.82rem; margin-bottom:4px; display:block;">
+                                                        Resultado da Revisão Técnica *
+                                                    </label>
+                                                    <?php $defBRes = $formValores['baixa_resultado'][$ex['id']] ?? $ex['status']; ?>
+                                                    <select name="baixa_resultado[<?= h($ex['id']) ?>]" id="baixa_res_<?= h($ex['id']) ?>" class="form-control form-control-sm select-baixa-resultado" required onchange="aoMudarResultadoBaixa('<?= h($ex['id']) ?>', this.value)" style="font-weight:600;">
+                                                        <option value="CUMPRIDA" <?= $defBRes === 'CUMPRIDA' ? 'selected' : '' ?>>Cumprida (Atendida integralmente)</option>
+                                                        <option value="PARCIAL" <?= $defBRes === 'PARCIAL' ? 'selected' : '' ?>>Parcial (Atendida em parte)</option>
+                                                        <option value="NAO_CUMPRIDA" <?= ($defBRes !== 'CUMPRIDA' && $defBRes !== 'PARCIAL') ? 'selected' : '' ?>>Não cumprida (Permanece pendente)</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="form-label-bold" style="font-size:0.82rem; margin-bottom:4px; display:block;">
+                                                        Manifestação Técnica do Analista *
+                                                    </label>
+                                                    <?php $defBMan = $formValores['baixa_manifestacao'][$ex['id']] ?? ($ex['status'] === 'CUMPRIDA' ? 'Atendido conforme revisão técnica apresentada.' : ''); ?>
+                                                    <textarea name="baixa_manifestacao[<?= h($ex['id']) ?>]" id="baixa_man_<?= h($ex['id']) ?>" required rows="2" class="form-control form-control-sm textarea-baixa-manifestacao" placeholder="Indique a evidência ou prancha examinada (ex.: Atendido na folha 02/04)..."><?= h($defBMan) ?></textarea>
+                                                </div>
+                                                <?php $defBAs = isset($formValores['baixa_as']) ? !empty($formValores['baixa_as'][$ex['id']]) : !empty($ex['as_impeditivo']); ?>
+                                                <div class="baixa-as-box" id="baixa-as-box-<?= h($ex['id']) ?>" style="margin-top:10px; padding:8px 10px; background:<?= $defBAs ? '#fff1f2' : '#f8fafc' ?>; border:1px solid <?= $defBAs ? '#fecdd3' : '#e2e8f0' ?>; border-radius:6px;">
+                                                    <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer; font-size:0.80rem; font-weight:700; color:<?= $defBAs ? '#991b1b' : '#334155' ?>;">
+                                                        <input type="checkbox" name="baixa_as[<?= h($ex['id']) ?>]" id="baixa_as_chk_<?= h($ex['id']) ?>" value="1" <?= $defBAs ? 'checked' : '' ?> style="width:16px; height:16px; accent-color:#dc2626;" onchange="aoMudarCheckboxASBaixa('<?= h($ex['id']) ?>', this.checked)">
+                                                        <span><i class="fa-solid fa-ban text-danger"></i> Condição Suspensiva "A/S" (Exigência Grave)</span>
+                                                    </label>
+                                                    <small class="text-muted d-block" style="font-size:0.73rem; margin-top:2px; margin-left:24px;">
+                                                        Desmarque se a gravidade foi sanada/atenuada para exigência comum, liberando a licença técnica.
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </article>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <!-- Adicionar Nova Exigência Diretamente neste Ciclo de RAP -->
+                            <div style="margin-top:14px; background:#ffffff; border:1px dashed #94a3b8; border-radius:8px; padding:14px 16px;">
+                                <details>
+                                    <summary style="font-weight:700; color:#0369a1; cursor:pointer; font-size:0.88rem; outline:none;">
+                                        <i class="fa-solid fa-circle-plus text-primary"></i> + Adicionar Nova Exigência Técnica neste Ciclo de Análise (RAP)
+                                    </summary>
+                                    <div style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">
+                                        <div class="form-row">
+                                            <div class="form-group col-4">
+                                                <label class="form-label-bold" style="font-size:0.82rem;">Categoria da Nova Exigência</label>
+                                                <select name="novo_item_categoria" class="form-control form-control-sm">
+                                                    <?php foreach ($categoriasNormam as $cNome): ?>
+                                                        <option value="<?= h($cNome) ?>"><?= h($cNome) ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            <div class="form-group col-5">
+                                                <label class="form-label-bold" style="font-size:0.82rem;">Referência Normativa NORMAM</label>
+                                                <input name="novo_item_referencia" class="form-control form-control-sm" placeholder="Ex.: NORMAM-202/DPC, Anexo 3-F" value="<?= h($formValores['novo_item_referencia'] ?? '') ?>">
+                                            </div>
+                                            <div class="form-group col-3" style="display:flex; align-items:center; padding-top:20px;">
+                                                <label style="font-size:0.82rem; font-weight:700; color:#991b1b; display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
+                                                    <input type="checkbox" name="novo_item_as" value="1" <?= !empty($formValores['novo_item_as']) ? 'checked' : '' ?> style="width:16px; height:16px; accent-color:#dc2626;">
+                                                    <span><i class="fa-solid fa-ban text-danger"></i> Condição A/S</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label-bold" style="font-size:0.82rem;">Descrição Técnica da Nova Exigência</label>
+                                            <textarea name="novo_item_descricao" rows="2" class="form-control form-control-sm" placeholder="Descreva a não-conformidade constatada neste ciclo..."><?= h($formValores['novo_item_descricao'] ?? '') ?></textarea>
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
 
                         <div class="form-group">
                             <label class="form-label-bold">Conclusão Técnica do Analista *</label>
-                            <textarea name="conclusao" id="conclusao_parecer" required rows="2" class="form-control" placeholder="Parecer conclusivo sobre a conformidade das plantas com a NORMAM-202/DPC..."><?= $todasCumpridas ? 'Projeto técnico naval aprovado em conformidade com as diretrizes da NORMAM-202/DPC, apto para emissão da Licença Técnica Oficial.' : '' ?></textarea>
+                            <textarea name="conclusao" id="conclusao_parecer" required rows="2" class="form-control" placeholder="Parecer conclusivo sobre a conformidade das plantas com a NORMAM-202/DPC..."><?= h($formValores['conclusao'] ?? ($todasCumpridas ? 'Projeto técnico naval aprovado em conformidade com as diretrizes da NORMAM-202/DPC, apto para emissão da Licença Técnica Oficial.' : '')) ?></textarea>
                         </div>
 
                         <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:14px; margin-top:14px; margin-bottom:18px;">
@@ -1261,7 +1326,7 @@ require_once __DIR__ . '/../../includes/header.php';
             <?php endif; ?>
 
             <!-- Histórico de Pareceres Emitidos -->
-            <div style="margin-top:24px;">
+            <div style="margin-top:24px;" id="historicoPareceresSection">
                 <h4 style="font-size:1rem; color:#0f172a; margin-bottom:14px;"><i class="fa-solid fa-clock-rotate-left"></i> Histórico de Relatórios Emitidos</h4>
                 <?php if (empty($pareceres)): ?>
                     <p class="text-muted">Nenhum relatório técnico emitido para este processo até o momento.</p>
@@ -1318,7 +1383,7 @@ require_once __DIR__ . '/../../includes/header.php';
             </div>
 
             <!-- Seção Especializada: Licença Técnica Naval (NORMAM-202 / DPC) -->
-            <div style="margin-top: 28px; border-top: 2px dashed #e2e8f0; padding-top: 20px;">
+            <div style="margin-top: 28px; border-top: 2px dashed #e2e8f0; padding-top: 20px;" id="secaoLicencaTecnica">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
                     <div>
                         <h4 style="margin:0; font-size:1.05rem; font-weight:700; color:#0f172a;">
@@ -1658,7 +1723,7 @@ require_once __DIR__ . '/../../includes/header.php';
                             </div>
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <?php if (!empty($vItem['vistoria_id'])): ?>
-                                    <a class="btn btn-secondary btn-sm" target="_blank" href="<?= APP_URL ?>vistorias/relatorio-pdf?id=<?= urlencode($vItem['vistoria_id']) ?>" title="Baixar Relatório Oficial de Vistoria">
+                                    <a class="btn btn-secondary btn-sm" target="_blank" href="<?= APP_URL ?>vistorias/relatorio_pdf?id=<?= urlencode($vItem['vistoria_id']) ?>" title="Baixar Relatório Oficial de Vistoria">
                                         <i class="fa-solid fa-file-pdf text-danger"></i> PDF RTV
                                     </a>
                                     <a class="btn btn-primary btn-sm" href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode((string)$vItem['agendamento_id']) ?>&vistoria_id=<?= urlencode((string)$vItem['vistoria_id']) ?>">
@@ -2078,43 +2143,67 @@ require_once __DIR__ . '/../../includes/header.php';
     padding: 10px 18px !important;
 }
 
-/* Barra de Abas */
+/* Barra de Abas Especializadas - Grid de 5 colunas perfeitamente distribuídas sem scroll horizontal */
 .analise-tabs-bar {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 8px;
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 6px;
-    overflow-x: auto;
-    scrollbar-width: thin;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+@media (max-width: 1180px) {
+    .analise-tabs-bar {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 6px;
+    }
 }
 .analise-tab-btn {
-    border: none;
-    background: transparent;
-    padding: 10px 18px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 10px 8px;
     border-radius: 8px;
-    font-size: 0.88rem;
+    font-size: 0.84rem;
     font-weight: 600;
-    color: #64748b;
-    display: inline-flex;
+    color: #475569;
+    display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 6px;
     cursor: pointer;
-    white-space: nowrap;
+    text-align: center;
     transition: all 0.18s ease;
+    min-height: 44px;
+    user-select: none;
 }
 .analise-tab-btn:hover {
-    color: #0f172a;
-    background: #f1f5f9;
+    color: #0d4a40;
+    background: #e6f4f1;
+    border-color: #99d5c8;
 }
 .analise-tab-btn.active {
-    background: #0d4a40;
-    color: #ffffff;
+    background: #0d4a40 !important;
+    color: #ffffff !important;
+    border-color: #0d4a40 !important;
     box-shadow: 0 2px 6px rgba(13, 74, 64, 0.25);
 }
-.analise-tab-btn.active .badge {
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+.analise-tab-btn i {
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+.analise-tab-btn .tab-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.analise-tab-btn .badge {
+    font-size: 0.72rem;
+    padding: 3px 6px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
 }
 
 /* Panes */
@@ -2161,26 +2250,151 @@ require_once __DIR__ . '/../../includes/header.php';
     align-items: center;
 }
 
-/* Tabela Moderna de Exigências */
+/* Tabela Moderna de Exigências & Botões com layout blindado contra estilos legados */
+.tabela-exigencias-wrapper {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    scrollbar-width: thin;
+    margin-bottom: 8px;
+}
 .tabela-exigencias-moderna {
     width: 100%;
-    table-layout: fixed;
+    min-width: 980px;
     border-collapse: collapse;
+    table-layout: auto;
 }
 .tabela-exigencias-moderna th {
     background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-    color: #64748b;
-    font-size: 0.75rem;
+    border-bottom: 2px solid #e2e8f0;
+    color: #475569;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    padding: 10px 12px;
-    text-align: left;
+    padding: 10px 10px;
+    white-space: nowrap;
 }
 .tabela-exigencias-moderna td {
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-bottom: 1px solid #f1f5f9;
     font-size: 0.88rem;
-    word-break: break-word;
+    vertical-align: middle;
+}
+.tabela-exigencias-moderna tr:hover td {
+    background-color: #fafbfc;
+}
+.acoes-inline-flex {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+}
+.tabela-exigencias-moderna .btn-baixa-inline,
+td:last-child .btn-baixa-inline,
+.acoes-inline-flex .btn-baixa-inline {
+    width: auto !important;
+    min-width: 86px !important;
+    height: 30px !important;
+    padding: 4px 10px !important;
+    border-radius: 6px !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
+    box-sizing: border-box !important;
+}
+.tabela-exigencias-moderna .btn-baixa-inline.btn-success,
+td:last-child .btn-baixa-inline.btn-success,
+.acoes-inline-flex .btn-baixa-inline.btn-success {
+    background-color: #059669 !important;
+    border: 1px solid #047857 !important;
+    color: #ffffff !important;
+}
+.tabela-exigencias-moderna .btn-baixa-inline.btn-success:hover,
+td:last-child .btn-baixa-inline.btn-success:hover,
+.acoes-inline-flex .btn-baixa-inline.btn-success:hover {
+    background-color: #047857 !important;
+    border-color: #065f46 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35) !important;
+}
+.tabela-exigencias-moderna .btn-baixa-inline.btn-outline-secondary,
+td:last-child .btn-baixa-inline.btn-outline-secondary,
+.acoes-inline-flex .btn-baixa-inline.btn-outline-secondary {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+.tabela-exigencias-moderna .btn-baixa-inline.btn-outline-secondary:hover,
+td:last-child .btn-baixa-inline.btn-outline-secondary:hover,
+.acoes-inline-flex .btn-baixa-inline.btn-outline-secondary:hover {
+    background-color: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+}
+.tabela-exigencias-moderna .btn-excluir-inline,
+td:last-child .btn-excluir-inline,
+.acoes-inline-flex .btn-excluir-inline {
+    width: 30px !important;
+    min-width: 30px !important;
+    height: 30px !important;
+    padding: 0 !important;
+    border-radius: 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid #fecaca !important;
+    background-color: #fef2f2 !important;
+    color: #dc2626 !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
+}
+.tabela-exigencias-moderna .btn-excluir-inline:hover,
+td:last-child .btn-excluir-inline:hover,
+.acoes-inline-flex .btn-excluir-inline:hover {
+    background-color: #dc2626 !important;
+    border-color: #b91c1c !important;
+    color: #ffffff !important;
+}
+.tabela-exigencias-moderna .btn-toggle-as {
+    width: 80px !important;
+    min-width: 80px !important;
+    height: 28px !important;
+    padding: 2px 6px !important;
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    border-radius: 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+}
+.tabela-exigencias-moderna select.form-control-sm {
+    height: 34px !important;
+    font-size: 0.82rem !important;
+    padding: 4px 6px !important;
+    border-radius: 6px !important;
+}
+.tabela-exigencias-moderna input.form-control-sm {
+    height: 34px !important;
+    font-size: 0.82rem !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+}
+.tabela-exigencias-moderna textarea.form-control {
+    font-size: 0.85rem !important;
+    padding: 6px 8px !important;
+    border-radius: 6px !important;
+    line-height: 1.4 !important;
 }
 .baixa-exigencia-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -3029,6 +3243,9 @@ function trocarAbaAnalise(abaId, suave = false) {
     if (!['exigencias', 'arquivos', 'pareceres', 'enquadramento', 'vistoria_tramite'].includes(abaId)) {
         return;
     }
+    if (abaId === 'pareceres') {
+        sincronizarAbaRapExigencias();
+    }
     document.querySelectorAll('.analise-tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.analise-tab-pane').forEach(p => p.classList.remove('active'));
 
@@ -3052,7 +3269,7 @@ function trocarAbaAnalise(abaId, suave = false) {
     window.history.replaceState({}, '', url);
 
     if (suave && pane) {
-        pane.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        pane.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
@@ -3497,7 +3714,9 @@ function salvarExigenciasAjax(btnEl) {
             atualizarSaldosKpi(data.saldo);
         }
 
-        mostrarToast('Alterações salvas com sucesso!', 'success');
+        sincronizarAbaRapExigencias();
+
+        mostrarToast('Alterações salvas com sucesso! Aba do RAP atualizada.', 'success');
     })
     .catch(err => {
         console.error('Erro ao salvar exigências:', err);
@@ -3546,12 +3765,12 @@ function baixaExigenciaDireta(id, novoStatus, btnEl) {
         // Atualizar o próprio botão
         if (btnEl) {
             if (novoStatus === 'CUMPRIDA') {
-                btnEl.className = 'btn btn-sm btn-outline-secondary btn-baixa-inline';
+                btnEl.className = 'btn btn-sm btn-outline-secondary btn-baixa-inline btn-has-text';
                 btnEl.title = 'Reabrir como Pendente';
                 btnEl.innerHTML = '<i class="fa-solid fa-arrow-rotate-left"></i> <span>Reabrir</span>';
                 btnEl.setAttribute('onclick', `baixaExigenciaDireta('${id}', 'PENDENTE', this)`);
             } else {
-                btnEl.className = 'btn btn-sm btn-success btn-baixa-inline';
+                btnEl.className = 'btn btn-sm btn-success btn-baixa-inline btn-has-text';
                 btnEl.title = 'Marcar como Cumprida em 1 clique';
                 btnEl.innerHTML = '<i class="fa-solid fa-check"></i> <span>Cumprida</span>';
                 btnEl.setAttribute('onclick', `baixaExigenciaDireta('${id}', 'CUMPRIDA', this)`);
@@ -3568,6 +3787,8 @@ function baixaExigenciaDireta(id, novoStatus, btnEl) {
         if (data.saldo) {
             atualizarSaldosKpi(data.saldo);
         }
+
+        sincronizarAbaRapExigencias();
 
         mostrarToast(data.mensagem || 'Situação atualizada com sucesso!', 'success');
     })
@@ -3664,11 +3885,11 @@ function toggleASExigenciaDireto(id, btnEl) {
 
         if (btnEl) {
             if (novoAS) {
-                btnEl.className = 'btn btn-xs btn-danger btn-toggle-as';
+                btnEl.className = 'btn btn-xs btn-danger btn-toggle-as btn-has-text';
                 btnEl.title = 'Exigência Grave (A/S): Condição suspensiva que impede emissão de certificados até saneamento no RAP. Clique para alternar.';
                 btnEl.innerHTML = '<i class="fa-solid fa-ban"></i> <span>A/S</span>';
             } else {
-                btnEl.className = 'btn btn-xs btn-outline-secondary btn-toggle-as';
+                btnEl.className = 'btn btn-xs btn-outline-secondary btn-toggle-as btn-has-text';
                 btnEl.title = 'Exigência Comum: Permite emissão da licença preliminar após publicação do RAP. Clique para marcar como A/S.';
                 btnEl.innerHTML = '<i class="fa-solid fa-check"></i> <span>Comum</span>';
             }
@@ -3677,6 +3898,8 @@ function toggleASExigenciaDireto(id, btnEl) {
         if (data.saldo) {
             atualizarSaldosKpi(data.saldo);
         }
+
+        sincronizarAbaRapExigencias();
 
         mostrarToast(data.mensagem, novoAS ? 'warning' : 'success');
     })
@@ -3748,6 +3971,224 @@ function marcarTodasBaixas(resultado) {
     }
 }
 
+// Sincronização em Tempo Real entre a Tabela de Exigências (Aba 1) e os Cards de Baixa do RAP (Aba 3)
+function sincronizarAbaRapExigencias() {
+    const container = document.getElementById('baixaCardsContainer');
+    const secao = document.getElementById('baixaGuiadaSecao');
+    const rows = document.querySelectorAll('#tabelaExigenciasBody tr[id^="row-exigencia-"]');
+    const totalContador = document.getElementById('totalBaixasContador');
+
+    if (totalContador) {
+        totalContador.textContent = rows.length;
+    }
+
+    if (secao) {
+        secao.style.display = rows.length > 0 ? 'block' : 'none';
+    }
+
+    if (!container) return;
+
+    // Conjunto de IDs válidos atualmente presentes na tabela da Aba 1
+    const idsValidos = new Set();
+
+    rows.forEach((row, idx) => {
+        const idInput = row.querySelector('input[name="exigencia_id[]"]');
+        const id = idInput ? idInput.value : row.id.replace('row-exigencia-', '');
+        if (!id) return;
+        idsValidos.add(id);
+
+        const ordem = idx + 1;
+        const catSelect = row.querySelector('select[name="exigencia_categoria[]"]');
+        const categoria = catSelect ? catSelect.value : 'GERAL';
+
+        const descTextarea = row.querySelector('textarea[name="exigencia_descricao[]"]');
+        const descricao = descTextarea ? descTextarea.value : '';
+
+        const refInput = row.querySelector('input[name="exigencia_referencia[]"]');
+        const referencia = refInput ? refInput.value : '';
+
+        const statusSelect = row.querySelector('select[name="exigencia_status[]"]');
+        const status = statusSelect ? statusSelect.value : 'PENDENTE';
+
+        const asInput = row.querySelector(`input[name="exigencia_as[${id}]"]`) || row.querySelector('input[name^="exigencia_as"]');
+        const btnAS = row.querySelector('.btn-toggle-as');
+        const asImpeditivo = asInput ? (asInput.value === '1') : (btnAS && btnAS.classList.contains('btn-danger'));
+
+        let card = document.getElementById(`baixa-card-${id}`);
+
+        if (card) {
+            // Atualizar card existente mantendo eventuais textos já digitados pelo analista
+            const numEl = card.querySelector('.baixa-card-num');
+            if (numEl) numEl.textContent = `#${ordem}`;
+
+            const catTxt = card.querySelector('.baixa-card-cat-txt');
+            if (catTxt) catTxt.textContent = categoria;
+
+            const refBadge = card.querySelector('.baixa-card-ref');
+            const refTxt = card.querySelector('.baixa-card-ref-txt');
+            if (refTxt) refTxt.textContent = referencia;
+            if (refBadge) refBadge.style.display = referencia ? 'inline-block' : 'none';
+
+            const descEl = card.querySelector('.baixa-card-desc');
+            if (descEl) descEl.textContent = descricao;
+
+            const statusBadge = document.getElementById(`baixa-badge-status-${id}`);
+            const statusTxt = card.querySelector('.baixa-status-txt');
+            if (statusTxt) statusTxt.textContent = status;
+            if (statusBadge) {
+                statusBadge.className = `badge ${status === 'CUMPRIDA' ? 'badge-success' : 'badge-warning'}`;
+            }
+
+            const asBadge = document.getElementById(`baixa-badge-as-${id}`);
+            if (asBadge) {
+                asBadge.style.display = asImpeditivo ? 'inline-block' : 'none';
+            }
+
+            const asChk = document.getElementById(`baixa_as_chk_${id}`);
+            if (asChk && asChk.checked !== asImpeditivo) {
+                asChk.checked = asImpeditivo;
+                aoMudarCheckboxASBaixa(id, asImpeditivo);
+            }
+
+            // Se na Aba 1 a exigência foi marcada como CUMPRIDA, atualizar o select da baixa se estava pendente
+            const selRes = document.getElementById(`baixa_res_${id}`);
+            if (selRes && status === 'CUMPRIDA' && selRes.value !== 'CUMPRIDA') {
+                selRes.value = 'CUMPRIDA';
+                aoMudarResultadoBaixa(id, 'CUMPRIDA');
+            }
+        } else {
+            // Criar novo card de baixa dinamicamente
+            card = document.createElement('article');
+            card.className = 'baixa-exigencia-card';
+            card.id = `baixa-card-${id}`;
+            card.style.cssText = 'background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.04);';
+
+            const defResultado = (status === 'CUMPRIDA') ? 'CUMPRIDA' : (status === 'PARCIAL' ? 'PARCIAL' : 'NAO_CUMPRIDA');
+            const defManifestacao = (status === 'CUMPRIDA') ? 'Atendido conforme revisão técnica apresentada.' : '';
+            const badgeStatusClass = (status === 'CUMPRIDA') ? 'badge-success' : 'badge-warning';
+
+            card.innerHTML = `
+                <!-- Topo do Card da Exigência -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <span class="badge bg-secondary baixa-card-num" style="font-size:0.80rem; font-weight:700;">#${ordem}</span>
+                        <span class="badge bg-primary-subtle text-primary baixa-card-cat" style="font-size:0.80rem; border:1px solid #bfdbfe; font-weight:600;">
+                            <i class="fa-solid fa-tag"></i> <span class="baixa-card-cat-txt">${escapeHtml(categoria)}</span>
+                        </span>
+                        <span class="badge bg-light text-dark baixa-card-ref" style="font-size:0.78rem; border:1px solid #cbd5e1; ${referencia ? '' : 'display:none;'}">
+                            <i class="fa-solid fa-book-bookmark text-muted"></i> <span class="baixa-card-ref-txt">${escapeHtml(referencia)}</span>
+                        </span>
+                        <span class="badge ${badgeStatusClass}" id="baixa-badge-status-${escapeHtml(id)}" style="font-size:0.75rem;">
+                            Status Atual: <span class="baixa-status-txt">${escapeHtml(status)}</span>
+                        </span>
+                        <span class="badge bg-danger baixa-card-as-badge" id="baixa-badge-as-${escapeHtml(id)}" style="font-size:0.75rem; ${asImpeditivo ? '' : 'display:none;'}">
+                            <i class="fa-solid fa-ban"></i> A/S (Grave)
+                        </span>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" class="btn btn-xs btn-outline-success" onclick="definirBaixaItem('${escapeHtml(id)}', 'CUMPRIDA')" title="Atalho rápido">
+                            <i class="fa-solid fa-check"></i> Cumprida
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-warning" onclick="definirBaixaItem('${escapeHtml(id)}', 'PARCIAL')">
+                            Parcial
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-danger" onclick="definirBaixaItem('${escapeHtml(id)}', 'NAO_CUMPRIDA')">
+                            Não Cumprida
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Corpo do Card: Grid de 2 colunas responsivas sem estouro horizontal -->
+                <div class="baixa-card-grid" style="display:grid; grid-template-columns:minmax(0, 1.35fr) minmax(320px, 1fr); gap:16px; align-items:start;">
+                    <!-- Coluna 1: Texto detalhado da exigência -->
+                    <div>
+                        <label style="font-size:0.80rem; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:4px; display:block;">
+                            <i class="fa-solid fa-triangle-exclamation text-warning"></i> Não-conformidade apontada:
+                        </label>
+                        <div class="baixa-card-desc" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; font-size:0.86rem; color:#1e293b; line-height:1.55; max-height:160px; overflow-y:auto; word-break:break-word; white-space:pre-wrap;">${escapeHtml(descricao)}</div>
+                    </div>
+
+                    <!-- Coluna 2: Parecer e Manifestação Técnica do Analista para este ciclo -->
+                    <div style="background:#fcfcfd; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+                        <div style="margin-bottom:10px;">
+                            <label class="form-label-bold" style="font-size:0.82rem; margin-bottom:4px; display:block;">
+                                Resultado da Revisão Técnica *
+                            </label>
+                            <select name="baixa_resultado[${escapeHtml(id)}]" id="baixa_res_${escapeHtml(id)}" class="form-control form-control-sm select-baixa-resultado" required onchange="aoMudarResultadoBaixa('${escapeHtml(id)}', this.value)" style="font-weight:600;">
+                                <option value="CUMPRIDA" ${defResultado === 'CUMPRIDA' ? 'selected' : ''}>Cumprida (Atendida integralmente)</option>
+                                <option value="PARCIAL" ${defResultado === 'PARCIAL' ? 'selected' : ''}>Parcial (Atendida em parte)</option>
+                                <option value="NAO_CUMPRIDA" ${defResultado === 'NAO_CUMPRIDA' ? 'selected' : ''}>Não cumprida (Permanece pendente)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label-bold" style="font-size:0.82rem; margin-bottom:4px; display:block;">
+                                Manifestação Técnica do Analista *
+                            </label>
+                            <textarea name="baixa_manifestacao[${escapeHtml(id)}]" id="baixa_man_${escapeHtml(id)}" required rows="2" class="form-control form-control-sm textarea-baixa-manifestacao" placeholder="Indique a evidência ou prancha examinada (ex.: Atendido na folha 02/04)...">${escapeHtml(defManifestacao)}</textarea>
+                        </div>
+                        <div class="baixa-as-box" id="baixa-as-box-${escapeHtml(id)}" style="margin-top:10px; padding:8px 10px; background:${asImpeditivo ? '#fff1f2' : '#f8fafc'}; border:1px solid ${asImpeditivo ? '#fecdd3' : '#e2e8f0'}; border-radius:6px;">
+                            <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer; font-size:0.80rem; font-weight:700; color:${asImpeditivo ? '#991b1b' : '#334155'};">
+                                <input type="checkbox" name="baixa_as[${escapeHtml(id)}]" id="baixa_as_chk_${escapeHtml(id)}" value="1" ${asImpeditivo ? 'checked' : ''} style="width:16px; height:16px; accent-color:#dc2626;" onchange="aoMudarCheckboxASBaixa('${escapeHtml(id)}', this.checked)">
+                                <span><i class="fa-solid fa-ban text-danger"></i> Condição Suspensiva "A/S" (Exigência Grave)</span>
+                            </label>
+                            <small class="text-muted d-block" style="font-size:0.73rem; margin-top:2px; margin-left:24px;">
+                                Desmarque se a gravidade foi sanada/atenuada para exigência comum, liberando a licença técnica.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+
+        // Manter na ordem sequencial
+        container.appendChild(card);
+    });
+
+    // Remover cards de exigências que não existem mais na tabela
+    container.querySelectorAll('article.baixa-exigencia-card').forEach(c => {
+        const cId = c.id.replace('baixa-card-', '');
+        if (!idsValidos.has(cId)) {
+            c.remove();
+        }
+    });
+}
+
+function aoMudarCheckboxASBaixa(id, isChecked) {
+    const box = document.getElementById(`baixa-as-box-${id}`);
+    const badge = document.getElementById(`baixa-badge-as-${id}`);
+    const lbl = box ? box.querySelector('label') : null;
+
+    if (box) {
+        box.style.background = isChecked ? '#fff1f2' : '#f8fafc';
+        box.style.borderColor = isChecked ? '#fecdd3' : '#e2e8f0';
+    }
+    if (lbl) {
+        lbl.style.color = isChecked ? '#991b1b' : '#334155';
+    }
+    if (badge) {
+        badge.style.display = isChecked ? 'inline-block' : 'none';
+    }
+
+    // Sincronizar com o input da Aba 1 se existir
+    const inputAS = document.getElementById(`input-as-${id}`);
+    const btnAS = document.getElementById(`btn-as-${id}`);
+    if (inputAS) {
+        inputAS.value = isChecked ? '1' : '0';
+    }
+    if (btnAS) {
+        if (isChecked) {
+            btnAS.className = 'btn btn-xs btn-danger btn-toggle-as btn-has-text';
+            btnAS.title = 'Exigência Grave (A/S): Condição suspensiva que impede emissão de certificados até saneamento no RAP. Clique para alternar.';
+            btnAS.innerHTML = '<i class="fa-solid fa-ban"></i> <span>A/S</span>';
+        } else {
+            btnAS.className = 'btn btn-xs btn-outline-secondary btn-toggle-as btn-has-text';
+            btnAS.title = 'Exigência Comum: Permite emissão da licença preliminar após publicação do RAP. Clique para marcar como A/S.';
+            btnAS.innerHTML = '<i class="fa-solid fa-check"></i> <span>Comum</span>';
+        }
+    }
+}
+
 // Excluir Exigência via AJAX sem Recarregar
 function excluirExigenciaAjax(id, btnEl) {
     if (!confirm('Deseja realmente remover esta exigência pendente?')) return;
@@ -3781,6 +4222,7 @@ function excluirExigenciaAjax(id, btnEl) {
                 row.remove();
                 reindexarTabelaExigencias();
                 atualizarContadoresExigencias(data.total_geral);
+                sincronizarAbaRapExigencias();
             }, 300);
         }
 
@@ -3825,7 +4267,7 @@ function anexarItensNaTabela(itens) {
             </td>
             <td style="vertical-align:middle; text-align:center;">
                 <input type="hidden" name="exigencia_as[${escapeHtml(it.id)}]" id="input-as-${escapeHtml(it.id)}" value="${it.as_impeditivo ? 1 : 0}">
-                <button type="button" class="btn btn-xs ${it.as_impeditivo ? 'btn-danger' : 'btn-outline-secondary'} btn-toggle-as" id="btn-as-${escapeHtml(it.id)}" onclick="toggleASExigenciaDireto('${escapeHtml(it.id)}', this)" title="${it.as_impeditivo ? 'Exigência Grave (A/S): Condição suspensiva que impede emissão de certificados até saneamento no RAP. Clique para alternar.' : 'Exigência Comum: Permite emissão da licença preliminar após publicação do RAP. Clique para marcar como A/S.'}" style="font-size:0.75rem; padding:3px 6px; font-weight:700;">
+                <button type="button" class="btn btn-xs ${it.as_impeditivo ? 'btn-danger' : 'btn-outline-secondary'} btn-toggle-as btn-has-text" id="btn-as-${escapeHtml(it.id)}" onclick="toggleASExigenciaDireto('${escapeHtml(it.id)}', this)" title="${it.as_impeditivo ? 'Exigência Grave (A/S): Condição suspensiva que impede emissão de certificados até saneamento no RAP. Clique para alternar.' : 'Exigência Comum: Permite emissão da licença preliminar após publicação do RAP. Clique para marcar como A/S.'}" style="font-size:0.75rem; padding:3px 6px; font-weight:700;">
                     <i class="fa-solid ${it.as_impeditivo ? 'fa-ban' : 'fa-check'}"></i>
                     <span>${it.as_impeditivo ? 'A/S' : 'Comum'}</span>
                 </button>
@@ -3850,11 +4292,11 @@ function anexarItensNaTabela(itens) {
                 </select>
             </td>
             <td style="vertical-align:middle; text-align:center;">
-                <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
-                    <button type="button" class="btn btn-sm btn-success btn-baixa-inline" id="btn-baixa-${escapeHtml(it.id)}" onclick="baixaExigenciaDireta('${escapeHtml(it.id)}', 'CUMPRIDA', this)" title="Marcar como Cumprida em 1 clique" style="font-size:0.78rem; padding:4px 8px;">
+                <div class="acoes-inline-flex">
+                    <button type="button" class="btn btn-sm btn-success btn-baixa-inline btn-has-text" id="btn-baixa-${escapeHtml(it.id)}" onclick="baixaExigenciaDireta('${escapeHtml(it.id)}', 'CUMPRIDA', this)" title="Marcar como Cumprida em 1 clique">
                         <i class="fa-solid fa-check"></i> <span>Cumprida</span>
                     </button>
-                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="excluirExigenciaAjax('${escapeHtml(it.id)}', this)" title="Remover exigência" style="font-size:0.78rem; padding:4px 8px;">
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-excluir-inline" onclick="excluirExigenciaAjax('${escapeHtml(it.id)}', this)" title="Remover exigência">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -3865,6 +4307,7 @@ function anexarItensNaTabela(itens) {
     });
 
     reindexarTabelaExigencias();
+    sincronizarAbaRapExigencias();
 }
 
 // Reindexar Números de Ordem na Tabela
@@ -4017,6 +4460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (targetAba && ['exigencias', 'arquivos', 'pareceres', 'enquadramento', 'vistoria_tramite'].includes(targetAba)) {
         trocarAbaAnalise(targetAba, false);
     }
+    sincronizarAbaRapExigencias();
 });
 </script>
 

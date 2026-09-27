@@ -104,7 +104,34 @@ function assinaturaEnviarConviteCertificado(PDO $pdo,string $tipo,string $id,?ar
 function assinaturaPendencias(PDO $pdo,string $usuarioId,string $cargo): array
 {
     $itens=[];$resp=assinaturaResponsavelUsuario($pdo,$usuarioId,false);
-    if($resp){foreach(assinaturaCertificadosMapas() as $tipo=>$m){$extra=$tipo==='LC'?',analise_id':'';$stmt=$pdo->prepare("SELECT id,{$m['number']} numero,nome_embarcacao,data_emissao,status,token_assinatura,criado_por{$extra} FROM {$m['table']} WHERE responsavel_assinatura_id=:resp AND ativo=1 AND assinado=0 AND status='emitido' ORDER BY criado_em DESC");$stmt->execute([':resp'=>$resp['id']]);foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $r){if($cargo==='ANALISTA'&&$r['criado_por']!==$usuarioId){$permitidaPorAnalise=false;if($tipo==='LC'&&!empty($r['analise_id'])){$q=$pdo->prepare('SELECT COUNT(*) FROM analises_planos WHERE id=:id AND analista_id=:usuario');$q->execute([':id'=>$r['analise_id'],':usuario'=>$usuarioId]);$permitidaPorAnalise=(int)$q->fetchColumn()===1;}if(!$permitidaPorAnalise)continue;}$r['tipo']=$tipo;$r['responsavel_id']=$resp['id'];$r['origem']=$m['list'];$itens[]=$r;}}}
+    if($resp){
+        $mapas = assinaturaCertificadosMapas();
+        if ($cargo === 'ANALISTA' || $cargo === 'ADMIN') {
+            $mapas['LC'] = ['table'=>'certificados_lc','label'=>'LC','number'=>'numero_lc','list'=>'documentacao/lc'];
+            $mapas['LP'] = ['table'=>'certificados_lp','label'=>'LP','number'=>'numero_lp','list'=>'documentacao/lp'];
+            $mapas['NAR'] = ['table'=>'certificados_nar','label'=>'NAR','number'=>'numero','list'=>'documentacao/nar'];
+        }
+        foreach($mapas as $tipo=>$m){
+            $extra=$tipo==='LC'?',analise_id':'';
+            $stmt=$pdo->prepare("SELECT id,{$m['number']} numero,nome_embarcacao,data_emissao,status,token_assinatura,criado_por{$extra} FROM {$m['table']} WHERE responsavel_assinatura_id=:resp AND ativo=1 AND assinado=0 AND status='emitido' ORDER BY criado_em DESC");
+            $stmt->execute([':resp'=>$resp['id']]);
+            foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $r){
+                if($cargo==='ANALISTA'&&$r['criado_por']!==$usuarioId){
+                    $permitidaPorAnalise=false;
+                    if($tipo==='LC'&&!empty($r['analise_id'])){
+                        $q=$pdo->prepare('SELECT COUNT(*) FROM analises_planos WHERE id=:id AND analista_id=:usuario');
+                        $q->execute([':id'=>$r['analise_id'],':usuario'=>$usuarioId]);
+                        $permitidaPorAnalise=(int)$q->fetchColumn()===1;
+                    }
+                    if(!$permitidaPorAnalise)continue;
+                }
+                $r['tipo']=$tipo;
+                $r['responsavel_id']=$resp['id'];
+                $r['origem']=$m['list'];
+                $itens[]=$r;
+            }
+        }
+    }
     if(in_array($cargo,['ADMIN','VISTORIADOR'],true)){
         $sql="SELECT v.id,v.numero,e.nome nome_embarcacao,v.data_vistoria data_emissao,
                      v.status,a.vistoriador_id,v.criado_por,u.nome vistoriador_nome
@@ -135,17 +162,32 @@ function assinaturaPendencias(PDO $pdo,string $usuarioId,string $cargo): array
 
 function assinaturaAutorizarCertificado(PDO $pdo,string $tipo,string $id,string $usuarioId): array
 {
-    $mapa=assinaturaCertificadosMapas()[$tipo]??null;if(!$mapa)throw new InvalidArgumentException('Tipo invalido.');
-    $stmt=$pdo->prepare("SELECT c.*,ra.usuario_id,u.cargo usuario_cargo FROM {$mapa['table']} c JOIN responsaveis_assinatura ra ON ra.id=c.responsavel_assinatura_id JOIN usuarios u ON u.id=ra.usuario_id WHERE c.id=:id AND c.ativo=1 FOR UPDATE");$stmt->execute([':id'=>$id]);$doc=$stmt->fetch(PDO::FETCH_ASSOC);
+    $tipoNorm = in_array(strtoupper(trim($tipo)), ['LA', 'LR', 'LCEC'], true) ? 'LC' : strtoupper(trim($tipo));
+    $mapa = aprovacaoDocumentoMapas()[$tipoNorm] ?? (assinaturaCertificadosMapas()[$tipoNorm] ?? null);
+    if(!$mapa)throw new InvalidArgumentException('Tipo invalido.');
+    $stmt=$pdo->prepare("SELECT c.*,ra.usuario_id,u.cargo usuario_cargo FROM {$mapa['table']} c JOIN responsaveis_assinatura ra ON ra.id=c.responsavel_assinatura_id JOIN usuarios u ON u.id=ra.usuario_id WHERE c.id=:id AND c.ativo=1 FOR UPDATE");
+    $stmt->execute([':id'=>$id]);
+    $doc=$stmt->fetch(PDO::FETCH_ASSOC);
     if(!$doc||$doc['usuario_id']!==$usuarioId)throw new RuntimeException('Este documento nao esta atribuido ao seu perfil de assinatura.');
-    if($doc['usuario_cargo']==='ANALISTA'&&$doc['criado_por']!==$usuarioId){$permitidaPorAnalise=false;if($tipo==='LC'&&!empty($doc['analise_id'])){$q=$pdo->prepare('SELECT COUNT(*) FROM analises_planos WHERE id=:id AND analista_id=:usuario');$q->execute([':id'=>$doc['analise_id'],':usuario'=>$usuarioId]);$permitidaPorAnalise=(int)$q->fetchColumn()===1;}if(!$permitidaPorAnalise)throw new RuntimeException('Analistas somente podem assinar documentos técnicos atribuídos a eles.');}
-    if((int)$doc['assinado']===1||$doc['status']!=='emitido')throw new RuntimeException('Este certificado nao esta pendente de assinatura.');return $doc;
+    if($doc['usuario_cargo']==='ANALISTA'&&$doc['criado_por']!==$usuarioId){
+        $permitidaPorAnalise=false;
+        if(in_array($tipoNorm, ['LC','LA','LR','LCEC'], true)&&!empty($doc['analise_id'])){
+            $q=$pdo->prepare('SELECT COUNT(*) FROM analises_planos WHERE id=:id AND analista_id=:usuario');
+            $q->execute([':id'=>$doc['analise_id'],':usuario'=>$usuarioId]);
+            $permitidaPorAnalise=(int)$q->fetchColumn()===1;
+        }
+        if(!$permitidaPorAnalise)throw new RuntimeException('Analistas somente podem assinar documentos técnicos atribuídos a eles.');
+    }
+    if((int)$doc['assinado']===1||$doc['status']!=='emitido')throw new RuntimeException('Este certificado nao esta pendente de assinatura.');
+    return $doc;
 }
 
 function assinaturaAssinarCertificado(PDO $pdo,array $input): array
 {
     $tipo=strtoupper(trim((string)($input['documento_tipo']??'')));$id=trim((string)($input['documento_id']??''));$usuario=(string)($_SESSION['usuario_id']??'');
-    if(!isset(assinaturaCertificadosMapas()[$tipo])||$id===''||$usuario==='')throw new InvalidArgumentException('Documento invalido.');
+    $tipoNorm = in_array($tipo, ['LA', 'LR', 'LCEC'], true) ? 'LC' : $tipo;
+    $valido = isset(assinaturaCertificadosMapas()[$tipoNorm]) || isset(aprovacaoDocumentoMapas()[$tipoNorm]);
+    if(!$valido||$id===''||$usuario==='')throw new InvalidArgumentException('Documento invalido.');
     $pdo->beginTransaction();try{$doc=assinaturaAutorizarCertificado($pdo,$tipo,$id,$usuario);$pdo->commit();}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
     $input['responsavel_id']=$doc['responsavel_assinatura_id'];return aprovarDocumentoEletronicamente($pdo,$input);
 }

@@ -29,6 +29,7 @@ if (!$approval) {
         'CNARQ' => 'certificados_cnarq',
         'LP' => 'certificados_lp',
         'LC' => 'certificados_lc',
+        'NAR' => 'certificados_nar',
         'CHT' => 'certificados_cht',
     ];
     foreach ($tabelas as $tipoTabela => $nomeTabela) {

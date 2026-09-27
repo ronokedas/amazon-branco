@@ -8,10 +8,11 @@
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../includes/functions.php';
+require_once __DIR__ . '/../../../includes/aprovacao_ui.php';
 
 // Verificar permissão
 verificar_sessao();
-if (!podeAcessar('documentacao')) {
+if (!podeAcessar('doc_lp')) {
     header('Location: ' . APP_URL . 'dashboard?erro=sem_permissao');
     exit;
 }
@@ -413,10 +414,13 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
 
         <!-- Botões de Ação -->
         <div class="card mb-3">
-            <div class="card-footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+            <div class="card-footer" style="display: flex; gap: 10px; justify-content: flex-end; align-items: center;">
                 <a href="<?php echo APP_URL; ?>documentacao/lp" class="btn btn-secondary">
                     <i class="fas fa-times"></i> Cancelar
                 </a>
+                <?php if ($editando && $licenca['status'] === 'emitido' && empty($licenca['assinado'])): ?>
+                    <?php renderBotaoAprovacaoDocumento($pdo, 'LP', $licenca['id'], $licenca['status'], (bool)$licenca['assinado'], (int)($licenca['responsavel_assinatura_id'] ?: 0)); ?>
+                <?php endif; ?>
                 <button type="submit" class="btn btn-success">
                     <i class="fas fa-save"></i> <?php echo $editando ? 'Atualizar Licença' : 'Salvar Licença'; ?>
                 </button>
@@ -466,4 +470,4 @@ document.addEventListener('DOMContentLoaded', function() {
 <?php endif; ?>
 </script>
 
-<?php require_once __DIR__ . '/../../../includes/footer.php'; ?>
+<?php renderAprovacaoUi($pdo); require_once __DIR__ . '/../../../includes/footer.php'; ?>

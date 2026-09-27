@@ -125,16 +125,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['atualizar_perfil'])) 
             $registro_profissional = trim($_POST['registro_profissional'] ?? '');
             $cpf_cnpj = trim($_POST['cpf_cnpj'] ?? '');
 
-            if (!empty($cpf_cnpj)) {
+            $arquivoAssinatura = $_FILES['assinatura_imagem'] ?? [];
+            $temArquivo = !empty($arquivoAssinatura['tmp_name']) && ($arquivoAssinatura['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
+
+            // Validação mandante NORMAM-202: CPF é obrigatório para responsáveis técnicos (Analistas, Vistoriadores e Administradores)
+            if ($responsavel || $temArquivo || $cargo_titulo !== '' || $registro_profissional !== '' || $cpf_cnpj !== '') {
+                if ($cpf_cnpj === '') {
+                    throw new RuntimeException('O CPF do responsável técnico é obrigatório pela NORMAM-202/DPC para validação e fé pública de laudos, relatórios (RAP) e pareceres.');
+                }
+
                 $digits = preg_replace('/\D+/', '', $cpf_cnpj);
                 $validDoc = (strlen($digits) === 11 && validarCPF($digits)) || (strlen($digits) === 14 && validarCNPJ($digits));
                 if (!$validDoc) {
-                    throw new RuntimeException('CPF ou CNPJ inválido informado para a assinatura.');
+                    throw new RuntimeException('CPF ou CNPJ inválido informado para o perfil de assinatura.');
+                }
+
+                if (strlen($digits) === 11) {
+                    $cpf_cnpj = preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $digits);
+                } else {
+                    $cpf_cnpj = preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/', '$1.$2.$3/$4-$5', $digits);
                 }
             }
-
-            $arquivoAssinatura = $_FILES['assinatura_imagem'] ?? [];
-            $temArquivo = !empty($arquivoAssinatura['tmp_name']) && ($arquivoAssinatura['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
 
             if ($responsavel) {
                 $respId = (int)$responsavel['id'];
@@ -392,7 +403,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <!-- CPF / CNPJ -->
                         <div class="form-group">
                             <label for="cpf_cnpj">
-                                <i class="fas fa-fingerprint"></i> CPF do Responsável Técnico
+                                <i class="fas fa-fingerprint"></i> CPF do Responsável Técnico *
                             </label>
                             <?php
                             $cpfValorExibicao = $responsavel['cpf_cnpj'] ?? '';
@@ -410,8 +421,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                    maxlength="18"
                                    autocomplete="off"
                                    oninput="mascararCpfCnpj(this)"
+                                   <?= $responsavel ? 'required' : '' ?>
                                    value="<?php echo h($cpfValorExibicao); ?>">
-                            <small class="text-muted">Formatação automática. Utilizado na composição do hash criptográfico e termo de fé pública.</small>
+                            <small class="text-muted"><strong>Obrigatório (NORMAM-202/DPC):</strong> O CPF compõe o carimbo de fé pública e a validação de assinatura nos relatórios de planos (RAP) e licenças.</small>
                         </div>
                     </div>
 

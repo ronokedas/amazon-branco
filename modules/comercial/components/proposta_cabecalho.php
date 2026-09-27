@@ -70,7 +70,7 @@
                     <i class="fas fa-user-tie"></i>
                     <h3>Nenhum cliente cadastrado</h3>
                     <p>Cadastre um proprietário ou armador antes de criar uma proposta.</p>
-                    <a href="<?php echo APP_URL; ?>clientes/form" class="btn btn-primary">
+                    <a href="<?php echo APP_URL; ?>proprietarios/form" class="btn btn-primary">
                         <i class="fas fa-plus"></i> Novo Cliente / Proprietário
                     </a>
                 </div>

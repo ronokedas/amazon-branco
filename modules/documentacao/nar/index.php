@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../../includes/functions.php';
 require_once __DIR__ . '/../../../includes/aprovacao_ui.php';
 
 verificar_sessao();
-if (!podeAcessar('documentacao')) {
+if (!podeAcessar('doc_nar')) {
     header('Location: ' . APP_URL . 'dashboard?erro=sem_permissao');
     exit;
 }
@@ -208,6 +208,7 @@ require_once __DIR__ . '/../../../includes/header.php';
                                         <i class="fa-solid fa-edit"></i>
                                     </a>
 
+                                    <?php renderBotaoAprovacaoDocumento($pdo, 'NAR', $nar['id'], $nar['status'], (bool)$nar['assinado'], (int)($nar['responsavel_assinatura_id'] ?: 0)); ?>
                                     <?php if ($nar['status'] !== 'assinado'): ?>
                                         <a href="<?= APP_URL ?>documentacao/nar/assinar?id=<?= urlencode($nar['id']) ?>" 
                                             class="btn btn-sm btn-outline-success" 
@@ -234,4 +235,4 @@ require_once __DIR__ . '/../../../includes/header.php';
     </div>
 </div>
 
-<?php require_once __DIR__ . '/../../../includes/footer.php'; ?>
+<?php renderAprovacaoUi($pdo); require_once __DIR__ . '/../../../includes/footer.php'; ?>

@@ -96,7 +96,11 @@ if (!function_exists('isActive')) {
         <?php endif; ?>
 
         <!-- 2. OPERAÇÃO NAVAL (Ciclo cronológico de vistorias e emissão) -->
-        <?php if (podeAcessar('agendamentos') || podeAcessar('vistorias') || podeAcessar('relatorios_aprovacao') || podeAcessar('certificados') || podeAcessar('documentacao')): ?>
+        <?php 
+        $temModelosEstatutarios = podeAcessar('documentacao') || podeAcessar('doc_csn') || podeAcessar('doc_cnbl') || podeAcessar('doc_cnarq') || podeAcessar('doc_nar') || podeAcessar('doc_lp') || podeAcessar('doc_lc') || podeAcessar('doc_cht');
+        $temOperacaoNaval = podeAcessar('agendamentos') || podeAcessar('vistorias') || podeAcessar('relatorios_aprovacao') || podeAcessar('certificados') || podeAcessar('vencimentos_certificados') || $temModelosEstatutarios;
+        ?>
+        <?php if ($temOperacaoNaval): ?>
             <div class="nav-group-label">OPERAÇÃO NAVAL</div>
             <?php if (podeAcessar('agendamentos')): ?>
                 <a href="<?= APP_URL ?>agendamentos" class="nav-item<?= isActive('agendamentos',$pagina_atual) ?>" data-label="Agendamentos">
@@ -128,7 +132,7 @@ if (!function_exists('isActive')) {
                     <span class="nav-text">Vencimentos Navais</span>
                 </a>
             <?php endif; ?>
-            <?php if (podeAcessar('documentacao')): ?>
+            <?php if ($temModelosEstatutarios): ?>
                 <div class="nav-group">
                     <a href="#" class="nav-item<?= (strpos($pagina_atual,'documentacao')===0 && strpos($pagina_atual,'documentacao/aprovacao_relatorios')===false) ? ' active' : '' ?>" data-label="Modelos Estatutários" onclick="this.parentElement.querySelector('.nav-submenu').classList.toggle('open');this.querySelector('.nav-chevron')?.classList.toggle('rotated');return false;">
                         <i class="fa-solid fa-file-shield"></i>
@@ -136,13 +140,27 @@ if (!function_exists('isActive')) {
                         <i class="fa-solid fa-chevron-down nav-chevron<?= (strpos($pagina_atual,'documentacao')===0 && strpos($pagina_atual,'documentacao/aprovacao_relatorios')===false) ? ' rotated' : '' ?>"></i>
                     </a>
                     <div class="nav-submenu<?= (strpos($pagina_atual,'documentacao')===0 && strpos($pagina_atual,'documentacao/aprovacao_relatorios')===false) ? ' open' : '' ?>">
-                        <a href="<?= APP_URL ?>documentacao/certificados" class="nav-item nav-subitem<?= isActive('documentacao/certificados',$pagina_atual) ?>">Certificados (CSN)</a>
-                        <a href="<?= APP_URL ?>documentacao/cnbl" class="nav-item nav-subitem<?= isActive('documentacao/cnbl',$pagina_atual) ?>">CNBL</a>
-                        <a href="<?= APP_URL ?>documentacao/cnarq" class="nav-item nav-subitem<?= isActive('documentacao/cnarq',$pagina_atual) ?>">CNARQ</a>
-                        <a href="<?= APP_URL ?>documentacao/nar" class="nav-item nav-subitem<?= (strpos($pagina_atual,'documentacao/nar')===0) ? ' active' : '' ?>">Notas de Arqueação (NAR)</a>
-                        <a href="<?= APP_URL ?>documentacao/lp" class="nav-item nav-subitem<?= isActive('documentacao/lp',$pagina_atual) ?>">LP</a>
-                        <a href="<?= APP_URL ?>documentacao/lc" class="nav-item nav-subitem<?= (strpos($pagina_atual,'documentacao/lc')===0) ? ' active' : '' ?>">Licenças (LC, LA, LR, LCEC)</a>
-                        <a href="<?= APP_URL ?>documentacao/cht" class="nav-item nav-subitem<?= isActive('documentacao/cht',$pagina_atual) ?>">CHT</a>
+                        <?php if (podeAcessar('doc_csn')): ?>
+                            <a href="<?= APP_URL ?>documentacao/certificados" class="nav-item nav-subitem<?= isActive('documentacao/certificados',$pagina_atual) ?>">Certificados (CSN)</a>
+                        <?php endif; ?>
+                        <?php if (podeAcessar('doc_cnbl')): ?>
+                            <a href="<?= APP_URL ?>documentacao/cnbl" class="nav-item nav-subitem<?= isActive('documentacao/cnbl',$pagina_atual) ?>">CNBL</a>
+                        <?php endif; ?>
+                        <?php if (podeAcessar('doc_cnarq')): ?>
+                            <a href="<?= APP_URL ?>documentacao/cnarq" class="nav-item nav-subitem<?= isActive('documentacao/cnarq',$pagina_atual) ?>">CNARQ</a>
+                        <?php endif; ?>
+                        <?php if (podeAcessar('doc_nar')): ?>
+                            <a href="<?= APP_URL ?>documentacao/nar" class="nav-item nav-subitem<?= (strpos($pagina_atual,'documentacao/nar')===0) ? ' active' : '' ?>">Notas de Arqueação (NAR)</a>
+                        <?php endif; ?>
+                        <?php if (podeAcessar('doc_lp')): ?>
+                            <a href="<?= APP_URL ?>documentacao/lp" class="nav-item nav-subitem<?= isActive('documentacao/lp',$pagina_atual) ?>">LP</a>
+                        <?php endif; ?>
+                        <?php if (podeAcessar('doc_lc')): ?>
+                            <a href="<?= APP_URL ?>documentacao/lc" class="nav-item nav-subitem<?= (strpos($pagina_atual,'documentacao/lc')===0) ? ' active' : '' ?>">Licenças (LC, LA, LR, LCEC)</a>
+                        <?php endif; ?>
+                        <?php if (podeAcessar('doc_cht')): ?>
+                            <a href="<?= APP_URL ?>documentacao/cht" class="nav-item nav-subitem<?= isActive('documentacao/cht',$pagina_atual) ?>">CHT</a>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endif; ?>
@@ -158,12 +176,18 @@ if (!function_exists('isActive')) {
         <?php endif; ?>
 
         <!-- 3. ENGENHARIA & CAPITANIA (Projetos e órgãos reguladores) -->
-        <?php if (podeAcessar('analise_planos') || podeAcessar('protocolos_documentais')): ?>
+        <?php if (podeAcessar('analise_planos') || podeAcessar('protocolos_documentais') || podeAcessar('configuracoes_normam202')): ?>
             <div class="nav-group-label">ENGENHARIA & CAPITANIA</div>
             <?php if (podeAcessar('analise_planos')): ?>
-                <a href="<?= APP_URL ?>analises-planos" class="nav-item<?= ($pagina_atual === 'analises-planos' || strpos($pagina_atual, 'analises-planos/') === 0) ? ' active' : '' ?>" data-label="Análise de Planos">
+                <a href="<?= APP_URL ?>analises-planos" class="nav-item<?= ($pagina_atual === 'analises-planos' || (strpos($pagina_atual, 'analises-planos/') === 0 && strpos($pagina_atual, 'analises-planos/referencias') !== 0)) ? ' active' : '' ?>" data-label="Análise de Planos">
                     <i class="fa-solid fa-drafting-compass"></i>
                     <span class="nav-text">Análise de Planos</span>
+                </a>
+            <?php endif; ?>
+            <?php if (podeAcessar('analise_planos') || podeAcessar('configuracoes_normam202')): ?>
+                <a href="<?= APP_URL ?>analises-planos/referencias" class="nav-item<?= strpos($pagina_atual, 'analises-planos/referencias') === 0 ? ' active' : '' ?>" data-label="Banco NORMAM">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                    <span class="nav-text">Banco NORMAM</span>
                 </a>
             <?php endif; ?>
             <?php if (podeAcessar('protocolos_documentais')): ?>

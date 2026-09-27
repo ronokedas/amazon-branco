@@ -127,6 +127,7 @@ $rotas = [
     'vistorias/relatorio' => 'modules/vistorias/relatorio.php',
     'vistorias/relatorio_pdf' => 'modules/vistorias/relatorio_pdf.php',
     'vistorias/relatorio_pdf.php' => 'modules/vistorias/relatorio_pdf.php',
+    'vistorias/relatorio-pdf' => 'modules/vistorias/relatorio_pdf.php',
     'analises-planos' => 'modules/analises_planos/index.php',
     'analises-planos/form' => 'modules/analises_planos/form.php',
     'analises-planos/actions' => 'modules/analises_planos/actions.php',
@@ -283,6 +284,7 @@ if (strpos($path, 'api/campo/v1') === 0) {
 } elseif (isset($rotas[$path])) {
     $permissoes_rota = [
         'dashboard' => 'dashboard',
+        'clientes' => 'clientes', 'clientes/form' => 'clientes', 'clientes/actions' => 'clientes',
         'armadores' => 'armadores', 'armadores/form' => 'armadores', 'armadores/actions' => 'armadores',
         'proprietarios' => 'proprietarios', 'proprietarios/form' => 'proprietarios', 'proprietarios/actions' => 'proprietarios',
         'despachantes' => 'despachantes', 'despachantes/form' => 'despachantes', 'despachantes/actions' => 'despachantes',
@@ -306,6 +308,15 @@ if (strpos($path, 'api/campo/v1') === 0) {
         'documentos/aprovar' => 'documentacao', 'documentos/cancelar' => 'documentacao',
         'autenticidade' => 'documentacao', 'autenticidade/aprovar' => 'documentacao', 'autenticidade/cancelar' => 'documentacao',
         'documentacao' => 'documentacao', 'documentacao/aprovacao_relatorios' => 'relatorios_aprovacao',
+        'documentacao/nar' => 'doc_nar', 'documentacao/nar/form' => 'doc_nar', 'documentacao/nar/actions' => 'doc_nar', 'documentacao/nar/pdf' => 'doc_nar', 'documentacao/nar/assinar' => 'doc_nar',
+        'documentacao/lp' => 'doc_lp', 'documentacao/lp/form' => 'doc_lp', 'documentacao/lp/actions' => 'doc_lp', 'documentacao/lp/pdf' => 'doc_lp',
+        'documentacao/lc' => 'doc_lc', 'documentacao/lc/form' => 'doc_lc', 'documentacao/lc/actions' => 'doc_lc', 'documentacao/lc/pdf' => 'doc_lc',
+        'documentacao/certificados' => 'doc_csn', 'documentacao/certificados/form' => 'doc_csn', 'documentacao/certificados/actions' => 'doc_csn', 'documentacao/certificados/pdf' => 'doc_csn',
+        'documentacao/cnbl' => 'doc_cnbl', 'documentacao/cnbl/form' => 'doc_cnbl', 'documentacao/cnbl/actions' => 'doc_cnbl', 'documentacao/cnbl/pdf' => 'doc_cnbl',
+        'documentacao/cnarq' => 'doc_cnarq', 'documentacao/cnarq/form' => 'doc_cnarq', 'documentacao/cnarq/actions' => 'doc_cnarq', 'documentacao/cnarq/pdf' => 'doc_cnarq',
+        'documentacao/cht' => 'doc_cht', 'documentacao/cht/form' => 'doc_cht', 'documentacao/cht/actions' => 'doc_cht', 'documentacao/cht/pdf' => 'doc_cht',
+        'documentacao/novo_certificado' => 'documentacao', 'documentacao/baixa_exigencias' => 'documentacao',
+        'vistorias/relatorio-pdf' => 'vistorias',
         'certificados' => 'certificados',
         'certificados/vencimentos' => 'vencimentos_certificados',
         'sgq/manual' => 'sgq', 'sgq/apresentacao' => 'sgq', 'sgq/indicadores' => 'sgq',
@@ -313,11 +324,25 @@ if (strpos($path, 'api/campo/v1') === 0) {
         'sgq/auditoria' => 'sgq', 'sgq/riscos' => 'sgq', 'sgq/riscos/actions' => 'sgq',
     ];
     $permissao_rota = $permissoes_rota[$path] ?? null;
-    if (strpos($path, 'documentacao/') === 0 && $path !== 'documentacao/aprovacao_relatorios') $permissao_rota = 'documentacao';
+    if ($permissao_rota === null && strpos($path, 'documentacao/') === 0) {
+        if (strpos($path, 'documentacao/nar') === 0) $permissao_rota = 'doc_nar';
+        elseif (strpos($path, 'documentacao/lp') === 0) $permissao_rota = 'doc_lp';
+        elseif (strpos($path, 'documentacao/lc') === 0) $permissao_rota = 'doc_lc';
+        elseif (strpos($path, 'documentacao/certificados') === 0) $permissao_rota = 'doc_csn';
+        elseif (strpos($path, 'documentacao/cnbl') === 0) $permissao_rota = 'doc_cnbl';
+        elseif (strpos($path, 'documentacao/cnarq') === 0) $permissao_rota = 'doc_cnarq';
+        elseif (strpos($path, 'documentacao/cht') === 0) $permissao_rota = 'doc_cht';
+        elseif ($path === 'documentacao/aprovacao_relatorios') $permissao_rota = 'relatorios_aprovacao';
+        else $permissao_rota = 'documentacao';
+    }
     if (strpos($path, 'certificados/') === 0) {
         $permissao_rota = ($path === 'certificados/vencimentos') ? 'vencimentos_certificados' : 'certificados';
     }
     if (strpos($path, 'sgq') === 0) $permissao_rota = 'sgq';
+    // Analista técnico pode visualizar relatório de vistoria vinculado a processos de análise
+    if (in_array($path, ['vistorias/relatorio_pdf', 'vistorias/relatorio_pdf.php', 'vistorias/relatorio-pdf'], true) && podeAcessar('analise_planos')) {
+        $permissao_rota = null;
+    }
     if ($permissao_rota !== null && !podeAcessar($permissao_rota)) {
         setMensagem('error', 'Acesso negado para este módulo.');
         redirecionar(APP_URL . 'dashboard');

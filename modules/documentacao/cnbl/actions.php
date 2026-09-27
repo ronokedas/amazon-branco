@@ -11,7 +11,7 @@ require_once __DIR__ . '/../../../includes/functions.php';
 
 // Verificar permissão
 verificar_sessao();
-if (!podeAcessar('documentacao')) {
+if (!podeAcessar('doc_cnbl')) {
     header('Location: ' . APP_URL . 'dashboard?erro=sem_permissao');
     exit;
 }
@@ -183,9 +183,10 @@ if ($action === 'salvar') {
         redirecionar(APP_URL . 'certificados');
     }
     if ($vistoria_id) {
-        $liberacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id);
-        if (empty($liberacao['permitido'])) {
-            setMensagem('error', $liberacao['mensagem']);
+        require_once __DIR__ . '/../../../includes/emissao_certificados.php';
+        $elegibilidade = avaliarElegibilidadeModalidadeCertificado($pdo, (string)$vistoria_id, (string)$tipo, (string)$embarcacao_id);
+        if (empty($elegibilidade['permitido'])) {
+            setMensagem('error', $elegibilidade['mensagem']);
             redirecionar(APP_URL . 'documentacao/cnbl/form' . ($editando ? "?id={$id}" : ''));
         }
         $relatorio_numero = relatorioNumerosReferenciaCertificado($pdo, (string)$vistoria_id);

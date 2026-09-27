@@ -8,9 +8,10 @@
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../includes/functions.php';
+require_once __DIR__ . '/../../../includes/analise_planos.php';
 
 verificar_sessao();
-if (!podeAcessar('documentacao')) {
+if (!podeAcessar('doc_nar')) {
     header('Location: ' . APP_URL . 'dashboard?erro=sem_permissao');
     exit;
 }
@@ -404,7 +405,9 @@ if ($action === 'salvar') {
             ]);
 
             if (!empty($analise_id)) {
-                analisePlanosHistorico($pdo, $analise_id, 'NAR_EMITIDA', 'EM_ANALISE', 'EM_ANALISE', "Nota de Arqueação {$numeroOficial} gerada e vinculada à análise.");
+                if (function_exists('analisePlanosHistorico')) {
+                    analisePlanosHistorico($pdo, $analise_id, 'NAR_EMITIDA', 'EM_ANALISE', 'EM_ANALISE', "Nota de Arqueação {$numeroOficial} gerada e vinculada à análise.");
+                }
             }
 
             setMensagem('success', "Nota de Arqueação {$numeroOficial} gerada com sucesso!");

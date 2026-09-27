@@ -36,11 +36,19 @@ function certificadoTipoEmbarcacaoEhBalsa($tipo_embarcacao) {
         $tipo = strtolower($tipo);
     }
 
-    return $tipo === 'balsa';
+    return $tipo === 'balsa' || str_contains($tipo, 'balsa') || str_contains($tipo, 'chata') || str_contains($tipo, 'batelao');
 }
 
 function certificadoAnosValidadePorTipoEmbarcacao($tipo_embarcacao) {
-    return certificadoTipoEmbarcacaoEhBalsa($tipo_embarcacao) ? 10 : 5;
+    if (certificadoTipoEmbarcacaoEhBalsa($tipo_embarcacao)) {
+        return 10;
+    }
+    $tipo = trim((string)$tipo_embarcacao);
+    $tipoNorm = function_exists('mb_strtolower') ? mb_strtolower($tipo, 'UTF-8') : strtolower($tipo);
+    if (str_contains($tipoNorm, 'empurrador') || str_contains($tipoNorm, 'rebocador')) {
+        return 8;
+    }
+    return 5;
 }
 
 function certificadoNomesConvalidacoes($tipo_embarcacao) {
@@ -1174,6 +1182,82 @@ function relatorioPossuiExigenciaComumPendenteNaRaiz(PDO $pdo, string $vistoriaI
     return obterExigenciasComunsPendentesCadeia($pdo, $vistoriaId) !== [];
 }
 
+/**
+ * Identifica se uma exigencia e de cunho exclusivamente documental/cartorial
+ * (pedido de inscricao, atualizacao de TIE, TIEM, PRPM ou registro na Capitania).
+ */
+function ehExigenciaInscricaoCartorial(array|string $exigencia): bool
+{
+    $texto = is_array($exigencia)
+        ? implode(' ', array_filter([
+            $exigencia['item'] ?? '',
+            $exigencia['descricao'] ?? '',
+            $exigencia['descricao_reescrita'] ?? '',
+            $exigencia['observacao'] ?? '',
+            $exigencia['item_normam'] ?? '',
+            $exigencia['bloco_vistoria'] ?? '',
+        ]))
+        : (string)$exigencia;
+
+    $texto = mb_strtolower(trim($texto), 'UTF-8');
+    $semAcentos = strtr(
+        $texto,
+        ['ã'=>'a', 'á'=>'a', 'à'=>'a', 'â'=>'a', 'é'=>'e', 'ê'=>'e', 'í'=>'i', 'ó'=>'o', 'ô'=>'o', 'õ'=>'o', 'ú'=>'u', 'ç'=>'c']
+    );
+
+    $termos = [
+        'inscricao',
+        'pedido de inscricao',
+        'atualizacao de inscricao',
+        'titulo de inscricao',
+        'tie',
+        'tiem',
+        'prpm',
+        'atualizacao de ti',
+        'atualizacao do ti',
+        'registro na capitania',
+        'registro da embarcacao',
+        'registro de propriedade',
+        'transferencia de propriedade',
+        'regularizacao cartorial',
+    ];
+
+    foreach ($termos as $termo) {
+        if (str_contains($semAcentos, $termo)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Classifica as exigencias comuns pendentes da vistoria entre fisicas/tecnicas
+ * e documentais/cartoriais (inscricao, TIE/TIEM, PRPM).
+ */
+function classificarExigenciasPendentesVistoria(PDO $pdo, string $vistoriaId): array
+{
+    $exigencias = obterExigenciasComunsPendentesCadeia($pdo, $vistoriaId);
+    $itensFisicos = [];
+    $itensInscricao = [];
+
+    foreach ($exigencias as $ex) {
+        if (ehExigenciaInscricaoCartorial($ex)) {
+            $itensInscricao[] = $ex;
+        } else {
+            $itensFisicos[] = $ex;
+        }
+    }
+
+    return [
+        'total_pendentes' => count($exigencias),
+        'total_fisicas' => count($itensFisicos),
+        'total_inscricao' => count($itensInscricao),
+        'itens_fisicos' => $itensFisicos,
+        'itens_inscricao' => $itensInscricao,
+    ];
+}
+
 /** Matriz unica de decisao administrativa do relatorio tecnico. */
 function resolverStatusDecisaoRelatorio(int $pendentes, int $pendentesAs): string
 {
@@ -1990,5 +2074,297 @@ function blocosComExigenciasRelatorioPdf(string $tipoVistoria, array $todos, arr
     return $resultado;
 }
 
+/**
+ * Gera as observações técnicas padrão pré-preenchidas para as Licenças Oficiais Navais:
+ * LC (Construção), LA (Alteração), LR (Reclassificação) e LCEC (Construção de Embarcação já Construída).
+ * Conforme NORMAM-202 (Anexo 3-A) e diretrizes técnicas do Analista Naval.
+ *
+ * @param array $dados Dados da embarcação, licença, análise ou vistoria
+ * @param string $tipo Tipo da licença (LC, LA, LR, LCEC)
+ * @return string Texto formatado contendo os 8 itens oficiais
+ */
+/**
+ * Modelos padrão originais de observações técnicas da NORMAM-202 (Anexo 3-A)
+ * com marcadores de interpolação automática ({tag}).
+ */
+function modelosObservacoesLicencaPadrao(): array
+{
+    return [
+        'LC' => "1 - Data de Batimento de Quilha: {ano_quilha}.\n"
+              . "2 - Previsão de Conclusão da Construção: {ano_evento}.\n"
+              . "3 - Esta Licença foi emitida com base no Relatório de Análise de Planos n.º {numero_rap}.\n"
+              . "4 - Esta licença contempla a construção da embarcação, conforme planos e memoriais técnicos aprovados:\n"
+              . "► Arranjo Geral, Especificação Técnica e Memorial Descritivo de Construção Naval;\n"
+              . "► Linhas de Forma, Estrutura do Casco e Estabilidade Intacta; e\n"
+              . "► Dotação de Equipamentos de Salvatagem e Combate a Incêndio (NORMAM-202).\n"
+              . "5 - A embarcação possui o comprimento total com rampas de {comprimento_total} m e comprimento do casco de {comprimento_casco} m.\n"
+              . "6 - Lotação Máxima a Bordo:\n"
+              . "► Para atividade e/ou serviço de turismo: está destinada a operar com {passageiros_turismo} passageiros e {tripulantes} tripulantes;\n"
+              . "► Para atividade e/ou serviço de passageiros: está destinada a operar com {passageiros_regular} passageiros e {tripulantes} tripulantes; e\n"
+              . "► Para atividade e/ou serviço de passageiros e carga no convés: está destinada a operar com {passageiros_misto} passageiros, {tripulantes} tripulantes, e com {porte_bruto} t. de carga sobre o convés principal.\n"
+              . "7 - Tempo de Singradura: {tempo_singradura}.\n"
+              . "8 - {restricao_carga}",
+
+        'LA' => "1 - Data de Batimento de Quilha: {ano_quilha}.\n"
+              . "2 - Data de Alteração: {ano_evento}.\n"
+              . "3 - Esta Licença foi emitida com base no Relatório de Análise de Planos n.º {numero_rap}.\n"
+              . "4 - Esta licença contempla as alterações, conforme relatório de alteração apresentados:\n"
+              . "► Alteração do layout da área dos passageiros do convés principal e da área de lazer (navegação intermediária e turística);\n"
+              . "► Adequação das dimensões da casaria conforme realidade da embarcação; e\n"
+              . "► Alteração Arqueação Bruta (AB) e Arqueação Líquida (AL).\n"
+              . "5 - A embarcação possui o comprimento total com rampas de {comprimento_total} m e comprimento do casco de {comprimento_casco} m.\n"
+              . "6 - Lotação Máxima a Bordo:\n"
+              . "► Para atividade e/ou serviço de turismo: está destinada a operar com {passageiros_turismo} passageiros e {tripulantes} tripulantes;\n"
+              . "► Para atividade e/ou serviço de passageiros: está destinada a operar com {passageiros_regular} passageiros e {tripulantes} tripulantes; e\n"
+              . "► Para atividade e/ou serviço de passageiros e carga no convés: está destinada a operar com {passageiros_misto} passageiros, {tripulantes} tripulantes, e com {porte_bruto} t. de carga sobre o convés principal.\n"
+              . "7 - Tempo de Singradura: {tempo_singradura}.\n"
+              . "8 - {restricao_carga}",
+
+        'LR' => "1 - Data de Batimento de Quilha: {ano_quilha}.\n"
+              . "2 - Data de Reclassificação: {ano_evento}.\n"
+              . "3 - Esta Licença foi emitida com base no Relatório de Análise de Planos n.º {numero_rap}.\n"
+              . "4 - Esta licença contempla a reclassificação da embarcação, conforme memorial descritivo e planos apresentados:\n"
+              . "► Reclassificação de atividade/serviço e área de navegação autorizada;\n"
+              . "► Adequação das condições de estabilidade intacta, arqueação e borda livre; e\n"
+              . "► Adequação da dotação de equipamentos de salvatagem e combate a incêndio (NORMAM-202).\n"
+              . "5 - A embarcação possui o comprimento total com rampas de {comprimento_total} m e comprimento do casco de {comprimento_casco} m.\n"
+              . "6 - Lotação Máxima a Bordo:\n"
+              . "► Para atividade e/ou serviço de turismo: está destinada a operar com {passageiros_turismo} passageiros e {tripulantes} tripulantes;\n"
+              . "► Para atividade e/ou serviço de passageiros: está destinada a operar com {passageiros_regular} passageiros e {tripulantes} tripulantes; e\n"
+              . "► Para atividade e/ou serviço de passageiros e carga no convés: está destinada a operar com {passageiros_misto} passageiros, {tripulantes} tripulantes, e com {porte_bruto} t. de carga sobre o convés principal.\n"
+              . "7 - Tempo de Singradura: {tempo_singradura}.\n"
+              . "8 - {restricao_carga}",
+
+        'LCEC' => "1 - Data de Batimento de Quilha: {ano_quilha}.\n"
+                . "2 - Data de Conclusão da Construção (LCEC): {ano_evento}.\n"
+                . "3 - Esta Licença foi emitida com base no Relatório de Análise de Planos n.º {numero_rap}.\n"
+                . "4 - Esta licença contempla a regularização de embarcação já construída (LCEC), conforme levantamento técnico e planos apresentados:\n"
+                . "► Vistoria de verificação e levantamento das características estruturais do casco e casaria;\n"
+                . "► Avaliação de estabilidade, arqueação bruta/líquida e borda livre aplicáveis; e\n"
+                . "► Atendimento aos requisitos da Autoridade Marítima (NORMAM-202).\n"
+                . "5 - A embarcação possui o comprimento total com rampas de {comprimento_total} m e comprimento do casco de {comprimento_casco} m.\n"
+                . "6 - Lotação Máxima a Bordo:\n"
+                . "► Para atividade e/ou serviço de turismo: está destinada a operar com {passageiros_turismo} passageiros e {tripulantes} tripulantes;\n"
+                . "► Para atividade e/ou serviço de passageiros: está destinada a operar com {passageiros_regular} passageiros e {tripulantes} tripulantes; e\n"
+                . "► Para atividade e/ou serviço de passageiros e carga no convés: está destinada a operar com {passageiros_misto} passageiros, {tripulantes} tripulantes, e com {porte_bruto} t. de carga sobre o convés principal.\n"
+                . "7 - Tempo de Singradura: {tempo_singradura}.\n"
+                . "8 - {restricao_carga}",
+    ];
+}
+
+/**
+ * Obtém o template de observações (prioriza o salvo pelo analista, depois global, depois padrão NORMAM)
+ */
+function obterTemplateObservacoesLicenca(string $tipo, ?string $usuarioId = null): array
+{
+    global $pdo;
+    $tipo = strtoupper(trim($tipo));
+    if (!in_array($tipo, ['LC', 'LA', 'LR', 'LCEC'], true)) {
+        $tipo = 'LC';
+    }
+
+    $padroes = modelosObservacoesLicencaPadrao();
+    $padrao = $padroes[$tipo] ?? $padroes['LC'];
+
+    if (!$pdo) {
+        return ['tipo' => $tipo, 'origem' => 'normam_padrao', 'conteudo' => $padrao, 'atualizado_em' => null];
+    }
+
+    $usuarioId = $usuarioId ?: ($_SESSION['usuario_id'] ?? null);
+
+    try {
+        if ($usuarioId) {
+            $stmt = $pdo->prepare("SELECT conteudo_template, atualizado_em FROM modelos_observacoes_licenca WHERE usuario_id = :uid AND tipo_licenca = :tipo AND ativo = 1 LIMIT 1");
+            $stmt->execute([':uid' => $usuarioId, ':tipo' => $tipo]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row && !empty(trim($row['conteudo_template']))) {
+                return ['tipo' => $tipo, 'origem' => 'analista', 'conteudo' => $row['conteudo_template'], 'atualizado_em' => $row['atualizado_em']];
+            }
+        }
+
+        // Buscar modelo global se configurado
+        $stmtG = $pdo->prepare("SELECT conteudo_template, atualizado_em FROM modelos_observacoes_licenca WHERE usuario_id IS NULL AND tipo_licenca = :tipo AND ativo = 1 LIMIT 1");
+        $stmtG->execute([':tipo' => $tipo]);
+        $rowG = $stmtG->fetch(PDO::FETCH_ASSOC);
+        if ($rowG && !empty(trim($rowG['conteudo_template']))) {
+            return ['tipo' => $tipo, 'origem' => 'global', 'conteudo' => $rowG['conteudo_template'], 'atualizado_em' => $rowG['atualizado_em']];
+        }
+    } catch (Throwable $e) {
+        error_log('Erro ao obter template de observações: ' . $e->getMessage());
+    }
+
+    return ['tipo' => $tipo, 'origem' => 'normam_padrao', 'conteudo' => $padrao, 'atualizado_em' => null];
+}
+
+/**
+ * Obtém todos os 4 templates (LC, LA, LR, LCEC) disponíveis para o usuário
+ */
+function obterTodosTemplatesObservacoesLicenca(?string $usuarioId = null): array
+{
+    $tipos = ['LC', 'LA', 'LR', 'LCEC'];
+    $res = [];
+    foreach ($tipos as $t) {
+        $res[$t] = obterTemplateObservacoesLicenca($t, $usuarioId);
+    }
+    return $res;
+}
+
+/**
+ * Realiza a interpolação das variáveis e tags dinâmicas no template de observações
+ */
+function compilarObservacoesLicenca(string $template, array $dados, string $tipo = 'LC'): string
+{
+    $tipo = strtoupper(trim($tipo ?: ($dados['tipo_licenca'] ?? 'LC')));
+    if (!in_array($tipo, ['LC', 'LA', 'LR', 'LCEC'], true)) {
+        $tipo = 'LC';
+    }
+
+    // 1 - Data de Batimento de Quilha
+    $anoQuilha = !empty($dados['ano_construcao']) ? $dados['ano_construcao'] : (!empty($dados['ano']) ? $dados['ano'] : (!empty($dados['data_batimento_quilha']) ? date('Y', strtotime($dados['data_batimento_quilha'])) : date('Y')));
+    if (is_numeric($anoQuilha)) {
+        $anoQuilha = (string)(int)$anoQuilha;
+    } else {
+        $anoQuilha = trim((string)$anoQuilha);
+    }
+    if (empty($anoQuilha)) $anoQuilha = date('Y');
+
+    // 2 - Data do Evento conforme modalidade
+    $anoAtual = date('Y');
+    if (!empty($dados['data_emissao'])) {
+        $dtEmissao = DateTimeImmutable::createFromFormat('!Y-m-d', $dados['data_emissao']);
+        if ($dtEmissao) $anoAtual = $dtEmissao->format('Y');
+    }
+
+    switch ($tipo) {
+        case 'LA':
+            $anoEvento = $anoAtual;
+            break;
+        case 'LR':
+            $anoEvento = $anoAtual;
+            break;
+        case 'LCEC':
+            $anoEvento = $anoAtual;
+            if (!empty($dados['data_termino_construcao'])) {
+                $dtTerm = DateTimeImmutable::createFromFormat('!Y-m-d', $dados['data_termino_construcao']);
+                if ($dtTerm) $anoEvento = $dtTerm->format('Y');
+            }
+            break;
+        case 'LC':
+        default:
+            $anoEvento = !empty($dados['data_validade']) ? date('Y', strtotime($dados['data_validade'])) : date('Y', strtotime('+1 year'));
+            break;
+    }
+
+    // 3 - Relatório de Análise de Planos (RAP)
+    $numeroRap = trim((string)($dados['relatorio_numero'] ?? $dados['numero_rap'] ?? $dados['rap_numero'] ?? ''));
+    if ($numeroRap === '') {
+        $numeroRap = 'RC-RAP' . date('ymd') . '/' . $anoAtual;
+    }
+
+    // 5 - Dimensões
+    $compTotalRaw = $dados['comprimento_total'] ?? null;
+    $compCascoRaw = $dados['comprimento_casco'] ?? $dados['comprimento_pp'] ?? $dados['comprimento_lpp'] ?? null;
+
+    $fmtMetros = function($val) {
+        if ($val === null || $val === '' || !is_numeric($val)) return null;
+        $num = (float)$val;
+        return number_format($num, 3, ',', '');
+    };
+
+    $compTotalFmt = $fmtMetros($compTotalRaw) ?: '32,560';
+    $compCascoFmt = $fmtMetros($compCascoRaw) ?: ($compTotalFmt !== '32,560' ? $compTotalFmt : '26,950');
+
+    // 6 - Lotação Máxima a Bordo
+    $tripulantes = (int)($dados['numero_tripulantes'] ?? 0);
+    if ($tripulantes <= 0) $tripulantes = 6;
+    $tripFmt = str_pad((string)$tripulantes, 2, '0', STR_PAD_LEFT);
+
+    $passageiros = (int)($dados['numero_passageiros'] ?? 0);
+    $porteBruto = !empty($dados['porte_bruto']) ? (float)$dados['porte_bruto'] : 30.0;
+    $porteBrutoFmt = number_format($porteBruto, 0, ',', '');
+
+    $passTurismo = !empty($dados['passageiros_turismo']) ? (int)$dados['passageiros_turismo'] : null;
+    $passRegular = !empty($dados['passageiros_regular']) ? (int)$dados['passageiros_regular'] : null;
+    $passMisto   = !empty($dados['passageiros_misto'])   ? (int)$dados['passageiros_misto']   : null;
+
+    if ($passTurismo === null || $passRegular === null || $passMisto === null) {
+        if ($passageiros > 0) {
+            $passRegular = $passageiros;
+            $passTurismo = (int)round($passageiros * 1.514);
+            $passMisto   = (int)round($passageiros * 0.624);
+        } else {
+            $passTurismo = 262;
+            $passRegular = 173;
+            $passMisto   = 108;
+        }
+        if ($passageiros === 173) {
+            $passTurismo = 262;
+            $passMisto   = 108;
+        }
+    }
+
+    // 7 - Tempo de Singradura
+    $tempoSingradura = trim((string)($dados['tempo_singradura'] ?? 'inferior a 12 h'));
+    if ($tempoSingradura === '') $tempoSingradura = 'inferior a 12 h';
+
+    // 8 - Restrições de Operação e Carga
+    $restricaoPorao = trim((string)($dados['restricao_carga'] ?? 'A embarcação não poderá transportar carga nos porões.'));
+    if ($restricaoPorao === '') $restricaoPorao = 'A embarcação não poderá transportar carga nos porões.';
+
+    // Dicionário de substituição de tags
+    $mapaTags = [
+        '{ano_quilha}' => $anoQuilha,
+        '{ano_construcao}' => $anoQuilha,
+        '{ano_evento}' => $anoEvento,
+        '{ano_conclusao}' => $anoEvento,
+        '{ano_alteracao}' => $anoEvento,
+        '{ano_reclassificacao}' => $anoEvento,
+        '{ano_conclusao_lcec}' => $anoEvento,
+        '{numero_rap}' => $numeroRap,
+        '{relatorio_numero}' => $numeroRap,
+        '{rap}' => $numeroRap,
+        '{comprimento_total}' => $compTotalFmt,
+        '{ct}' => $compTotalFmt,
+        '{comprimento_casco}' => $compCascoFmt,
+        '{comprimento_regra}' => $compCascoFmt,
+        '{l}' => $compCascoFmt,
+        '{tripulantes}' => $tripFmt,
+        '{numero_tripulantes}' => $tripFmt,
+        '{passageiros_turismo}' => $passTurismo,
+        '{passageiros_regular}' => $passRegular,
+        '{passageiros_misto}' => $passMisto,
+        '{lotacao_turismo}' => $passTurismo,
+        '{lotacao_regular}' => $passRegular,
+        '{lotacao_misto}' => $passMisto,
+        '{porte_bruto}' => $porteBrutoFmt,
+        '{carga}' => $porteBrutoFmt,
+        '{tempo_singradura}' => $tempoSingradura,
+        '{restricao_carga}' => $restricaoPorao,
+    ];
+
+    return str_ireplace(array_keys($mapaTags), array_values($mapaTags), $template);
+}
+
+/**
+ * Gera as observações técnicas oficiais da licença (NORMAM-202 Anexo 3-A),
+ * priorizando modelo personalizado pelo analista com interpolação dinâmica dos dados do formulário.
+ *
+ * @param array $dados Dados da embarcação, licença, análise ou vistoria
+ * @param string $tipo Tipo da licença (LC, LA, LR, LCEC)
+ * @param string|null $usuarioId ID do analista logado (opcional)
+ * @return string Texto formatado contendo os itens oficiais
+ */
+function gerarObservacoesPadraoLicenca(array $dados, string $tipo = 'LC', ?string $usuarioId = null): string
+{
+    $tipo = strtoupper(trim($tipo ?: ($dados['tipo_licenca'] ?? 'LC')));
+    if (!in_array($tipo, ['LC', 'LA', 'LR', 'LCEC'], true)) {
+        $tipo = 'LC';
+    }
+
+    $templateInfo = obterTemplateObservacoesLicenca($tipo, $usuarioId);
+    return compilarObservacoesLicenca($templateInfo['conteudo'], $dados, $tipo);
+}
+
 // Sistema de Gestão da Qualidade (ISO 9001:2015 & NORMAM)
 require_once __DIR__ . '/sgq.php';
+

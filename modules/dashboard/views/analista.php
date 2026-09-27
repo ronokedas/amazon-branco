@@ -278,28 +278,53 @@ $statusMap = [
                 </section>
             <?php endif; ?>
 
-            <!-- Acesso rápido a Normas e Referências -->
+            <!-- Acesso rápido a Documentos Técnicos Autorizados & Normas -->
             <section class="analista-card analista-card--normas">
                 <div class="analista-card__header">
-                    <h3><i class="fa-solid fa-book-bookmark"></i> Referências Rápidas</h3>
+                    <h3><i class="fa-solid fa-file-shield"></i> Modelos Técnicos & Normas</h3>
+                    <p>Atalhos diretos para os modelos autorizados para análise.</p>
                 </div>
                 <div class="normas-links">
-                    <a href="<?= APP_URL ?>configuracoes/normam202" class="norma-link-item">
-                        <i class="fa-solid fa-list-check"></i>
-                        <div>
-                            <strong>NORMAM-202/DPC</strong>
-                            <small>Embarcações na Navegação Interior</small>
-                        </div>
-                        <i class="fa-solid fa-chevron-right"></i>
-                    </a>
-                    <a href="<?= APP_URL ?>documentacao/lc" class="norma-link-item">
-                        <i class="fa-solid fa-award"></i>
-                        <div>
-                            <strong>Licenças de Construção (LC)</strong>
-                            <small>Emissão e homologação técnica</small>
-                        </div>
-                        <i class="fa-solid fa-chevron-right"></i>
-                    </a>
+                    <?php if (podeAcessar('doc_nar')): ?>
+                        <a href="<?= APP_URL ?>documentacao/nar" class="norma-link-item">
+                            <i class="fa-solid fa-ruler-combined" style="color: #56e0ad;"></i>
+                            <div>
+                                <strong>Notas de Arqueação (AM-NAR)</strong>
+                                <small>Cálculos e notas de arqueação técnica</small>
+                            </div>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                    <?php endif; ?>
+                    <?php if (podeAcessar('doc_lc')): ?>
+                        <a href="<?= APP_URL ?>documentacao/lc" class="norma-link-item">
+                            <i class="fa-solid fa-award" style="color: #60a5fa;"></i>
+                            <div>
+                                <strong>Licenças Técnicas (LC, LA, LR, LCEC)</strong>
+                                <small>Emissão e homologação de licenças navais</small>
+                            </div>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                    <?php endif; ?>
+                    <?php if (podeAcessar('doc_lp')): ?>
+                        <a href="<?= APP_URL ?>documentacao/lp" class="norma-link-item">
+                            <i class="fa-solid fa-file-lines" style="color: #fbbf24;"></i>
+                            <div>
+                                <strong>Licença Provisória (LP)</strong>
+                                <small>Emissão de licenças provisórias</small>
+                            </div>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                    <?php endif; ?>
+                    <?php if (podeAcessar('configuracoes_normam202') || podeAcessar('analise_planos')): ?>
+                        <a href="<?= APP_URL ?>analises-planos/referencias" class="norma-link-item">
+                            <i class="fa-solid fa-book-bookmark" style="color: #c084fc;"></i>
+                            <div>
+                                <strong>Banco de Requisitos NORMAM</strong>
+                                <small>Consulta rápida à NORMAM-202, 211 e 212</small>
+                            </div>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                    <?php endif; ?>
                 </div>
             </section>
         </aside>

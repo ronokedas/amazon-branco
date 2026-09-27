@@ -12,7 +12,7 @@ require_once __DIR__ . '/../../../includes/functions.php';
 require_once __DIR__ . '/../../../includes/aprovacao_ui.php';
 
 verificar_sessao();
-if (!podeAcessar('documentacao')) {
+if (!podeAcessar('doc_lc')) {
     header('Location: ' . APP_URL . 'dashboard?erro=sem_permissao');
     exit;
 }
@@ -23,6 +23,7 @@ $filtro_tipo = $_GET['tipo_licenca'] ?? '';
 
 $sql = "SELECT c.id, c.numero_lc, c.nome_embarcacao, c.tipo_licenca, 
                c.data_emissao, c.data_validade, c.status, c.assinado, c.criado_em,
+               c.responsavel_assinatura_id,
                c.analise_id, ap.numero as relatorio_rap_numero
         FROM certificados_lc c
         LEFT JOIN analises_planos ap ON ap.id = c.analise_id
@@ -75,6 +76,12 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
         <a href="<?php echo APP_URL; ?>documentacao/lc?tipo_licenca=LA" class="btn btn-sm <?php echo $filtro_tipo === 'LA' ? 'btn-primary' : 'btn-outline-secondary'; ?>">LA · Alteração</a>
         <a href="<?php echo APP_URL; ?>documentacao/lc?tipo_licenca=LR" class="btn btn-sm <?php echo $filtro_tipo === 'LR' ? 'btn-primary' : 'btn-outline-secondary'; ?>">LR · Reclassificação</a>
         <a href="<?php echo APP_URL; ?>documentacao/lc?tipo_licenca=LCEC" class="btn btn-sm <?php echo $filtro_tipo === 'LCEC' ? 'btn-primary' : 'btn-outline-secondary'; ?>">LCEC · Já Construída</a>
+    </div>
+
+    <!-- Informação autodidática NORMAM -->
+    <div class="alert alert-light border small text-muted mb-3 py-2 px-3" style="background: rgba(var(--cor-primaria-rgb, 13, 110, 253), 0.04); border-left: 4px solid var(--cor-primaria) !important;">
+        <strong><i class="fas fa-info-circle text-primary me-1"></i> Informação Regulatória NORMAM-202:</strong>
+        As Licenças Técnicas (LC, LA, LR e LCEC) são geradas pelo <strong>Analista de Planos / Engenheiro Naval</strong> a partir da aprovação do <strong>RAP (Relatório de Análise de Planos)</strong> e autorizam a execução de obras no estaleiro ou regularização de projeto. Elas diferem dos <strong>Certificados Estatutários de Navegabilidade</strong> (CSN, CNBL, CNARQ), que atestam a navegabilidade e são emitidos após a vistoria técnica nas modalidades Condicional, Provisório e Definitivo.
     </div>
 
     <div class="card mb-3">
@@ -173,7 +180,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                 <div class="d-flex gap-1" style="flex-wrap: nowrap;">
                                     <a href="<?php echo APP_URL; ?>documentacao/lc/form?id=<?php echo h($c['id']); ?>" class="btn btn-sm btn-primary" title="Editar"><i class="fas fa-edit"></i></a>
                                     <a href="<?php echo APP_URL; ?>documentacao/lc/pdf?id=<?php echo h($c['id']); ?>" class="btn btn-sm btn-secondary" title="Gerar PDF" target="_blank"><i class="fas fa-file-pdf"></i></a>
-                                    <?php renderBotaoAprovacaoDocumento($pdo,'LC',$c['id'],$c['status'],(bool)$c['assinado']); ?>
+                                    <?php renderBotaoAprovacaoDocumento($pdo, $c['tipo_licenca'] ?: 'LC', $c['id'], $c['status'], (bool)$c['assinado'], (int)($c['responsavel_assinatura_id'] ?: 0)); ?>
                                     <form method="POST" action="<?php echo APP_URL; ?>documentacao/lc/actions" style="display:inline;" onsubmit="return confirm('Enviar licença <?php echo h(addslashes($c['numero_lc'])); ?> por e-mail?')">
                                         <input type="hidden" name="action" value="enviar_certificado">
                                         <input type="hidden" name="id" value="<?php echo h($c['id']); ?>">

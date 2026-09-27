@@ -8,8 +8,37 @@ require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
-// Verificar autenticacao
-exigirAcesso('documentacao');
+// Verificar autenticacao e redirecionar para o primeiro modelo disponivel
+verificar_sessao();
+$temAlgumDoc = podeAcessar('documentacao')
+    || podeAcessar('doc_csn')
+    || podeAcessar('doc_cnbl')
+    || podeAcessar('doc_cnarq')
+    || podeAcessar('doc_nar')
+    || podeAcessar('doc_lp')
+    || podeAcessar('doc_lc')
+    || podeAcessar('doc_cht');
+
+if (!$temAlgumDoc) {
+    exigirAcesso('documentacao');
+}
+
+// Redirecionamento inteligente para a tela permitida do usuario
+if (podeAcessar('doc_csn')) {
+    redirecionar(APP_URL . 'documentacao/certificados');
+} elseif (podeAcessar('doc_nar')) {
+    redirecionar(APP_URL . 'documentacao/nar');
+} elseif (podeAcessar('doc_lc')) {
+    redirecionar(APP_URL . 'documentacao/lc');
+} elseif (podeAcessar('doc_lp')) {
+    redirecionar(APP_URL . 'documentacao/lp');
+} elseif (podeAcessar('doc_cnbl')) {
+    redirecionar(APP_URL . 'documentacao/cnbl');
+} elseif (podeAcessar('doc_cnarq')) {
+    redirecionar(APP_URL . 'documentacao/cnarq');
+} elseif (podeAcessar('doc_cht')) {
+    redirecionar(APP_URL . 'documentacao/cht');
+}
 
 $titulo_page = 'Documentação - ERP Sistema';
 require_once __DIR__ . '/../../includes/header.php';

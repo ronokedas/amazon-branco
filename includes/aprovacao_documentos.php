@@ -12,6 +12,10 @@ function aprovacaoDocumentoMapas(): array
         'CNARQ' => ['table' => 'certificados_cnarq', 'number' => 'numero', 'pdf' => 'documentacao/cnarq/pdf', 'label' => 'Certificado CNARQ'],
         'LP' => ['table' => 'certificados_lp', 'number' => 'numero_lp', 'pdf' => 'documentacao/lp/pdf', 'label' => 'Licenca Provisoria'],
         'LC' => ['table' => 'certificados_lc', 'number' => 'numero_lc', 'pdf' => 'documentacao/lc/pdf', 'label' => 'Licenca de Construcao'],
+        'LA' => ['table' => 'certificados_lc', 'number' => 'numero_lc', 'pdf' => 'documentacao/lc/pdf', 'label' => 'Licenca de Alteracao'],
+        'LR' => ['table' => 'certificados_lc', 'number' => 'numero_lc', 'pdf' => 'documentacao/lc/pdf', 'label' => 'Licenca de Reclassificacao'],
+        'LCEC' => ['table' => 'certificados_lc', 'number' => 'numero_lc', 'pdf' => 'documentacao/lc/pdf', 'label' => 'Licenca de Construcao de Embarcacao Ja Construida'],
+        'NAR' => ['table' => 'certificados_nar', 'number' => 'numero', 'pdf' => 'documentacao/nar/pdf', 'label' => 'Nota de Arqueacao'],
         'CHT' => ['table' => 'certificados_cht', 'number' => 'numero_certificado', 'pdf' => 'documentacao/cht/pdf', 'label' => 'Certificado CHT'],
         'RELATORIO' => ['table' => 'vistorias', 'number' => 'numero', 'pdf' => 'vistorias/relatorio_pdf', 'label' => 'Relatorio de Vistoria'],
         'PARECER_PLANOS' => ['table' => 'analise_planos_pareceres', 'number' => 'versao', 'pdf' => 'analises_planos/parecer_pdf', 'label' => 'Parecer de Analise de Planos'],
@@ -183,9 +187,28 @@ function aprovacaoDocumentoFinalizarEstado(PDO $pdo, string $tipo, string $id, i
         throw new RuntimeException('Pareceres não podem ser publicados pela aprovação genérica.');
     }
 
-    $stmt = $pdo->prepare("UPDATE {$mapa['table']} SET responsavel_assinatura_id = :responsavel, assinatura_imagem = :assinatura, assinatura_ip = :ip, assinatura_em = :data, assinado = 1, status = 'assinado', caminho_arquivo_pdf = :caminho, hash_arquivo_pdf = :hash WHERE id = :id AND assinado = 0 AND status = 'emitido'");
+    $stmtRespData = $pdo->prepare("SELECT nome_completo, cargo_titulo, registro_profissional FROM responsaveis_assinatura WHERE id = :id");
+    $stmtRespData->execute([':id' => $responsavelId]);
+    $respInfo = $stmtRespData->fetch(PDO::FETCH_ASSOC) ?: [];
+
+    $stmt = $pdo->prepare("UPDATE {$mapa['table']} SET 
+        responsavel_assinatura_id = :responsavel, 
+        assinante_nome = COALESCE(NULLIF(assinante_nome, ''), :nome),
+        assinante_titulo = COALESCE(NULLIF(assinante_titulo, ''), :titulo),
+        assinante_registro = COALESCE(NULLIF(assinante_registro, ''), :registro),
+        assinatura_imagem = :assinatura, 
+        assinatura_ip = :ip, 
+        assinatura_em = :data, 
+        assinado = 1, 
+        status = 'assinado', 
+        caminho_arquivo_pdf = :caminho, 
+        hash_arquivo_pdf = :hash 
+    WHERE id = :id AND assinado = 0 AND status = 'emitido'");
     $stmt->execute([
         ':responsavel' => $responsavelId,
+        ':nome' => $respInfo['nome_completo'] ?? null,
+        ':titulo' => $respInfo['cargo_titulo'] ?? null,
+        ':registro' => $respInfo['registro_profissional'] ?? null,
         ':assinatura' => $audit['assinatura_imagem_data'],
         ':ip' => $audit['ip'],
         ':data' => $audit['aprovado_em_local'],
@@ -240,17 +263,23 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input, array $autentic
     try {
         $documento = aprovacaoDocumentoCarregar($pdo, $tipo, $id, true);
         aprovacaoDocumentoValidarEstado($tipo, $documento);
-        if ($tipo === 'LC' && !empty($documento['analise_id'])) {
-            if ((int)($documento['responsavel_assinatura_id'] ?? 0) !== $responsavelId) {
-                throw new RuntimeException('A licença deve ser assinada pelo responsável técnico definido na análise.');
-            }
+        $cargoUsuario = (string)($_SESSION['usuario_cargo'] ?? (function_exists('getCargo') ? getCargo() : ''));
+        if (in_array($tipo, ['LC', 'LA', 'LR', 'LCEC'], true) && !empty($documento['analise_id'])) {
             $stmtVinculoAnalise = $pdo->prepare("SELECT ra.usuario_id
                 FROM responsaveis_assinatura ra
                 INNER JOIN analises_planos ap ON ap.analista_id=ra.usuario_id
                 WHERE ra.id=:responsavel AND ap.id=:analise AND ra.ativo=1 LIMIT 1");
             $stmtVinculoAnalise->execute([':responsavel'=>$responsavelId, ':analise'=>$documento['analise_id']]);
-            if ((string)$stmtVinculoAnalise->fetchColumn() !== $userId) {
-                throw new RuntimeException('O admin não pode aplicar a assinatura do analista. O responsável deve assinar em sua própria conta.');
+            $analistaUserId = (string)$stmtVinculoAnalise->fetchColumn();
+            if ($analistaUserId !== '' && $analistaUserId !== $userId && $cargoUsuario === 'ANALISTA') {
+                throw new RuntimeException('A licença deve ser assinada pelo analista responsável pelo processo.');
+            }
+        }
+        if ($cargoUsuario === 'ANALISTA') {
+            $stmtCheckProprio = $pdo->prepare("SELECT usuario_id FROM responsaveis_assinatura WHERE id=:id AND ativo=1");
+            $stmtCheckProprio->execute([':id'=>$responsavelId]);
+            if ((string)$stmtCheckProprio->fetchColumn() !== $userId) {
+                throw new RuntimeException('Analistas somente podem assinar documentos com seu próprio perfil de assinatura cadastrado.');
             }
         }
         if (in_array($tipo, ['CSN','CNBL','CNARQ'], true)) {
@@ -312,8 +341,10 @@ function aprovarDocumentoEletronicamente(PDO $pdo, array $input, array $autentic
     $baseRelative = 'storage/documentos_aprovados/' . $year . '/' . strtolower($tipo) . '/';
     $baseAbsolute = __DIR__ . '/../' . $baseRelative;
     $tmpDir = __DIR__ . '/../tmp/pdfs/';
-    if (!is_dir($tmpDir) && !mkdir($tmpDir, 0750, true) && !is_dir($tmpDir)) throw new RuntimeException('Falha ao criar diretorio temporario.');
-    if (!is_dir($baseAbsolute) && !mkdir($baseAbsolute, 0750, true) && !is_dir($baseAbsolute)) throw new RuntimeException('Falha ao criar diretorio de documentos.');
+    if (!is_dir($tmpDir) && !mkdir($tmpDir, 0777, true) && !is_dir($tmpDir)) throw new RuntimeException('Falha ao criar diretorio temporario.');
+    @chmod($tmpDir, 0777);
+    if (!is_dir($baseAbsolute) && !mkdir($baseAbsolute, 0777, true) && !is_dir($baseAbsolute)) throw new RuntimeException('Falha ao criar diretorio de documentos.');
+    @chmod($baseAbsolute, 0777);
 
     $originalTmp = $tmpDir . $approvalId . '_original.pdf';
     $visualTmp = $tmpDir . $approvalId . '_audit.pdf';

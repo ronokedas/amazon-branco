@@ -12,7 +12,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 $requisicaoExterna = !isset($salvar_pdf_caminho);
 if ($requisicaoExterna) {
     verificar_sessao();
-    if (!podeAcessar('vistorias')) {
+    if (!podeAcessar('vistorias') && !podeAcessar('analise_planos')) {
         http_response_code(403);
         exit('Acesso negado.');
     }

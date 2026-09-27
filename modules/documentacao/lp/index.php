@@ -13,7 +13,7 @@ require_once __DIR__ . '/../../../includes/aprovacao_ui.php';
 
 // Verificar permissão
 verificar_sessao();
-if (!podeAcessar('documentacao')) {
+if (!podeAcessar('doc_lp')) {
     header('Location: ' . APP_URL . 'dashboard?erro=sem_permissao');
     exit;
 }
@@ -25,7 +25,8 @@ $filtro_tipo = $_GET['tipo_licenca'] ?? '';
 
 // Construir query
 $sql = "SELECT c.id, c.numero_lp, c.nome_embarcacao, c.tipo_licenca, 
-               c.data_emissao, c.validade_data, c.status, c.assinado, c.criado_em
+               c.data_emissao, c.validade_data, c.status, c.assinado, c.criado_em,
+               c.responsavel_assinatura_id
         FROM certificados_lp c
         WHERE c.ativo = 1";
 
@@ -186,7 +187,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                        class="btn btn-sm btn-secondary" title="Gerar PDF" target="_blank">
                                         <i class="fas fa-file-pdf"></i>
                                     </a>
-                                    <?php renderBotaoAprovacaoDocumento($pdo,'LP',$c['id'],$c['status'],(bool)$c['assinado']); ?>
+                                    <?php renderBotaoAprovacaoDocumento($pdo, 'LP', $c['id'], $c['status'], (bool)$c['assinado'], (int)($c['responsavel_assinatura_id'] ?: 0)); ?>
 
                                     <!-- Enviar por E-mail -->
                                     <form method="POST" action="<?php echo APP_URL; ?>documentacao/lp/actions" 

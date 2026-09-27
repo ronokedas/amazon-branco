@@ -164,7 +164,7 @@ try {
     $unidade = $pdo->query("SELECT id FROM protocolo_unidades_maritimas WHERE ativo=1 LIMIT 1")->fetchColumn();
     if (!$unidade) {
         $unidade = gerarUUID();
-        $pdo->prepare("INSERT INTO protocolo_unidades_maritimas (id, nome, sigla, ativo, criado_em) VALUES (?, 'Capitania Fluvial da Amazônia Ocidental', 'CFAOC', 1, NOW())")->execute([$unidade]);
+        $pdo->prepare("INSERT INTO protocolo_unidades_maritimas (id, codigo, nome, tipo, cidade, uf, ativo, criado_em) VALUES (?, 'CFAOC', 'Capitania Fluvial da Amazônia Ocidental', 'CAPITANIA', 'Manaus', 'AM', 1, NOW())")->execute([$unidade]);
     }
     $pdo->prepare("INSERT INTO protocolo_dossies (id, numero, embarcacao_id, cliente_id, analise_id, assunto, unidade_maritima_id, criado_por, status, criado_em)
                    VALUES (?, ?, ?, ?, ?, 'Dossiê de Aprovação de Planos de Construção', ?, ?, 'EM_PREPARACAO', NOW())")

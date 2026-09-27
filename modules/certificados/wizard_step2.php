@@ -142,22 +142,25 @@ if ($responsavel_id_selecionado === '' && count($responsaveis) === 1) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $vistoria_id_post = $_POST['vistoria_id'] ?? '';
     if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true) && $vistoria_id_post !== '') {
-        $dadosValidadeCsn = buscarDadosVistoriaCertificado($pdo, $vistoria_id_post);
-        $validadeCalculadaCsn = $dadosValidadeCsn ? calcularValidadeCsnDoRelatorio($dadosValidadeCsn) : null;
-        if ($validadeCalculadaCsn === null) {
-            $erro = 'O relatório precisa ter prazo de validade de 60 ou 90 dias antes de gerar o ' . $modelo . '.';
-        } else {
-            $data_validade_valor = $validadeCalculadaCsn;
+        $dadosEmbPost = buscarDadosVistoriaCertificado($pdo, $vistoria_id_post);
+        if ($dadosEmbPost) {
+            $elegibilidade = avaliarElegibilidadeModalidadeCertificado($pdo, $vistoria_id_post, $tipo, $dadosEmbPost['embarcacao_id'] ?? null);
+            if (empty($elegibilidade['permitido'])) {
+                $erro = $elegibilidade['mensagem'];
+            } else {
+                $calcVal = calcularValidadeCertificadoPorModalidade($pdo, $modelo, $tipo, $dadosEmbPost, $_POST['data_emissao'] ?? null);
+                if (empty($data_validade_valor) || in_array($tipo, ['Provisório', 'Definitivo'], true)) {
+                    $data_validade_valor = $calcVal['data_validade'] ?? $data_validade_valor;
+                }
+            }
         }
-    }
-    if ($vistoria_id_post !== '') {
+        if ($erro === '' && !certificadoModeloPermitidoPorVistoria($pdo, (string)$vistoria_id_post, $modelo)) {
+            $erro = certificadoMensagemServicoObrigatorio($modelo);
+        }
+    } elseif ($vistoria_id_post !== '') {
         $liberacaoCertificacao = avaliarLiberacaoCertificacao($pdo, $vistoria_id_post);
         if (empty($liberacaoCertificacao['permitido'])) {
             $erro = $liberacaoCertificacao['mensagem'];
-        }
-        if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true)
-            && !certificadoModeloPermitidoPorVistoria($pdo, (string)$vistoria_id_post, $modelo)) {
-            $erro = certificadoMensagemServicoObrigatorio($modelo);
         }
     }
 
@@ -397,8 +400,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $dados_preenchidos = buscarDadosVistoriaCertificado($pdo, $vistoria_id);
-if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true) && $dados_preenchidos && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-    $data_validade_valor = calcularValidadeCsnDoRelatorio($dados_preenchidos) ?? '';
+$elegibilidade_atual = null;
+if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true) && $dados_preenchidos) {
+    $elegibilidade_atual = avaliarElegibilidadeModalidadeCertificado($pdo, $vistoria_id, $tipo, $dados_preenchidos['embarcacao_id'] ?? null);
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        $calcValGet = calcularValidadeCertificadoPorModalidade($pdo, $modelo, $tipo, $dados_preenchidos);
+        $data_validade_valor = $calcValGet['data_validade'] ?? '';
+    }
 }
 $relatorio_label = '';
 $relatorio_vinculado = !empty($agendamento_id);
@@ -437,6 +445,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     <?php if (!empty($erro)): ?>
         <div class="alert alert-danger">
             <i class="fa-solid fa-circle-xmark"></i> <?= h($erro) ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($elegibilidade_atual) && empty($elegibilidade_atual['permitido']) && empty($erro)): ?>
+        <div class="alert alert-warning">
+            <i class="fa-solid fa-triangle-exclamation"></i> <strong>Atenção às regras da NORMAM para <?= h($tipo) ?>:</strong><br>
+            <?= h($elegibilidade_atual['mensagem']) ?>
         </div>
     <?php endif; ?>
 
@@ -569,7 +584,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <label for="data_validade"><i class="fas fa-calendar-check"></i> Validade <span class="text-danger">*</span></label>
                                 <input type="date" name="data_validade" id="data_validade" class="form-control" value="<?= h($data_validade_valor) ?>" required <?= in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true) ? 'readonly' : '' ?>>
                                 <?php if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true)): ?>
-                                    <small>Calculada automaticamente pela data e pelo prazo do relatório de vistoria.</small>
+                                    <?php if ($tipo === 'Condicional'): ?>
+                                        <small class="text-muted"><i class="fas fa-clock"></i> 60 ou 90 dias (máx. 90d NORMAM).</small>
+                                    <?php elseif ($tipo === 'Provisório'): ?>
+                                        <small class="text-muted"><i class="fas fa-hourglass-half"></i> 180d da vistoria em seco deduzindo condicional.</small>
+                                    <?php else: ?>
+                                        <small class="text-muted"><i class="fas fa-calendar-check"></i> Validade plena de <?= !empty($dados_preenchidos) ? certificadoAnosValidadePorTipoEmbarcacao($dados_preenchidos['tipo_embarcacao_nome'] ?? $dados_preenchidos['tipo_embarcacao'] ?? '') : '5 a 10' ?> anos.</small>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
@@ -609,6 +630,22 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </div>
                     <?php endif; ?>
 
+                    <?php if ($tipo === 'Provisório' && $dados_preenchidos): 
+                        $calcProvBox = calcularValidadeCertificadoPorModalidade($pdo, $modelo, 'Provisório', $dados_preenchidos);
+                        $saldoProvBox = $calcProvBox['saldo_provisorio'] ?? null;
+                    ?>
+                        <div class="alert alert-info mt-3 p-3" style="border-left: 4px solid var(--cor-primaria);">
+                            <h6 class="mb-1 fw-bold"><i class="fas fa-calculator me-1"></i> Cálculo NORMAM do Certificado Provisório</h6>
+                            <div class="small">
+                                • Data base da vistoria em seco: <strong><?= !empty($saldoProvBox['data_vistoria_seco']) ? date('d/m/Y', strtotime($saldoProvBox['data_vistoria_seco'])) : 'Não informada' ?></strong><br>
+                                • Prazo total estatutário NORMAM: <strong>180 dias (6 meses)</strong><br>
+                                • Dias já usufruídos em Certificado Condicional prévio: <strong><?= (int)($saldoProvBox['dias_usados_condicional'] ?? 0) ?> dias</strong><br>
+                                • Saldo remanescente para o Provisório: <strong><?= (int)($saldoProvBox['dias_remanescentes'] ?? 180) ?> dias</strong> (Vencimento máximo: <strong><?= !empty($saldoProvBox['data_validade_maxima']) ? date('d/m/Y', strtotime($saldoProvBox['data_validade_maxima'])) : '-' ?></strong>)<br>
+                                <span class="text-muted"><i class="fas fa-circle-info"></i> Nota regulamentar: Permite apenas pendência documental de inscrição na Capitania (TI/PRPM). O projeto RAP deve estar aprovado.</span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="cert-action-bar">
                         <a href="<?= APP_URL ?>certificados/wizard?modelo=<?= urlencode($modelo) ?><?= !empty($agendamento_id) ? '&agendamento_id=' . urlencode($agendamento_id) : '' ?><?= !empty($vistoria_id) ? '&vistoria_id=' . urlencode($vistoria_id) : '' ?>" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Voltar
@@ -641,7 +678,17 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <?php if ($tipo === 'Definitivo'): ?>
                 <div class="cert-help-note">
                     <i class="fas fa-circle-info"></i>
-                    <span>Definitivo não pode ser emitido com relatório aprovado com exigências.</span>
+                    <span><strong>Definitivo:</strong> Exige projeto aprovado e 100% das exigências da vistoria cumpridas, com inscrição concluída.</span>
+                </div>
+            <?php elseif ($tipo === 'Provisório'): ?>
+                <div class="cert-help-note">
+                    <i class="fas fa-hourglass-half"></i>
+                    <span><strong>Provisório:</strong> 6 meses da vistoria em seco deduzindo o condicional. Permite apenas exigência de inscrição (TI/PRPM).</span>
+                </div>
+            <?php elseif ($tipo === 'Condicional'): ?>
+                <div class="cert-help-note">
+                    <i class="fas fa-clock"></i>
+                    <span><strong>Condicional:</strong> 60 a 90 dias (máx. 90d). Permite exigências comuns na vistoria e no RAP, sem A/S.</span>
                 </div>
             <?php endif; ?>
         </aside>

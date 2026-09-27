@@ -24,9 +24,22 @@ $categoriasPermissoes = [
             'analise_planos' => ['Análise de Planos', 'Projetos navais, estabilidade e arqueação'],
             'relatorios_aprovacao' => ['Relatórios em Aprovação', 'Pareceres técnicos de vistorias pendentes'],
             'protocolos_documentais' => ['Protocolos Documentais', 'Dossiês, custódia e trâmite na Capitania'],
-            'certificados' => ['Certificados', 'Consulta e emissão de certificados navais'],
+            'certificados' => ['Certificados (Módulo Geral)', 'Consulta geral e emissão de certificados navais'],
             'vencimentos_certificados' => ['Vencimentos Navais', 'Monitoramento e alerta de certificados a vencer'],
-            'documentacao' => ['Documentação', 'Workspace de laudos, plantas e arquivos'],
+            'documentacao' => ['Documentação (Módulo Base)', 'Workspace de laudos, plantas e arquivos'],
+        ]
+    ],
+    'DOCUMENTOS_SUB' => [
+        'titulo' => 'Modelos Estatutários — Submódulos de Documentos',
+        'icone' => 'fa-solid fa-file-shield',
+        'itens' => [
+            'doc_csn' => ['Certificados (CSN)', 'Certificados de Segurança da Navegação'],
+            'doc_cnbl' => ['Certificado Nacional de Borda Livre (CNBL)', 'Linhas de carga e borda livre'],
+            'doc_cnarq' => ['Certificado Nacional de Arqueação (CNARQ)', 'Certificados de arqueação oficial'],
+            'doc_nar' => ['Notas de Arqueação (AM-NAR)', 'Emissão e cálculo de notas de arqueação'],
+            'doc_lp' => ['Licença Provisória (LP)', 'Emissão de Licenças Provisórias'],
+            'doc_lc' => ['Licenças Técnicas (LC, LA, LR, LCEC)', 'Licença de Construção, Alteração, Reclassificação e Constr. Já Construída'],
+            'doc_cht' => ['Certificado de Habilitação Técnica (CHT)', 'Habilitação técnica naval'],
         ]
     ],
     'CADASTROS' => [
@@ -34,6 +47,7 @@ $categoriasPermissoes = [
         'icone' => 'fa-solid fa-folder-open',
         'itens' => [
             'embarcacoes' => ['Embarcações', 'Cadastro e dados técnicos das embarcações'],
+            'clientes' => ['Clientes', 'Cadastro unificado de clientes'],
             'armadores' => ['Armadores', 'Cadastro de armadores e empresas de navegação'],
             'proprietarios' => ['Proprietários', 'Cadastro de proprietários e operadores'],
             'despachantes' => ['Despachantes', 'Cadastro de despachantes marítimos parceiros'],
@@ -384,13 +398,23 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
 <script>
 const padroesCargos = {
-    'VISTORIADOR': ['dashboard', 'vistorias', 'agendamentos', 'embarcacoes', 'documentacao', 'configuracoes_normam202'],
-    'ANALISTA': ['dashboard', 'analise_planos', 'relatorios_aprovacao', 'protocolos_documentais', 'embarcacoes', 'armadores', 'proprietarios', 'vistorias', 'certificados', 'documentacao', 'configuracoes_normam202'],
-    'VENDEDOR': ['dashboard', 'comercial', 'servicos', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails'],
+    'VISTORIADOR': [
+        'dashboard', 'vistorias', 'agendamentos', 'embarcacoes', 'clientes', 'documentacao',
+        'doc_csn', 'doc_cnbl', 'doc_cnarq', 'doc_nar', 'doc_lp', 'doc_lc', 'doc_cht',
+        'configuracoes_normam202', 'vencimentos_certificados'
+    ],
+    'ANALISTA': [
+        'dashboard', 'analise_planos', 'doc_nar', 'doc_lp', 'doc_lc', 'configuracoes_normam202'
+    ],
+    'VENDEDOR': [
+        'dashboard', 'comercial', 'servicos', 'embarcacoes', 'clientes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails', 'vencimentos_certificados'
+    ],
     'ADMIN': [
         'dashboard', 'vistorias', 'agendamentos', 'analise_planos', 'relatorios_aprovacao',
-        'protocolos_documentais', 'certificados', 'documentacao', 'embarcacoes', 'armadores',
-        'proprietarios', 'despachantes', 'comercial', 'servicos', 'financeiro', 'emails',
+        'protocolos_documentais', 'certificados', 'vencimentos_certificados', 'documentacao',
+        'doc_csn', 'doc_cnbl', 'doc_cnarq', 'doc_nar', 'doc_lp', 'doc_lc', 'doc_cht',
+        'embarcacoes', 'clientes', 'armadores', 'proprietarios', 'despachantes',
+        'comercial', 'servicos', 'financeiro', 'emails',
         'portal_clientes', 'gestao_acessos_portal', 'relatorios', 'sgq', 'usuarios', 'configuracoes', 'responsaveis_assinatura',
         'configuracoes_normam202', 'configuracoes_basicas', 'configuracoes_financeiro', 'configuracoes_backup', 'configuracoes_exportacoes'
     ]

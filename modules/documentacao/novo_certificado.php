@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 verificar_sessao();
-if (!podeAcessar('documentacao')) {
+if (!podeAcessar('doc_csn') && !podeAcessar('doc_cnbl') && !podeAcessar('doc_cnarq')) {
     header('Location: ' . APP_URL . 'dashboard?erro=sem_permissao');
     exit;
 }
@@ -82,6 +82,9 @@ $tipos = [
     'CNARQ' => ['label' => 'Certificado Nacional de Arqueação', 'icone' => 'fa-ruler-combined', 'url' => APP_URL . 'documentacao/cnarq/form?agendamento_id=' . urlencode($agendamento_id)],
 ];
 $tipos = array_filter($tipos, static fn(array $info, string $tipo): bool => !empty($modelos_permitidos[$tipo]), ARRAY_FILTER_USE_BOTH);
+if (!podeAcessar('doc_csn')) unset($tipos['CSN']);
+if (!podeAcessar('doc_cnbl')) unset($tipos['CNBL']);
+if (!podeAcessar('doc_cnarq')) unset($tipos['CNARQ']);
 
 $titulo_page = 'Emitir Certificado - ' . APP_NAME;
 require_once __DIR__ . '/../../includes/header.php';

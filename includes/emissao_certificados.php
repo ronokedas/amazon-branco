@@ -66,6 +66,291 @@ if (!function_exists('calcularValidadeCsnDoRelatorio')) {
     }
 }
 
+if (!function_exists('obterProcessoRapVigenteEmbarcacao')) {
+    /**
+     * Localiza o processo mais recente de Analise de Planos (RAP) da embarcacao
+     * e retorna seus indicadores tecnicos (status, pendencias A/S, pareceres publicados).
+     */
+    function obterProcessoRapVigenteEmbarcacao(PDO $pdo, string $embarcacaoId): ?array
+    {
+        if (empty($embarcacaoId)) return null;
+
+        $stmt = $pdo->prepare("SELECT ap.*, 
+            (SELECT COUNT(*) FROM analise_planos_exigencias WHERE analise_id = ap.id AND as_impeditivo = 1 AND (status <> 'CUMPRIDA' OR saneamento_pendente = 1)) as total_as_pendentes,
+            (SELECT COUNT(*) FROM analise_planos_exigencias WHERE analise_id = ap.id AND as_impeditivo = 0 AND status <> 'CUMPRIDA') as total_comuns_pendentes,
+            (SELECT COUNT(*) FROM analise_planos_pareceres WHERE analise_id = ap.id AND status = 'PUBLICADO') as total_pareceres_publicados
+            FROM analises_planos ap
+            WHERE ap.embarcacao_id = :emb_id AND ap.status <> 'CANCELADA'
+            ORDER BY ap.criado_em DESC
+            LIMIT 1");
+        $stmt->execute([':emb_id' => $embarcacaoId]);
+        $rap = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$rap) return null;
+
+        $totalAs = (int)$rap['total_as_pendentes'];
+        $totalComuns = (int)$rap['total_comuns_pendentes'];
+        $totalPareceres = (int)$rap['total_pareceres_publicados'];
+        $aprovado = ($totalAs === 0 && ($rap['status'] === 'CONCLUIDA' || ($totalPareceres > 0 && $totalComuns === 0)));
+
+        return [
+            'id' => $rap['id'],
+            'numero' => $rap['numero'],
+            'status' => $rap['status'],
+            'total_as_pendentes' => $totalAs,
+            'total_comuns_pendentes' => $totalComuns,
+            'total_pareceres_publicados' => $totalPareceres,
+            'possui_as' => ($totalAs > 0),
+            'aprovado' => $aprovado,
+        ];
+    }
+}
+
+if (!function_exists('obterSaldoDiasValidadeProvisorio')) {
+    /**
+     * Calcula o saldo de validade para o Certificado Provisorio:
+     * Regra NORMAM: maximo 6 meses (180 dias) a contar da data da vistoria em seco.
+     * Se houver Certificado Condicional previo emitido para a embarcacao/vistoria,
+     * deduz os dias usufruidos no Condicional.
+     */
+    function obterSaldoDiasValidadeProvisorio(PDO $pdo, string $embarcacaoId, string $dataVistoriaSeco, ?string $vistoriaId = null): array
+    {
+        $dataBaseStr = !empty($dataVistoriaSeco) ? $dataVistoriaSeco : date('Y-m-d');
+        $dtBase = DateTimeImmutable::createFromFormat('!Y-m-d', $dataBaseStr) ?: new DateTimeImmutable('today');
+        $dtLimiteNormam = $dtBase->modify('+180 days');
+        $dataLimiteNormam = $dtLimiteNormam->format('Y-m-d');
+
+        $diasCondicionalUsados = 0;
+        $historicoCondicionais = [];
+
+        $paramsCond = [];
+        $whereCond = [];
+        if (!empty($embarcacaoId)) {
+            $whereCond[] = "embarcacao_id = :emb_id";
+            $paramsCond[':emb_id'] = $embarcacaoId;
+        }
+        if (!empty($vistoriaId)) {
+            $whereCond[] = "vistoria_id = :vist_id";
+            $paramsCond[':vist_id'] = $vistoriaId;
+        }
+
+        if (!empty($whereCond)) {
+            $sqlCond = "SELECT id, numero, tipo, data_emissao, data_validade,
+                               DATEDIFF(data_validade, data_emissao) as dias_prazo
+                        FROM certificados_csn
+                        WHERE tipo = 'Condicional' AND ativo = 1 AND status <> 'cancelado'
+                          AND (" . implode(' OR ', $whereCond) . ")
+                        ORDER BY criado_em DESC";
+            $stmtCond = $pdo->prepare($sqlCond);
+            $stmtCond->execute($paramsCond);
+            $historicoCondicionais = $stmtCond->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($historicoCondicionais as $hc) {
+                $dias = (int)($hc['dias_prazo'] ?? 0);
+                if ($dias > 0 && $dias > $diasCondicionalUsados) {
+                    $diasCondicionalUsados = $dias;
+                }
+            }
+        }
+
+        $diasRemanescentes = max(0, 180 - $diasCondicionalUsados);
+        $dtHoje = new DateTimeImmutable('today');
+        $dtValidadeMax = $dtHoje->modify('+' . $diasRemanescentes . ' days');
+        if ($dtValidadeMax > $dtLimiteNormam) {
+            $dtValidadeMax = $dtLimiteNormam;
+        }
+        $dataValidadeMaxima = $dtValidadeMax->format('Y-m-d');
+
+        return [
+            'data_vistoria_seco' => $dataBaseStr,
+            'dias_totais_normam' => 180,
+            'dias_usados_condicional' => $diasCondicionalUsados,
+            'dias_remanescentes' => $diasRemanescentes,
+            'data_limite_normam' => $dataLimiteNormam,
+            'data_validade_maxima' => $dataValidadeMaxima,
+            'historico_condicional' => $historicoCondicionais,
+        ];
+    }
+}
+
+if (!function_exists('avaliarElegibilidadeModalidadeCertificado')) {
+    /**
+     * Avalia elegibilidade técnica e jurídica para a modalidade solicitada
+     * (Condicional, Provisório, Definitivo) articulando Relatório de Vistoria e RAP.
+     */
+    function avaliarElegibilidadeModalidadeCertificado(PDO $pdo, string $vistoriaId, string $tipo, ?string $embarcacaoId = null): array
+    {
+        $tipo = trim($tipo);
+        if ($tipo === '') $tipo = 'Definitivo';
+
+        // 1. Avaliação básica do relatório da vistoria
+        $liberacaoVistoria = avaliarLiberacaoCertificacao($pdo, $vistoriaId);
+        if (empty($liberacaoVistoria['permitido'])) {
+            return [
+                'permitido' => false,
+                'mensagem' => $liberacaoVistoria['mensagem'] ?? 'Certificação bloqueada para esta vistoria.',
+                'tipo' => $tipo,
+                'motivo' => 'vistoria_bloqueada',
+            ];
+        }
+
+        // Resolver embarcação se não fornecida
+        if (empty($embarcacaoId)) {
+            $stmtEmb = $pdo->prepare("SELECT COALESCE(v.embarcacao_id, a.embarcacao_id) FROM vistorias v LEFT JOIN agendamentos a ON a.id = v.agendamento_id WHERE v.id = :id");
+            $stmtEmb->execute([':id' => $vistoriaId]);
+            $embarcacaoId = (string)($stmtEmb->fetchColumn() ?: '');
+        }
+
+        // 2. Consulta Análise de Planos (RAP) se houver para esta embarcação
+        $rap = !empty($embarcacaoId) ? obterProcessoRapVigenteEmbarcacao($pdo, $embarcacaoId) : null;
+        if ($rap && !empty($rap['possui_as'])) {
+            return [
+                'permitido' => false,
+                'mensagem' => "Certificação bloqueada: o processo de Análise de Planos (RAP n.º {$rap['numero']}) da embarcação possui {$rap['total_as_pendentes']} exigência(s) com condição grave A/S pendente(s). Nenhuma modalidade de certificado pode ser emitida com pendência A/S.",
+                'tipo' => $tipo,
+                'motivo' => 'rap_possui_as',
+            ];
+        }
+
+        // 3. Classificação das exigências comuns da vistoria
+        $classif = classificarExigenciasPendentesVistoria($pdo, $vistoriaId);
+
+        // 4. Regras específicas por modalidade
+        if ($tipo === 'Condicional') {
+            return [
+                'permitido' => true,
+                'mensagem' => '',
+                'tipo' => 'Condicional',
+                'prazo_maximo_dias' => 90,
+                'exige_sem_as' => true,
+                'classificacao_exigencias' => $classif,
+                'rap' => $rap,
+            ];
+        }
+
+        if ($tipo === 'Provisório' || $tipo === 'Provisorio') {
+            // Provisório:
+            // 1) O projeto (RAP) tem que estar aprovado
+            if ($rap && empty($rap['aprovado'])) {
+                return [
+                    'permitido' => false,
+                    'mensagem' => "Para emissão do Certificado Provisório, o projeto técnico (RAP n.º {$rap['numero']}) da embarcação deve estar totalmente aprovado e sem exigências pendentes.",
+                    'tipo' => 'Provisório',
+                    'motivo' => 'rap_nao_aprovado',
+                ];
+            }
+
+            // 2) Não pode ter exigências físicas na vistoria
+            if ($classif['total_fisicas'] > 0) {
+                $primeiraFisica = $classif['itens_fisicos'][0]['item'] ?? $classif['itens_fisicos'][0]['descricao'] ?? 'item físico';
+                return [
+                    'permitido' => false,
+                    'mensagem' => "Não é possível emitir o Certificado Provisório: existem {$classif['total_fisicas']} exigência(s) física(s)/técnica(s) pendente(s) no relatório de vistoria (ex.: {$primeiraFisica}). Para o certificado provisório, todas as exigências físicas devem estar cumpridas, permitindo apenas a pendência de inscrição/atualização cadastral na Capitania dos Portos (TI/PRPM).",
+                    'tipo' => 'Provisório',
+                    'motivo' => 'exigencias_fisicas_pendentes',
+                    'classificacao_exigencias' => $classif,
+                ];
+            }
+
+            return [
+                'permitido' => true,
+                'mensagem' => '',
+                'tipo' => 'Provisório',
+                'classificacao_exigencias' => $classif,
+                'rap' => $rap,
+            ];
+        }
+
+        if ($tipo === 'Definitivo') {
+            // Definitivo:
+            // 1) O projeto (RAP) tem que estar aprovado
+            if ($rap && empty($rap['aprovado'])) {
+                return [
+                    'permitido' => false,
+                    'mensagem' => "Para emissão do Certificado Definitivo, o projeto técnico (RAP n.º {$rap['numero']}) da embarcação deve estar aprovado.",
+                    'tipo' => 'Definitivo',
+                    'motivo' => 'rap_nao_aprovado',
+                ];
+            }
+
+            // 2) Não pode ter NENHUMA exigência pendente (nem física, nem de inscrição)
+            if ($classif['total_pendentes'] > 0) {
+                return [
+                    'permitido' => false,
+                    'mensagem' => "O Certificado Definitivo exige 100% das exigências cumpridas, incluindo a regularização e emissão do documento de inscrição na Capitania dos Portos (restam {$classif['total_pendentes']} pendência(s)). Conclua a verificação ou emita um Certificado Provisório.",
+                    'tipo' => 'Definitivo',
+                    'motivo' => 'exigencias_comuns_pendentes',
+                    'classificacao_exigencias' => $classif,
+                ];
+            }
+
+            return [
+                'permitido' => true,
+                'mensagem' => '',
+                'tipo' => 'Definitivo',
+                'classificacao_exigencias' => $classif,
+                'rap' => $rap,
+            ];
+        }
+
+        return ['permitido' => true, 'mensagem' => '', 'tipo' => $tipo];
+    }
+}
+
+if (!function_exists('calcularValidadeCertificadoPorModalidade')) {
+    /**
+     * Calcula a data de validade recomendada e máxima para o certificado
+     * com base na modalidade (Condicional, Provisório ou Definitivo).
+     */
+    function calcularValidadeCertificadoPorModalidade(PDO $pdo, string $modelo, string $tipo, array $dadosEmb, ?string $dataEmissao = null): array
+    {
+        $tipo = trim($tipo);
+        if ($tipo === '') $tipo = 'Definitivo';
+        $dataEmissao = !empty($dataEmissao) ? $dataEmissao : date('Y-m-d');
+        $dataVistoria = (string)($dadosEmb['data_vistoria'] ?? $dataEmissao);
+        $dataVistoriaSeco = (string)($dadosEmb['data_vistoria_seco'] ?? $dataVistoria);
+
+        if ($tipo === 'Condicional') {
+            $prazo = (int)($dadosEmb['prazo_exigencias_dias'] ?? 60);
+            if (!in_array($prazo, [60, 90], true)) {
+                $prazo = 60;
+            }
+            $dtBase = DateTimeImmutable::createFromFormat('!Y-m-d', $dataVistoria) ?: new DateTimeImmutable('today');
+            $validade = $dtBase->modify('+' . $prazo . ' days')->format('Y-m-d');
+            return [
+                'tipo' => 'Condicional',
+                'prazo_dias' => $prazo,
+                'data_validade' => $validade,
+                'detalhes' => "Validade condicional de {$prazo} dias calculada a contar da data da vistoria.",
+            ];
+        }
+
+        if ($tipo === 'Provisório' || $tipo === 'Provisorio') {
+            $embarcacaoId = (string)($dadosEmb['embarcacao_id'] ?? $dadosEmb['id'] ?? '');
+            $vistoriaId = (string)($dadosEmb['vistoria_id'] ?? '');
+            $saldo = obterSaldoDiasValidadeProvisorio($pdo, $embarcacaoId, $dataVistoriaSeco, $vistoriaId);
+            return [
+                'tipo' => 'Provisório',
+                'prazo_dias' => $saldo['dias_remanescentes'],
+                'data_validade' => $saldo['data_validade_maxima'],
+                'saldo_provisorio' => $saldo,
+                'detalhes' => "Validade provisória de {$saldo['dias_remanescentes']} dias restantes (teto de 180 dias da vistoria em seco menos {$saldo['dias_usados_condicional']} dias de condicional prévio).",
+            ];
+        }
+
+        // Definitivo
+        $tipoEmb = (string)($dadosEmb['tipo_embarcacao_nome'] ?? $dadosEmb['tipo_embarcacao'] ?? '');
+        $anos = certificadoAnosValidadePorTipoEmbarcacao($tipoEmb);
+        $dtBase = DateTimeImmutable::createFromFormat('!Y-m-d', $dataVistoria) ?: new DateTimeImmutable('today');
+        $validade = $dtBase->modify('+' . $anos . ' years')->format('Y-m-d');
+        return [
+            'tipo' => 'Definitivo',
+            'anos' => $anos,
+            'data_validade' => $validade,
+            'detalhes' => "Validade definitiva NORMAM de {$anos} anos para a embarcação ({$tipoEmb}).",
+        ];
+    }
+}
+
 /**
  * Emite qualquer modelo de certificado ou licença de forma unificada e atômica.
  *
@@ -171,10 +456,12 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
             throw new RuntimeException($liberacao['mensagem'] ?? 'Certificação bloqueada para esta vistoria.');
         }
 
-        // Bloqueio de Definitivo para relatórios com pendências de exigências (CSN, CNBL, CNARQ)
-        if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true) && $tipo === 'Definitivo' && $statusRelatorio === 'APROVADA_COM_EXIGENCIAS') {
-            $msgDefinitivo = (string)($dadosEmb['mensagem_definitivo'] ?? $liberacao['mensagem_definitivo'] ?? '');
-            throw new RuntimeException($msgDefinitivo ?: 'O relatório vigente ainda possui exigências comuns pendentes. Conclua a verificação antes de emitir o Certificado Definitivo.');
+        // Validação e Elegibilidade por Modalidade (Condicional, Provisório, Definitivo)
+        if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true)) {
+            $elegibilidade = avaliarElegibilidadeModalidadeCertificado($pdo, $vistoriaId, $tipo, $dadosEmb['embarcacao_id'] ?? null);
+            if (empty($elegibilidade['permitido'])) {
+                throw new RuntimeException($elegibilidade['mensagem']);
+            }
         }
 
         // Verificação de escopo contratual da Ordem de Serviço / Proposta
@@ -278,6 +565,31 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
         $conviteAssinatura = null;
         $envioEmail = null;
 
+        // Resolver Validade Canônica para Modelos Estatutários (CSN, CNBL, CNARQ)
+        $dataValidadeEstatutaria = $dados['data_validade'] ?? null;
+        if (in_array($modelo, ['CSN', 'CNBL', 'CNARQ'], true)) {
+            $calculoVal = calcularValidadeCertificadoPorModalidade($pdo, $modelo, $tipo, $dadosEmb, $dados['data_emissao'] ?? null);
+            if (empty($dataValidadeEstatutaria)) {
+                $dataValidadeEstatutaria = $calculoVal['data_validade'];
+            } else {
+                if ($tipo === 'Condicional') {
+                    $dtBase = DateTimeImmutable::createFromFormat('!Y-m-d', (string)($dadosEmb['data_vistoria'] ?? $dados['data_emissao'] ?? date('Y-m-d')));
+                    $dtMax90 = $dtBase ? $dtBase->modify('+90 days') : null;
+                    $dtVal = DateTimeImmutable::createFromFormat('!Y-m-d', $dataValidadeEstatutaria);
+                    if ($dtVal && $dtMax90 && $dtVal > $dtMax90) {
+                        $dataValidadeEstatutaria = $dtMax90->format('Y-m-d');
+                    }
+                } elseif ($tipo === 'Provisório' || $tipo === 'Provisorio') {
+                    $saldoProv = obterSaldoDiasValidadeProvisorio($pdo, (string)($embarcacaoId ?: $dadosEmb['embarcacao_id'] ?? ''), (string)($dadosEmb['data_vistoria_seco'] ?? $dadosEmb['data_vistoria'] ?? ''), $vistoriaId);
+                    $dtLimiteNormam = DateTimeImmutable::createFromFormat('!Y-m-d', $saldoProv['data_limite_normam']);
+                    $dtVal = DateTimeImmutable::createFromFormat('!Y-m-d', $dataValidadeEstatutaria);
+                    if ($dtVal && $dtLimiteNormam && $dtVal > $dtLimiteNormam) {
+                        $dataValidadeEstatutaria = $saldoProv['data_limite_normam'];
+                    }
+                }
+            }
+        }
+
         switch ($modelo) {
             case 'CSN':
                 $numeroCertificado = trim((string)($dados['numero'] ?? ''));
@@ -378,7 +690,7 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                     ':acessibilidade_sim' => !empty($dados['acessibilidade_sim']) || ($dados['acessibilidade'] ?? '') === 'sim' ? 1 : 0,
                     ':acessibilidade_nao' => empty($dados['acessibilidade_sim']) && ($dados['acessibilidade'] ?? '') !== 'sim' ? 1 : 0,
                     ':data_emissao' => $dados['data_emissao'] ?? date('Y-m-d'),
-                    ':data_validade' => $dados['data_validade'] ?? date('Y-m-d', strtotime('+5 years')),
+                    ':data_validade' => $dataValidadeEstatutaria ?? $dados['data_validade'] ?? date('Y-m-d', strtotime('+5 years')),
                     ':local_emissao' => trim((string)($dados['local_emissao'] ?? 'Belém-PA')),
                     ':assinante_nome' => $respData['nome_completo'] ?? trim((string)($dados['assinante_nome'] ?? '')),
                     ':assinante_titulo' => $respData['cargo_titulo'] ?? trim((string)($dados['assinante_titulo'] ?? '')),
@@ -562,7 +874,7 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                     ':tipo_vistoria_certificado' => trim((string)($dados['tipo_vistoria_certificado'] ?? '')),
                     ':observacoes_verso' => trim((string)($dados['observacoes_verso'] ?? '')),
                     ':data_emissao' => $dados['data_emissao'] ?? date('Y-m-d'),
-                    ':data_validade' => $dados['data_validade'] ?? date('Y-m-d', strtotime('+5 years')),
+                    ':data_validade' => $dataValidadeEstatutaria ?? $dados['data_validade'] ?? date('Y-m-d', strtotime('+5 years')),
                     ':local_emissao' => trim((string)($dados['local_emissao'] ?? 'Belém-PA')),
                     ':assinante_nome' => $respData['nome_completo'] ?? trim((string)($dados['assinante_nome'] ?? '')),
                     ':assinante_titulo' => $respData['cargo_titulo'] ?? trim((string)($dados['assinante_titulo'] ?? '')),
@@ -692,7 +1004,7 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                     ':tipo_vistoria_certificado' => trim((string)($dados['tipo_vistoria_certificado'] ?? '')),
                     ':observacoes_verso' => trim((string)($dados['observacoes_verso'] ?? '')),
                     ':data_emissao' => $dados['data_emissao'] ?? date('Y-m-d'),
-                    ':data_validade' => $dados['data_validade'] ?? date('Y-m-d', strtotime('+10 years')),
+                    ':data_validade' => $dataValidadeEstatutaria ?? $dados['data_validade'] ?? date('Y-m-d', strtotime('+10 years')),
                     ':local_emissao' => trim((string)($dados['local_emissao'] ?? 'Belém-PA')),
                     ':assinante_nome' => $respData['nome_completo'] ?? trim((string)($dados['assinante_nome'] ?? '')),
                     ':assinante_titulo' => $respData['cargo_titulo'] ?? trim((string)($dados['assinante_titulo'] ?? '')),
@@ -798,6 +1110,16 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
 
                 $propulsaoLC = !empty($dados['propulsao']) ? (string)$dados['propulsao'] : (!empty($dadosEmb['possui_propulsao']) ? 'Com Propulsão' : 'Sem Propulsão');
 
+                $observacoesLC = trim((string)($dados['observacoes'] ?? ''));
+                if ($observacoesLC === '') {
+                    $dadosParaObs = array_merge($dadosEmb, $dados, [
+                        'tipo_licenca' => $modalidadeLC,
+                        'comprimento_casco' => $dados['comprimento_casco'] ?? ($dadosEmb['comprimento_casco'] ?? ($dadosEmb['comprimento_lpp'] ?? null)),
+                        'ano_construcao' => $dados['ano_construcao'] ?? ($dadosEmb['ano_construcao'] ?? ($dadosEmb['ano'] ?? date('Y'))),
+                    ]);
+                    $observacoesLC = gerarObservacoesPadraoLicenca($dadosParaObs, $modalidadeLC);
+                }
+
                 $sqlLC = "INSERT INTO certificados_lc (
                             id, numero_lc, embarcacao_id, cliente_id, token_assinatura, tipo_licenca,
                             data_termino_construcao, nome_embarcacao, tipo_embarcacao,
@@ -809,7 +1131,8 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                             estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco,
                             data_emissao, data_validade, local_emissao, relatorio_numero,
                             assinante_nome, assinante_titulo, assinante_registro,
-                            status, ativo, criado_por, vistoria_id, analise_id, responsavel_assinatura_id
+                            status, ativo, criado_por, vistoria_id, analise_id, responsavel_assinatura_id,
+                            observacoes, dados_json
                         ) VALUES (
                             :id, :numero_lc, :embarcacao_id, :cliente_id, :token_assinatura, :tipo_licenca,
                             :data_termino_construcao, :nome_embarcacao, :tipo_embarcacao,
@@ -821,7 +1144,8 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                             :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco,
                             :data_emissao, :data_validade, :local_emissao, :relatorio_numero,
                             :assinante_nome, :assinante_titulo, :assinante_registro,
-                            :status, 1, :criado_por, :vistoria_id, :analise_id, :responsavel_assinatura_id
+                            :status, 1, :criado_por, :vistoria_id, :analise_id, :responsavel_assinatura_id,
+                            :observacoes, :dados_json
                         )";
 
                 $stmtLC = $pdo->prepare($sqlLC);
@@ -868,6 +1192,8 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                     ':vistoria_id' => $vistoriaId ?: null,
                     ':analise_id' => $analiseId ?: null,
                     ':responsavel_assinatura_id' => $respData ? (int)$respData['id'] : null,
+                    ':observacoes' => $observacoesLC,
+                    ':dados_json' => json_encode(['observacoes' => $observacoesLC], JSON_UNESCAPED_UNICODE),
                 ]);
 
                 log_atividade('certificado_lc_criado', "Licença de Construção {$numeroCertificado} - " . ($dados['nome_embarcacao'] ?? $dadosEmb['nome'] ?? ''));

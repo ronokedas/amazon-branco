@@ -50,12 +50,17 @@ try {
         'hash_pdf_original' => hash_file('sha256', $original),
     ];
 
-    foreach (['CSN', 'CNBL', 'CNARQ'] as $type) {
+    foreach (['CSN', 'CNBL', 'CNARQ', 'LC', 'LA', 'LR', 'LCEC', 'LP'] as $type) {
         $destination = $workDir . DIRECTORY_SEPARATOR . strtolower($type) . '.pdf';
         aprovacaoPdfCriarComBloco($original, $destination, $context + ['documento_tipo' => $type]);
         $reader = new Fpdi();
-        assertAprovacaoPdfLayout($reader->setSourceFile($destination) === 2, $type . ' ganhou uma pagina adicional.');
+        assertAprovacaoPdfLayout($reader->setSourceFile($destination) === 2, $type . ' ganhou uma pagina adicional indevida.');
     }
+
+    $narDestination = $workDir . DIRECTORY_SEPARATOR . 'nar.pdf';
+    aprovacaoPdfCriarComBloco($original, $narDestination, $context + ['documento_tipo' => 'NAR', 'bloco_pagina' => 2]);
+    $reader = new Fpdi();
+    assertAprovacaoPdfLayout($reader->setSourceFile($narDestination) === 2, 'NAR ganhou uma pagina adicional indevida.');
 
     $reportDestination = $workDir . DIRECTORY_SEPARATOR . 'relatorio.pdf';
     aprovacaoPdfCriarComBloco($original, $reportDestination, $context + [
@@ -76,7 +81,7 @@ try {
     );
 
     $otherDestination = $workDir . DIRECTORY_SEPARATOR . 'outro.pdf';
-    aprovacaoPdfCriarComBloco($original, $otherDestination, $context + ['documento_tipo' => 'LP']);
+    aprovacaoPdfCriarComBloco($original, $otherDestination, $context + ['documento_tipo' => 'OUTRO_GENERICO']);
     $reader = new Fpdi();
     assertAprovacaoPdfLayout($reader->setSourceFile($otherDestination) === 3, 'O comportamento dos demais documentos foi alterado.');
 
