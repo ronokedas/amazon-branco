@@ -73,11 +73,12 @@ if docker ps --format '{{.Names}}' | grep -q "erp_db"; then
         done
     fi
 
-    # 3. Garantia explícita de colunas críticas para emissão de licenças (MySQL 8.0)
+    # 3. Garantia explícita de colunas críticas para emissão de licenças e catálogo de serviços (MySQL 8.0)
     docker exec -i erp_db mysql -u"$DB_USER" -p"$DB_PASS" --default-character-set=utf8mb4 "$DB_NAME" -e "
         SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'certificados_lc' AND COLUMN_NAME = 'observacoes');
         SET @sql = IF(@col_exists = 0, 'ALTER TABLE certificados_lc ADD COLUMN observacoes TEXT NULL AFTER dados_json', 'SELECT 1');
         PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+        ALTER TABLE servicos MODIFY COLUMN certificado_modelo VARCHAR(20) NULL;
     " 2>/dev/null || true
 
     # 4. Executa dinamicamente TODAS as migrações novas que ainda não foram aplicadas (099, 100, 101, 102, 103, 104, 105...)

@@ -24,6 +24,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
+// Garantir função de conversão de moeda caso ainda não esteja carregada
+if (!function_exists('converterMoedaDecimal')) {
+    function converterMoedaDecimal(mixed $valor): float {
+        if (is_numeric($valor)) {
+            return round((float)$valor, 2);
+        }
+        $valor = trim((string)$valor);
+        if ($valor === '') {
+            return 0.0;
+        }
+        $valor = preg_replace('/[^\d,.-]/u', '', $valor) ?? '';
+        if (str_contains($valor, ',')) {
+            $valor = str_replace('.', '', $valor);
+            $valor = str_replace(',', '.', $valor);
+        } elseif (substr_count($valor, '.') > 1) {
+            $valor = str_replace('.', '', $valor);
+        }
+        return round((float)$valor, 2);
+    }
+}
+
+$modelosCertificadosValidos = ['CSN', 'CNBL', 'CNARQ', 'LP', 'LC', 'CHT', 'NAR'];
+
 switch ($action) {
 
     case 'inserir':
@@ -31,7 +54,7 @@ switch ($action) {
             $nome       = sanitizar($_POST['nome'] ?? '');
             $descricao  = sanitizar($_POST['descricao'] ?? '');
             $certificado_modelo = strtoupper(trim((string)($_POST['certificado_modelo'] ?? '')));
-            $certificado_modelo = in_array($certificado_modelo, ['CSN', 'CNBL', 'CNARQ'], true) ? $certificado_modelo : null;
+            $certificado_modelo = in_array($certificado_modelo, $modelosCertificadosValidos, true) ? $certificado_modelo : null;
             $preco_raw  = $_POST['preco_padrao'] ?? '0,00';
 
             if (empty($nome)) {
@@ -60,9 +83,9 @@ switch ($action) {
             setMensagem('success', 'Serviço cadastrado com sucesso!');
             redirecionar(APP_URL . 'servicos');
 
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log('Erro ao inserir serviço: ' . $e->getMessage());
-            setMensagem('error', 'Erro ao cadastrar serviço.');
+            setMensagem('error', 'Erro ao cadastrar serviço: ' . $e->getMessage());
             redirecionar(APP_URL . 'servicos/form');
         }
         break;
@@ -73,7 +96,7 @@ switch ($action) {
             $nome       = sanitizar($_POST['nome'] ?? '');
             $descricao  = sanitizar($_POST['descricao'] ?? '');
             $certificado_modelo = strtoupper(trim((string)($_POST['certificado_modelo'] ?? '')));
-            $certificado_modelo = in_array($certificado_modelo, ['CSN', 'CNBL', 'CNARQ'], true) ? $certificado_modelo : null;
+            $certificado_modelo = in_array($certificado_modelo, $modelosCertificadosValidos, true) ? $certificado_modelo : null;
             $preco_raw  = $_POST['preco_padrao'] ?? '0,00';
             $ativo      = isset($_POST['ativo']) ? 1 : 0;
 
@@ -108,9 +131,9 @@ switch ($action) {
             setMensagem('success', 'Serviço atualizado com sucesso!');
             redirecionar(APP_URL . 'servicos');
 
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log('Erro ao editar serviço: ' . $e->getMessage());
-            setMensagem('error', 'Erro ao atualizar serviço.');
+            setMensagem('error', 'Erro ao atualizar serviço: ' . $e->getMessage());
             redirecionar(APP_URL . 'servicos/form?id=' . urlencode($id));
         }
         break;
@@ -136,7 +159,7 @@ switch ($action) {
             setMensagem('success', 'Serviço desativado com sucesso!');
             redirecionar(APP_URL . 'servicos');
 
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log('Erro ao desativar serviço: ' . $e->getMessage());
             setMensagem('error', 'Erro ao desativar serviço.');
             redirecionar(APP_URL . 'servicos');
@@ -164,7 +187,7 @@ switch ($action) {
             setMensagem('success', 'Serviço reativado com sucesso!');
             redirecionar(APP_URL . 'servicos');
 
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log('Erro ao reativar serviço: ' . $e->getMessage());
             setMensagem('error', 'Erro ao reativar serviço.');
             redirecionar(APP_URL . 'servicos');

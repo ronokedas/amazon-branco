@@ -389,6 +389,28 @@ function formatarMoeda($valor) {
     return 'R$ ' . number_format($valor, 2, ',', '.');
 }
 
+/**
+ * Converte valor monetário (ex: "1.800,00", "R$ 1.800,00", "1800,00", 1800) em decimal float.
+ */
+function converterMoedaDecimal(mixed $valor): float {
+    if (is_numeric($valor)) {
+        return round((float)$valor, 2);
+    }
+    $valor = trim((string)$valor);
+    if ($valor === '') {
+        return 0.0;
+    }
+    // Remove qualquer caractere que não seja dígito, vírgula, ponto ou sinal negativo
+    $valor = preg_replace('/[^\d,.-]/u', '', $valor) ?? '';
+    if (str_contains($valor, ',')) {
+        $valor = str_replace('.', '', $valor);
+        $valor = str_replace(',', '.', $valor);
+    } elseif (substr_count($valor, '.') > 1) {
+        $valor = str_replace('.', '', $valor);
+    }
+    return round((float)$valor, 2);
+}
+
 // Formatador de CPF
 function formatarCPF($cpf) {
     if (empty($cpf)) return '';
