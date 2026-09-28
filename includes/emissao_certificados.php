@@ -1120,6 +1120,14 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                     $observacoesLC = gerarObservacoesPadraoLicenca($dadosParaObs, $modalidadeLC);
                 }
 
+                // Auto-recuperação: assegura que a coluna observacoes exista no MySQL da VPS
+                try {
+                    $colCheck = $pdo->query("SHOW COLUMNS FROM certificados_lc LIKE 'observacoes'")->fetch();
+                    if (!$colCheck) {
+                        $pdo->exec("ALTER TABLE certificados_lc ADD COLUMN observacoes TEXT NULL AFTER dados_json");
+                    }
+                } catch (Throwable $eIgnored) {}
+
                 $sqlLC = "INSERT INTO certificados_lc (
                             id, numero_lc, embarcacao_id, cliente_id, token_assinatura, tipo_licenca,
                             data_termino_construcao, nome_embarcacao, tipo_embarcacao,

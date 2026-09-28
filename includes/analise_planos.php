@@ -645,6 +645,14 @@ function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel): 
     ]);
     $observacoesLicenca = gerarObservacoesPadraoLicenca($dadosObs, $tipo);
 
+    // Auto-recuperação: assegura que a coluna observacoes exista no MySQL da VPS
+    try {
+        $colCheck = $pdo->query("SHOW COLUMNS FROM certificados_lc LIKE 'observacoes'")->fetch();
+        if (!$colCheck) {
+            $pdo->exec("ALTER TABLE certificados_lc ADD COLUMN observacoes TEXT NULL AFTER dados_json");
+        }
+    } catch (Throwable $eIgnored) {}
+
     $insert = $pdo->prepare("INSERT INTO certificados_lc
         (id,numero_lc,embarcacao_id,cliente_id,token_assinatura,tipo_licenca,nome_embarcacao,tipo_embarcacao,
          numero_casco,material_casco,sociedade_classificadora,comprimento_total,comprimento_pp,boca_moldada,
