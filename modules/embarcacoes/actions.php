@@ -110,12 +110,6 @@ switch ($action) {
             $errosCampos['nome'] = 'O nome deve ter pelo menos 2 caracteres.';
         }
 
-        // Validação ISO 9001 / NORMAM: Tipo de Embarcação
-        if (empty($tipo_embarcacao_id)) {
-            $erros[] = 'O tipo de embarcação é obrigatório (exigência ISO 9001 / NORMAM).';
-            $errosCampos['tipo_embarcacao_id'] = 'O tipo de embarcação é obrigatório (exigência ISO 9001 / NORMAM).';
-        }
-
         if (!empty($ano) && ($ano < 1900 || $ano > 2099)) {
             $erros[] = 'O ano deve estar entre 1900 e 2099.';
             $errosCampos['ano'] = 'O ano deve estar entre 1900 e 2099.';
@@ -150,61 +144,8 @@ switch ($action) {
             }
         }
 
-        // Validação de Requisitos Técnicos Mínimos (ISO 8.2 & NORMAM)
-        // 1. Comprimento (Total ou Casco)
-        $compTotalNum = (float)$comprimento_total;
-        $compCascoNum = (float)$comprimento_casco;
-        if ($compTotalNum <= 0 && $compCascoNum <= 0) {
-            $msgComp = 'Informe o Comprimento Total ou do Casco (requisito técnico obrigatório ISO/NORMAM).';
-            $erros[] = $msgComp;
-            $errosCampos['comprimento_total'] = $msgComp;
-        }
-
-        // 2. Boca (Moldada ou Máxima)
-        $bocaMoldNum = (float)$boca_moldada;
-        $bocaMaxNum = (float)$boca_maxima;
-        if ($bocaMoldNum <= 0 && $bocaMaxNum <= 0) {
-            $msgBoca = 'Informe a Boca Moldada ou Máxima (requisito técnico obrigatório ISO/NORMAM).';
-            $erros[] = $msgBoca;
-            $errosCampos['boca_moldada'] = $msgBoca;
-        }
-
-        // 3. Pontal Moldado
-        $pontalNum = (float)$pontal_moldado;
-        if ($pontalNum <= 0) {
-            $msgPontal = 'Informe o Pontal Moldado (requisito técnico obrigatório ISO/NORMAM).';
-            $erros[] = $msgPontal;
-            $errosCampos['pontal_moldado'] = $msgPontal;
-        }
-
-        // 4. Arqueação Bruta (AB)
-        if ($arqueacao_bruta === '' || $arqueacao_bruta === '0') {
-            $msgAB = 'A Arqueação Bruta (AB) é obrigatória pela NORMAM e ISO 9001.';
-            $erros[] = $msgAB;
-            $errosCampos['arqueacao_bruta'] = $msgAB;
-        }
-
-        if (!in_array($possui_propulsao, [0, 1], true)) {
-            $erros[] = 'A informação se possui propulsão é obrigatória.';
-            $errosCampos['possui_propulsao'] = 'A informação se possui propulsão é obrigatória.';
-        } elseif ($possui_propulsao === 1) {
-            if ($fabricante_motor === '') {
-                $erros[] = 'Informe o fabricante do motor.';
-                $errosCampos['fabricante_motor'] = 'Informe o fabricante do motor.';
-            }
-            if ($modelo_motor === '') {
-                $erros[] = 'Informe o modelo do motor.';
-                $errosCampos['modelo_motor'] = 'Informe o modelo do motor.';
-            }
-            if ($numero_motor === '') {
-                $erros[] = 'Informe o número do motor.';
-                $errosCampos['numero_motor'] = 'Informe o número do motor.';
-            }
-            if ($potencia_kw === '') {
-                $erros[] = 'Informe a potência propulsiva.';
-                $errosCampos['potencia_kw'] = 'Informe a potência propulsiva.';
-            }
-        } else {
+        // Se sem propulsão (0), limpa os campos de motor
+        if ($possui_propulsao === 0) {
             $fabricante_motor = '';
             $modelo_motor = '';
             $numero_motor = '';

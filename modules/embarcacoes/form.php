@@ -323,11 +323,11 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                         <span class="tab-error-badge"></span>
                     </li>
                     <li class="tab-item" data-tab="tab-tecnicos" onclick="openTab('tab-tecnicos', this)">
-                        Dados Técnicos e Propulsão <span class="required-star">*</span>
+                        Dados Técnicos e Propulsão
                         <span class="tab-error-badge"></span>
                     </li>
                     <li class="tab-item" data-tab="tab-dimensoes" onclick="openTab('tab-dimensoes', this)">
-                        Arqueação e Dimensões <span class="required-star">*</span>
+                        Arqueação e Dimensões
                         <span class="tab-error-badge"></span>
                     </li>
                     <li class="tab-item" data-tab="tab-bordalivre" onclick="openTab('tab-bordalivre', this)">
@@ -373,9 +373,9 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
 
                     <div class="grid-2">
                         <div class="form-group">
-                            <label for="tipo_embarcacao_id"><i class="fas fa-tags"></i> Tipo de Embarcação <span class="required-star">*</span></label>
-                            <select id="tipo_embarcacao_id" name="tipo_embarcacao_id" required>
-                                <option value="">-- Selecione o Tipo --</option>
+                            <label for="tipo_embarcacao_id"><i class="fas fa-tags"></i> Tipo de Embarcação</label>
+                            <select id="tipo_embarcacao_id" name="tipo_embarcacao_id">
+                                <option value="">-- Selecione o Tipo (opcional) --</option>
                                 <?php foreach ($tipos_embarcacao as $t): ?>
                                     <option value="<?php echo h($t['id']); ?>" <?php echo (isset($embarcacao['tipo_embarcacao_id']) && $embarcacao['tipo_embarcacao_id'] == $t['id']) ? 'selected' : ''; ?>>
                                         <?php echo h($t['nome']); ?>
@@ -420,10 +420,10 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                     <div class="grid-2">
                         <div class="form-group">
                             <label for="possui_propulsao" style="font-weight:bold; color:var(--cor-destaque);">
-                                <i class="fas fa-cogs"></i> Possui Propulsão? (Crítico para Validade) *
+                                <i class="fas fa-cogs"></i> Possui Propulsão?
                             </label>
-                            <select id="possui_propulsao" name="possui_propulsao" required>
-                                <option value="">-- Selecione --</option>
+                            <select id="possui_propulsao" name="possui_propulsao">
+                                <option value="">-- Selecione (opcional) --</option>
                                 <option value="1" <?php echo (isset($embarcacao['possui_propulsao']) && $embarcacao['possui_propulsao'] == 1) ? 'selected' : ''; ?>>SIM (Com propulsão)</option>
                                 <option value="0" <?php echo (isset($embarcacao['possui_propulsao']) && $embarcacao['possui_propulsao'] == 0) ? 'selected' : ''; ?>>NÃO (Sem propulsão)</option>
                             </select>
@@ -530,15 +530,15 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                 <div id="tab-dimensoes" class="tab-pane">
                     <div style="margin-bottom: 18px; padding: 12px 16px; background: rgba(9, 155, 112, 0.05); border: 1px solid rgba(9, 155, 112, 0.2); border-radius: 8px; font-size: 0.88rem; color: var(--cor-texto);">
                         <i class="fas fa-ruler-combined" style="color: var(--cor-destaque); margin-right: 6px;"></i>
-                        <strong>Dimensionamento Técnico Obrigatório (ISO 8.2 & NORMAM):</strong>
-                        Informe ao menos uma medida de Comprimento (Total ou Casco), uma medida de Boca (Moldada ou Máxima), o Pontal Moldado e a Arqueação Bruta (AB).
+                        <strong>Dimensionamento Técnico e Arqueação:</strong>
+                        Preencha as medidas e arqueação da embarcação quando disponíveis (podem ser completadas posteriormente na edição).
                     </div>
 
                     <div class="grid-2">
                         <div class="form-group">
-                            <label for="comprimento_total">Comprimento Total (m) <span class="required-star">*</span></label>
+                            <label for="comprimento_total">Comprimento Total (m)</label>
                             <input type="number" step="0.01" min="0" id="comprimento_total" name="comprimento_total" value="<?php echo h($embarcacao['comprimento_total'] ?? ''); ?>">
-                            <small class="text-muted">Obrigatório C. Total ou do Casco.</small>
+                            <small class="text-muted">Medida de comprimento principal.</small>
                         </div>
                         <div class="form-group">
                             <label for="comprimento_casco">Comprimento Casco (m)</label>
@@ -549,9 +549,9 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
 
                     <div class="grid-2">
                         <div class="form-group">
-                            <label for="boca_moldada">Boca Moldada (m) <span class="required-star">*</span></label>
+                            <label for="boca_moldada">Boca Moldada (m)</label>
                             <input type="number" step="0.01" min="0" id="boca_moldada" name="boca_moldada" value="<?php echo h($embarcacao['boca_moldada'] ?? ''); ?>">
-                            <small class="text-muted">Obrigatório Boca Moldada ou Máxima.</small>
+                            <small class="text-muted">Medida de largura principal.</small>
                         </div>
                         <div class="form-group">
                             <label for="boca_maxima">Boca Máxima (m)</label>
@@ -562,8 +562,8 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
 
                     <div class="grid-2">
                         <div class="form-group">
-                            <label for="pontal_moldado">Pontal Moldado (m) <span class="required-star">*</span></label>
-                            <input type="number" step="0.01" min="0" id="pontal_moldado" name="pontal_moldado" required value="<?php echo h($embarcacao['pontal_moldado'] ?? ''); ?>">
+                            <label for="pontal_moldado">Pontal Moldado (m)</label>
+                            <input type="number" step="0.01" min="0" id="pontal_moldado" name="pontal_moldado" value="<?php echo h($embarcacao['pontal_moldado'] ?? ''); ?>">
                         </div>
                         <div class="form-group">
                             <label for="comprimento_lpp">Comprimento LPP (m)</label>
@@ -573,9 +573,9 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
 
                     <div class="grid-2">
                         <div class="form-group">
-                            <label for="arqueacao_bruta">Arqueação Bruta (AB) <span class="required-star">*</span></label>
-                            <input type="text" id="arqueacao_bruta" name="arqueacao_bruta" required maxlength="50" placeholder="Ex.: 45.20" value="<?php echo h($embarcacao['arqueacao_bruta'] ?? ''); ?>">
-                            <small class="text-muted">Obrigatório para emissão de propostas e certificados (NORMAM).</small>
+                            <label for="arqueacao_bruta">Arqueação Bruta (AB)</label>
+                            <input type="text" id="arqueacao_bruta" name="arqueacao_bruta" maxlength="50" placeholder="Ex.: 45.20" value="<?php echo h($embarcacao['arqueacao_bruta'] ?? ''); ?>">
+                            <small class="text-muted">Pode ser preenchido posteriormente na edição.</small>
                         </div>
                         <div class="form-group">
                             <label for="arqueacao_liquida">Arqueação Líquida (AL)</label>
@@ -845,7 +845,7 @@ function atualizarCamposPropulsao() {
     const semPropulsao = possuiPropulsao.value === '0';
 
     campos.forEach(campo => {
-        campo.required = comPropulsao;
+        campo.required = false;
         campo.disabled = semPropulsao;
         campo.toggleAttribute('disabled', semPropulsao);
         campo.readOnly = false;
@@ -858,15 +858,8 @@ function atualizarCamposPropulsao() {
 
             const label = grupo.querySelector('label');
             if (label) {
-                let star = label.querySelector('.motor-star');
-                if (comPropulsao) {
-                    if (!star) {
-                        star = document.createElement('span');
-                        star.className = 'required-star motor-star';
-                        star.textContent = ' *';
-                        label.appendChild(star);
-                    }
-                } else if (star) {
+                const star = label.querySelector('.motor-star');
+                if (star) {
                     star.remove();
                 }
             }
@@ -961,74 +954,9 @@ function validarFormularioEmbarcacao(event) {
         }
     }
 
-    // 1.1 Tipo de Embarcação (obrigatório pela ISO 9001 / NORMAM)
-    const campoTipo = document.getElementById('tipo_embarcacao_id');
-    if (campoTipo) {
-        if (!(campoTipo.value || '').trim()) {
-            registrarErro(campoTipo, 'Selecione o tipo de embarcação (obrigatório pela ISO 9001 / NORMAM).');
-        }
-    }
-
-    // 2. Possui propulsão (obrigatório: 0 ou 1)
-    if (campoPossuiPropulsao) {
-        const valProp = campoPossuiPropulsao.value;
-        if (valProp === '' || (valProp !== '0' && valProp !== '1')) {
-            registrarErro(campoPossuiPropulsao, 'A informação se possui propulsão é obrigatória.');
-        } else if (valProp === '1') {
-            // Motores obrigatórios quando possui propulsão
-            const camposMotor = [
-                { id: 'fabricante_motor', label: 'Informe o fabricante do motor.' },
-                { id: 'modelo_motor', label: 'Informe o modelo do motor.' },
-                { id: 'numero_motor', label: 'Informe o número do motor.' },
-                { id: 'potencia_kw', label: 'Informe a potência propulsiva.' }
-            ];
-            camposMotor.forEach(item => {
-                const c = document.getElementById(item.id);
-                if (c && !(c.value || '').trim()) {
-                    registrarErro(c, item.label);
-                }
-            });
-        }
-    }
-
-    // 2.1 Requisitos de Dimensionamento Técnico (ISO 8.2 & NORMAM)
-    const campoCompTotal = document.getElementById('comprimento_total');
-    const campoCompCasco = document.getElementById('comprimento_casco');
-    const compTotal = parseFloat(campoCompTotal ? campoCompTotal.value : 0) || 0;
-    const compCasco = parseFloat(campoCompCasco ? campoCompCasco.value : 0) || 0;
-    if (compTotal <= 0 && compCasco <= 0) {
-        registrarErro(campoCompTotal || campoCompCasco, 'Informe o Comprimento Total ou do Casco (mínimo exigido pela ISO/NORMAM).');
-    }
-
-    const campoBocaMold = document.getElementById('boca_moldada');
-    const campoBocaMax = document.getElementById('boca_maxima');
-    const bocaMold = parseFloat(campoBocaMold ? campoBocaMold.value : 0) || 0;
-    const bocaMax = parseFloat(campoBocaMax ? campoBocaMax.value : 0) || 0;
-    if (bocaMold <= 0 && bocaMax <= 0) {
-        registrarErro(campoBocaMold || campoBocaMax, 'Informe a Boca Moldada ou Máxima (mínimo exigido pela ISO/NORMAM).');
-    }
-
-    const campoPontal = document.getElementById('pontal_moldado');
-    if (campoPontal) {
-        const valPontal = parseFloat(campoPontal.value) || 0;
-        if (valPontal <= 0) {
-            registrarErro(campoPontal, 'Informe o Pontal Moldado (mínimo exigido pela ISO/NORMAM).');
-        }
-    }
-
-    const campoAB = document.getElementById('arqueacao_bruta');
-    if (campoAB) {
-        const valAB = (campoAB.value || '').trim();
-        if (!valAB || valAB === '0') {
-            registrarErro(campoAB, 'A Arqueação Bruta (AB) é obrigatória pela NORMAM e ISO 9001.');
-        }
-    }
-
     // 3. Demais campos com atributo required ativo
     form.querySelectorAll('[required]').forEach(campo => {
-        if (campo.disabled || campo.id === 'nome' || campo.id === 'possui_propulsao' ||
-            campo.id === 'fabricante_motor' || campo.id === 'modelo_motor' ||
-            campo.id === 'numero_motor' || campo.id === 'potencia_kw') {
+        if (campo.disabled || campo.id === 'nome') {
             return;
         }
         if (!(campo.value || '').trim()) {
