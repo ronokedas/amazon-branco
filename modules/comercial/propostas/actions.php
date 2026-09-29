@@ -16,6 +16,8 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 if ($action === 'embarcacoes_cliente') {
     verificar_sessao();
     header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
 
     if (!podeAcessar('comercial')) {
         echo json_encode(['error' => 'Acesso negado.']);
@@ -62,14 +64,13 @@ if ($action === 'embarcacoes_cliente') {
             FROM embarcacoes e
             LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND (ce.status = 'ATIVO' OR ce.status IS NULL OR ce.desvinculado_em IS NULL)
             WHERE {$clausulaWhere}
-              AND (e.ativo = 1 OR e.ativo IS NULL)
               AND e.excluido_em IS NULL
             ORDER BY e.nome ASC
         ");
         $stmt->execute($params);
         $embarcacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        echo json_encode(['embarcacoes' => $embarcacoes]);
+        echo json_encode(['embarcacoes' => $embarcacoes], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
         exit;
     } catch (Exception $e) {
         error_log('Erro ao buscar embarcações do cliente: ' . $e->getMessage());

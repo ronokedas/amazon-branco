@@ -142,10 +142,10 @@ function formatarTelefoneResponsavel(input) {
 }
 
 // ============ PASSO 2: SERVIÇOS POR EMBARCAÇÃO ============
-function carregarPasso2() {
+function carregarPasso2(forcar = false) {
     if (!clienteSelecionadoData) return;
 
-    if (clientePasso2CarregadoId === clienteSelecionadoData.id && embarcacoesCarregadas.length > 0) {
+    if (!forcar && clientePasso2CarregadoId === clienteSelecionadoData.id && embarcacoesCarregadas.length > 0) {
         document.getElementById('passo2ClienteNome').textContent = clienteSelecionadoData.nome;
         construirGradeServicos(embarcacoesCarregadas);
         return;
@@ -164,8 +164,9 @@ function carregarPasso2() {
     if (typeof EMBARCACAO_URL_INICIAL !== 'undefined' && EMBARCACAO_URL_INICIAL) {
         url += '&embarcacao_id=' + encodeURIComponent(EMBARCACAO_URL_INICIAL);
     }
+    url += '&_t=' + Date.now();
 
-    fetch(url)
+    fetch(url, { cache: 'no-store' })
         .then(r => r.json())
         .then(data => {
             document.getElementById('paso2Loading').style.display = 'none';
@@ -183,7 +184,9 @@ function carregarPasso2() {
             const embUrl = (typeof EMBARCACAO_URL_INICIAL !== 'undefined' && EMBARCACAO_URL_INICIAL)
                 ? data.embarcacoes.find(e => e.id === EMBARCACAO_URL_INICIAL)
                 : null;
-            embarcacaoSelecionadaId = primeiraComServico?.id || embUrl?.id || data.embarcacoes[0]?.id || null;
+            if (!embarcacaoSelecionadaId || !data.embarcacoes.some(e => e.id === embarcacaoSelecionadaId)) {
+                embarcacaoSelecionadaId = primeiraComServico?.id || embUrl?.id || data.embarcacoes[0]?.id || null;
+            }
             clientePasso2CarregadoId = clienteSelecionadoData.id;
             construirGradeServicos(data.embarcacoes);
         })
@@ -222,6 +225,9 @@ function renderizarSeletorEmbarcacoes(embarcacoes) {
                 <span class="badge" id="embContadorGeral" style="font-size: 0.82rem; padding: 4px 12px; border-radius: 20px; font-weight: 700; background: ${totalComServicos > 0 ? 'rgba(46,204,113,0.18)' : 'rgba(120,120,120,0.14)'}; color: ${totalComServicos > 0 ? 'var(--cor-destaque)' : 'var(--cor-texto-secundario)'}; border: 1px solid ${totalComServicos > 0 ? 'rgba(46,204,113,0.35)' : 'var(--cor-borda)'};">
                     <i class="fas fa-list-check" style="margin-right: 4px;"></i> ${totalComServicos} de ${embarcacoes.length} com serviços
                 </span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="carregarPasso2(true)" title="Recarregar embarcações vinculadas" style="padding: 2px 8px; font-size: 0.8rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-sync-alt"></i> Atualizar
+                </button>
             </div>
             ${embarcacoes.length > 3 ? `
             <div class="emb-filtro-container" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
