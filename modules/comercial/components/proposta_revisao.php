@@ -37,7 +37,7 @@
                         <span id="rSubtotal" style="font-weight: 600; color: var(--cor-texto);">R$ 0,00</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span class="text-muted">Desconto (<span id="rDescontoPerc">0</span>%):</span>
+                        <span class="text-muted" id="rDescontoLabel">Desconto (<span id="rDescontoPerc">0</span>%):</span>
                         <span id="rDesconto" style="font-weight: 600; color: var(--cor-erro);">- R$ 0,00</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">

@@ -392,8 +392,8 @@ if ($action !== '') {
             $token_assinatura = md5(uniqid(rand(), true)) . uniqid();
             
             $stmtProp = $pdo->prepare("
-                INSERT INTO propostas (id, numero, cliente_id, responsavel_fechamento_nome, responsavel_fechamento_telefone, data_emissao, data_validade, parcelas, forma_pagamento, valor_total, valor_entrada, desconto_percentual, desconto_valor, observacoes, status, criado_por, token_assinatura, escritorio_id)
-                VALUES (UUID(), :numero, :cliente_id, :responsavel_fechamento_nome, :responsavel_fechamento_telefone, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), :parcelas, :forma_pagamento, :valor_total, :valor_entrada, :desconto_percentual, :desconto_valor, :observacoes, 'rascunho', :criado_por, :token_assinatura, :escritorio_id)
+                INSERT INTO propostas (id, numero, cliente_id, responsavel_fechamento_nome, responsavel_fechamento_telefone, data_emissao, data_validade, parcelas, forma_pagamento, valor_total, valor_entrada, desconto_percentual, desconto_valor, tipo_desconto, observacoes, status, criado_por, token_assinatura, escritorio_id)
+                VALUES (UUID(), :numero, :cliente_id, :responsavel_fechamento_nome, :responsavel_fechamento_telefone, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), :parcelas, :forma_pagamento, :valor_total, :valor_entrada, :desconto_percentual, :desconto_valor, :tipo_desconto, :observacoes, 'rascunho', :criado_por, :token_assinatura, :escritorio_id)
             ");
             $stmtProp->execute([
                 ':numero'              => $numero,
@@ -406,6 +406,7 @@ if ($action !== '') {
                 ':valor_entrada'       => $valor_entrada,
                 ':desconto_percentual' => $desconto_percentual,
                 ':desconto_valor'      => $desconto_valor,
+                ':tipo_desconto'       => ($tipo_desconto === 'valor') ? 'valor' : 'perc',
                 ':observacoes'         => $observacoes,
                 ':criado_por'          => $_SESSION['usuario_id'],
                 ':token_assinatura'    => $token_assinatura,
@@ -446,7 +447,10 @@ if ($action !== '') {
 
             $pdo->commit();
 
-            log_atividade('proposta_criada', "Proposta {$numero} criada para cliente '{$cliente_nome}'. Subtotal: R$ " . number_format($subtotal_geral, 2, ',', '.') . " | Desconto: {$desconto_percentual}% | Entrada: R$ " . number_format($valor_entrada, 2, ',', '.') . " | Total: R$ " . number_format($valor_total, 2, ',', '.'));
+            $descTextoLog = ($tipo_desconto === 'valor')
+                ? "R$ " . number_format($desconto_valor, 2, ',', '.')
+                : "{$desconto_percentual}%";
+            log_atividade('proposta_criada', "Proposta {$numero} criada para cliente '{$cliente_nome}'. Subtotal: R$ " . number_format($subtotal_geral, 2, ',', '.') . " | Desconto: {$descTextoLog} | Entrada: R$ " . number_format($valor_entrada, 2, ',', '.') . " | Total: R$ " . number_format($valor_total, 2, ',', '.'));
             setMensagem('success', "Proposta {$numero} criada com sucesso!");
             redirecionar(APP_URL . 'comercial?nova_proposta=' . urlencode($proposta_id));
 
@@ -634,6 +638,7 @@ if ($action !== '') {
                     valor_entrada = :valor_entrada,
                     desconto_percentual = :desconto_percentual,
                     desconto_valor = :desconto_valor,
+                    tipo_desconto = :tipo_desconto,
                     observacoes = :observacoes,
                     escritorio_id = :escritorio,
                     updated_at = NOW()
@@ -649,6 +654,7 @@ if ($action !== '') {
                 ':valor_entrada' => $valorEntrada,
                 ':desconto_percentual' => $descontoPercentual,
                 ':desconto_valor' => $descontoValor,
+                ':tipo_desconto' => ($tipoDesconto === 'valor') ? 'valor' : 'perc',
                 ':observacoes' => $observacoes,
                 ':escritorio' => $escritorioId,
                 ':id' => $propostaId,

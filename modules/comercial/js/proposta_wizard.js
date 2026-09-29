@@ -909,7 +909,15 @@ function montarRevisao() {
     document.getElementById('reviewPorEmbarcacao').innerHTML = revEmbHtml || '<p class="text-muted">Nenhum serviço selecionado.</p>';
 
     document.getElementById('rSubtotal').textContent = formatarMoeda(subtotalGeral);
-    document.getElementById('rDescontoPerc').textContent = descontoPerc.toFixed(2).replace('.', ',');
+    const rDescLabel = document.getElementById('rDescontoLabel');
+    if (rDescLabel) {
+        rDescLabel.innerHTML = tipoDesconto === 'valor'
+            ? 'Desconto:'
+            : `Desconto (<span id="rDescontoPerc">${descontoPerc.toFixed(2).replace('.', ',')}</span>%):`;
+    } else {
+        const rDescPercEl = document.getElementById('rDescontoPerc');
+        if (rDescPercEl) rDescPercEl.textContent = descontoPerc.toFixed(2).replace('.', ',');
+    }
     document.getElementById('rDesconto').textContent = '- ' + formatarMoeda(descontoValor);
     document.getElementById('rEntrada').textContent = formatarMoeda(valorEntrada);
     document.getElementById('rSaldo').textContent = formatarMoeda(saldoRestante);

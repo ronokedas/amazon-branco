@@ -89,92 +89,101 @@ require_once $autoload_path;
 // ============================================
 // FUNÇÕES AUXILIARES
 // ============================================
-function dataExtenso($data) {
-    if (empty($data)) return '___/___/______';
-    $meses = [
-        1 => 'janeiro', 2 => 'fevereiro', 3 => 'março', 4 => 'abril',
-        5 => 'maio', 6 => 'junho', 7 => 'julho', 8 => 'agosto',
-        9 => 'setembro', 10 => 'outubro', 11 => 'novembro', 12 => 'dezembro'
-    ];
-    $dt = new DateTime($data);
-    return $dt->format('d') . ' de ' . $meses[(int)$dt->format('n')] . ' de ' . $dt->format('Y');
-}
-
-function formatarMoedaPDF($valor) {
-    return number_format((float)$valor, 2, ',', '.');
-}
-
-function dataBR($data) {
-    if (empty($data)) return '';
-    return date('d/m/Y', strtotime($data));
-}
-
-function valorPorExtenso($valor) {
-    $valor = (float)$valor;
-    $inteiro = floor($valor);
-    $centavos = round(($valor - $inteiro) * 100);
-
-    $unidades = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
-    $dezenas = ['', 'dez', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
-    $especiais = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
-    $centenas = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
-
-    if ($inteiro == 0 && $centavos == 0) return 'zero real';
-    if ($inteiro == 0) return $centavos . ($centavos == 1 ? ' centavo' : ' centavos');
-
-    $extenso = '';
-
-    // Milhares
-    if ($inteiro >= 1000) {
-        $milhar = floor($inteiro / 1000);
-        $inteiro %= 1000;
-        if ($milhar == 1) {
-            $extenso .= 'um mil';
-        } else {
-            $extenso .= $unidades[$milhar] . ' mil';
-        }
-        if ($inteiro > 0) $extenso .= ' e ';
+if (!function_exists('dataExtenso')) {
+    function dataExtenso($data) {
+        if (empty($data)) return '___/___/______';
+        $meses = [
+            1 => 'janeiro', 2 => 'fevereiro', 3 => 'março', 4 => 'abril',
+            5 => 'maio', 6 => 'junho', 7 => 'julho', 8 => 'agosto',
+            9 => 'setembro', 10 => 'outubro', 11 => 'novembro', 12 => 'dezembro'
+        ];
+        $dt = new DateTime($data);
+        return $dt->format('d') . ' de ' . $meses[(int)$dt->format('n')] . ' de ' . $dt->format('Y');
     }
+}
 
-    // Centenas
-    if ($inteiro >= 100) {
-        $c = floor($inteiro / 100);
-        $inteiro %= 100;
-        if ($inteiro == 0 && $c == 1) {
-            $extenso .= 'cem';
-        } else {
-            $extenso .= $centenas[$c];
-        }
-        if ($inteiro > 0) $extenso .= ' e ';
+if (!function_exists('formatarMoedaPDF')) {
+    function formatarMoedaPDF($valor) {
+        return number_format((float)$valor, 2, ',', '.');
     }
+}
 
-    // Dezenas e unidades
-    if ($inteiro >= 10 && $inteiro <= 19) {
-        $extenso .= $especiais[$inteiro - 10];
-    } else {
-        if ($inteiro >= 20) {
-            $d = floor($inteiro / 10);
-            $inteiro %= 10;
-            $extenso .= $dezenas[$d];
+if (!function_exists('dataBR')) {
+    function dataBR($data) {
+        if (empty($data)) return '';
+        return date('d/m/Y', strtotime($data));
+    }
+}
+
+if (!function_exists('valorPorExtenso')) {
+    function valorPorExtenso($valor) {
+        $valor = (float)$valor;
+        $inteiro = floor($valor);
+        $centavos = round(($valor - $inteiro) * 100);
+
+        $unidades = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+        $dezenas = ['', 'dez', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+        $especiais = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+        $centenas = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+
+        if ($inteiro == 0 && $centavos == 0) return 'zero real';
+        if ($inteiro == 0) return $centavos . ($centavos == 1 ? ' centavo' : ' centavos');
+
+        $extenso = '';
+
+        // Milhares
+        if ($inteiro >= 1000) {
+            $milhar = floor($inteiro / 1000);
+            $inteiro %= 1000;
+            if ($milhar == 1) {
+                $extenso .= 'um mil';
+            } else {
+                $extenso .= $unidades[$milhar] . ' mil';
+            }
             if ($inteiro > 0) $extenso .= ' e ';
         }
-        if ($inteiro > 0) {
-            $extenso .= $unidades[$inteiro];
+
+        // Centenas
+        if ($inteiro >= 100) {
+            $c = floor($inteiro / 100);
+            $inteiro %= 100;
+            if ($inteiro == 0 && $c == 1) {
+                $extenso .= 'cem';
+            } else {
+                $extenso .= $centenas[$c];
+            }
+            if ($inteiro > 0) $extenso .= ' e ';
         }
+
+        // Dezenas e unidades
+        if ($inteiro >= 10 && $inteiro <= 19) {
+            $extenso .= $especiais[$inteiro - 10];
+        } else {
+            if ($inteiro >= 20) {
+                $d = floor($inteiro / 10);
+                $inteiro %= 10;
+                $extenso .= $dezenas[$d];
+                if ($inteiro > 0) $extenso .= ' e ';
+            }
+            if ($inteiro > 0) {
+                $extenso .= $unidades[$inteiro];
+            }
+        }
+
+        $extenso .= $valor == 1 ? ' real' : ' reais';
+
+        if ($centavos > 0) {
+            $extenso .= ' e ' . $centavos . ($centavos == 1 ? ' centavo' : ' centavos');
+        }
+
+        return $extenso;
     }
-
-    $extenso .= $valor == 1 ? ' real' : ' reais';
-
-    if ($centavos > 0) {
-        $extenso .= ' e ' . $centavos . ($centavos == 1 ? ' centavo' : ' centavos');
-    }
-
-    return $extenso;
 }
 
 // ============================================
 // CLASSE PDF PERSONALIZADA
 // ============================================
+if (!class_exists('PropostaPDF', false)) {
 class PropostaPDF extends \setasign\Fpdi\Tcpdf\Fpdi {
     protected $proposta;
     protected $numero;
@@ -310,6 +319,7 @@ class PropostaPDF extends \setasign\Fpdi\Tcpdf\Fpdi {
     }
 
 }
+}
 
 // ============================================
 // CRIAR PDF
@@ -438,9 +448,18 @@ if (empty($servicos_todos)) {
 }
 
 // --- TOTAIS ---
+$tipoDesconto = $proposta['tipo_desconto'] ?? 'perc';
 $descontoPerc = (float)($proposta['desconto_percentual'] ?? 0);
-$descontoValor = round($subtotalGeral * ($descontoPerc / 100), 2);
-$totalGeral = round($subtotalGeral - $descontoValor, 2);
+$descontoValor = (float)($proposta['desconto_valor'] ?? 0);
+
+if ($descontoValor <= 0 && $descontoPerc > 0) {
+    $descontoValor = round($subtotalGeral * ($descontoPerc / 100), 2);
+}
+if ($tipoDesconto === 'perc' && $descontoPerc <= 0 && $descontoValor > 0 && $subtotalGeral > 0) {
+    $descontoPerc = round(($descontoValor / $subtotalGeral) * 100, 2);
+}
+
+$totalGeral = max(0, round($subtotalGeral - $descontoValor, 2));
 
 $pdf->Ln(2);
 $pdf->SetFont('helvetica', 'B', 9);
@@ -457,7 +476,12 @@ $pdf->Cell($colTotalValor, 6, 'R$ ' . formatarMoedaPDF($subtotalGeral), 1, 1, 'R
 // Linha Desconto (se houver)
 if ($descontoValor > 0) {
     $pdf->SetFont('helvetica', 'B', 9);
-    $pdf->Cell($colTotalLabel, 6, 'DESCONTO (' . number_format($descontoPerc, 2, ',', '.') . '%)', 1, 0, 'R', true);
+    $labelDesconto = ($tipoDesconto === 'valor')
+        ? 'DESCONTO'
+        : 'DESCONTO (' . number_format($descontoPerc, 2, ',', '.') . '%)';
+    $GLOBALS['ULTIMO_LABEL_DESCONTO'] = $labelDesconto;
+    $GLOBALS['ULTIMO_VALOR_DESCONTO'] = $descontoValor;
+    $pdf->Cell($colTotalLabel, 6, $labelDesconto, 1, 0, 'R', true);
     $pdf->SetTextColor(180, 0, 0);
     $pdf->Cell($colTotalValor, 6, '- R$ ' . formatarMoedaPDF($descontoValor), 1, 1, 'R', true);
     $pdf->SetTextColor(0, 0, 0);

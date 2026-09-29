@@ -348,9 +348,13 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                 <!-- Totais do detalhe -->
                 <div style="padding: 16px 20px; background: var(--cor-sidebar); border-top: 2px solid var(--cor-borda);">
                     <?php
+                    $descTipoDet = $propostaDetalhe['tipo_desconto'] ?? 'perc';
                     $descPercDet = (float)($propostaDetalhe['desconto_percentual'] ?? 0);
-                    $descValDet = round($subtotalDetalhe * ($descPercDet / 100), 2);
-                    $totalDet = round($subtotalDetalhe - $descValDet, 2);
+                    $descValDet = (float)($propostaDetalhe['desconto_valor'] ?? 0);
+                    if ($descValDet <= 0 && $descPercDet > 0) {
+                        $descValDet = round($subtotalDetalhe * ($descPercDet / 100), 2);
+                    }
+                    $totalDet = max(0, round($subtotalDetalhe - $descValDet, 2));
                     $parcDet = (int)$propostaDetalhe['parcelas'];
                     $valParcDet = ($parcDet > 0) ? round($totalDet / $parcDet, 2) : $totalDet;
                     ?>
@@ -360,7 +364,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     </div>
                     <?php if ($descValDet > 0): ?>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span class="text-muted">Desconto (<?php echo number_format($descPercDet, 2, ',', '.'); ?>%)</span>
+                        <span class="text-muted"><?php echo $descTipoDet === 'valor' ? 'Desconto' : 'Desconto (' . number_format($descPercDet, 2, ',', '.') . '%)'; ?></span>
                         <span style="font-weight: 600; color: var(--cor-erro);">- R$ <?php echo number_format($descValDet, 2, ',', '.'); ?></span>
                     </div>
                     <?php endif; ?>

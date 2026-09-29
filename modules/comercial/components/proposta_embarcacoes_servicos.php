@@ -35,23 +35,30 @@
             </div>
             <div class="discount-card">
                 <small class="text-muted">Desconto</small>
+                <?php
+                $tipoDescontoSalvo = $propostaEdicao['tipo_desconto'] ?? 'perc';
+                $isDescontoValor = ($tipoDescontoSalvo === 'valor');
+                $valorDescontoSalvo = $isDescontoValor
+                    ? (float)($propostaEdicao['desconto_valor'] ?? 0)
+                    : (float)($propostaEdicao['desconto_percentual'] ?? 0);
+                ?>
                 <select id="tipoDesconto" name="tipo_desconto" onchange="setTipoDesconto(this.value)" class="discount-hidden-select" aria-label="Tipo de desconto">
-                    <option value="perc">%</option>
-                    <option value="valor">R$</option>
+                    <option value="perc" <?php echo !$isDescontoValor ? 'selected' : ''; ?>>%</option>
+                    <option value="valor" <?php echo $isDescontoValor ? 'selected' : ''; ?>>R$</option>
                 </select>
                 <div class="discount-control" role="group" aria-label="Tipo e valor do desconto">
                     <div class="discount-mode">
-                        <button type="button" class="discount-mode-btn is-active" data-discount-type="perc" onclick="setTipoDesconto('perc')" title="Desconto em porcentagem" aria-pressed="true">%</button>
-                        <button type="button" class="discount-mode-btn" data-discount-type="valor" onclick="setTipoDesconto('valor')" title="Desconto em reais" aria-pressed="false">R$</button>
+                        <button type="button" class="discount-mode-btn <?php echo !$isDescontoValor ? 'is-active' : ''; ?>" data-discount-type="perc" onclick="setTipoDesconto('perc')" title="Desconto em porcentagem" aria-pressed="<?php echo !$isDescontoValor ? 'true' : 'false'; ?>">%</button>
+                        <button type="button" class="discount-mode-btn <?php echo $isDescontoValor ? 'is-active' : ''; ?>" data-discount-type="valor" onclick="setTipoDesconto('valor')" title="Desconto em reais" aria-pressed="<?php echo $isDescontoValor ? 'true' : 'false'; ?>">R$</button>
                     </div>
                     <label class="discount-input-wrap" for="descontoGlobalDisplay">
-                        <span id="descontoPrefixo">%</span>
+                        <span id="descontoPrefixo"><?php echo $isDescontoValor ? 'R$' : '%'; ?></span>
                         <input type="text" id="descontoGlobalDisplay"
-                               value="<?php echo number_format((float)($propostaEdicao['desconto_percentual'] ?? 0), 2, ',', '.'); ?>"
+                               value="<?php echo number_format($valorDescontoSalvo, 2, ',', '.'); ?>"
                                oninput="mascararDesconto(this)" onkeydown="tratarKeyDownDesconto(event)" onblur="finalizarEdicaoDesconto(this)" onfocus="this.select()" title="Valor do desconto"
-                               inputmode="decimal" autocomplete="off" aria-describedby="descontoErro descontoValor">
+                               inputmode="<?php echo $isDescontoValor ? 'numeric' : 'decimal'; ?>" autocomplete="off" aria-describedby="descontoErro descontoValor">
                         <input type="hidden" id="descontoGlobal" name="desconto_global"
-                               value="<?php echo number_format((float)($propostaEdicao['desconto_percentual'] ?? 0), 2, '.', ''); ?>">
+                               value="<?php echo number_format($valorDescontoSalvo, 2, '.', ''); ?>">
                     </label>
                 </div>
                 <small id="descontoErro" class="discount-error" role="alert" hidden>O desconto percentual deve ser menor que 100%.</small>
