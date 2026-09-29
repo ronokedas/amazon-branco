@@ -320,34 +320,6 @@ $pdf = new PropostaPDF($proposta);
 $pdf->AddPage();
 $pdf->SetTextColor(0, 0, 0);
 
-// --- BLOCO: NOME DA EMBARCAÇÃO ---
-$pdf->SetFont('helvetica', 'B', 9);
-$pdf->SetTextColor(0, 61, 52);
-$pdf->Cell(0, 5, 'NOME DA EMBARCAÇÃO', 0, 1, 'L');
-$pdf->SetTextColor(0, 0, 0);
-
-// Listar todas as embarcações
-$embarcacoesNomes = [];
-foreach ($embarcacoes as $emb) {
-    $linhaNome = '"' . mb_strtoupper($emb['nome']) . '"';
-    if (!empty($emb['registro'])) {
-        $linhaNome .= '     Registro: ' . $emb['registro'];
-    }
-    $embarcacoesNomes[] = $linhaNome;
-}
-
-if (empty($embarcacoesNomes)) {
-    $pdf->SetFont('helvetica', 'I', 9);
-    $pdf->Cell(0, 6, '(Nenhuma embarcação vinculada)', 0, 1, 'L');
-} else {
-    foreach ($embarcacoesNomes as $i => $nomeEmb) {
-        $pdf->SetFont('helvetica', 'B', 10);
-        $pdf->Cell(0, 6, $nomeEmb, 0, 1, 'L');
-    }
-}
-
-$pdf->Ln(2);
-
 // --- BLOCO: CONTRATANTE / CONTRATADA (duas colunas) ---
 $colEsq = 90;
 $colDir = 90;
