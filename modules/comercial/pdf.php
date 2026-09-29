@@ -442,12 +442,12 @@ $pdf->SetFont('helvetica', 'B', 8);
 $pdf->SetFillColor(0, 61, 52);
 $pdf->SetTextColor(255, 255, 255);
 
-$wServ = [10, 100, 20, 30, 30];
+$wServ = [10, 125, 15, 40];
 $pdf->Cell($wServ[0], 6, 'Nº', 1, 0, 'C', true);
 $pdf->Cell($wServ[1], 6, 'DESCRIÇÃO DOS SERVIÇOS', 1, 0, 'C', true);
 $pdf->Cell($wServ[2], 6, 'QTD', 1, 0, 'C', true);
-$pdf->Cell($wServ[3], 6, 'PREÇO UNIT.', 1, 0, 'C', true);
-$pdf->Cell($wServ[4], 6, 'SUBTOTAL', 1, 1, 'C', true);
+$pdf->Cell($wServ[3], 6, 'SUBTOTAL', 1, 1, 'C', true);
+
 
 $pdf->SetTextColor(0, 0, 0);
 $pdf->SetFont('helvetica', '', 8);
@@ -495,8 +495,8 @@ if (empty($servicos_todos)) {
             $pdf->Cell($wServ[0], $hLinha, $contador, 1, 0, 'C', true);
             $pdf->Cell($wServ[1], $hLinha, $nomeServ, 1, 0, 'L', true);
             $pdf->Cell($wServ[2], $hLinha, $qtd, 1, 0, 'C', true);
-            $pdf->Cell($wServ[3], $hLinha, 'R$ ' . formatarMoedaPDF($preco), 1, 0, 'R', true);
-            $pdf->Cell($wServ[4], $hLinha, 'R$ ' . formatarMoedaPDF($sub), 1, 1, 'R', true);
+            $pdf->Cell($wServ[3], $hLinha, 'R$ ' . formatarMoedaPDF($sub), 1, 1, 'R', true);
+
         }
     }
 }
@@ -510,8 +510,8 @@ $pdf->Ln(2);
 $pdf->SetFont('helvetica', 'B', 9);
 
 // Linha Subtotal
-$colTotalLabel = $wServ[0] + $wServ[1] + $wServ[2]; // 130
-$colTotalValor = $wServ[3] + $wServ[4]; // 60
+$colTotalLabel = $wServ[0] + $wServ[1] + $wServ[2]; // 150
+$colTotalValor = $wServ[3]; // 40
 
 $pdf->SetFillColor(240, 247, 243);
 $pdf->Cell($colTotalLabel, 6, 'TOTAL DOS SERVIÇOS', 1, 0, 'R', true);
