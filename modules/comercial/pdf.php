@@ -361,42 +361,6 @@ $pdf->Cell($colDir, 5, '', 1, 1, 'L', true);
 
 $pdf->Ln(5);
 
-// --- BLOCO: DADOS TÉCNICOS DA EMBARCAÇÃO ---
-if (!empty($embarcacoes)) {
-    $pdf->SetFont('helvetica', 'B', 9);
-    $pdf->SetTextColor(0, 61, 52);
-    $pdf->Cell(0, 5, 'DADOS TÉCNICOS DA EMBARCAÇÃO', 0, 1, 'L');
-    $pdf->SetTextColor(0, 0, 0);
-    $pdf->Ln(1);
-
-    // Tabela de dados técnicos para cada embarcação
-    foreach ($embarcacoes as $emb) {
-        $pdf->SetFont('helvetica', 'B', 8);
-        $pdf->SetFillColor(231, 243, 238);
-        $pdf->Cell(180, 5, mb_strtoupper($emb['nome']), 1, 1, 'L', true);
-
-        $pdf->SetFont('helvetica', '', 8);
-        $pdf->SetFillColor(255, 255, 255);
-
-        $colW = [60, 60, 60];
-        $comprimento = !empty($emb['comprimento_total']) ? number_format((float)$emb['comprimento_total'], 3, ',', '.') . ' m' : 'N/I';
-        $boca = !empty($emb['boca_moldada']) ? number_format((float)$emb['boca_moldada'], 3, ',', '.') . ' m' : 'N/I';
-        $pontal = !empty($emb['pontal_moldado']) ? number_format((float)$emb['pontal_moldado'], 3, ',', '.') . ' m' : 'N/I';
-
-        $pdf->Cell($colW[0], 5, 'COMPRIMENTO: ' . $comprimento, 1, 0, 'L', true);
-        $pdf->Cell($colW[1], 5, 'BOCA: ' . $boca, 1, 0, 'L', true);
-        $pdf->Cell($colW[2], 5, 'PONTAL: ' . $pontal, 1, 1, 'L', true);
-
-        $tipoEmb = !empty($emb['tipo_embarcacao']) ? $emb['tipo_embarcacao'] : 'N/I';
-        $material = !empty($emb['material_casco']) ? $emb['material_casco'] : 'N/I';
-
-        $pdf->Cell($colW[0], 5, 'TIPO: ' . $tipoEmb, 1, 0, 'L', true);
-        $pdf->Cell($colW[1] + $colW[2], 5, 'MATERIAL DO CASCO: ' . $material, 1, 1, 'L', true);
-    }
-
-    $pdf->Ln(5);
-}
-
 // --- BLOCO: OBJETO DA PROPOSTA E SERVIÇOS ---
 $pdf->SetFont('helvetica', 'B', 10);
 $pdf->SetTextColor(0, 61, 52);
