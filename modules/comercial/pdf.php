@@ -588,144 +588,145 @@ $pdf->SetFillColor(240, 247, 243);
 $pdf->Cell($colParc[0] + $colParc[1] + $colParc[2], 6, 'TOTAL', 1, 0, 'R', true);
 $pdf->Cell($colParc[3], 6, 'R$ ' . formatarMoedaPDF($totalGeral), 1, 1, 'R', true);
 
-$pdf->Ln(2);
+$pdf->Ln(3);
 
 // --- DADOS BANCÁRIOS ---
-$pdf->SetFont('helvetica', 'B', 8.5);
+$pdf->SetFont('helvetica', 'B', 9);
 $pdf->SetTextColor(0, 61, 52);
 $pdf->SetFillColor(231, 243, 238);
-$pdf->Cell(0, 5, 'DADOS BANCÁRIOS', 0, 1, 'L', true);
+$pdf->Cell(0, 6, 'DADOS BANCÁRIOS', 0, 1, 'L', true);
 $pdf->SetTextColor(0, 0, 0);
-$pdf->SetFont('helvetica', '', 7.5);
+$pdf->SetFont('helvetica', '', 8);
 
-$pdf->MultiCell(0, 3.5, "O pagamento, quando acordado a ser realizado por transferência ou depósito, deverá ser efetuado na conta corrente do Banco Inter 077, Agência 0001, Conta Corrente 0533429765, Código do operador 70723325, ou PIX 60.360.061/0001-91.", 0, 'L');
-$pdf->Ln(1.5);
+$pdf->MultiCell(0, 4, "O pagamento, quando acordado a ser realizado por transferência ou depósito, deverá ser efetuado na conta corrente do Banco Inter 077, Agência 0001, Conta Corrente 0533429765, Código do operador 70723325, ou PIX 60.360.061/0001-91.", 0, 'L');
+$pdf->Ln(2);
 
 // --- DESPESAS EVENTUAIS ---
-$pdf->SetFont('helvetica', 'B', 8.5);
+$pdf->SetFont('helvetica', 'B', 9);
 $pdf->SetTextColor(0, 61, 52);
 $pdf->SetFillColor(231, 243, 238);
-$pdf->Cell(0, 5, 'DESPESAS EVENTUAIS', 0, 1, 'L', true);
+$pdf->Cell(0, 6, 'DESPESAS EVENTUAIS', 0, 1, 'L', true);
 $pdf->SetTextColor(0, 0, 0);
-$pdf->SetFont('helvetica', '', 7.5);
+$pdf->SetFont('helvetica', '', 8);
 
-$pdf->MultiCell(0, 3.5, "Todas as despesas de deslocamento (uber ou táxi) e alimentação dentro da cidade de BELÉM/PA deverão ser pagas pelo ACEITANTE.", 0, 'L');
-$pdf->Ln(0.8);
-$pdf->MultiCell(0, 3.5, "Havendo necessidade de realização de vistorias no Sábado ou Domingo ou Feriado, o ACEITANTE deverá arcar com o valor de R\$300,00 (trezentos reais) a diária, a ser pago de forma integral via PIX ou transferência bancária, no dia da realização da vistoria.", 0, 'L');
-$pdf->Ln(0.8);
-$pdf->MultiCell(0, 3.5, "Todas as despesas com passagens (aéreas, terrestres ou fluviais), combustível, alimentação, hospedagem, entre outras, fora da cidade de BELÉM/PA deverão ser arcadas pelo ACEITANTE.", 0, 'L');
-$pdf->Ln(2);
+$pdf->MultiCell(0, 4, "Todas as despesas de deslocamento (uber ou táxi) e alimentação dentro da cidade de BELÉM/PA deverão ser pagas pelo ACEITANTE.", 0, 'L');
+$pdf->Ln(1);
+$pdf->MultiCell(0, 4, "Havendo necessidade de realização de vistorias no Sábado ou Domingo ou Feriado, o ACEITANTE deverá arcar com o valor de R\$300,00 (trezentos reais) a diária, a ser pago de forma integral via PIX ou transferência bancária, no dia da realização da vistoria.", 0, 'L');
+$pdf->Ln(1);
+$pdf->MultiCell(0, 4, "Todas as despesas com passagens (aéreas, terrestres ou fluviais), combustível, alimentação, hospedagem, entre outras, fora da cidade de BELÉM/PA deverão ser arcadas pelo ACEITANTE.", 0, 'L');
+$pdf->Ln(3);
 
 // --- PRAZO DE VALIDADE DA PROPOSTA ---
-$pdf->SetFont('helvetica', 'B', 8.5);
+$pdf->SetFont('helvetica', 'B', 9);
 $pdf->SetTextColor(0, 61, 52);
-$pdf->Cell(0, 5, '5.0 - PRAZO DE VALIDADE DA PROPOSTA DE SERVIÇOS', 0, 1, 'L');
+$pdf->Cell(0, 6, '5.0 - PRAZO DE VALIDADE DA PROPOSTA DE SERVIÇOS', 0, 1, 'L');
 $pdf->SetTextColor(0, 0, 0);
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->MultiCell(0, 3.5, "O prazo de validade desta proposta de serviços é de 30 (trinta) dias contados a partir da sua data de emissão, sendo que, posteriormente a esse prazo, o PROPONENTE não se obrigará a manter as condições e os preços por ventura compactuados.", 0, 'L');
-$pdf->Ln(1.5);
+$pdf->SetFont('helvetica', '', 8);
+$pdf->MultiCell(0, 4, "O prazo de validade desta proposta de serviços é de 30 (trinta) dias contados a partir da sua data de emissão, sendo que, posteriormente a esse prazo, o PROPONENTE não se obrigará a manter as condições e os preços por ventura compactuados.", 0, 'L');
+$pdf->Ln(2);
 
 // --- SERVIÇOS A REALIZAR ---
-$pdf->SetFont('helvetica', 'B', 8.5);
+$pdf->SetFont('helvetica', 'B', 9);
 $pdf->SetTextColor(0, 61, 52);
-$pdf->Cell(0, 5, '6.0 - SERVIÇOS A REALIZAR', 0, 1, 'L');
+$pdf->Cell(0, 6, '6.0 - SERVIÇOS A REALIZAR', 0, 1, 'L');
 $pdf->SetTextColor(0, 0, 0);
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->MultiCell(0, 3.5, "O agendamento das vistorias ficará condicionado à apresentação prévia do projeto da embarcação, em meio físico ou digital, devidamente acompanhado de todas as informações e documentos necessários para análise técnica.", 0, 'L');
-$pdf->Ln(0.8);
-$pdf->MultiCell(0, 3.5, "Os agendamentos para realização dos serviços deverão ser feitos com a devida antecedência, sendo que as orientações dadas pelo PROPONENTE deverão ser seguidas pelo ACEITANTE.", 0, 'L');
-$pdf->Ln(0.8);
-$pdf->MultiCell(0, 3.5, "No caso do ACEITANTE não cumprir os prazos dos certificados mencionados no item acima, será realizada uma nova PROPOSTA DE SERVIÇOS.", 0, 'L');
-$pdf->Ln(0.8);
-$pdf->MultiCell(0, 3.5, "No caso de excepcional desistência na conclusão dos serviços por parte do ACEITANTE, este se compromete a arcar com as despesas já realizadas e não pagas, bem como o valor residual acordado e não pago desta proposta de serviços.", 0, 'L');
-$pdf->Ln(2);
+$pdf->SetFont('helvetica', '', 8);
+$pdf->MultiCell(0, 4, "O agendamento das vistorias ficará condicionado à apresentação prévia do projeto da embarcação, em meio físico ou digital, devidamente acompanhado de todas as informações e documentos necessários para análise técnica.", 0, 'L');
+$pdf->Ln(1);
+$pdf->MultiCell(0, 4, "Os agendamentos para realização dos serviços deverão ser feitos com a devida antecedência, sendo que as orientações dadas pelo PROPONENTE deverão ser seguidas pelo ACEITANTE.", 0, 'L');
+$pdf->Ln(1);
+$pdf->MultiCell(0, 4, "No caso do ACEITANTE não cumprir os prazos dos certificados mencionados no item acima, será realizada uma nova PROPOSTA DE SERVIÇOS.", 0, 'L');
+$pdf->Ln(1);
+$pdf->MultiCell(0, 4, "No caso de excepcional desistência na conclusão dos serviços por parte do ACEITANTE, este se compromete a arcar com as despesas já realizadas e não pagas, bem como o valor residual acordado e não pago desta proposta de serviços.", 0, 'L');
+$pdf->Ln(3);
 
 // --- DO FORO ---
-$pdf->SetFont('helvetica', 'B', 8.5);
+$pdf->SetFont('helvetica', 'B', 9);
 $pdf->SetTextColor(0, 61, 52);
-$pdf->Cell(0, 5, '7.0 - DO FORO', 0, 1, 'L');
+$pdf->Cell(0, 6, '7.0 - DO FORO', 0, 1, 'L');
 $pdf->SetTextColor(0, 0, 0);
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->MultiCell(0, 3.5, "Fica eleito o foro da comarca de BELÉM/PA para nele serem dirimidas as dúvidas porventura surgidas no fiel cumprimento deste instrumento.", 0, 'L');
-$pdf->Ln(2);
+$pdf->SetFont('helvetica', '', 8);
+$pdf->MultiCell(0, 4, "Fica eleito o foro da comarca de BELÉM/PA para nele serem dirimidas as dúvidas porventura surgidas no fiel cumprimento deste instrumento.", 0, 'L');
+$pdf->Ln(3);
 
 // Observações contratuais (se houver)
 if (!empty($proposta['observacoes'])) {
-    $pdf->SetFont('helvetica', 'B', 8.5);
+    $pdf->SetFont('helvetica', 'B', 9);
     $pdf->SetTextColor(0, 61, 52);
     $pdf->SetFillColor(231, 243, 238);
-    $pdf->Cell(0, 5, 'OBSERVAÇÕES', 0, 1, 'L', true);
+    $pdf->Cell(0, 6, 'OBSERVAÇÕES', 0, 1, 'L', true);
     $pdf->SetTextColor(0, 0, 0);
-    $pdf->SetFont('helvetica', '', 7.5);
-    $pdf->MultiCell(0, 3.5, $proposta['observacoes'], 0, 'L');
-    $pdf->Ln(2);
+    $pdf->SetFont('helvetica', '', 8);
+    $pdf->MultiCell(0, 4, $proposta['observacoes'], 0, 'L');
+    $pdf->Ln(3);
 }
 
 // --- 8.0 ACEITE FORMAL E BLOCO DE ASSINATURA INDIVISÍVEL ---
-// O aceite formal, quadros de assinatura e QR code de assinatura devem permanecer
-// estritamente na mesma página (sem quebra órfã para o QR code ou assinaturas).
-$alturaBlocoAceiteAssinatura = 84;
+// O aceite formal, os quadros de assinatura no tamanho normal (60mm) e o QR code
+// devem ficar estritamente na mesma página. Se não houver espaço suficiente para
+// todo o conjunto na página atual (após o 7.0 Foro), quebra automaticamente para a próxima página.
+$alturaBlocoAceiteAssinatura = 110;
 if ($pdf->GetY() + $alturaBlocoAceiteAssinatura > 275) {
     $pdf->AddPage();
 }
 
-$pdf->SetFont('helvetica', 'B', 9);
+$pdf->SetFont('helvetica', 'B', 10);
 $pdf->SetTextColor(0, 61, 52);
 $pdf->SetFillColor(231, 243, 238);
-$pdf->Cell(0, 6, '8.0 - ACEITE FORMAL', 0, 1, 'L', true);
+$pdf->Cell(0, 7, '8.0 - ACEITE FORMAL', 0, 1, 'L', true);
 $pdf->SetTextColor(0, 0, 0);
-$pdf->Ln(1.5);
+$pdf->Ln(2);
 
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->MultiCell(0, 3.5, "Pela presente proposta de serviços, a CONTRATADA se compromete a prestar os serviços descritos na Cláusula 1.0 (OBJETO DA PROPOSTA E SERVIÇOS), mediante as condições de pagamento constantes na Cláusula 4.0 (CONDIÇÕES DE PAGAMENTO), e o ACEITANTE se compromete a efetuar o pagamento conforme acordado.", 0, 'L');
+$pdf->SetFont('helvetica', '', 8);
+$pdf->MultiCell(0, 4, "Pela presente proposta de serviços, a CONTRATADA se compromete a prestar os serviços descritos na Cláusula 1.0 (OBJETO DA PROPOSTA E SERVIÇOS), mediante as condições de pagamento constantes na Cláusula 4.0 (CONDIÇÕES DE PAGAMENTO), e o ACEITANTE se compromete a efetuar o pagamento conforme acordado.", 0, 'L');
 $pdf->Ln(1);
-$pdf->MultiCell(0, 3.5, "O ACEITANTE declara estar ciente e de acordo com todos os termos e condições estipulados na presente proposta de serviços.", 0, 'L');
-$pdf->Ln(2.5);
+$pdf->MultiCell(0, 4, "O ACEITANTE declara estar ciente e de acordo com todos os termos e condições estipulados na presente proposta de serviços.", 0, 'L');
+$pdf->Ln(5);
 
-// --- QUADROS DE ASSINATURA ---
+// --- QUADROS DE ASSINATURA (TAMANHO NORMAL: 60mm) ---
 $assinaturaY = $pdf->GetY();
-$alturaQuadro = 44;
+$alturaQuadro = 60;
 
 // Quadro da assinatura CONTRATANTE (esquerda)
 $pdf->SetDrawColor(0, 61, 52);
-$pdf->SetLineWidth(0.4);
+$pdf->SetLineWidth(0.5);
 $pdf->Rect(15, $assinaturaY, 88, $alturaQuadro);
 $pdf->SetDrawColor(173, 204, 194);
 $pdf->SetLineWidth(0.2);
-$pdf->Rect(16.5, $assinaturaY + 1.5, 85, $alturaQuadro - 3);
+$pdf->Rect(17, $assinaturaY + 2, 84, $alturaQuadro - 4);
 
 // Quadro da assinatura CONTRATADA (direita)
 $pdf->SetDrawColor(0, 61, 52);
-$pdf->SetLineWidth(0.4);
+$pdf->SetLineWidth(0.5);
 $pdf->Rect(107, $assinaturaY, 88, $alturaQuadro);
 $pdf->SetDrawColor(173, 204, 194);
 $pdf->SetLineWidth(0.2);
-$pdf->Rect(108.5, $assinaturaY + 1.5, 85, $alturaQuadro - 3);
+$pdf->Rect(109, $assinaturaY + 2, 84, $alturaQuadro - 4);
 
 // Título ACEITANTE (esquerda)
-$pdf->SetXY(16.5, $assinaturaY + 2.5);
-$pdf->SetFont('helvetica', 'B', 8.5);
+$pdf->SetXY(17, $assinaturaY + 4);
+$pdf->SetFont('helvetica', 'B', 9);
 $pdf->SetTextColor(0, 61, 52);
-$pdf->Cell(85, 4, 'ACEITANTE', 0, 1, 'C');
+$pdf->Cell(84, 5, 'ACEITANTE', 0, 1, 'C');
 $pdf->SetTextColor(0, 0, 0);
-$pdf->SetXY(16.5, $assinaturaY + 6.5);
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(85, 3.5, $clienteNome, 0, 1, 'C');
+$pdf->SetXY(17, $assinaturaY + 9);
+$pdf->SetFont('helvetica', '', 8);
+$pdf->Cell(84, 5, $clienteNome, 0, 1, 'C');
 
 // Título PROPONENTE (direita)
-$pdf->SetXY(108.5, $assinaturaY + 2.5);
-$pdf->SetFont('helvetica', 'B', 8.5);
+$pdf->SetXY(109, $assinaturaY + 4);
+$pdf->SetFont('helvetica', 'B', 9);
 $pdf->SetTextColor(0, 61, 52);
-$pdf->Cell(85, 4, 'PROPONENTE', 0, 1, 'C');
+$pdf->Cell(84, 5, 'PROPONENTE', 0, 1, 'C');
 $pdf->SetTextColor(0, 0, 0);
-$pdf->SetXY(108.5, $assinaturaY + 6.5);
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(85, 3.5, 'AMAZON NAVAL LTDA', 0, 1, 'C');
+$pdf->SetXY(109, $assinaturaY + 9);
+$pdf->SetFont('helvetica', '', 8);
+$pdf->Cell(84, 5, 'AMAZON NAVAL LTDA', 0, 1, 'C');
 
-// Logo oficial Amazon Naval no quadro direito
+// Logo oficial Amazon Naval no quadro direito (largura 22mm, tamanho normal legível)
 $logo_path2 = __DIR__ . '/../../img/logo.png';
 if (file_exists($logo_path2) && filesize($logo_path2) > 100) {
-    $pdf->Image($logo_path2, 144, $assinaturaY + 11.5, 14, 0, 'PNG', '', '', false, 150);
+    $pdf->Image($logo_path2, 140, $assinaturaY + 16, 22, 0, 'PNG', '', '', false, 150);
 }
 
 // Imagem da Assinatura do Cliente (se houver)
@@ -740,10 +741,10 @@ if (!empty($proposta['assinado'])) {
         file_put_contents($tmp_file, $imagemAssinatura['bytes'], LOCK_EX);
         $pdf->Image(
             $tmp_file,
-            28,
-            $assinaturaY + 10,
-            50,
-            16,
+            25,
+            $assinaturaY + 14,
+            55,
+            25,
             $imagemAssinatura['tipo_pdf'],
             '',
             '',
@@ -791,7 +792,7 @@ if (!empty($proposta['assinado'])) {
         if ($decoded !== false && !empty($decoded)) {
             $tmp_file = tempnam(sys_get_temp_dir(), 'sig_') . '.png';
             file_put_contents($tmp_file, $decoded);
-            $pdf->Image($tmp_file, 28, $assinaturaY + 10, 50, 16, 'PNG', '', '', true, 150);
+            $pdf->Image($tmp_file, 25, $assinaturaY + 14, 55, 25, 'PNG', '', '', true, 150);
             @unlink($tmp_file);
         }
     } elseif (!empty($proposta['assinatura_imagem'])) {
@@ -803,7 +804,7 @@ if (!empty($proposta['assinado'])) {
         if ($decoded !== false) {
             $tmp_file = tempnam(sys_get_temp_dir(), 'sig_') . '.png';
             file_put_contents($tmp_file, $decoded);
-            $pdf->Image($tmp_file, 28, $assinaturaY + 10, 50, 16, 'PNG', '', '', true, 150);
+            $pdf->Image($tmp_file, 25, $assinaturaY + 14, 55, 25, 'PNG', '', '', true, 150);
             @unlink($tmp_file);
         }
     }
@@ -812,69 +813,69 @@ if (!empty($proposta['assinado'])) {
 // Linha de assinatura CONTRATANTE
 $pdf->SetDrawColor(80, 80, 80);
 $pdf->SetLineWidth(0.3);
-$pdf->Line(25, $assinaturaY + 28, 95, $assinaturaY + 28);
+$pdf->Line(25, $assinaturaY + 40, 95, $assinaturaY + 40);
 
 // Linha de assinatura CONTRATADA
-$pdf->Line(115, $assinaturaY + 28, 187, $assinaturaY + 28);
+$pdf->Line(115, $assinaturaY + 40, 187, $assinaturaY + 40);
 
 // Label abaixo das linhas
-$pdf->SetXY(25, $assinaturaY + 29.5);
-$pdf->SetFont('helvetica', 'I', 6.5);
+$pdf->SetXY(25, $assinaturaY + 42);
+$pdf->SetFont('helvetica', 'I', 7);
 $pdf->SetTextColor(100, 100, 100);
-$pdf->Cell(70, 3, 'Assinatura do ACEITANTE', 0, 0, 'C');
+$pdf->Cell(70, 4, 'Assinatura do ACEITANTE', 0, 0, 'C');
 
-$pdf->SetXY(115, $assinaturaY + 29.5);
-$pdf->Cell(72, 3, 'Assinatura do PROPONENTE', 0, 0, 'C');
+$pdf->SetXY(115, $assinaturaY + 42);
+$pdf->Cell(72, 4, 'Assinatura do PROPONENTE', 0, 0, 'C');
 
 // Nome abaixo
-$pdf->SetXY(25, $assinaturaY + 33.5);
-$pdf->SetFont('helvetica', '', 6.5);
+$pdf->SetXY(25, $assinaturaY + 47);
+$pdf->SetFont('helvetica', '', 7);
 $pdf->SetTextColor(80, 80, 80);
 $cpfCnpjLimpo = !empty($proposta['cliente_cpfcnpj']) ? 'CPF/CNPJ: ' . $proposta['cliente_cpfcnpj'] : '';
-$pdf->Cell(70, 3, $cpfCnpjLimpo, 0, 0, 'C');
+$pdf->Cell(70, 4, $cpfCnpjLimpo, 0, 0, 'C');
 
-$pdf->SetXY(115, $assinaturaY + 33.5);
-$pdf->Cell(72, 3, 'CPF/CNPJ: 60.360.061/0001-91', 0, 0, 'C');
+$pdf->SetXY(115, $assinaturaY + 47);
+$pdf->Cell(72, 4, 'CPF/CNPJ: 60.360.061/0001-91', 0, 0, 'C');
 
 // Data e local no rodapé dos quadros
-$pdf->SetXY(25, $assinaturaY + 37.5);
-$pdf->Cell(70, 3, 'BELÉM/PA, ' . dataBR($proposta['data_emissao']), 0, 0, 'C');
+$pdf->SetXY(17, $assinaturaY + 54);
+$pdf->Cell(84, 4, 'BELÉM/PA, ' . dataBR($proposta['data_emissao']), 0, 0, 'C');
 
-$pdf->SetXY(115, $assinaturaY + 37.5);
-$pdf->Cell(72, 3, 'BELÉM/PA, ' . dataBR($proposta['data_emissao']), 0, 0, 'C');
+$pdf->SetXY(109, $assinaturaY + 54);
+$pdf->Cell(84, 4, 'BELÉM/PA, ' . dataBR($proposta['data_emissao']), 0, 0, 'C');
 
-// --- QR CODE + LINK DE ASSINATURA DIGITAL (ABAIXO DOS QUADROS NA MESMA PÁGINA) ---
+// --- QR CODE + LINK DE ASSINATURA DIGITAL (LOGO ABAIXO DOS QUADROS NA MESMA PÁGINA) ---
 if (!empty($proposta['token_assinatura'])) {
     $link_assinatura = APP_URL . 'assinar/' . $proposta['token_assinatura'];
-    $qr_y = $assinaturaY + $alturaQuadro + 2.5;
+    $qr_y = $assinaturaY + $alturaQuadro + 4;
 
     try {
         $qr = new TCPDF2DBarcode($link_assinatura, 'QRCODE,M');
         $qr_png = $qr->getBarcodePngData(3, 3, array(0, 0, 0));
         $qr_file = tempnam(sys_get_temp_dir(), 'qr_') . '.png';
         file_put_contents($qr_file, $qr_png);
-        $pdf->Image($qr_file, 15, $qr_y, 13, 13, 'PNG');
+        $pdf->Image($qr_file, 15, $qr_y, 15, 15, 'PNG');
         @unlink($qr_file);
-        $pdf->SetXY(30, $qr_y);
+        $pdf->SetXY(32, $qr_y);
     } catch (Exception $e) {
         $pdf->SetXY(15, $qr_y);
     }
 
     $pdf->SetFont('helvetica', '', 7);
     $pdf->SetTextColor(60, 60, 60);
-    $pdf->Cell(0, 3.5, 'Link de assinatura: ' . $link_assinatura, 0, 1, 'L');
+    $pdf->Cell(0, 5, 'Link de assinatura: ' . $link_assinatura, 0, 1, 'L');
 
     if ($proposta['assinado']) {
-        $pdf->SetFont('helvetica', 'B', 7.5);
-        $pdf->SetX(30);
+        $pdf->SetFont('helvetica', 'B', 8);
+        $pdf->SetX(32);
         $pdf->SetTextColor(0, 100, 0);
-        $pdf->Cell(0, 3.5, 'Documento assinado digitalmente por ' . h($proposta['assinante_nome']) . ' em ' . date('d/m/Y H:i:s', strtotime($proposta['assinatura_em'])), 0, 1, 'L');
+        $pdf->Cell(0, 5, 'Documento assinado digitalmente por ' . h($proposta['assinante_nome']) . ' em ' . date('d/m/Y H:i:s', strtotime($proposta['assinatura_em'])), 0, 1, 'L');
         $pdf->SetTextColor(0, 0, 0);
     } else {
-        $pdf->SetFont('helvetica', 'I', 7);
-        $pdf->SetX(30);
+        $pdf->SetFont('helvetica', 'I', 8);
+        $pdf->SetX(32);
         $pdf->SetTextColor(80, 80, 80);
-        $pdf->Cell(0, 3.5, 'Acesse o link ou aponte a câmera do celular para o QR Code para assinar este documento digitalmente.', 0, 1, 'L');
+        $pdf->Cell(0, 5, 'Acesse o link ou aponte a câmera do celular para o QR Code para assinar este documento digitalmente.', 0, 1, 'L');
         $pdf->SetTextColor(0, 0, 0);
     }
 }
