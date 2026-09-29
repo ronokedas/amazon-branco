@@ -383,11 +383,9 @@ switch ($action) {
                     sgqRegistrarAuditoriaCadastral($pdo, 'EMBARCACAO', $id, 'ALTERACAO', $dadosAntigos, $dados, $_POST['motivo_alteracao'] ?? 'Edição de cadastro técnico da embarcação');
                 }
 
-                // Sincronizar vínculo na tabela clientes_embarcacoes
+                // Sincronizar vínculo na tabela clientes_embarcacoes sem desvincular as demais embarcações do cliente
                 require_once __DIR__ . '/../../includes/cliente_vinculos.php';
-                if (!empty($proprietario_id)) {
-                    sincronizarClienteEmbarcacoes($pdo, $proprietario_id, [$id], $_SESSION['usuario_id'] ?? null);
-                }
+                vincularEmbarcacaoAoCliente($pdo, $id, !empty($proprietario_id) ? $proprietario_id : null, $_SESSION['usuario_id'] ?? null);
 
                 setMensagem('success', 'Embarcacao atualizada com sucesso!');
             } else {
@@ -407,11 +405,9 @@ switch ($action) {
                     sgqRegistrarAuditoriaCadastral($pdo, 'EMBARCACAO', $novoId, 'CRIACAO', null, $dados, 'Cadastro inicial da embarcação');
                 }
 
-                // Sincronizar vínculo na tabela clientes_embarcacoes
+                // Sincronizar vínculo na tabela clientes_embarcacoes sem desvincular as demais embarcações do cliente
                 require_once __DIR__ . '/../../includes/cliente_vinculos.php';
-                if (!empty($proprietario_id)) {
-                    sincronizarClienteEmbarcacoes($pdo, $proprietario_id, [$novoId], $_SESSION['usuario_id'] ?? null);
-                }
+                vincularEmbarcacaoAoCliente($pdo, $novoId, !empty($proprietario_id) ? $proprietario_id : null, $_SESSION['usuario_id'] ?? null);
 
                 setMensagem('success', 'Embarcacao cadastrada com sucesso!');
             }

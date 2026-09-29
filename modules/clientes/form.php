@@ -49,10 +49,17 @@ if ($editando) {
         if ($dados) {
             $cliente = array_merge($cliente, $dados);
             
-            // Carregar embarcações ativas vinculadas
-            $stmtEmb = $pdo->prepare("SELECT embarcacao_id FROM clientes_embarcacoes WHERE cliente_id = :cliente_id AND status = 'ATIVO'");
-            $stmtEmb->execute([':cliente_id' => $id]);
-            $cliente['embarcacoes_ids'] = array_column($stmtEmb->fetchAll(PDO::FETCH_ASSOC), 'embarcacao_id');
+            // Carregar embarcações ativas vinculadas (da tabela pivô e de proprietario_id/cliente_id)
+            $stmtEmb = $pdo->prepare("
+                SELECT DISTINCT e.id
+                FROM embarcacoes e
+                LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND (ce.status = 'ATIVO' OR ce.status IS NULL)
+                WHERE (ce.cliente_id = :cid1 OR e.proprietario_id = :cid2 OR e.cliente_id = :cid3)
+                  AND (e.ativo = 1 OR e.ativo IS NULL)
+                  AND e.excluido_em IS NULL
+            ");
+            $stmtEmb->execute([':cid1' => $id, ':cid2' => $id, ':cid3' => $id]);
+            $cliente['embarcacoes_ids'] = $stmtEmb->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
             // Carregar tipos de embarcação atendidos (específico despachante)
             $stmtTipos = $pdo->prepare("SELECT tipo_embarcacao_id FROM clientes_tipos_embarcacao WHERE cliente_id = :cliente_id");

@@ -22,7 +22,9 @@ if ($action === 'embarcacoes_cliente') {
         exit;
     }
 
-    $cliente_id = $_GET['cliente_id'] ?? '';
+    $cliente_id = trim($_GET['cliente_id'] ?? '');
+    $proposta_id = trim($_GET['proposta_id'] ?? '');
+    $embarcacao_extra_id = trim($_GET['embarcacao_id'] ?? '');
 
     if (empty($cliente_id)) {
         echo json_encode(['error' => 'cliente_id não informado.']);
@@ -30,20 +32,41 @@ if ($action === 'embarcacoes_cliente') {
     }
 
     try {
+        $clausulasOr = [
+            'ce.cliente_id = :cid1',
+            'e.proprietario_id = :cid2',
+            'e.cliente_id = :cid3'
+        ];
+        $params = [
+            ':cid1' => $cliente_id,
+            ':cid2' => $cliente_id,
+            ':cid3' => $cliente_id
+        ];
+
+        if ($proposta_id !== '') {
+            $clausulasOr[] = 'e.id IN (SELECT ps.embarcacao_id FROM propostas_servicos ps WHERE ps.proposta_id = :proposta_id)';
+            $clausulasOr[] = 'e.id IN (SELECT pe.embarcacao_id FROM propostas_embarcacoes pe WHERE pe.proposta_id = :proposta_id2)';
+            $params[':proposta_id'] = $proposta_id;
+            $params[':proposta_id2'] = $proposta_id;
+        }
+
+        if ($embarcacao_extra_id !== '') {
+            $clausulasOr[] = 'e.id = :emb_extra_id';
+            $params[':emb_extra_id'] = $embarcacao_extra_id;
+        }
+
+        $clausulaWhere = '(' . implode(' OR ', $clausulasOr) . ')';
+
         $stmt = $pdo->prepare("
             SELECT DISTINCT e.id, e.nome, COALESCE(e.numero_inscricao, e.registro, '') as registro
             FROM embarcacoes e
-            LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND ce.status = 'ATIVO'
-            WHERE (ce.cliente_id = :cid1 OR e.proprietario_id = :cid2 OR e.cliente_id = :cid3)
+            LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND (ce.status = 'ATIVO' OR ce.status IS NULL OR ce.desvinculado_em IS NULL)
+            WHERE {$clausulaWhere}
               AND (e.ativo = 1 OR e.ativo IS NULL)
               AND e.excluido_em IS NULL
             ORDER BY e.nome ASC
         ");
-        $stmt->execute([
-            ':cid1' => $cliente_id,
-            ':cid2' => $cliente_id,
-            ':cid3' => $cliente_id
-        ]);
+        $stmt->execute($params);
         $embarcacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode(['embarcacoes' => $embarcacoes]);

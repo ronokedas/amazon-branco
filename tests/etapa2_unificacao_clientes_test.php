@@ -71,6 +71,8 @@ if (empty($embarcacoesTeste)) {
 }
 
 // Limpar eventuais resquícios de testes anteriores
+$pdo->query("UPDATE embarcacoes SET proprietario_id = NULL, cliente_id = NULL WHERE proprietario_id IN (SELECT id FROM clientes WHERE email LIKE '%@teste-etapa2.com') OR cliente_id IN (SELECT id FROM clientes WHERE email LIKE '%@teste-etapa2.com')");
+$pdo->query("DELETE FROM clientes_embarcacoes WHERE cliente_id IN (SELECT id FROM clientes WHERE email LIKE '%@teste-etapa2.com')");
 $pdo->query("DELETE FROM clientes WHERE email LIKE '%@teste-etapa2.com'");
 
 $randNum = mt_rand(100000, 999999);
@@ -269,6 +271,7 @@ afirmar($embarcacoesForm !== false, "modules/embarcacoes/form.php lido com suces
 // Limpeza dos dados de teste
 $pdo->query("DELETE FROM clientes_tipos_embarcacao WHERE cliente_id = '{$idDespachante}'");
 $pdo->query("DELETE FROM clientes_embarcacoes WHERE cliente_id = '{$idArmador}'");
+$pdo->query("UPDATE embarcacoes SET proprietario_id = NULL, cliente_id = NULL WHERE proprietario_id IN ('{$idArmador}', '{$idProprietario}', '{$idDespachante}') OR cliente_id IN ('{$idArmador}', '{$idProprietario}', '{$idDespachante}')");
 $pdo->query("DELETE FROM clientes WHERE id IN ('{$idArmador}', '{$idProprietario}', '{$idDespachante}')");
 
 echo "\n===============================================================\n";

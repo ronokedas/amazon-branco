@@ -187,6 +187,7 @@ const APP_URL = <?php echo json_encode(APP_URL); ?>;
 const ESCRITORIO_DISPONIVEL = <?php echo $escritorioPropostaDisponivel ? 'true' : 'false'; ?>;
 const ALL_SERVICOS = <?php echo json_encode($servicos, JSON_UNESCAPED_UNICODE); ?>;
 const MODO_EDICAO = <?php echo $modoEdicao ? 'true' : 'false'; ?>;
+const PROPOSTA_ID_EDICAO = <?php echo json_encode($modoEdicao ? (string)$propostaEdicao['id'] : ''); ?>;
 const SERVICOS_EDICAO_INICIAIS = <?php echo json_encode($servicosEdicaoIniciais, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 const EMBARCACAO_URL_INICIAL = <?php echo json_encode($embarcacaoPreSelecionadaId); ?>;
 </script>

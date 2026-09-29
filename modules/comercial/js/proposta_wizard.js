@@ -157,7 +157,14 @@ function carregarPasso2() {
     document.getElementById('totaisPainel').style.display = 'none';
     document.getElementById('passo2ClienteNome').textContent = clienteSelecionadoData.nome;
 
-    const url = (typeof APP_URL !== 'undefined' ? APP_URL : '') + 'comercial/propostas/actions?action=embarcacoes_cliente&cliente_id=' + encodeURIComponent(clienteSelecionadoData.id);
+    let url = (typeof APP_URL !== 'undefined' ? APP_URL : '') + 'comercial/propostas/actions?action=embarcacoes_cliente&cliente_id=' + encodeURIComponent(clienteSelecionadoData.id);
+    if (typeof PROPOSTA_ID_EDICAO !== 'undefined' && PROPOSTA_ID_EDICAO) {
+        url += '&proposta_id=' + encodeURIComponent(PROPOSTA_ID_EDICAO);
+    }
+    if (typeof EMBARCACAO_URL_INICIAL !== 'undefined' && EMBARCACAO_URL_INICIAL) {
+        url += '&embarcacao_id=' + encodeURIComponent(EMBARCACAO_URL_INICIAL);
+    }
+
     fetch(url)
         .then(r => r.json())
         .then(data => {
@@ -188,6 +195,8 @@ function carregarPasso2() {
         });
 }
 
+let filtroSituacaoEmbarcacoesAtual = 'todas';
+
 function construirGradeServicos(embarcacoes) {
     const container = document.getElementById('paso2Content');
     container.innerHTML = renderizarSeletorEmbarcacoes(embarcacoes) + '<div id="servicosEmbarcacaoAtual"></div>';
@@ -198,30 +207,179 @@ function construirGradeServicos(embarcacoes) {
 }
 
 function renderizarSeletorEmbarcacoes(embarcacoes) {
-    let html = '<div class="card" style="margin-bottom: 18px;"><div class="card-header"><h3><i class="fas fa-ship"></i> Escolha a embarcação</h3></div><div class="card-body"><div class="embarcacao-selector-grid">';
+    let totalComServicos = 0;
+    embarcacoes.forEach(emb => {
+        const res = obterResumoEmbarcacao(emb.id);
+        if (res.qtd > 0) totalComServicos++;
+    });
+
+    let html = `
+    <div class="card" style="margin-bottom: 18px;">
+        <div class="card-header emb-selector-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 18px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <i class="fas fa-ship" style="color: var(--cor-destaque); font-size: 1.15rem;"></i>
+                <h3 style="margin: 0; font-size: 1.05rem; color: var(--cor-texto);">Escolha a embarcação para definir serviços</h3>
+                <span class="badge" id="embContadorGeral" style="font-size: 0.82rem; padding: 4px 12px; border-radius: 20px; font-weight: 700; background: ${totalComServicos > 0 ? 'rgba(46,204,113,0.18)' : 'rgba(120,120,120,0.14)'}; color: ${totalComServicos > 0 ? 'var(--cor-destaque)' : 'var(--cor-texto-secundario)'}; border: 1px solid ${totalComServicos > 0 ? 'rgba(46,204,113,0.35)' : 'var(--cor-borda)'};">
+                    <i class="fas fa-list-check" style="margin-right: 4px;"></i> ${totalComServicos} de ${embarcacoes.length} com serviços
+                </span>
+            </div>
+            ${embarcacoes.length > 3 ? `
+            <div class="emb-filtro-container" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div style="position: relative;">
+                    <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--cor-texto-secundario);"></i>
+                    <input type="text" id="filtroEmbarcacoesPasso2" placeholder="Buscar embarcação..." 
+                           oninput="filtrarEmbarcacoesPasso2(this.value)"
+                           style="padding: 6px 10px 6px 28px; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--cor-borda); background: var(--cor-fundo); color: var(--cor-texto); width: 175px;">
+                </div>
+                <div class="btn-group btn-group-sm" role="group" style="display: flex; gap: 4px;">
+                    <button type="button" class="btn btn-sm emb-filtro-btn ${filtroSituacaoEmbarcacoesAtual === 'todas' ? 'is-active' : ''}" data-filtro="todas" onclick="aplicarFiltroRapidoEmbarcacoes('todas', this)">Todas (${embarcacoes.length})</button>
+                    <button type="button" class="btn btn-sm emb-filtro-btn ${filtroSituacaoEmbarcacoesAtual === 'com_servicos' ? 'is-active' : ''}" data-filtro="com_servicos" onclick="aplicarFiltroRapidoEmbarcacoes('com_servicos', this)">Com serviços (<span id="qtdFiltroComServicos">${totalComServicos}</span>)</button>
+                    <button type="button" class="btn btn-sm emb-filtro-btn ${filtroSituacaoEmbarcacoesAtual === 'pendentes' ? 'is-active' : ''}" data-filtro="pendentes" onclick="aplicarFiltroRapidoEmbarcacoes('pendentes', this)">Pendentes (<span id="qtdFiltroPendentes">${embarcacoes.length - totalComServicos}</span>)</button>
+                </div>
+            </div>
+            ` : ''}
+        </div>
+        <div class="card-body" style="padding: 16px;">
+            <div class="embarcacao-selector-grid" id="embarcacaoSelectorGrid">`;
+
     embarcacoes.forEach(emb => {
         const resumo = obterResumoEmbarcacao(emb.id);
         const selecionada = embarcacaoSelecionadaId === emb.id;
+        const temServicos = resumo.qtd > 0;
+
         html += `
-            <button type="button" class="embarcacao-select-card ${selecionada ? 'is-selected' : ''}" onclick="selecionarEmbarcacaoServicos('${escAttr(emb.id)}')">
-                <span class="embarcacao-select-icon"><i class="fas fa-ship"></i></span>
+            <button type="button" class="embarcacao-select-card ${selecionada ? 'is-selected' : ''} ${temServicos ? 'has-services' : 'no-services'}" 
+                    data-emb-id="${escAttr(emb.id)}" 
+                    onclick="selecionarEmbarcacaoServicos('${escAttr(emb.id)}')">
+                <span class="embarcacao-select-icon ${temServicos ? 'is-configured' : ''}">
+                    <i class="fas fa-ship"></i>
+                    ${temServicos ? '<i class="fas fa-check-circle emb-icon-check"></i>' : ''}
+                </span>
                 <span class="embarcacao-select-main">
-                    <strong>${esc(emb.nome)}</strong>
+                    <strong title="${escAttr(emb.nome)}">${esc(emb.nome)}</strong>
                     <small>${emb.registro ? esc(emb.registro) : 'Sem registro informado'}</small>
                 </span>
                 <span class="embarcacao-select-summary">
-                    <b id="embTotal_${escAttr(emb.id)}">${formatarMoeda(resumo.total)}</b>
-                    <small>${resumo.qtd} serviço(s)</small>
+                    <span class="emb-status-pill ${temServicos ? 'pill-success' : 'pill-muted'}" id="embPill_${escAttr(emb.id)}">
+                        ${temServicos ? '<i class="fas fa-check"></i> <b>' + resumo.qtd + ' serviço(s)</b>' : '<i class="far fa-circle"></i> Sem serviços'}
+                    </span>
+                    <b id="embTotal_${escAttr(emb.id)}" class="${temServicos ? 'text-success' : ''}">${formatarMoeda(resumo.total)}</b>
                 </span>
             </button>`;
     });
-    html += '</div></div></div>';
+
+    html += `</div></div></div>`;
     return html;
 }
 
 function selecionarEmbarcacaoServicos(embId) {
     embarcacaoSelecionadaId = embId;
     construirGradeServicos(embarcacoesCarregadas);
+}
+
+function atualizarCardEmbarcacaoSeletor(embId) {
+    const card = document.querySelector(`.embarcacao-select-card[data-emb-id="${embId}"]`);
+    if (!card) return;
+
+    const resumo = obterResumoEmbarcacao(embId);
+    const temServicos = resumo.qtd > 0;
+
+    // Atualiza classes do card
+    if (temServicos) {
+        card.classList.add('has-services');
+        card.classList.remove('no-services');
+    } else {
+        card.classList.remove('has-services');
+        card.classList.add('no-services');
+    }
+
+    // Atualiza Pill de status
+    const pill = document.getElementById('embPill_' + embId);
+    if (pill) {
+        pill.className = `emb-status-pill ${temServicos ? 'pill-success' : 'pill-muted'}`;
+        pill.innerHTML = temServicos
+            ? `<i class="fas fa-check"></i> <b>${resumo.qtd} serviço(s)</b>`
+            : `<i class="far fa-circle"></i> Sem serviços`;
+    }
+
+    // Atualiza Total em reais
+    const totalEl = document.getElementById('embTotal_' + embId);
+    if (totalEl) {
+        totalEl.textContent = formatarMoeda(resumo.total);
+        if (temServicos) {
+            totalEl.classList.add('text-success');
+        } else {
+            totalEl.classList.remove('text-success');
+        }
+    }
+
+    // Atualiza ícone com selo de check
+    const iconWrap = card.querySelector('.embarcacao-select-icon');
+    if (iconWrap) {
+        if (temServicos) {
+            iconWrap.classList.add('is-configured');
+            if (!iconWrap.querySelector('.emb-icon-check')) {
+                iconWrap.insertAdjacentHTML('beforeend', '<i class="fas fa-check-circle emb-icon-check"></i>');
+            }
+        } else {
+            iconWrap.classList.remove('is-configured');
+            const checkIcon = iconWrap.querySelector('.emb-icon-check');
+            if (checkIcon) checkIcon.remove();
+        }
+    }
+
+    // Atualiza contadores globais do cabeçalho
+    atualizarContadoresProgressoEmbarcacoes();
+}
+
+function atualizarContadoresProgressoEmbarcacoes() {
+    let totalComServicos = 0;
+    embarcacoesCarregadas.forEach(emb => {
+        const res = obterResumoEmbarcacao(emb.id);
+        if (res.qtd > 0) totalComServicos++;
+    });
+
+    const contadorGeral = document.getElementById('embContadorGeral');
+    if (contadorGeral) {
+        contadorGeral.innerHTML = `<i class="fas fa-list-check" style="margin-right: 4px;"></i> ${totalComServicos} de ${embarcacoesCarregadas.length} com serviços`;
+        contadorGeral.style.background = totalComServicos > 0 ? 'rgba(46,204,113,0.18)' : 'rgba(120,120,120,0.14)';
+        contadorGeral.style.color = totalComServicos > 0 ? 'var(--cor-destaque)' : 'var(--cor-texto-secundario)';
+        contadorGeral.style.borderColor = totalComServicos > 0 ? 'rgba(46,204,113,0.35)' : 'var(--cor-borda)';
+    }
+
+    const qtdCom = document.getElementById('qtdFiltroComServicos');
+    if (qtdCom) qtdCom.textContent = totalComServicos;
+
+    const qtdPend = document.getElementById('qtdFiltroPendentes');
+    if (qtdPend) qtdPend.textContent = embarcacoesCarregadas.length - totalComServicos;
+}
+
+function aplicarFiltroRapidoEmbarcacoes(tipo, btn) {
+    filtroSituacaoEmbarcacoesAtual = tipo;
+    document.querySelectorAll('.emb-filtro-btn').forEach(b => b.classList.remove('is-active'));
+    if (btn) btn.classList.add('is-active');
+    filtrarEmbarcacoesPasso2(document.getElementById('filtroEmbarcacoesPasso2')?.value || '');
+}
+
+function filtrarEmbarcacoesPasso2(termo) {
+    termo = (termo || '').toLowerCase().trim();
+    document.querySelectorAll('.embarcacao-select-card').forEach(card => {
+        const embId = card.dataset.embId;
+        const resumo = obterResumoEmbarcacao(embId);
+        const temServicos = resumo.qtd > 0;
+
+        let atendeSituacao = true;
+        if (filtroSituacaoEmbarcacoesAtual === 'com_servicos') {
+            atendeSituacao = temServicos;
+        } else if (filtroSituacaoEmbarcacoesAtual === 'pendentes') {
+            atendeSituacao = !temServicos;
+        }
+
+        const texto = card.textContent.toLowerCase();
+        const atendeTermo = !termo || texto.includes(termo);
+
+        card.style.display = (atendeSituacao && atendeTermo) ? 'grid' : 'none';
+    });
 }
 
 function renderizarServicosEmbarcacaoAtual() {
@@ -318,6 +476,7 @@ function servicoToggled(checkbox) {
     }
 
     atualizarSubtotalServico(embId, servId);
+    atualizarCardEmbarcacaoSeletor(embId);
     atualizarTotais();
 }
 
@@ -330,6 +489,7 @@ function servicoQtdChanged(input) {
         salvarServicoSelecionado(embId, servId, input.value);
     }
     atualizarSubtotalServico(embId, servId);
+    atualizarCardEmbarcacaoSeletor(embId);
     atualizarTotais();
 }
 
