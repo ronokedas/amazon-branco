@@ -161,7 +161,7 @@ require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 ?>
 
-<link rel="stylesheet" href="<?php echo APP_URL; ?>modules/comercial/css/proposta_wizard.css">
+<link rel="stylesheet" href="<?php echo APP_URL; ?>modules/comercial/css/proposta_wizard.css?v=<?php echo filemtime(__DIR__ . '/css/proposta_wizard.css'); ?>">
 
 <div class="conteudo-principal flow-shell">
     <!-- Formulário principal -->
@@ -191,6 +191,6 @@ const PROPOSTA_ID_EDICAO = <?php echo json_encode($modoEdicao ? (string)$propost
 const SERVICOS_EDICAO_INICIAIS = <?php echo json_encode($servicosEdicaoIniciais, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 const EMBARCACAO_URL_INICIAL = <?php echo json_encode($embarcacaoPreSelecionadaId); ?>;
 </script>
-<script src="<?php echo APP_URL; ?>modules/comercial/js/proposta_wizard.js"></script>
+<script src="<?php echo APP_URL; ?>modules/comercial/js/proposta_wizard.js?v=<?php echo filemtime(__DIR__ . '/js/proposta_wizard.js'); ?>"></script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

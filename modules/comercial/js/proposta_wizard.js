@@ -607,6 +607,45 @@ function normalizarPercentualVisivel(valor) {
     return inteiro;
 }
 
+function tratarKeyDownDesconto(event) {
+    const tipo = document.getElementById('tipoDesconto')?.value || 'perc';
+    if (tipo !== 'perc') return;
+
+    if (event.key === ',' || event.key === '.') {
+        const input = event.target;
+        const val = input.value;
+        const pos = input.selectionStart;
+        const end = input.selectionEnd;
+
+        const idxVirgula = val.indexOf(',');
+        if (idxVirgula !== -1) {
+            // Se já tem vírgula e o cursor está antes ou nela, pula direto para a parte decimal
+            if (pos <= idxVirgula) {
+                event.preventDefault();
+                const inicioDec = idxVirgula + 1;
+                const fimDec = Math.max(inicioDec, val.length);
+                input.setSelectionRange(inicioDec, fimDec);
+                return;
+            }
+            // Se o cursor está depois da vírgula e nada selecionado, evita duplicar vírgula
+            if (pos === end && pos > idxVirgula) {
+                event.preventDefault();
+                return;
+            }
+        } else {
+            // Se pressionou ponto do teclado numérico, insere vírgula diretamente
+            if (event.key === '.') {
+                event.preventDefault();
+                input.value = val.slice(0, pos) + ',' + val.slice(end);
+                const novaPos = pos + 1;
+                input.setSelectionRange(novaPos, novaPos);
+                mascararDesconto(input);
+                return;
+            }
+        }
+    }
+}
+
 function mascararDesconto(input) {
     const tipo = document.getElementById('tipoDesconto')?.value || 'perc';
     if (tipo === 'valor') {
