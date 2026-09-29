@@ -585,11 +585,26 @@ function mascararMoeda(input, hiddenId) {
 }
 
 function normalizarPercentualVisivel(valor) {
-    let texto = String(valor ?? '').replace(/\./g, ',').replace(/[^\d,]/g, '');
+    if (valor === '' || valor === null || valor === undefined) return '';
+    let texto = String(valor).replace(/\./g, ',').replace(/[^\d,]/g, '');
+    if (texto === '') return '';
+
+    const temVirgula = texto.includes(',');
     const partes = texto.split(',');
-    const inteiro = (partes.shift() || '0').replace(/^0+(?=\d)/, '').slice(0, 3) || '0';
+    let inteiro = partes.shift() || '';
+
+    // Remove zeros à esquerda (ex: "05" -> "5", "0" -> "0")
+    inteiro = inteiro.replace(/^0+(?=\d)/, '').slice(0, 3);
+    if (inteiro === '' && temVirgula) {
+        inteiro = '0';
+    }
+
     const decimal = partes.join('').slice(0, 2);
-    return decimal.length ? inteiro + ',' + decimal : inteiro;
+
+    if (temVirgula) {
+        return (inteiro || '0') + ',' + decimal;
+    }
+    return inteiro;
 }
 
 function mascararDesconto(input) {
@@ -599,9 +614,42 @@ function mascararDesconto(input) {
         return;
     }
 
-    input.value = normalizarPercentualVisivel(input.value);
+    const valorOriginal = input.value;
+    const posOriginal = input.selectionStart;
+    const normalizado = normalizarPercentualVisivel(valorOriginal);
+
+    if (input.value !== normalizado) {
+        input.value = normalizado;
+        if (posOriginal !== null) {
+            const diferenca = normalizado.length - valorOriginal.length;
+            const novaPos = Math.max(0, Math.min(normalizado.length, posOriginal + diferenca));
+            try {
+                input.setSelectionRange(novaPos, novaPos);
+            } catch (e) {}
+        }
+    }
+
     const valor = parseFloat(input.value.replace(',', '.')) || 0;
     document.getElementById('descontoGlobal').value = valor.toFixed(2);
+    validarDescontoPercentual(false);
+    atualizarTotais();
+}
+
+function finalizarEdicaoDesconto(input) {
+    const tipo = document.getElementById('tipoDesconto')?.value || 'perc';
+    if (tipo === 'valor') {
+        mascararMoeda(input, 'descontoGlobal');
+        return;
+    }
+
+    if (input.value.endsWith(',')) {
+        input.value = input.value.slice(0, -1);
+    }
+    const normalizado = normalizarPercentualVisivel(input.value);
+    input.value = normalizado;
+    const valor = parseFloat(input.value.replace(',', '.')) || 0;
+    document.getElementById('descontoGlobal').value = valor.toFixed(2);
+    validarDescontoPercentual(true);
     atualizarTotais();
 }
 

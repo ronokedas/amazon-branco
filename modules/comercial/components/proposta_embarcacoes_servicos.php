@@ -48,7 +48,7 @@
                         <span id="descontoPrefixo">%</span>
                         <input type="text" id="descontoGlobalDisplay"
                                value="<?php echo number_format((float)($propostaEdicao['desconto_percentual'] ?? 0), 2, ',', '.'); ?>"
-                               oninput="mascararDesconto(this)" onfocus="this.select()" title="Valor do desconto"
+                               oninput="mascararDesconto(this)" onblur="finalizarEdicaoDesconto(this)" onfocus="this.select()" title="Valor do desconto"
                                inputmode="decimal" autocomplete="off" aria-describedby="descontoErro descontoValor">
                         <input type="hidden" id="descontoGlobal" name="desconto_global"
                                value="<?php echo number_format((float)($propostaEdicao['desconto_percentual'] ?? 0), 2, '.', ''); ?>">
