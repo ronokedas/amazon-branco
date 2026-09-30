@@ -129,7 +129,9 @@ function vincularEmbarcacaoAoCliente(PDO $pdo, string $embarcacaoId, ?string $no
     }
 
     if (!empty($novoClienteId)) {
-        // Desativar vínculo desta embarcação apenas se estiver com outro cliente
+        $vinculoChave = $novoClienteId . ':' . $embarcacaoId;
+
+        // Desativar vínculo desta embarcação se estiver ativa com outro cliente
         $stmtDesvOutros = $pdo->prepare("
             UPDATE clientes_embarcacoes 
             SET status = 'INATIVO', vinculo_ativo_chave = NULL, desvinculado_em = NOW(), desvinculado_por = :usuario 
@@ -139,6 +141,16 @@ function vincularEmbarcacaoAoCliente(PDO $pdo, string $embarcacaoId, ?string $no
             ':usuario' => $usuarioId,
             ':embarcacao' => $embarcacaoId,
             ':novo_cliente' => $novoClienteId
+        ]);
+
+        // Sanitizar qualquer registro pré-existente com essa mesma chave ativa para evitar erro 1062 de duplicidade
+        $pdo->prepare("
+            UPDATE clientes_embarcacoes 
+            SET vinculo_ativo_chave = NULL 
+            WHERE embarcacao_id = :embarcacao AND vinculo_ativo_chave = :chave
+        ")->execute([
+            ':embarcacao' => $embarcacaoId,
+            ':chave' => $vinculoChave
         ]);
 
         // Verificar se já existe registro de vínculo para este cliente e embarcação
@@ -151,30 +163,28 @@ function vincularEmbarcacaoAoCliente(PDO $pdo, string $embarcacaoId, ?string $no
         $vinculo = $stmtExiste->fetch(PDO::FETCH_ASSOC);
 
         if ($vinculo) {
-            if ($vinculo['status'] !== 'ATIVO') {
-                $stmtReativa = $pdo->prepare("
-                    UPDATE clientes_embarcacoes 
-                    SET status = 'ATIVO', vinculo_ativo_chave = concat(:cliente, ':', :embarcacao), 
-                        desvinculado_em = NULL, desvinculado_por = NULL, vinculado_em = NOW(), vinculado_por = :usuario 
-                    WHERE id = :id
-                ");
-                $stmtReativa->execute([
-                    ':cliente' => $novoClienteId,
-                    ':embarcacao' => $embarcacaoId,
-                    ':usuario' => $usuarioId,
-                    ':id' => $vinculo['id']
-                ]);
-            }
+            $stmtReativa = $pdo->prepare("
+                UPDATE clientes_embarcacoes 
+                SET status = 'ATIVO', vinculo_ativo_chave = :chave, 
+                    desvinculado_em = NULL, desvinculado_por = NULL, vinculado_em = NOW(), vinculado_por = :usuario 
+                WHERE id = :id
+            ");
+            $stmtReativa->execute([
+                ':chave' => $vinculoChave,
+                ':usuario' => $usuarioId,
+                ':id' => $vinculo['id']
+            ]);
         } else {
             $stmtIns = $pdo->prepare("
                 INSERT INTO clientes_embarcacoes 
                     (id, cliente_id, embarcacao_id, status, vinculo_ativo_chave, vinculado_em, vinculado_por) 
                 VALUES 
-                    (UUID(), :cliente, :embarcacao, 'ATIVO', concat(:cliente, ':', :embarcacao), NOW(), :usuario)
+                    (UUID(), :cliente, :embarcacao, 'ATIVO', :chave, NOW(), :usuario)
             ");
             $stmtIns->execute([
                 ':cliente' => $novoClienteId,
                 ':embarcacao' => $embarcacaoId,
+                ':chave' => $vinculoChave,
                 ':usuario' => $usuarioId
             ]);
         }

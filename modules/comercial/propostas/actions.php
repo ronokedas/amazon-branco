@@ -335,13 +335,38 @@ if ($action !== '') {
             $servicos_a_inserir = []; // [{ servico_id, embarcacao_id, preco_aplicado, quantidade }]
 
             $stmtPreco = $pdo->prepare("SELECT id, preco_padrao FROM servicos WHERE id = :id AND ativo = 1");
+            $stmtCheckEmb = $pdo->prepare("
+                SELECT e.id
+                FROM embarcacoes e
+                LEFT JOIN clientes_embarcacoes ce
+                    ON ce.embarcacao_id = e.id
+                   AND ce.cliente_id = :cliente
+                   AND ce.status = 'ATIVO'
+                WHERE e.id = :embarcacao 
+                  AND (ce.id IS NOT NULL OR e.proprietario_id = :prop_id OR e.cliente_id = :cli_id)
+                  AND (e.ativo = 1 OR e.ativo IS NULL)
+                  AND e.excluido_em IS NULL
+                LIMIT 1
+            ");
 
             foreach ($dadosServicos as $embData) {
                 $emb_id = $embData['embarcacao_id'] ?? '';
                 if (empty($emb_id)) continue;
 
-                // Núcleo Comercial: Propostas comerciais não são bloqueadas por pendências preliminares de cadastro
-                // A validação de prontidão técnica NORMAM/ISO permanece disponível para auditoria no subsistema SGQ
+                $stmtCheckEmb->execute([
+                    ':cliente' => $cliente_id,
+                    ':embarcacao' => $emb_id,
+                    ':prop_id' => $cliente_id,
+                    ':cli_id' => $cliente_id
+                ]);
+                if (!$stmtCheckEmb->fetchColumn()) {
+                    throw new RuntimeException('Uma das embarcações não pertence ao proprietário selecionado.');
+                }
+
+                // Assegurar vínculo ativo em clientes_embarcacoes
+                require_once __DIR__ . '/../../../includes/cliente_vinculos.php';
+                vincularEmbarcacaoAoCliente($pdo, $emb_id, $cliente_id, $_SESSION['usuario_id'] ?? null);
+
                 $embarcacoes_ids[] = $emb_id;
 
                 $servicos = $embData['servicos'] ?? [];
@@ -555,11 +580,14 @@ if ($action !== '') {
             $stmtEmbarcacao = $pdo->prepare("
                 SELECT e.id
                 FROM embarcacoes e
-                INNER JOIN clientes_embarcacoes ce
+                LEFT JOIN clientes_embarcacoes ce
                     ON ce.embarcacao_id = e.id
                    AND ce.cliente_id = :cliente
                    AND ce.status = 'ATIVO'
-                WHERE e.id = :embarcacao AND e.ativo = 1
+                WHERE e.id = :embarcacao 
+                  AND (ce.id IS NOT NULL OR e.proprietario_id = :prop_id OR e.cliente_id = :cli_id)
+                  AND (e.ativo = 1 OR e.ativo IS NULL)
+                  AND e.excluido_em IS NULL
                 LIMIT 1
             ");
             $stmtServico = $pdo->prepare("
@@ -579,10 +607,19 @@ if ($action !== '') {
                 if ($embarcacaoId === '') {
                     continue;
                 }
-                $stmtEmbarcacao->execute([':cliente' => $clienteId, ':embarcacao' => $embarcacaoId]);
+                $stmtEmbarcacao->execute([
+                    ':cliente' => $clienteId,
+                    ':embarcacao' => $embarcacaoId,
+                    ':prop_id' => $clienteId,
+                    ':cli_id' => $clienteId
+                ]);
                 if (!$stmtEmbarcacao->fetchColumn()) {
                     throw new RuntimeException('Uma das embarcações não pertence ao proprietário selecionado.');
                 }
+
+                // Assegurar vínculo ativo em clientes_embarcacoes
+                require_once __DIR__ . '/../../../includes/cliente_vinculos.php';
+                vincularEmbarcacaoAoCliente($pdo, $embarcacaoId, $clienteId, $usuarioAtual);
 
                 foreach (($embarcacaoData['servicos'] ?? []) as $servicoData) {
                     $servicoId = (string)($servicoData['servico_id'] ?? '');

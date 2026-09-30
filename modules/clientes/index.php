@@ -69,9 +69,13 @@ try {
     ];
 
     $totalVinculos = (int)$pdo->query("
-        SELECT COUNT(DISTINCT cliente_id) 
-        FROM clientes_embarcacoes 
-        WHERE status = 'ATIVO'
+        SELECT COUNT(DISTINCT cliente_unificado) FROM (
+            SELECT cliente_id AS cliente_unificado FROM clientes_embarcacoes WHERE status = 'ATIVO'
+            UNION
+            SELECT proprietario_id AS cliente_unificado FROM embarcacoes WHERE proprietario_id IS NOT NULL AND (ativo = 1 OR ativo IS NULL) AND excluido_em IS NULL
+            UNION
+            SELECT cliente_id AS cliente_unificado FROM embarcacoes WHERE cliente_id IS NOT NULL AND (ativo = 1 OR ativo IS NULL) AND excluido_em IS NULL
+        ) u
     ")->fetchColumn();
 } catch (Exception $e) {
     error_log('Erro ao calcular KPIs de clientes: ' . $e->getMessage());
@@ -119,10 +123,11 @@ $registroFim = min($offset + $porPagina, $totalClientes);
 try {
     $sql = "
         SELECT c.*, 
-               COUNT(DISTINCT ce.id) AS total_embarcacoes,
+               COUNT(DISTINCT COALESCE(ce.embarcacao_id, e.id)) AS total_embarcacoes,
                GROUP_CONCAT(DISTINCT te.nome ORDER BY te.nome SEPARATOR ', ') AS tipos_atendidos
         FROM clientes c
         LEFT JOIN clientes_embarcacoes ce ON ce.cliente_id = c.id AND ce.status = 'ATIVO'
+        LEFT JOIN embarcacoes e ON (e.proprietario_id = c.id OR e.cliente_id = c.id) AND (e.ativo = 1 OR e.ativo IS NULL) AND e.excluido_em IS NULL
         LEFT JOIN clientes_tipos_embarcacao cte ON cte.cliente_id = c.id
         LEFT JOIN tipos_embarcacao te ON te.id = cte.tipo_embarcacao_id
         {$sqlWhere}

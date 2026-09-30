@@ -246,6 +246,8 @@ switch ($action) {
         ];
 
         try {
+            $pdo->beginTransaction();
+
             if ($isEdicao) {
                 // Obter dados anteriores para auditoria
                 $stmtAnt = $pdo->prepare("SELECT * FROM embarcacoes WHERE id = :id LIMIT 1");
@@ -328,6 +330,7 @@ switch ($action) {
                 require_once __DIR__ . '/../../includes/cliente_vinculos.php';
                 vincularEmbarcacaoAoCliente($pdo, $id, !empty($proprietario_id) ? $proprietario_id : null, $_SESSION['usuario_id'] ?? null);
 
+                $pdo->commit();
                 setMensagem('success', 'Embarcacao atualizada com sucesso!');
             } else {
                 // Criar
@@ -350,9 +353,13 @@ switch ($action) {
                 require_once __DIR__ . '/../../includes/cliente_vinculos.php';
                 vincularEmbarcacaoAoCliente($pdo, $novoId, !empty($proprietario_id) ? $proprietario_id : null, $_SESSION['usuario_id'] ?? null);
 
+                $pdo->commit();
                 setMensagem('success', 'Embarcacao cadastrada com sucesso!');
             }
         } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             error_log('Erro ao salvar embarcacao: ' . $e->getMessage());
             setMensagem('error', 'Erro ao salvar embarcacao. Tente novamente.');
         }
