@@ -164,11 +164,20 @@ require __DIR__ . '/../../includes/sidebar.php';
                     <i class="fa-brands fa-whatsapp"></i> Notificar Cliente
                 </a>
                 <a class="btn btn-primary" target="_blank" href="<?= APP_URL ?>protocolos/pdf-dossie?id=<?= urlencode($id) ?>">
-                    <i class="fa-solid fa-file-pdf"></i> PDF Consolidado
+                    <i class="fa-solid fa-file-pdf"></i> Visualizar Ofício (PDF)
                 </a>
-                <?php if (!$somenteLeitura): ?>
-                    <button type="button" class="btn btn-outline-secondary" onclick="const p = document.getElementById('painel-edicao-dossie'); p.classList.toggle('show');">
-                        <i class="fa-solid fa-sliders"></i> Editar Vínculos
+                <?php if (!empty($d['assinado'])): ?>
+                    <span class="badge bg-success d-inline-flex align-items-center gap-1 py-2 px-3" style="font-size: 0.85rem;" title="Assinado por <?= h($d['assinante_nome'] ?: 'Digital') ?> em <?= formatarDataHora($d['assinatura_em']) ?>">
+                        <i class="fa-solid fa-circle-check"></i> Ofício Assinado
+                    </span>
+                    <?php if (!$somenteLeitura): ?>
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="abrirModalAssinarOficio('dossie', '<?= h($d['id']) ?>', '<?= h(addslashes($d['destinatario_autoridade'] ?? '')) ?>', '<?= h(addslashes($d['numero_oficio'] ?? '')) ?>', '<?= h(addslashes($d['assinante_nome'] ?? '')) ?>', '<?= h(addslashes($d['assinante_cargo'] ?? '')) ?>', '<?= (int)($d['responsavel_assinatura_id'] ?? 0) ?>')" title="Alterar assinatura ou dados do ofício">
+                            <i class="fa-solid fa-pen-nib"></i>
+                        </button>
+                    <?php endif; ?>
+                <?php elseif (!$somenteLeitura): ?>
+                    <button type="button" class="btn btn-warning" onclick="abrirModalAssinarOficio('dossie', '<?= h($d['id']) ?>', '<?= h(addslashes($d['destinatario_autoridade'] ?? '')) ?>', '<?= h(addslashes($d['numero_oficio'] ?? '')) ?>', '<?= h(addslashes($d['assinante_nome'] ?? '')) ?>', '<?= h(addslashes($d['assinante_cargo'] ?? '')) ?>', '<?= (int)($d['responsavel_assinatura_id'] ?? 0) ?>')">
+                        <i class="fa-solid fa-file-signature"></i> Assinar Digitalmente
                     </button>
                 <?php endif; ?>
             <?php endif; ?>
@@ -547,6 +556,7 @@ require __DIR__ . '/../../includes/sidebar.php';
             document.body.appendChild(modal);
         }
         </script>
+        <?php require __DIR__ . '/components/modal_assinar_oficio.php'; ?>
     <?php endif; ?>
 </main>
 

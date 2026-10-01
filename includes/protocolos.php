@@ -158,6 +158,66 @@ function protocoloSnapshot(PDO $pdo,string $movId):array
 }
 
 /**
+ * Formata data por extenso em português para documentos oficiais e ofícios navais.
+ */
+function formatarDataExtensoNaval(?string $dt): string
+{
+    $ts = $dt ? strtotime($dt) : time();
+    $dia = date('d', $ts);
+    $meses = [
+        1 => 'janeiro', 2 => 'fevereiro', 3 => 'março', 4 => 'abril',
+        5 => 'maio', 6 => 'junho', 7 => 'julho', 8 => 'agosto',
+        9 => 'setembro', 10 => 'outubro', 11 => 'novembro', 12 => 'dezembro'
+    ];
+    $mes = $meses[(int)date('m', $ts)] ?? 'janeiro';
+    $ano = date('Y', $ts);
+    return "Belém/PA, {$dia} de {$mes} de {$ano}.";
+}
+
+/**
+ * Formata a citação estrita de um documento para o corpo do ofício naval (ex: AM-CSN: 107/26).
+ */
+function formatarCitacaoItemNaval(array $it): string
+{
+    $desc = trim($it['descricao'] ?? '');
+    $rev = trim($it['numero_revisao'] ?? '');
+
+    if (preg_match('/AM-[A-Z0-9:\/\-\.]+/i', $desc, $mMatch)) {
+        return strtoupper(trim($mMatch[0]));
+    }
+
+    $sigla = 'AM-DOC';
+    $descUpper = mb_strtoupper($desc, 'UTF-8');
+    if (str_contains($descUpper, 'VISTORIA') || str_contains($descUpper, 'REL-V')) {
+        $sigla = 'AM-REL-V';
+    } elseif (str_contains($descUpper, 'CSN') || str_contains($descUpper, 'SEGURANÇA')) {
+        $sigla = 'AM-CSN';
+    } elseif (str_contains($descUpper, 'CNARQ') || str_contains($descUpper, 'ARQUEAÇÃO')) {
+        $sigla = 'AM-CNARQ';
+    } elseif (str_contains($descUpper, 'CNBL') || str_contains($descUpper, 'BORDA LIVRE')) {
+        $sigla = 'AM-CNBL';
+    } elseif (str_contains($descUpper, 'ANALISE') || str_contains($descUpper, 'PARECER') || str_contains($descUpper, 'REL:AP') || str_contains($descUpper, 'PLANO')) {
+        $sigla = 'AM-REL:AP';
+    } elseif (str_contains($descUpper, 'NARQ') || str_contains($descUpper, 'NOTA DE ARQUEAÇÃO')) {
+        $sigla = 'AM-NARQ';
+    } elseif (str_contains($descUpper, 'LP') || str_contains($descUpper, 'LICENÇA PROVISÓRIA')) {
+        $sigla = 'AM-LP';
+    } elseif (str_contains($descUpper, 'LC') || str_contains($descUpper, 'CONSTRUÇÃO') || str_contains($descUpper, 'ALTERAÇÃO')) {
+        $sigla = 'AM-LC';
+    } elseif (str_contains($descUpper, 'CHT')) {
+        $sigla = 'AM-CHT';
+    }
+
+    if ($rev !== '') {
+        return $sigla . ': ' . $rev;
+    }
+    if (preg_match('/[0-9]+(\/[0-9]{2,4})?/', $desc, $mNum)) {
+        return $sigla . ': ' . $mNum[0];
+    }
+    return $sigla . ': ' . $desc;
+}
+
+/**
  * Agrega o Acervo Documental Completo vinculado a uma Embarcação (AGENTS.md / NORMAM).
  * Localiza Propostas Comerciais, Relatórios de Vistoria (com multi-versões e retornos),
  * Projetos e Pranchas de Engenharia Naval (com suas revisões REV), Pareceres Técnicos,
@@ -182,7 +242,7 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
         return $resultado;
     }
 
-    // 1. PROPOSTAS COMERCIAIS
+    // 1. PROPOSTAS COMERCIAIS (Somente assinadas digitalmente)
     try {
         $qProp = $pdo->prepare("
             SELECT p.id, p.numero, p.data_emissao, p.data_validade, p.valor_total, p.status, p.assinado,
@@ -190,19 +250,16 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
             FROM propostas p
             INNER JOIN propostas_embarcacoes pe ON pe.proposta_id = p.id
             LEFT JOIN usuarios u ON u.id = p.criado_por
-            WHERE pe.embarcacao_id = :emb_id AND p.status <> 'cancelada'
+            WHERE pe.embarcacao_id = :emb_id AND p.status <> 'cancelada' AND p.assinado = 1
             ORDER BY p.data_emissao DESC, p.created_at DESC
         ");
         $qProp->execute([':emb_id' => $embarcacaoId]);
         $props = $qProp->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($props as $p) {
-            $statusLabel = strtoupper($p['status']);
-            if (!empty($p['assinado'])) {
-                $statusLabel = 'ASSINADA';
-            }
+            $statusLabel = 'ASSINADA';
             $valorFmt = 'R$ ' . number_format((float)$p['valor_total'], 2, ',', '.');
-            $versao = !empty($p['assinado']) ? 'Proposta Comercial (Assinada)' : 'Proposta Comercial (' . ucfirst($p['status']) . ')';
+            $versao = 'Proposta Comercial (Assinada Digitalmente)';
 
             $resultado['itens'][] = [
                 'id' => 'prop_' . $p['id'],
@@ -219,7 +276,7 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
                 'status' => $p['status'],
                 'status_label' => $statusLabel,
                 'suporte' => 'DIGITAL',
-                'forma' => !empty($p['assinado']) ? 'NATO_DIGITAL' : 'DIGITALIZADO',
+                'forma' => 'NATO_DIGITAL',
                 'tamanho_bytes' => null,
                 'hash' => null,
                 'url_pdf' => APP_URL . 'comercial/pdf?id=' . urlencode($p['id']),
@@ -232,7 +289,7 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
         error_log('Erro ao buscar propostas no acervo: ' . $e->getMessage());
     }
 
-    // 2. VISTORIAS EM CAMPO (Com rastreamento completo de Multi-Versões / Retornos / Exigências)
+    // 2. VISTORIAS EM CAMPO (Somente relatórios assinados digitalmente / aprovados)
     try {
         $qVist = $pdo->prepare("
             SELECT v.id, v.numero, v.finalidade, v.data_vistoria, v.data_emissao, v.status,
@@ -244,6 +301,7 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
             LEFT JOIN vistoria_retornos r ON (r.relatorio_resultado_id = v.id OR r.relatorio_origem_id = v.id)
             LEFT JOIN usuarios u ON u.id = v.criado_por
             WHERE v.embarcacao_id = :emb_id AND v.status <> 'CANCELADA'
+              AND (v.assinatura_status = 'ASSINADO' OR v.assinatura_em IS NOT NULL)
             ORDER BY v.data_vistoria DESC, v.criado_em DESC
         ");
         $qVist->execute([':emb_id' => $embarcacaoId]);
@@ -255,11 +313,11 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
             
             if ($ehRetorno) {
                 $ref = $v['relatorio_anterior_numero'] ? ' (Ref. ' . $v['relatorio_anterior_numero'] . ')' : '';
-                $versaoLabel = 'Revisão / Retorno de Exigências' . $ref;
+                $versaoLabel = 'Revisão / Retorno de Exigências' . $ref . ' (Assinado)';
             } elseif (!empty($v['mobile_versao']) && (int)$v['mobile_versao'] > 1) {
-                $versaoLabel = 'Revisão ' . (int)$v['mobile_versao'] . ' (Vistoria de Campo)';
+                $versaoLabel = 'Revisão ' . (int)$v['mobile_versao'] . ' (Assinada)';
             } else {
-                $versaoLabel = 'Versão Inicial (Vistoria em Campo)';
+                $versaoLabel = 'Versão Inicial (Assinada)';
             }
 
             $resultado['itens'][] = [
@@ -275,7 +333,7 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
                 'data_documento' => $v['data_vistoria'] ?: ($v['data_emissao'] ?: substr($v['criado_em'], 0, 10)),
                 'data_validade' => null,
                 'status' => $v['status'] ?: 'CONCLUIDA',
-                'status_label' => str_replace('_', ' ', $v['status'] ?: 'CONCLUIDA'),
+                'status_label' => 'ASSINADO',
                 'suporte' => 'DIGITAL',
                 'forma' => 'NATO_DIGITAL',
                 'tamanho_bytes' => null,
@@ -290,9 +348,9 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
         error_log('Erro ao buscar vistorias no acervo: ' . $e->getMessage());
     }
 
-    // 3. ANÁLISE DE PLANOS & ENGENHARIA NAVAL (Pranchas, Memoriais e Pareceres por Revisão)
+    // 3. ANÁLISE DE PLANOS & ENGENHARIA NAVAL (Somente documentos e pareceres aprovados/assinados)
     try {
-        // 3.1 Pranchas, Memoriais de Cálculo, Estabilidade por Revisão
+        // 3.1 Pranchas e Memoriais Aprovados / Aceitos em PDF
         $qArq = $pdo->prepare("
             SELECT ar.id AS arquivo_id, ar.nome_original, ar.categoria, ar.classificacao,
                    ar.tamanho_bytes, ar.sha256, ar.chave_arquivo, ar.criado_em,
@@ -302,6 +360,8 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
             INNER JOIN analise_planos_submissoes s ON s.id = ar.submissao_id
             INNER JOIN analises_planos ap ON ap.id = s.analise_id
             WHERE ap.embarcacao_id = :emb_id AND ap.status <> 'CANCELADA'
+              AND ar.classificacao = 'ACEITO'
+              AND (ar.extensao = 'pdf' OR ar.mime_type LIKE '%pdf%')
             ORDER BY ap.numero DESC, s.revisao DESC, ar.criado_em DESC
         ");
         $qArq->execute([':emb_id' => $embarcacaoId]);
@@ -309,7 +369,7 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
 
         foreach ($arqs as $ar) {
             $revNum = (int)($ar['revisao'] ?? 0);
-            $revLabel = 'Revisão REV ' . str_pad((string)$revNum, 2, '0', STR_PAD_LEFT);
+            $revLabel = 'REV ' . str_pad((string)$revNum, 2, '0', STR_PAD_LEFT) . ' (Aprovado)';
             $catLabel = str_replace('_', ' ', $ar['categoria'] ?: 'PROJETO');
 
             $resultado['itens'][] = [
@@ -324,8 +384,8 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
                 'versao_numero' => $revNum,
                 'data_documento' => $ar['recebido_em'] ?: substr($ar['criado_em'], 0, 10),
                 'data_validade' => null,
-                'status' => $ar['classificacao'] ?: 'RECEBIDO',
-                'status_label' => $ar['classificacao'] ?: 'RECEBIDO',
+                'status' => 'ACEITO',
+                'status_label' => 'APROVADO',
                 'suporte' => 'DIGITAL',
                 'forma' => 'NATO_DIGITAL',
                 'tamanho_bytes' => (int)($ar['tamanho_bytes'] ?? 0),
@@ -337,14 +397,16 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
             $resultado['resumo']['projetos']++;
         }
 
-        // 3.2 Pareceres Técnicos Oficiais emitidos pelo Analista / Engenheiro
+        // 3.2 Pareceres Técnicos Oficiais Assinados Digitalmente pelo Analista
         $qPar = $pdo->prepare("
             SELECT p.id, p.numero, p.versao, p.finalidade, p.resultado, p.status,
                    p.caminho_pdf_final, p.hash_pdf_final, p.publicado_em, p.criado_em,
                    ap.numero AS processo_numero, ap.tipo_processo
             FROM analise_planos_pareceres p
             INNER JOIN analises_planos ap ON ap.id = p.analise_id
-            WHERE ap.embarcacao_id = :emb_id AND p.status NOT IN ('MINUTA', 'CANCELADO')
+            WHERE ap.embarcacao_id = :emb_id 
+              AND p.status = 'PUBLICADO' 
+              AND p.assinado_analista_em IS NOT NULL
             ORDER BY p.criado_em DESC, p.versao DESC
         ");
         $qPar->execute([':emb_id' => $embarcacaoId]);
@@ -352,7 +414,7 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
 
         foreach ($pares as $par) {
             $numPar = $par['numero'] ?: 'Parecer S/N';
-            $versaoPar = 'Parecer Técnico V' . ((int)$par['versao']) . ' (' . str_replace('_', ' ', $par['finalidade'] ?: 'CONCLUSIVO') . ')';
+            $versaoPar = 'Parecer Técnico V' . ((int)$par['versao']) . ' (Assinado Digitalmente)';
 
             $resultado['itens'][] = [
                 'id' => 'proj_par_' . $par['id'],
@@ -367,7 +429,7 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
                 'data_documento' => $par['publicado_em'] ? substr($par['publicado_em'], 0, 10) : substr($par['criado_em'], 0, 10),
                 'data_validade' => null,
                 'status' => $par['resultado'] ?: 'APROVADO',
-                'status_label' => str_replace('_', ' ', $par['resultado'] ?: 'APROVADO'),
+                'status_label' => 'ASSINADO',
                 'suporte' => 'DIGITAL',
                 'forma' => 'NATO_DIGITAL',
                 'tamanho_bytes' => null,
@@ -382,7 +444,7 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
         error_log('Erro ao buscar engenharia/projetos no acervo: ' . $e->getMessage());
     }
 
-    // 4. CERTIFICADOS NAVAIS E LICENÇAS OFICIAIS (CSN, CNBL, CNARQ, LP, LC, NAR, CHT)
+    // 4. CERTIFICADOS NAVAIS E LICENÇAS OFICIAIS (Somente Assinados Digitalmente: assinado = 1)
     $tabelasCert = [
         ['tipo' => 'CSN', 'tabela' => 'certificados_csn', 'num_col' => 'numero', 'dt_val_col' => 'data_validade', 'pdf_route' => 'documentacao/certificados/pdf', 'nome' => 'Certificado de Segurança da Navegação (CSN)'],
         ['tipo' => 'CNBL', 'tabela' => 'certificados_cnbl', 'num_col' => 'numero', 'dt_val_col' => 'data_validade', 'pdf_route' => 'documentacao/cnbl/pdf', 'nome' => 'Certificado Nacional de Borda Livre (CNBL)'],
@@ -400,7 +462,7 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
                 SELECT id, {$tc['num_col']} AS num_cert, data_emissao, {$sqlVal}, status, assinado,
                        caminho_arquivo_pdf, hash_arquivo_pdf
                 FROM {$tc['tabela']}
-                WHERE embarcacao_id = :emb_id AND ativo = 1 AND status <> 'cancelado'
+                WHERE embarcacao_id = :emb_id AND ativo = 1 AND status <> 'cancelado' AND assinado = 1
                 ORDER BY data_emissao DESC
             ");
             $qCert->execute([':emb_id' => $embarcacaoId]);
@@ -408,8 +470,8 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
 
             foreach ($certs as $c) {
                 $numCert = $c['num_cert'] ?: 'S/N';
-                $statusCert = !empty($c['assinado']) ? 'ASSINADO' : strtoupper($c['status'] ?: 'EMITIDO');
-                $versaoLabel = 'Via Oficial Expedida' . (!empty($c['assinado']) ? ' (Assinada)' : '');
+                $statusCert = 'ASSINADO';
+                $versaoLabel = 'Via Oficial Assinada Digitalmente';
 
                 $resultado['itens'][] = [
                     'id' => 'cert_' . strtolower($tc['tipo']) . '_' . $c['id'],
@@ -426,7 +488,7 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
                     'status' => $statusCert,
                     'status_label' => $statusCert,
                     'suporte' => 'DIGITAL',
-                    'forma' => !empty($c['assinado']) ? 'NATO_DIGITAL' : 'ORIGINAL',
+                    'forma' => 'NATO_DIGITAL',
                     'tamanho_bytes' => null,
                     'hash' => $c['hash_arquivo_pdf'] ?: null,
                     'url_pdf' => APP_URL . $tc['pdf_route'] . '?id=' . urlencode($c['id']),

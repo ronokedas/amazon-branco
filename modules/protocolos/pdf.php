@@ -10,8 +10,17 @@ $interno = isset($salvar_pdf_caminho, $movimentacao_pdf_id);
 if (!$interno) protocoloExigirAcesso();
 $movId = $interno ? (string)$movimentacao_pdf_id : trim($_GET['id'] ?? '');
 
-$q = $pdo->prepare("SELECT m.*, d.numero dossie_numero, d.assunto, d.embarcacao_id, d.cliente_id, d.criado_por, d.proposta_id, d.analise_id, d.vistoria_id, e.nome embarcacao_nome, e.registro, c.nome cliente_nome, um.nome unidade_nome, um.tipo unidade_tipo, u.nome responsavel_nome
-FROM protocolo_movimentacoes m JOIN protocolo_dossies d ON d.id=m.dossie_id JOIN embarcacoes e ON e.id=d.embarcacao_id LEFT JOIN clientes c ON c.id=d.cliente_id LEFT JOIN protocolo_unidades_maritimas um ON um.id=m.unidade_maritima_id LEFT JOIN usuarios u ON u.id=m.criado_por WHERE m.id=:id");
+$q = $pdo->prepare("SELECT m.*, d.numero dossie_numero, d.assunto, d.embarcacao_id, d.cliente_id, d.criado_por, d.proposta_id, d.analise_id, d.vistoria_id, 
+d.destinatario_autoridade dossie_destinatario_autoridade, d.numero_oficio dossie_numero_oficio, d.normam_referencia dossie_normam_referencia,
+d.assinante_nome dossie_assinante_nome, d.assinante_cargo dossie_assinante_cargo, d.assinatura_imagem dossie_assinatura_imagem,
+e.nome embarcacao_nome, e.registro, c.nome cliente_nome, um.nome unidade_nome, um.tipo unidade_tipo, u.nome responsavel_nome
+FROM protocolo_movimentacoes m 
+JOIN protocolo_dossies d ON d.id=m.dossie_id 
+JOIN embarcacoes e ON e.id=d.embarcacao_id 
+LEFT JOIN clientes c ON c.id=d.cliente_id 
+LEFT JOIN protocolo_unidades_maritimas um ON um.id=m.unidade_maritima_id 
+LEFT JOIN usuarios u ON u.id=m.criado_por 
+WHERE m.id=:id");
 $q->execute([':id' => $movId]);
 $m = $q->fetch(PDO::FETCH_ASSOC);
 if (!$m) throw new RuntimeException('Movimentação não encontrada.');
@@ -155,97 +164,181 @@ $unidadeMaritima = !empty($m['unidade_nome']) ? $e($m['unidade_nome']) : 'Não a
 $portadorRastreio = trim(($m['portador_nome'] ?? '') . ' ' . ($m['codigo_rastreio'] ?? ''));
 $rastreioTexto = $portadorRastreio !== '' ? ' · ' . $e($portadorRastreio) : '';
 
-$html = '
-<table width="100%" cellpadding="5" cellspacing="0" style="border: 1px solid #b8d9cc; background-color: #f2f8f5;">
-<tr>
-  <td width="68%">
-    <span style="font-size: 7pt; color: #52756a; font-weight: bold;">ASSUNTO DO DOSSIÊ</span><br>
-    <span style="font-size: 9.5pt; color: #087653; font-weight: bold;">' . $e($m['assunto']) . '</span>
-  </td>
-  <td width="32%" align="right">
-    <span style="font-size: 7pt; color: #52756a; font-weight: bold;">DATA / HORA DO REGISTRO</span><br>
-    <span style="font-size: 9pt; color: #173b32; font-weight: bold;">' . $dataHoraMov . '</span>
-  </td>
-</tr>
-</table>
-<div style="height: 6px;">&nbsp;</div>
+$ehSaida = ($m['tipo'] === 'SAIDA');
 
-<table width="100%" cellpadding="5" cellspacing="0" style="border: 1px solid #d4e3dc; background-color: #ffffff;">
-<tr>
-  <td width="50%" style="border-right: 1px solid #e0ebe6; border-bottom: 1px solid #e0ebe6; background-color: #f8faf9;">
-    <span style="font-size: 7pt; color: #087653; font-weight: bold;">EMBARCAÇÃO</span><br>
-    <span style="font-size: 9pt; font-weight: bold; color: #173b32;">' . $e($m['embarcacao_nome']) . $registroNaval . '</span>
-  </td>
-  <td width="50%" style="border-bottom: 1px solid #e0ebe6; background-color: #f8faf9;">
-    <span style="font-size: 7pt; color: #087653; font-weight: bold;">CLIENTE / INTERESSADO</span><br>
-    <span style="font-size: 9pt; font-weight: bold; color: #173b32;">' . $e($m['cliente_nome'] ?: 'Não informado') . '</span>
-  </td>
-</tr>
-<tr>
-  <td style="border-right: 1px solid #e0ebe6; border-bottom: 1px solid #e0ebe6;">
-    <span style="font-size: 7pt; color: #557067;">ORIGEM (QUEM ENTREGOU)</span><br>
-    <span style="font-size: 8.5pt; font-weight: bold; color: #173b32;">' . $e($m['origem_nome']) . '</span> <span style="font-size: 7.5pt; color: #557067;">(' . $e($m['origem_tipo']) . ')</span>
-  </td>
-  <td style="border-bottom: 1px solid #e0ebe6;">
-    <span style="font-size: 7pt; color: #557067;">DESTINO (QUEM RECEBEU)</span><br>
-    <span style="font-size: 8.5pt; font-weight: bold; color: #173b32;">' . $e($m['destino_nome']) . '</span> <span style="font-size: 7.5pt; color: #557067;">(' . $e($m['destino_tipo']) . ')</span>
-  </td>
-</tr>
-<tr>
-  <td style="border-right: 1px solid #e0ebe6;">
-    <span style="font-size: 7pt; color: #557067;">LOCALIDADE & MEIO DE ENVIO</span><br>
-    <span style="font-size: 8.5pt; color: #173b32;">' . $e($m['cidade'] . '/' . $m['uf'] . ' · ' . $m['meio_envio']) . '</span>
-  </td>
-  <td>
-    <span style="font-size: 7pt; color: #557067;">DESTINO MARÍTIMO / RASTREIO</span><br>
-    <span style="font-size: 8.5pt; color: #173b32;">' . $unidadeMaritima . $rastreioTexto . '</span>
-  </td>
-</tr>
-</table>
-<div style="height: 8px;">&nbsp;</div>
+// Dados para Ofício se for SAÍDA
+$numOf = !empty($m['numero_oficio']) ? $m['numero_oficio'] : (!empty($m['dossie_numero_oficio']) ? $m['dossie_numero_oficio'] : 'AM-OF' . str_pad((string)$m['sequencia'], 3, '0', STR_PAD_LEFT) . '/' . date('Y', strtotime($m['movimentado_em'])));
+$destPara = !empty($m['destino_nome']) ? mb_strtoupper($m['destino_nome'], 'UTF-8') : (!empty($m['unidade_nome']) ? mb_strtoupper($m['unidade_nome'], 'UTF-8') : 'CAPITANIA DOS PORTOS DA AMAZÔNIA ORIENTAL');
+$destAC = !empty($m['destinatario_autoridade']) ? mb_strtoupper($m['destinatario_autoridade'], 'UTF-8') : (!empty($m['dossie_destinatario_autoridade']) ? mb_strtoupper($m['dossie_destinatario_autoridade'], 'UTF-8') : 'CAPITÃO DE MAR E GUERRA – ALEXANDRE BATISTA PIMENTEL');
+$normamRef = !empty($m['dossie_normam_referencia']) ? $m['dossie_normam_referencia'] : 'NORMAM 202/DPC';
+$dataPorExtenso = formatarDataExtensoNaval($m['movimentado_em']);
 
-<div style="font-size: 10pt; font-weight: bold; color: #087653; margin-bottom: 4px;">RELAÇÃO DE DOCUMENTOS TRAMITADOS (' . count($itens) . ')</div>
-<table width="100%" cellpadding="6" cellspacing="0" style="border-collapse: collapse; border: 1px solid #b8d9cc;">
-<thead>
-  <tr style="background-color: #087653; color: #ffffff;">
-    <th width="6%" align="center" style="font-size: 7.5pt; font-weight: bold; border: 1px solid #087653;">#</th>
-    <th width="38%" style="font-size: 7.5pt; font-weight: bold; border: 1px solid #087653;">DOCUMENTO APRESENTADO</th>
-    <th width="18%" style="font-size: 7.5pt; font-weight: bold; border: 1px solid #087653;">SUPORTE & FORMA</th>
-    <th width="8%" align="center" style="font-size: 7.5pt; font-weight: bold; border: 1px solid #087653;">QTD</th>
-    <th width="30%" style="font-size: 7.5pt; font-weight: bold; border: 1px solid #087653;">CONDIÇÃO & CUSTÓDIA</th>
-  </tr>
-</thead>
-<tbody>
-  ' . $linhas . '
-</tbody>
-</table>' .
-(!empty($m['observacoes']) ? '
-<div style="height: 6px;">&nbsp;</div>
-<div style="padding: 6px; border-left: 3px solid #087653; background-color: #f7faf9; font-size: 8pt; color: #2d4c42;">
-  <b>OBSERVAÇÕES:</b> ' . $e($m['observacoes']) . '
-</div>' : '') . '
+$assinanteNome = !empty($m['assinante_nome']) ? mb_strtoupper($m['assinante_nome'], 'UTF-8') : (!empty($m['dossie_assinante_nome']) ? mb_strtoupper($m['dossie_assinante_nome'], 'UTF-8') : 'THAINARA BARROS');
+$assinanteCargo = !empty($m['assinante_cargo']) ? $m['assinante_cargo'] : (!empty($m['dossie_assinante_cargo']) ? $m['dossie_assinante_cargo'] : 'Secretária');
+$assinado = !empty($m['assinado']);
+$sigImagem = !empty($m['assinatura_imagem']) ? $m['assinatura_imagem'] : (!empty($m['dossie_assinatura_imagem']) ? $m['dossie_assinatura_imagem'] : null);
 
-<div style="height: 15px;">&nbsp;</div>
-<table width="100%" cellpadding="0" cellspacing="0">
-<tr nobr="true">
-  <td width="46%" align="center">
-    <div style="border-bottom: 1.5px solid #2d4c42; height: 35px;">&nbsp;</div>
-    <div style="padding-top: 5px;">
-      <span style="font-size: 8.5pt; font-weight: bold; color: #173b32;">RESPONSÁVEL PELA ENTREGA</span><br>
-      <span style="font-size: 7.5pt; color: #507065;">' . $e($m['origem_nome']) . ' (' . $e($m['origem_tipo']) . ')</span>
+// Coleta estrita dos itens enviados
+$citacoes = [];
+foreach ($itens as $it) {
+    $citacoes[] = formatarCitacaoItemNaval($it);
+}
+$citacaoDocumentos = !empty($citacoes) ? implode('; ', array_unique($citacoes)) : 'Documentos anexados conforme manifesto';
+
+if ($ehSaida) {
+    $html = '
+    <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; border-color: #222222; font-family: helvetica; width: 100%;">
+        <tr>
+            <td width="48%" style="font-size: 8.5pt; font-weight: bold; background-color: #ffffff;">Tipo de Documento: OFÍCIO</td>
+            <td width="52%" style="font-size: 8.5pt; font-weight: bold; background-color: #ffffff;">Núm. Doc.: ' . $e($numOf) . '</td>
+        </tr>
+        <tr>
+            <td width="16%" style="font-size: 8.5pt; font-weight: bold; background-color: #ffffff;">Para:</td>
+            <td width="84%" style="font-size: 8.5pt; background-color: #ffffff;">' . $e($destPara) . '</td>
+        </tr>
+        <tr>
+            <td width="16%" style="font-size: 8.5pt; font-weight: bold; background-color: #ffffff;">A/C:</td>
+            <td width="84%" style="font-size: 8.5pt; background-color: #ffffff;"><b>' . $e($destAC) . '</b></td>
+        </tr>
+        <tr>
+            <td width="16%" style="font-size: 8.5pt; font-weight: bold; background-color: #ffffff;">Assunto:</td>
+            <td width="84%" style="font-size: 8.5pt; background-color: #ffffff;">Encaminhamento de documentos emitidos/aprovados por esta Entidade Certificadora para arquivo nesta OM.</td>
+        </tr>
+    </table>
+
+    <div style="font-family: helvetica; font-size: 9.5pt; color: #111111; line-height: 1.6; margin-top: 10px;">
+        <p style="margin-bottom: 12px;">Prezado Senhor,</p>
+
+        <p style="text-align: justify; margin-bottom: 14px;">
+            Atendendo ao disposto no artigo da ' . $e($normamRef) . ', a Entidade Certificadora Amazon Naval vem, através do presente ofício, encaminhar os documentos anexados da seguinte embarcação:
+        </p>
+
+        <div style="margin-bottom: 18px; padding-left: 4px;">
+            • <b>' . $e(mb_strtoupper($m['embarcacao_nome'], 'UTF-8')) . '</b> – ' . $e($citacaoDocumentos) . '
+        </div>
+
+        <p style="margin-bottom: 14px;">
+            ' . $e($dataPorExtenso) . '
+        </p>
+
+        <p style="margin-bottom: 8px;">
+            Atenciosamente,
+        </p>
     </div>
-  </td>
-  <td width="8%">&nbsp;</td>
-  <td width="46%" align="center">
-    <div style="border-bottom: 1.5px solid #2d4c42; height: 35px;">&nbsp;</div>
-    <div style="padding-top: 5px;">
-      <span style="font-size: 8.5pt; font-weight: bold; color: #173b32;">RESPONSÁVEL PELO RECEBIMENTO</span><br>
-      <span style="font-size: 7.5pt; color: #507065;">' . $e($m['destino_nome']) . ' (' . $e($m['destino_tipo']) . ')</span>
-    </div>
-  </td>
-</tr>
-</table>
 
+    <div style="height: 10px;">&nbsp;</div>
+    <div style="text-align: center; width: 100%;">
+        <div style="width: 250px; margin: 0 auto; text-align: center;">
+            <div style="border-bottom: 1px solid #333333; height: 35px; width: 220px; margin: 0 auto 4px auto;">&nbsp;</div>
+            <strong style="font-size: 9pt; color: #111111;">' . $e($assinanteNome) . '</strong><br>
+            <span style="font-size: 8pt; color: #444444;">' . $e($assinanteCargo) . '</span>' .
+            ($assinado ? '
+            <div style="margin-top: 4px; font-size: 6.8pt; color: #087653;">
+                Assinado Digitalmente via Sistema Amazon Naval<br>
+                Data: ' . date('d/m/Y H:i:s', strtotime($m['assinatura_em'] ?: 'now')) . ' · Autenticidade: ' . $codigo . '
+            </div>' : '
+            <div style="margin-top: 4px; font-size: 6.8pt; color: #888888;">
+                (Ofício aguardando assinatura digital no sistema)
+            </div>') . '
+        </div>
+    </div>
+
+    <div style="height: 16px;">&nbsp;</div>
+    <div style="font-size: 9.5pt; font-weight: bold; color: #087653; border-top: 1px solid #b8d9cc; padding-top: 8px; margin-bottom: 4px;">
+        ANEXO AO OFÍCIO: MANIFESTO DE ITENS ENVIADOS (' . count($itens) . ')
+    </div>
+    <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse: collapse; border: 1px solid #b8d9cc;">
+    <thead>
+      <tr style="background-color: #087653; color: #ffffff;">
+        <th width="6%" align="center" style="font-size: 7.2pt; font-weight: bold; border: 1px solid #087653;">#</th>
+        <th width="38%" style="font-size: 7.2pt; font-weight: bold; border: 1px solid #087653;">DOCUMENTO ANEXADO</th>
+        <th width="18%" style="font-size: 7.2pt; font-weight: bold; border: 1px solid #087653;">SUPORTE & FORMA</th>
+        <th width="8%" align="center" style="font-size: 7.2pt; font-weight: bold; border: 1px solid #087653;">QTD</th>
+        <th width="30%" style="font-size: 7.2pt; font-weight: bold; border: 1px solid #087653;">CONDIÇÃO & CUSTÓDIA</th>
+      </tr>
+    </thead>
+    <tbody>
+      ' . $linhas . '
+    </tbody>
+    </table>
+    ';
+} else {
+    // Formato de Comprovante de Entrada / Custódia
+    $html = '
+    <table width="100%" cellpadding="5" cellspacing="0" style="border: 1px solid #b8d9cc; background-color: #f2f8f5;">
+    <tr>
+      <td width="68%">
+        <span style="font-size: 7pt; color: #52756a; font-weight: bold;">ASSUNTO DO DOSSIÊ</span><br>
+        <span style="font-size: 9.5pt; color: #087653; font-weight: bold;">' . $e($m['assunto']) . '</span>
+      </td>
+      <td width="32%" align="right">
+        <span style="font-size: 7pt; color: #52756a; font-weight: bold;">DATA / HORA DO REGISTRO</span><br>
+        <span style="font-size: 9pt; color: #173b32; font-weight: bold;">' . $dataHoraMov . '</span>
+      </td>
+    </tr>
+    </table>
+    <div style="height: 6px;">&nbsp;</div>
+
+    <table width="100%" cellpadding="5" cellspacing="0" style="border: 1px solid #d4e3dc; background-color: #ffffff;">
+    <tr>
+      <td width="50%" style="border-right: 1px solid #e0ebe6; border-bottom: 1px solid #e0ebe6; background-color: #f8faf9;">
+        <span style="font-size: 7pt; color: #087653; font-weight: bold;">EMBARCAÇÃO</span><br>
+        <span style="font-size: 9pt; font-weight: bold; color: #173b32;">' . $e($m['embarcacao_nome']) . $registroNaval . '</span>
+      </td>
+      <td width="50%" style="border-bottom: 1px solid #e0ebe6; background-color: #f8faf9;">
+        <span style="font-size: 7pt; color: #087653; font-weight: bold;">CLIENTE / INTERESSADO</span><br>
+        <span style="font-size: 9pt; font-weight: bold; color: #173b32;">' . $e($m['cliente_nome'] ?: 'Não informado') . '</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="border-right: 1px solid #e0ebe6; border-bottom: 1px solid #e0ebe6;">
+        <span style="font-size: 7pt; color: #557067;">ORIGEM (QUEM ENTREGOU)</span><br>
+        <span style="font-size: 8.5pt; font-weight: bold; color: #173b32;">' . $e($m['origem_nome']) . '</span> <span style="font-size: 7.5pt; color: #557067;">(' . $e($m['origem_tipo']) . ')</span>
+      </td>
+      <td style="border-bottom: 1px solid #e0ebe6;">
+        <span style="font-size: 7pt; color: #557067;">DESTINO (QUEM RECEBEU)</span><br>
+        <span style="font-size: 8.5pt; font-weight: bold; color: #173b32;">' . $e($m['destino_nome']) . '</span> <span style="font-size: 7.5pt; color: #557067;">(' . $e($m['destino_tipo']) . ')</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="border-right: 1px solid #e0ebe6;">
+        <span style="font-size: 7pt; color: #557067;">LOCALIDADE & MEIO DE ENVIO</span><br>
+        <span style="font-size: 8.5pt; color: #173b32;">' . $e($m['cidade'] . '/' . $m['uf'] . ' · ' . $m['meio_envio']) . '</span>
+      </td>
+      <td>
+        <span style="font-size: 7pt; color: #557067;">DESTINO MARÍTIMO / RASTREIO</span><br>
+        <span style="font-size: 8.5pt; color: #173b32;">' . $unidadeMaritima . $rastreioTexto . '</span>
+      </td>
+    </tr>
+    </table>
+    <div style="height: 8px;">&nbsp;</div>
+
+    <div style="font-size: 10pt; font-weight: bold; color: #087653; margin-bottom: 4px;">RELAÇÃO DE DOCUMENTOS TRAMITADOS (' . count($itens) . ')</div>
+    <table width="100%" cellpadding="6" cellspacing="0" style="border-collapse: collapse; border: 1px solid #b8d9cc;">
+    <thead>
+      <tr style="background-color: #087653; color: #ffffff;">
+        <th width="6%" align="center" style="font-size: 7.5pt; font-weight: bold; border: 1px solid #087653;">#</th>
+        <th width="38%" style="font-size: 7.5pt; font-weight: bold; border: 1px solid #087653;">DOCUMENTO APRESENTADO</th>
+        <th width="18%" style="font-size: 7.5pt; font-weight: bold; border: 1px solid #087653;">SUPORTE & FORMA</th>
+        <th width="8%" align="center" style="font-size: 7.5pt; font-weight: bold; border: 1px solid #087653;">QTD</th>
+        <th width="30%" style="font-size: 7.5pt; font-weight: bold; border: 1px solid #087653;">CONDIÇÃO & CUSTÓDIA</th>
+      </tr>
+    </thead>
+    <tbody>
+      ' . $linhas . '
+    </tbody>
+    </table>';
+}
+
+if (!empty($m['observacoes'])) {
+    $html .= '
+    <div style="height: 6px;">&nbsp;</div>
+    <div style="padding: 6px; border-left: 3px solid #087653; background-color: #f7faf9; font-size: 8pt; color: #2d4c42;">
+      <b>OBSERVAÇÕES:</b> ' . $e($m['observacoes']) . '
+    </div>';
+}
+
+$html .= '
 <div style="height: 12px;">&nbsp;</div>
 <table width="100%" cellpadding="5" cellspacing="0" style="border: 1px solid #cce0d8; background-color: #f4f9f7;" nobr="true">
 <tr>
@@ -263,8 +356,7 @@ $html = '
     <tr>
       <td colspan="2" style="padding-top: 4px; border-top: 1px dashed #d0e2db;">
         <span style="font-size: 6.8pt; color: #527066;">
-          Documento gerado pelo sistema Amazon Naval com valor probatório de custódia e tramitação documental.
-          Após a confirmação, o conteúdo, a relação documental e o hash criptográfico ficam permanentemente imutáveis.
+          Documento emitido nos termos das normas da Marinha do Brasil (DPC/NORMAM) com valor probatório de protocolo e custódia documental.
         </span>
       </td>
     </tr>

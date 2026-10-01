@@ -145,8 +145,25 @@
                         <div class="d-flex flex-wrap gap-2 pt-2 border-top" style="border-color: var(--border) !important;">
                             <?php if (in_array($m['status'], ['CONFIRMADA', 'RETIFICADA'], true)): ?>
                                 <a class="btn btn-sm btn-secondary" target="_blank" href="<?= APP_URL ?>protocolos/pdf?id=<?= urlencode($m['id']) ?>">
-                                    <i class="fa-solid fa-file-pdf text-danger"></i> Comprovante Oficial (PDF)
+                                    <i class="fa-solid fa-file-pdf text-danger"></i> <?= $m['tipo'] === 'SAIDA' ? 'Visualizar Ofício de Saída (PDF)' : 'Comprovante Oficial (PDF)' ?>
                                 </a>
+
+                                <?php if ($m['tipo'] === 'SAIDA'): ?>
+                                    <?php if (!empty($m['assinado'])): ?>
+                                        <span class="badge bg-success d-inline-flex align-items-center gap-1 py-1 px-2" style="font-size: 0.8rem;" title="Assinado por <?= h($m['assinante_nome'] ?: 'Digital') ?> em <?= formatarDataHora($m['assinatura_em']) ?>">
+                                            <i class="fa-solid fa-circle-check"></i> Ofício Assinado
+                                        </span>
+                                        <?php if (!$somenteLeitura): ?>
+                                            <button type="button" class="btn btn-sm btn-outline-light py-0 px-2" onclick="abrirModalAssinarOficio('movimentacao', '<?= h($m['id']) ?>', '<?= h(addslashes($m['destinatario_autoridade'] ?? '')) ?>', '<?= h(addslashes($m['numero_oficio'] ?? '')) ?>', '<?= h(addslashes($m['assinante_nome'] ?? '')) ?>', '<?= h(addslashes($m['assinante_cargo'] ?? '')) ?>', '<?= (int)($m['responsavel_assinatura_id'] ?? 0) ?>')" title="Alterar assinatura">
+                                                <i class="fa-solid fa-pen-nib"></i> Alterar
+                                            </button>
+                                        <?php endif; ?>
+                                    <?php elseif (!$somenteLeitura): ?>
+                                        <button type="button" class="btn btn-sm btn-outline-warning" onclick="abrirModalAssinarOficio('movimentacao', '<?= h($m['id']) ?>', '<?= h(addslashes($m['destinatario_autoridade'] ?? '')) ?>', '<?= h(addslashes($m['numero_oficio'] ?? '')) ?>', '<?= h(addslashes($m['assinante_nome'] ?? '')) ?>', '<?= h(addslashes($m['assinante_cargo'] ?? '')) ?>', '<?= (int)($m['responsavel_assinatura_id'] ?? 0) ?>')">
+                                            <i class="fa-solid fa-file-signature"></i> Assinar Digitalmente Ofício
+                                        </button>
+                                    <?php endif; ?>
+                                <?php endif; ?>
 
                                 <?php if ($m['aceite_existente']): ?>
                                     <button type="button" class="btn btn-sm btn-outline-info" onclick="abrirModalAceite('<?= h($m['aceite_existente']) ?>')">

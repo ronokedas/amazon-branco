@@ -52,7 +52,7 @@ try{
   }
   $pdo->commit();setMensagem('success','Dossiê '.$numero.' criado com sucesso.');redirecionar($voltar($id));
  }
- if($id==='')throw new RuntimeException('Dossiê não informado.');$d=protocoloCarregar($pdo,$id,in_array($acao,['adicionar_movimentacao','confirmar','registro_orgao','encerrar','cancelar','editar_dossie'],true));
+ if($id==='')throw new RuntimeException('Dossiê não informado.');$d=protocoloCarregar($pdo,$id,in_array($acao,['adicionar_movimentacao','confirmar','registro_orgao','encerrar','cancelar','editar_dossie','assinar_oficio'],true));
  if(in_array($d['status'],['ENCERRADO','CANCELADO'],true)&&!in_array($acao,['criar_aceite'],true))throw new RuntimeException('Dossiê encerrado ou cancelado é somente leitura.');
  if($acao==='editar_dossie'){
   $assunto=trim($_POST['assunto']??'');if(!$assunto)throw new InvalidArgumentException('Informe o assunto.');
@@ -68,6 +68,106 @@ try{
   ]);
   protocoloAuditar($pdo,$id,null,'DOSSIE_EDITADO',null,null,'Dados e vínculos atualizados.');$pdo->commit();
   setMensagem('success','Dados do dossiê atualizados.');redirecionar($voltar($id, $abaRetorno ?: 'timeline'));
+ }
+ if($acao==='assinar_oficio'){
+  $alvoTipo=trim($_POST['alvo_tipo']??'dossie');
+  $alvoId=trim($_POST['alvo_id']??$id);
+  $respId=trim($_POST['responsavel_id']??'')?:null;
+  $nome=trim($_POST['assinante_nome']??'');
+  $cargo=trim($_POST['assinante_cargo']??'');
+  $destAC=trim($_POST['destinatario_autoridade']??'');
+  $numOf=trim($_POST['numero_oficio']??'');
+  $sigRaw=trim($_POST['assinatura_imagem']??'');
+  $caminhoImagemSalva=null;
+
+  if($respId){
+   $qR=$pdo->prepare("SELECT nome_completo, cargo_titulo, registro_profissional, assinatura_arquivo FROM responsaveis_assinatura WHERE id=:id AND ativo=1");
+   $qR->execute([':id'=>$respId]);
+   $rInfo=$qR->fetch(PDO::FETCH_ASSOC);
+   if($rInfo){
+    if(!$nome)$nome=$rInfo['nome_completo'];
+    if(!$cargo)$cargo=$rInfo['cargo_titulo'];
+    if(!$sigRaw&&!empty($rInfo['assinatura_arquivo']))$caminhoImagemSalva=$rInfo['assinatura_arquivo'];
+   }
+  }
+
+  if(str_starts_with($sigRaw,'data:image/')){
+   $dirSigs=dirname(__DIR__,2).'/storage/private/assinaturas_oficios';
+   if(!is_dir($dirSigs)){@mkdir($dirSigs,0777,true);@chmod($dirSigs,0777);}
+   $imgData=substr($sigRaw,strpos($sigRaw,',')+1);
+   $decoded=base64_decode($imgData);
+   if($decoded!==false){
+    $relNome='storage/private/assinaturas_oficios/oficio_sig_'.bin2hex(random_bytes(8)).'.png';
+    file_put_contents(dirname(__DIR__,2).'/'.$relNome,$decoded);
+    @chmod(dirname(__DIR__,2).'/'.$relNome,0666);
+    $caminhoImagemSalva=$relNome;
+   }
+  }
+
+  if(!$nome)$nome='THAINARA BARROS';
+  if(!$cargo)$cargo='Secretária';
+  $ip=$_SERVER['REMOTE_ADDR']??'127.0.0.1';
+
+  $pdo->beginTransaction();
+  if($alvoTipo==='movimentacao'){
+   $up=$pdo->prepare("UPDATE protocolo_movimentacoes SET 
+     assinado=1,
+     assinatura_em=NOW(),
+     responsavel_assinatura_id=:resp,
+     assinante_nome=:nome,
+     assinante_cargo=:cargo,
+     assinatura_imagem=:img,
+     assinatura_ip=:ip,
+     destinatario_autoridade=COALESCE(:dest_ac, destinatario_autoridade),
+     numero_oficio=COALESCE(:num_of, numero_oficio)
+     WHERE id=:mid AND dossie_id=:did");
+   $up->execute([
+     ':resp'=>$respId,
+     ':nome'=>$nome,
+     ':cargo'=>$cargo,
+     ':img'=>$caminhoImagemSalva,
+     ':ip'=>$ip,
+     ':dest_ac'=>$destAC?:null,
+     ':num_of'=>$numOf?:null,
+     ':mid'=>$alvoId,
+     ':did'=>$id
+   ]);
+
+   $qPdf=$pdo->prepare("SELECT pdf_caminho FROM protocolo_movimentacoes WHERE id=:mid");
+   $qPdf->execute([':mid'=>$alvoId]);
+   $oldPdf=$qPdf->fetchColumn();
+   if($oldPdf&&is_file(dirname(__DIR__,2).'/'.$oldPdf)){
+    @unlink(dirname(__DIR__,2).'/'.$oldPdf);
+    $pdo->prepare("UPDATE protocolo_movimentacoes SET pdf_hash=NULL WHERE id=:mid")->execute([':mid'=>$alvoId]);
+   }
+   protocoloAuditar($pdo,$id,$alvoId,'OFICIO_ASSINADO',null,'ASSINADO',"Ofício da saída assinado digitalmente por {$nome} ({$cargo}).");
+  } else {
+   $up=$pdo->prepare("UPDATE protocolo_dossies SET 
+     assinado=1,
+     assinatura_em=NOW(),
+     responsavel_assinatura_id=:resp,
+     assinante_nome=:nome,
+     assinante_cargo=:cargo,
+     assinatura_imagem=:img,
+     assinatura_ip=:ip,
+     destinatario_autoridade=COALESCE(:dest_ac, destinatario_autoridade),
+     numero_oficio=COALESCE(:num_of, numero_oficio)
+     WHERE id=:id");
+   $up->execute([
+     ':resp'=>$respId,
+     ':nome'=>$nome,
+     ':cargo'=>$cargo,
+     ':img'=>$caminhoImagemSalva,
+     ':ip'=>$ip,
+     ':dest_ac'=>$destAC?:null,
+     ':num_of'=>$numOf?:null,
+     ':id'=>$id
+   ]);
+   protocoloAuditar($pdo,$id,null,'OFICIO_ASSINADO',null,'ASSINADO',"Ofício do dossiê assinado digitalmente por {$nome} ({$cargo}).");
+  }
+  $pdo->commit();
+  setMensagem('success',"Ofício assinado digitalmente com sucesso por {$nome} ({$cargo}). O carimbo oficial foi aplicado.");
+  redirecionar($voltar($id, $abaRetorno ?: 'timeline'));
  }
  if($acao==='adicionar_movimentacao'){
   $tipo=trim($_POST['tipo']??'');$nat=trim($_POST['natureza']??'');$tipos=['ENTRADA','SAIDA'];$nats=['RECEBIMENTO_CLIENTE','ENVIO_ORGAO','RETORNO_ORGAO','CUMPRIMENTO_EXIGENCIA','RETIRADA_ORGAO','ENTREGA_CLIENTE','TRANSFERENCIA_INTERNA','OUTRA'];
