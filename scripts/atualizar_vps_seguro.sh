@@ -120,8 +120,9 @@ echo "   ✅ Agendamentos e demandas de análise saneados com sucesso."
 
 echo ""
 echo "🔐 [6/6] Ajustando Permissões de Runtime para Apache (www-data)..."
-sudo chown -R www-data:www-data storage uploads logs temp_pdf tmp
-sudo chmod -R 775 storage uploads logs temp_pdf tmp
+# Usamos -f e fallback seguro para ignorar arquivos temporários de sessão que o PHP apaga dinamicamente
+sudo chown -f -R www-data:www-data storage uploads logs temp_pdf tmp 2>/dev/null || true
+sudo chmod -f -R 775 storage uploads logs temp_pdf tmp 2>/dev/null || true
 echo "   ✅ Permissões ajustadas."
 
 echo ""
