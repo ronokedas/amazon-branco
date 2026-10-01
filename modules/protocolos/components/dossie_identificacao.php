@@ -42,30 +42,31 @@
                 <input type="hidden" name="action" value="criar">
 
                 <div class="row g-3 mb-3">
-                    <div class="col-md-6 position-relative">
-                        <label class="form-label fw-bold" for="busca_embarcacao_input">
-                            <i class="fa-solid fa-ship text-accent me-1"></i> Embarcação (Pesquisa Inteligente) *
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold" for="embarcacao_id">
+                            <i class="fa-solid fa-ship text-accent me-1"></i> Embarcação *
                         </label>
-                        <div class="input-group">
+
+                        <!-- Campo de Pesquisa Rápida / Filtro -->
+                        <div class="input-group mb-2">
                             <span class="input-group-text" style="background: rgba(255,255,255,0.05); border-color: var(--border); color: var(--accent, #56e0ad);">
                                 <i class="fa-solid fa-magnifying-glass"></i>
                             </span>
                             <input type="text" 
                                    id="busca_embarcacao_input" 
                                    class="form-control" 
-                                   placeholder="Digite o nome ou registro da embarcação..." 
+                                   placeholder="🔍 Digite para pesquisar ou escolha na lista fixa abaixo..." 
                                    autocomplete="off" 
-                                   oninput="aoDigitarBuscaEmbarcacao(this.value)" 
-                                   onfocus="aoFocarBuscaEmbarcacao()" 
-                                   onkeydown="tratarTecladoBuscaEmbarcacao(event)">
-                            <button type="button" class="btn btn-outline-secondary" id="btn-limpar-embarcacao" onclick="limparSelecaoEmbarcacao()" style="display: none;" title="Limpar seleção para buscar outra">
+                                   oninput="filtrarListaEmbarcacoes(this.value)" 
+                                   onkeydown="aoTeclarBuscaEmbarcacao(event)">
+                            <button type="button" class="btn btn-outline-secondary" id="btn-limpar-embarcacao" onclick="limparFiltroEmbarcacao()" style="display: none;" title="Limpar pesquisa e mostrar todas as opções">
                                 ✕ Limpar
                             </button>
                         </div>
 
-                        <!-- Select real sincronizado para submissão do formulário -->
-                        <select name="embarcacao_id" id="embarcacao_id" required style="position: absolute; opacity: 0; pointer-events: none; height: 1px; width: 1px;" onchange="sincronizarDadosEmbarcacao(this)">
-                            <option value="">-- Selecione a embarcação --</option>
+                        <!-- Lista Fixa Selecionável (Visível e Permanente) -->
+                        <select name="embarcacao_id" id="embarcacao_id" class="form-control form-select" required onchange="aoSelecionarEmbarcacao(this)">
+                            <option value="">-- Selecione na lista fixa ou pesquise acima --</option>
                             <?php foreach ($embarcacoes as $e): ?>
                                 <option value="<?= h($e['id']) ?>" 
                                         data-nome="<?= h($e['nome']) ?>"
@@ -78,13 +79,13 @@
                             <?php endforeach; ?>
                         </select>
 
-                        <!-- Dropdown flutuante de resultados dinâmicos -->
-                        <div id="dropdown-busca-embarcacoes" class="shadow-lg rounded" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; max-height: 280px; overflow-y: auto; background: var(--bg-surface, #0e2a24); border: 1px solid var(--accent, #56e0ad); margin-top: 4px; padding: 4px 0;">
-                            <!-- Preenchido via JavaScript -->
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <small class="text-muted" id="info-filtro-embarcacoes">
+                                <i class="fa-solid fa-list-check me-1"></i> Lista fixa com <?= count($embarcacoes) ?> embarcação(ões). Selecione diretamente ou digite acima para filtrar.
+                            </small>
                         </div>
 
                         <div id="embarcacao-selecionada-badge" class="mt-2" style="display: none;"></div>
-                        <small class="text-muted d-block mt-1">Digite qualquer letra do nome ou registro da embarcação para filtrar em tempo real.</small>
                         <div id="preview-acervo-resumo" class="mt-2" style="display: none;"></div>
                     </div>
 
@@ -214,185 +215,128 @@
     </section>
 
     <script>
-    const listaEmbarcacoes = <?= json_encode(array_values(array_map(function($e) {
-        return [
-            'id' => (string)$e['id'],
-            'nome' => (string)$e['nome'],
-            'registro' => (string)($e['registro'] ?? ''),
-            'cliente_id' => (string)($e['cliente_id'] ?? ''),
-            'cliente_nome' => (string)($e['cliente_nome'] ?? ''),
-        ];
-    }, $embarcacoes)), JSON_UNESCAPED_UNICODE) ?>;
-
-    let indiceFocadoDropdown = -1;
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
 
     function normalizarTexto(txt) {
         return (txt || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     }
 
-    function destacarTermo(texto, termo) {
-        if (!termo || !texto) return texto || '';
-        const normTexto = normalizarTexto(texto);
-        const normTermo = normalizarTexto(termo);
-        const idx = normTexto.indexOf(normTermo);
-        if (idx === -1) return texto;
-        const antes = texto.substring(0, idx);
-        const match = texto.substring(idx, idx + termo.length);
-        const depois = texto.substring(idx + termo.length);
-        return `${antes}<mark style="background: rgba(86, 224, 173, 0.35); color: #fff; padding: 0 2px; border-radius: 2px;">${match}</mark>${depois}`;
-    }
-
-    function aoDigitarBuscaEmbarcacao(termo) {
-        const dropdown = document.getElementById('dropdown-busca-embarcacoes');
-        const norm = normalizarTexto(termo.trim());
-        indiceFocadoDropdown = -1;
-
-        if (!norm) {
-            renderizarDropdownBusca(listaEmbarcacoes.slice(0, 15), termo);
-            dropdown.style.display = 'block';
-            return;
-        }
-
-        const filtradas = listaEmbarcacoes.filter(e => {
-            const nomeNorm = normalizarTexto(e.nome);
-            const regNorm = normalizarTexto(e.registro);
-            const cliNorm = normalizarTexto(e.cliente_nome);
-            return nomeNorm.includes(norm) || regNorm.includes(norm) || cliNorm.includes(norm);
-        });
-
-        renderizarDropdownBusca(filtradas, termo);
-        dropdown.style.display = 'block';
-    }
-
-    function renderizarDropdownBusca(itens, termo) {
-        const dropdown = document.getElementById('dropdown-busca-embarcacoes');
-        if (!itens || itens.length === 0) {
-            dropdown.innerHTML = `
-                <div class="p-3 text-center text-muted small">
-                    <i class="fa-solid fa-triangle-exclamation text-warning me-1"></i>
-                    Nenhuma embarcação encontrada para "<strong>${termo}</strong>".
-                </div>
-            `;
-            return;
-        }
-
-        let html = '';
-        itens.forEach((it, idx) => {
-            const nomeFmt = destacarTermo(it.nome, termo);
-            const regFmt = it.registro ? destacarTermo(it.registro, termo) : '';
-            const cliFmt = it.cliente_nome ? destacarTermo(it.cliente_nome, termo) : '';
-
-            html += `
-                <div class="item-busca-embarcacao px-3 py-2" 
-                     data-index="${idx}"
-                     style="cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.15s ease;"
-                     onmouseenter="this.style.background='rgba(86,224,173,0.12)'"
-                     onmouseleave="this.style.background='transparent'"
-                     onclick='selecionarEmbarcacaoPeloItem(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong style="color: var(--accent, #56e0ad); font-size: 0.92rem;">
-                                <i class="fa-solid fa-ship me-1 text-accent"></i> ${nomeFmt}
-                            </strong>
-                            ${regFmt ? `<span class="badge bg-secondary ms-2 small" style="font-size: 0.72rem;">${regFmt}</span>` : ''}
-                        </div>
-                    </div>
-                    ${cliFmt ? `<div class="small text-secondary mt-1"><i class="fa-solid fa-user me-1"></i> Armador: ${cliFmt}</div>` : ''}
-                </div>
-            `;
-        });
-        dropdown.innerHTML = html;
-    }
-
-    function aoFocarBuscaEmbarcacao() {
-        const input = document.getElementById('busca_embarcacao_input');
-        aoDigitarBuscaEmbarcacao(input.value);
-    }
-
-    function tratarTecladoBuscaEmbarcacao(e) {
-        const dropdown = document.getElementById('dropdown-busca-embarcacoes');
-        if (dropdown.style.display === 'none') return;
-
-        const itens = dropdown.querySelectorAll('.item-busca-embarcacao');
-        if (!itens.length) return;
-
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            indiceFocadoDropdown = (indiceFocadoDropdown + 1) % itens.length;
-            atualizarFocoItemDropdown(itens);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            indiceFocadoDropdown = (indiceFocadoDropdown - 1 + itens.length) % itens.length;
-            atualizarFocoItemDropdown(itens);
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (indiceFocadoDropdown >= 0 && itens[indiceFocadoDropdown]) {
-                itens[indiceFocadoDropdown].click();
-            }
-        } else if (e.key === 'Escape') {
-            dropdown.style.display = 'none';
-        }
-    }
-
-    function atualizarFocoItemDropdown(itens) {
-        itens.forEach((el, i) => {
-            if (i === indiceFocadoDropdown) {
-                el.style.background = 'rgba(86, 224, 173, 0.2)';
-                el.scrollIntoView({ block: 'nearest' });
-            } else {
-                el.style.background = 'transparent';
-            }
-        });
-    }
-
-    function selecionarEmbarcacaoPeloItem(item) {
-        const input = document.getElementById('busca_embarcacao_input');
+    function filtrarListaEmbarcacoes(termo) {
         const select = document.getElementById('embarcacao_id');
         const btnLimpar = document.getElementById('btn-limpar-embarcacao');
-        const badge = document.getElementById('embarcacao-selecionada-badge');
-        const dropdown = document.getElementById('dropdown-busca-embarcacoes');
+        const infoFiltro = document.getElementById('info-filtro-embarcacoes');
+        const norm = normalizarTexto(termo.trim());
 
-        input.value = item.nome;
-        select.value = item.id;
+        btnLimpar.style.display = termo.trim().length > 0 ? 'inline-block' : 'none';
+
+        let totalVisiveis = 0;
+        const options = select.options;
+
+        for (let i = 1; i < options.length; i++) {
+            const opt = options[i];
+            const nome = opt.getAttribute('data-nome') || opt.text;
+            const reg = opt.getAttribute('data-registro') || '';
+            const cli = opt.getAttribute('data-cliente-nome') || '';
+            const textoCompleto = normalizarTexto(`${nome} ${reg} ${cli}`);
+
+            const match = !norm || textoCompleto.includes(norm);
+            if (match) {
+                opt.hidden = false;
+                opt.style.display = '';
+                totalVisiveis++;
+            } else {
+                opt.hidden = true;
+                opt.style.display = 'none';
+            }
+        }
+
+        if (!norm) {
+            infoFiltro.innerHTML = `<i class="fa-solid fa-list-check me-1"></i> Lista fixa com ${options.length - 1} embarcação(ões). Selecione diretamente ou digite acima para filtrar.`;
+        } else {
+            infoFiltro.innerHTML = `<i class="fa-solid fa-filter text-accent me-1"></i> Encontrada(s) <strong>${totalVisiveis}</strong> de ${options.length - 1} embarcação(ões) para "<strong>${escapeHtml(termo)}</strong>". Selecione na lista abaixo:`;
+        }
+    }
+
+    function aoTeclarBuscaEmbarcacao(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const select = document.getElementById('embarcacao_id');
+            for (let i = 1; i < select.options.length; i++) {
+                const opt = select.options[i];
+                if (!opt.hidden && opt.style.display !== 'none') {
+                    select.selectedIndex = i;
+                    aoSelecionarEmbarcacao(select);
+                    break;
+                }
+            }
+        }
+    }
+
+    function aoSelecionarEmbarcacao(select) {
+        const opt = select.selectedOptions[0];
+        const badge = document.getElementById('embarcacao-selecionada-badge');
+        const input = document.getElementById('busca_embarcacao_input');
+        const btnLimpar = document.getElementById('btn-limpar-embarcacao');
+
+        if (!opt || !opt.value) {
+            badge.style.display = 'none';
+            badge.innerHTML = '';
+            sincronizarDadosEmbarcacao(select);
+            return;
+        }
+
+        const nome = opt.getAttribute('data-nome') || opt.text;
+        const reg = opt.getAttribute('data-registro') || '';
+        const cliNome = opt.getAttribute('data-cliente-nome') || '';
+
+        input.value = nome;
         btnLimpar.style.display = 'inline-block';
 
         badge.innerHTML = `
             <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded small" style="background: rgba(86, 224, 173, 0.15); border: 1px solid var(--accent, #56e0ad); color: var(--text-primary);">
                 <i class="fa-solid fa-circle-check text-accent"></i>
-                <span>Embarcação Selecionada: <strong>${item.nome}</strong> ${item.registro ? '· ' + item.registro : ''}</span>
+                <span>Embarcação Selecionada: <strong>${escapeHtml(nome)}</strong> ${reg ? '· ' + escapeHtml(reg) : ''} ${cliNome ? ' · Armador: ' + escapeHtml(cliNome) : ''}</span>
             </div>
         `;
         badge.style.display = 'block';
-        dropdown.style.display = 'none';
 
         sincronizarDadosEmbarcacao(select);
     }
 
-    function limparSelecaoEmbarcacao() {
+    function limparFiltroEmbarcacao() {
         const input = document.getElementById('busca_embarcacao_input');
         const select = document.getElementById('embarcacao_id');
         const btnLimpar = document.getElementById('btn-limpar-embarcacao');
         const badge = document.getElementById('embarcacao-selecionada-badge');
-        const dropdown = document.getElementById('dropdown-busca-embarcacoes');
+        const infoFiltro = document.getElementById('info-filtro-embarcacoes');
 
         input.value = '';
-        select.value = '';
         btnLimpar.style.display = 'none';
+
+        for (let i = 0; i < select.options.length; i++) {
+            select.options[i].hidden = false;
+            select.options[i].style.display = '';
+        }
+
+        if (infoFiltro) {
+            infoFiltro.innerHTML = `<i class="fa-solid fa-list-check me-1"></i> Lista fixa com ${select.options.length - 1} embarcação(ões). Selecione diretamente ou digite acima para filtrar.`;
+        }
+
+        select.value = '';
         badge.style.display = 'none';
-        dropdown.style.display = 'none';
+        badge.innerHTML = '';
 
         sincronizarDadosEmbarcacao(select);
-        input.focus();
+        select.focus();
     }
-
-    // Fechar dropdown ao clicar fora
-    document.addEventListener('click', function(e) {
-        const container = document.getElementById('busca_embarcacao_input')?.closest('.position-relative');
-        const dropdown = document.getElementById('dropdown-busca-embarcacoes');
-        if (dropdown && container && !container.contains(e.target)) {
-            dropdown.style.display = 'none';
-        }
-    });
 
     function definirAssunto(txt) {
         document.getElementById('assunto').value = txt;
@@ -470,12 +414,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const embSel = document.getElementById('embarcacao_id');
         if (embSel && embSel.value) {
-            const it = listaEmbarcacoes.find(x => x.id === embSel.value);
-            if (it) {
-                selecionarEmbarcacaoPeloItem(it);
-            } else {
-                sincronizarDadosEmbarcacao(embSel);
-            }
+            aoSelecionarEmbarcacao(embSel);
         }
     });
     </script>
