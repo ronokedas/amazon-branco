@@ -2,7 +2,7 @@
 /**
  * Emissão do Ofício Oficial de Encaminhamento e Dossiê Naval
  * Local: modules/protocolos/pdf_dossie.php
- * Modelo padronizado conforme diretrizes DPC/NORMAM e padrão da Amazon Naval.
+ * Modelo oficial em PÁGINA ÚNICA padronizado conforme diretrizes DPC/NORMAM e padrão da Amazon Naval.
  */
 
 require_once __DIR__ . '/../../config.php';
@@ -81,12 +81,10 @@ $baseIntegridade = ['dossie' => $d, 'movimentacoes' => $movimentacoes, 'itens' =
 $ordenar($baseIntegridade);
 $hashDados = hash('sha256', json_encode($baseIntegridade, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION));
 $codigoIntegridade = strtoupper(substr($hashDados, 0, 24));
-$emitidoEm = date('d/m/Y H:i:s');
-$labels = protocoloRotulosStatus();
 
+// Coleta estrita dos documentos enviados
 $docsCitados = [];
 foreach ($itens as $it) {
-    // Filtrar somente itens de eventos de saída/envio ou confirmados
     if (empty($it['mov_status']) || in_array($it['mov_status'], ['CONFIRMADA', 'RETIFICADA'], true)) {
         $docsCitados[] = formatarCitacaoItemNaval($it);
     }
@@ -94,7 +92,6 @@ foreach ($itens as $it) {
 $docsCitados = array_unique(array_filter($docsCitados));
 
 if (empty($docsCitados)) {
-    // Se ainda não houver itens anexados na saída, buscar vínculos diretos da ficha do dossiê
     if (!empty($d['analise_id'])) {
         $qA = $pdo->prepare("SELECT numero FROM analises_planos WHERE id = :id");
         $qA->execute([':id' => $d['analise_id']]);
@@ -110,7 +107,7 @@ if (empty($docsCitados)) {
     }
 }
 
-$citacaoDocumentos = !empty($docsCitados) ? implode('; ', $docsCitados) : 'AM-OF/ANEXOS: Conforme manifesto em anexo';
+$citacaoDocumentos = !empty($docsCitados) ? implode('; ', $docsCitados) : 'AM-OF/ANEXOS: Documentos técnicos constantes do processo';
 
 // Dados do Cabeçalho e Destinatário do Ofício
 $numeroOficio = !empty($d['numero_oficio']) 
@@ -133,23 +130,29 @@ $assinanteNome = !empty($d['assinante_nome']) ? mb_strtoupper($d['assinante_nome
 $assinanteCargo = !empty($d['assinante_cargo']) ? $d['assinante_cargo'] : 'Secretária';
 $assinado = !empty($d['assinado']);
 
-class ProtocoloOficioNavalPdf extends TCPDF
-{
-    public string $numeroOficio = '';
-    public string $codigoIntegridade = '';
-
-    public function Footer(): void
+if (!class_exists('ProtocoloOficioNavalPdf')) {
+    class ProtocoloOficioNavalPdf extends TCPDF
     {
-        $this->SetY(-13);
-        $this->SetDrawColor(200, 205, 203);
-        $this->SetLineWidth(0.2);
-        $this->Line(18, $this->GetY(), 192, $this->GetY());
-        $this->Ln(1.2);
-        $this->SetTextColor(90, 100, 95);
-        $this->SetFont('helvetica', '', 7);
-        $this->Cell(85, 4, 'Ofício ' . $this->numeroOficio . ' · Amazon Certificadora Naval', 0, 0, 'L');
-        $this->Cell(55, 4, 'Autenticidade: ' . $this->codigoIntegridade, 0, 0, 'C');
-        $this->Cell(34, 4, 'Pág. ' . $this->getAliasNumPage() . ' de ' . $this->getAliasNbPages(), 0, 0, 'R');
+        public string $numeroOficio = '';
+        public string $codigoIntegridade = '';
+
+        public function Footer(): void
+        {
+            $this->SetY(-14);
+            $this->SetDrawColor(13, 73, 65);
+            $this->SetLineWidth(0.3);
+            $this->Line(16, $this->GetY(), 194, $this->GetY());
+            $this->Ln(1.5);
+            $this->SetTextColor(85, 105, 98);
+            $this->SetFont('helvetica', '', 7);
+            $this->Cell(85, 3.5, 'Ofício ' . $this->numeroOficio . ' · Amazon Certificadora Naval', 0, 0, 'L');
+            $this->Cell(70, 3.5, 'Validação Criptográfica: ' . $this->codigoIntegridade, 0, 0, 'C');
+            $this->Cell(23, 3.5, 'Página 1 de 1', 0, 0, 'R');
+            $this->Ln(3.2);
+            $this->SetFont('helvetica', 'I', 6);
+            $this->SetTextColor(120, 135, 130);
+            $this->Cell(0, 3, 'Documento oficial emitido em conformidade com as diretrizes da DPC / Marinha do Brasil (NORMAM-202).', 0, 0, 'C');
+        }
     }
 }
 
@@ -160,59 +163,90 @@ $pdf->SetCreator('Amazon Certificadora Naval');
 $pdf->SetAuthor('Amazon Certificadora Naval');
 $pdf->SetTitle('Ofício ' . $numeroOficio . ' - ' . $d['embarcacao_nome']);
 $pdf->SetSubject('Encaminhamento de documentos emitidos/aprovados para arquivo nesta OM');
-$pdf->SetMargins(18, 16, 18);
-$pdf->SetAutoPageBreak(true, 18);
+$pdf->SetMargins(16, 12, 16);
+$pdf->SetAutoPageBreak(false); // Garante rigorosamente PÁGINA ÚNICA
 $pdf->setPrintHeader(false);
 $pdf->setPrintFooter(true);
 $pdf->AddPage();
 
 $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-// ==========================================
-// PÁGINA 1: O OFÍCIO OFICIAL (ESPELHO DA FOTO)
-// ==========================================
+// =========================================================================
+// OFÍCIO OFICIAL AMAZON NAVAL (PÁGINA ÚNICA ESTILIZADA E MODERNA)
+// =========================================================================
 
-// Logo centralizada
+// 1. Logotipo oficial centralizado
 $logoFile = __DIR__ . '/../../img/logo.png';
 if (is_file($logoFile)) {
-    $pdf->Image($logoFile, 95, 12, 20, 0, 'PNG', '', '', true, 300, 'C');
-    $pdf->SetY(33);
+    $pdf->Image($logoFile, 96, 10, 18, 0, 'PNG', '', '', true, 300, 'C');
+    $pdf->SetY(29.5);
 } else {
-    $pdf->SetY(16);
+    $pdf->SetY(12);
 }
 
-// Cabeçalho da Entidade Certificadora
-$pdf->SetFont('helvetica', 'B', 11);
-$pdf->SetTextColor(20, 30, 25);
+// 2. Cabeçalho Institucional
+$pdf->SetFont('helvetica', 'B', 11.5);
+$pdf->SetTextColor(13, 73, 65); // Verde naval oficial da Amazon
 $pdf->Cell(0, 5, 'AMAZON NAVAL', 0, 1, 'C');
 
-$pdf->SetFont('helvetica', '', 7.6);
-$pdf->SetTextColor(50, 60, 55);
-$pdf->Cell(0, 4, 'TRAVESSA QUINTINO BOCAIÚVA, Nº 2301 EDIFÍCIO ROGÉLIO FERNANDEZ, SALA 1116. CREMAÇÃO,', 0, 1, 'C');
-$pdf->Cell(0, 4, 'BELÉM, PA – (91) 99111-2065.', 0, 1, 'C');
-$pdf->SetFont('helvetica', '', 7.6);
-$pdf->Cell(0, 4, 'www.amazonaval.com.br - amazoncertificados@gmail.com', 0, 1, 'C');
+$pdf->SetFont('helvetica', 'B', 7);
+$pdf->SetTextColor(85, 105, 98);
+$pdf->Cell(0, 3.5, 'ENTIDADE CERTIFICADORA NAVAL CREDENCIADA PELA DPC / MARINHA DO BRASIL', 0, 1, 'C');
+
+$pdf->SetFont('helvetica', '', 7.2);
+$pdf->SetTextColor(55, 65, 60);
+$pdf->Cell(0, 3.5, 'TRAVESSA QUINTINO BOCAIÚVA, Nº 2301, EDIFÍCIO ROGÉLIO FERNANDEZ, SALA 1116. CREMAÇÃO,', 0, 1, 'C');
+$pdf->Cell(0, 3.5, 'BELÉM, PA – CEP: 66063-015 · FONE: (91) 99111-2065', 0, 1, 'C');
+$pdf->SetFont('helvetica', '', 7.2);
+$pdf->SetTextColor(13, 73, 65);
+$pdf->Cell(0, 3.5, 'www.amazonaval.com.br · amazoncertificados@gmail.com', 0, 1, 'C');
+
+// Linha decorativa naval dupla (Verde e Dourado)
+$pdf->Ln(2);
+$yLinha = $pdf->GetY();
+$pdf->SetDrawColor(13, 73, 65);
+$pdf->SetLineWidth(0.5);
+$pdf->Line(16, $yLinha, 194, $yLinha);
+$pdf->SetDrawColor(184, 157, 82); // Dourado naval sutil
+$pdf->SetLineWidth(0.2);
+$pdf->Line(16, $yLinha + 0.8, 194, $yLinha + 0.8);
 
 $pdf->Ln(4);
 
-// Tabela do Ofício (Idêntica ao modelo operacional da empresa)
+// 3. Tabela Estruturada do Ofício (Modernizada combinando com a identidade visual)
 $htmlTabela = '
-<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; border-color: #222222; font-family: helvetica; width: 100%;">
+<table cellpadding="4.5" cellspacing="0" style="border-collapse: collapse; font-family: helvetica; width: 100%; border: 0.8px solid #0d4941;">
     <tr>
-        <td width="48%" style="font-size: 8.5pt; font-weight: bold; background-color: #ffffff;">Tipo de Documento: OFÍCIO</td>
-        <td width="52%" style="font-size: 8.5pt; font-weight: bold; background-color: #ffffff;">Núm. Doc.: ' . $e($numeroOficio) . '</td>
+        <td width="48%" style="font-size: 8.5pt; font-weight: bold; background-color: #f4f8f6; color: #0d4941; border: 0.8px solid #0d4941;">
+            TIPO DE DOCUMENTO: <span style="color: #111111;">OFÍCIO</span>
+        </td>
+        <td width="52%" style="font-size: 8.5pt; font-weight: bold; background-color: #f4f8f6; color: #0d4941; border: 0.8px solid #0d4941;">
+            NÚM. DOC.: <span style="color: #111111;">' . $e($numeroOficio) . '</span>
+        </td>
     </tr>
     <tr>
-        <td width="16%" style="font-size: 8.5pt; font-weight: bold; background-color: #ffffff;">Para:</td>
-        <td width="84%" style="font-size: 8.5pt; background-color: #ffffff;">' . $e($destinatarioPara) . '</td>
+        <td width="15%" style="font-size: 8.5pt; font-weight: bold; background-color: #f4f8f6; color: #0d4941; border: 0.8px solid #0d4941;">
+            PARA:
+        </td>
+        <td width="85%" style="font-size: 8.5pt; color: #111111; border: 0.8px solid #0d4941;">
+            ' . $e($destinatarioPara) . '
+        </td>
     </tr>
     <tr>
-        <td width="16%" style="font-size: 8.5pt; font-weight: bold; background-color: #ffffff;">A/C:</td>
-        <td width="84%" style="font-size: 8.5pt; background-color: #ffffff;">' . $e($destinatarioAC) . '</td>
+        <td width="15%" style="font-size: 8.5pt; font-weight: bold; background-color: #f4f8f6; color: #0d4941; border: 0.8px solid #0d4941;">
+            A/C:
+        </td>
+        <td width="85%" style="font-size: 8.5pt; font-weight: bold; color: #111111; border: 0.8px solid #0d4941;">
+            ' . $e($destinatarioAC) . '
+        </td>
     </tr>
     <tr>
-        <td width="16%" style="font-size: 8.5pt; font-weight: bold; background-color: #ffffff;">Assunto:</td>
-        <td width="84%" style="font-size: 8.5pt; background-color: #ffffff;">Encaminhamento de documentos emitidos/aprovados por esta Entidade Certificadora para arquivo nesta OM.</td>
+        <td width="15%" style="font-size: 8.5pt; font-weight: bold; background-color: #f4f8f6; color: #0d4941; border: 0.8px solid #0d4941;">
+            ASSUNTO:
+        </td>
+        <td width="85%" style="font-size: 8.5pt; color: #111111; border: 0.8px solid #0d4941;">
+            Encaminhamento de documentos emitidos/aprovados por esta Entidade Certificadora para arquivo nesta OM.
+        </td>
     </tr>
 </table>
 ';
@@ -220,35 +254,34 @@ $pdf->writeHTML($htmlTabela, true, false, true, false, '');
 
 $pdf->Ln(6);
 
-// Texto formal do Ofício
+// 4. Texto Formal do Ofício
 $htmlCorpo = '
-<div style="font-family: helvetica; font-size: 9.5pt; color: #111111; line-height: 1.6;">
-    <p style="margin-bottom: 14px;">Prezado Senhor,</p>
+<div style="font-family: helvetica; font-size: 9.5pt; color: #1a1a1a; line-height: 1.65;">
+    <p style="margin-bottom: 12px; font-weight: bold; color: #0d4941;">Prezado Senhor,</p>
 
-    <p style="text-align: justify; text-indent: 0px; margin-bottom: 18px;">
-        Atendendo ao disposto no artigo da ' . $e($normamRef) . ', a Entidade Certificadora Amazon Naval vem, através do presente ofício, encaminhar os documentos anexados da seguinte embarcação:
+    <p style="text-align: justify; margin-bottom: 16px;">
+        Atendendo ao disposto no artigo pertinente da <b>' . $e($normamRef) . '</b>, a Entidade Certificadora Amazon Naval vem, através do presente ofício, encaminhar os documentos anexados da seguinte embarcação:
     </p>
 
-    <div style="margin-bottom: 22px; padding-left: 4px;">
-        • <b>' . $e(mb_strtoupper($d['embarcacao_nome'], 'UTF-8')) . '</b> – ' . $e($citacaoDocumentos) . '
+    <div style="margin-bottom: 18px; padding: 8px 12px; background-color: #f9fbfb; border-left: 3px solid #0d4941; border-radius: 3px;">
+        • <b style="color: #0d4941;">' . $e(mb_strtoupper($d['embarcacao_nome'], 'UTF-8')) . '</b> – <span style="color: #222222;">' . $e($citacaoDocumentos) . '</span>
     </div>
 
-    <p style="margin-bottom: 18px;">
+    <p style="margin-bottom: 16px;">
         ' . $e($dataPorExtenso) . '
     </p>
 
-    <p style="margin-bottom: 10px;">
+    <p style="margin-bottom: 6px;">
         Atenciosamente,
     </p>
 </div>
 ';
 $pdf->writeHTML($htmlCorpo, true, false, true, false, '');
 
-// Quadro de Assinatura Digital do Ofício
+// 5. Quadro de Assinatura Digital do Ofício
 $pdf->Ln(4);
 $yAssinatura = $pdf->GetY();
 
-// Processar imagem de assinatura se existir
 $temImagemAssinatura = false;
 $tmpSigFile = null;
 
@@ -277,111 +310,44 @@ if (!empty($d['assinatura_imagem'])) {
 }
 
 if ($temImagemAssinatura && $tmpSigFile) {
-    // Centralizar imagem da assinatura
-    $pdf->Image($tmpSigFile, 80, $yAssinatura, 50, 20, 'PNG', '', '', true, 200, 'C');
+    $pdf->Image($tmpSigFile, 82, $yAssinatura, 46, 17, 'PNG', '', '', true, 300, 'C');
     if (str_contains($tmpSigFile, 'sig_of_')) @unlink($tmpSigFile);
-    $pdf->SetY($yAssinatura + 21);
+    $pdf->SetY($yAssinatura + 18);
 } else {
-    $pdf->SetY($yAssinatura + 14);
-    $pdf->SetDrawColor(40, 40, 40);
-    $pdf->SetLineWidth(0.3);
+    $pdf->SetY($yAssinatura + 12);
+    $pdf->SetDrawColor(13, 73, 65);
+    $pdf->SetLineWidth(0.4);
     $pdf->Line(68, $pdf->GetY(), 142, $pdf->GetY());
     $pdf->Ln(1.5);
 }
 
-// Nomes e Cargo
-$pdf->SetFont('helvetica', 'B', 9.5);
-$pdf->SetTextColor(20, 25, 22);
+// Nome e Cargo do Assinante
+$pdf->SetFont('helvetica', 'B', 10);
+$pdf->SetTextColor(13, 73, 65);
 $pdf->Cell(0, 4.5, $assinanteNome, 0, 1, 'C');
 
 $pdf->SetFont('helvetica', '', 8.5);
-$pdf->SetTextColor(60, 65, 62);
+$pdf->SetTextColor(60, 75, 70);
 $pdf->Cell(0, 4, $assinanteCargo, 0, 1, 'C');
 
+// Carimbo / Selo de Autenticidade Digital
 if ($assinado) {
     $dtAss = !empty($d['assinatura_em']) ? date('d/m/Y \à\s H:i:s', strtotime($d['assinatura_em'])) : date('d/m/Y H:i:s');
-    $pdf->Ln(2);
-    $pdf->SetFont('helvetica', '', 7);
+    $pdf->Ln(1.5);
+    $pdf->SetFont('helvetica', 'B', 7);
     $pdf->SetTextColor(8, 118, 83);
-    $pdf->Cell(0, 3.5, 'Documento Assinado Digitalmente via Sistema Amazon Naval', 0, 1, 'C');
+    $pdf->Cell(0, 3.5, 'Documento Assinado Digitalmente com Fé Pública via Sistema Amazon Naval', 0, 1, 'C');
     $pdf->SetFont('helvetica', '', 6.5);
     $pdf->SetTextColor(90, 105, 100);
-    $pdf->Cell(0, 3.2, 'Assinado em ' . $dtAss . ' · IP: ' . ($d['assinatura_ip'] ?: '127.0.0.1') . ' · Hash: ' . $codigoIntegridade, 0, 1, 'C');
+    $pdf->Cell(0, 3.2, 'Data: ' . $dtAss . ' · IP: ' . ($d['assinatura_ip'] ?: '127.0.0.1') . ' · Hash SHA-256: ' . $codigoIntegridade, 0, 1, 'C');
 } else {
     $pdf->Ln(1.5);
     $pdf->SetFont('helvetica', 'I', 7);
-    $pdf->SetTextColor(140, 145, 142);
-    $pdf->Cell(0, 3.5, '(Ofício emitido aguardando assinatura digital no sistema)', 0, 1, 'C');
+    $pdf->SetTextColor(130, 140, 135);
+    $pdf->Cell(0, 3.5, '(Ofício oficial emitido aguardando assinatura digital no sistema)', 0, 1, 'C');
 }
 
-// =========================================================================
-// PÁGINA 2: MANIFESTO DE ENTREGA E CUSTÓDIA DOCUMENTAL (SEGURANÇA NAVAL)
-// =========================================================================
-if (!empty($itens) || !empty($documentos)) {
-    $pdf->AddPage();
-
-    $pdf->SetFont('helvetica', 'B', 11);
-    $pdf->SetTextColor(8, 118, 83);
-    $pdf->Cell(0, 6, 'ANEXO AO OFÍCIO: MANIFESTO DE ITENS E CUSTÓDIA DOCUMENTAL', 0, 1, 'L');
-    
-    $pdf->SetFont('helvetica', '', 8);
-    $pdf->SetTextColor(60, 75, 70);
-    $pdf->Cell(0, 4, 'Relação discriminada dos documentos técnicos e oficiais vinculados à embarcação ' . $d['embarcacao_nome'], 0, 1, 'L');
-    $pdf->Ln(3);
-
-    $linhasTabela = '';
-    $seq = 1;
-    foreach ($itens as $it) {
-        $linhasTabela .= '
-        <tr nobr="true" style="font-size: 7.5pt;">
-            <td align="center" style="border: 1px solid #c8d8d2; padding: 4px;">' . $seq++ . '</td>
-            <td style="border: 1px solid #c8d8d2; padding: 4px;"><b>' . $e($it['descricao']) . '</b>' . (!empty($it['numero_revisao']) ? '<br><span style="color: #557067;">Ref/Rev: ' . $e($it['numero_revisao']) . '</span>' : '') . '</td>
-            <td style="border: 1px solid #c8d8d2; padding: 4px;">' . $e(str_replace('_', ' ', $it['categoria'] ?: 'DOCUMENTO')) . '</td>
-            <td style="border: 1px solid #c8d8d2; padding: 4px;">' . $e($it['suporte']) . ' · ' . $e(str_replace('_', ' ', $it['forma'])) . '</td>
-            <td align="center" style="border: 1px solid #c8d8d2; padding: 4px;"><b>' . (int)$it['quantidade'] . '</b></td>
-            <td style="border: 1px solid #c8d8d2; padding: 4px;">' . $e($it['condicao_documento'] ?: 'Conferido no ato') . ($it['requer_devolucao'] ? '<br><b style="color: #b33900;">● Exige devolução</b>' : '') . '</td>
-        </tr>';
-    }
-
-    $htmlManifesto = '
-    <table cellpadding="4" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid #087653;">
-        <thead>
-            <tr style="background-color: #087653; color: #ffffff; font-size: 7.5pt; font-weight: bold;">
-                <th width="6%" align="center" style="border: 1px solid #087653;">#</th>
-                <th width="38%" style="border: 1px solid #087653;">Documento / Relatório</th>
-                <th width="18%" style="border: 1px solid #087653;">Categoria</th>
-                <th width="16%" style="border: 1px solid #087653;">Suporte/Forma</th>
-                <th width="6%" align="center" style="border: 1px solid #087653;">Qtd</th>
-                <th width="16%" style="border: 1px solid #087653;">Condição / Custódia</th>
-            </tr>
-        </thead>
-        <tbody>
-            ' . $linhasTabela . '
-        </tbody>
-    </table>
-    ';
-    $pdf->writeHTML($htmlManifesto, true, false, true, false, '');
-
-    $pdf->Ln(6);
-    $htmlSeguranca = '
-    <table cellpadding="5" cellspacing="0" style="border: 1px solid #b8d9cc; background-color: #f7fbf9; width: 100%;">
-        <tr>
-            <td width="75%" style="font-size: 7.2pt; color: #334d44;">
-                <strong style="color: #087653;">FÉ PÚBLICA E VALIDAÇÃO DE AUTENTICIDADE:</strong><br>
-                Este manifesto e o ofício a que se vincula foram emitidos sob as regras da Marinha do Brasil (DPC/NORMAM) e possuem código criptográfico único e imutável SHA-256.<br>
-                Chave de integridade: <code>' . $codigoIntegridade . '</code>
-            </td>
-            <td width="25%" align="center" style="font-size: 6.8pt; color: #557067;">
-                Certificadora Amazon Naval<br>
-                Belém/PA - Brasil
-            </td>
-        </tr>
-    </table>
-    ';
-    $pdf->writeHTML($htmlSeguranca, true, false, true, false, '');
-}
-
-// Finalização
+// Finalização do PDF
 if ($interno) {
     $pdf->Output($salvar_pdf_dossie_caminho, 'F');
     @chmod($salvar_pdf_dossie_caminho, 0666);

@@ -184,6 +184,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <select name="cargo" id="filtroCargo" class="form-control" style="height: 42px; border-radius: 6px;">
                     <option value="">Todos os cargos</option>
                     <option value="ADMIN" <?php echo $filtro_cargo === 'ADMIN' ? 'selected' : ''; ?>>Administrador</option>
+                    <option value="SECRETARIA" <?php echo $filtro_cargo === 'SECRETARIA' ? 'selected' : ''; ?>>Secretária</option>
                     <option value="VENDEDOR" <?php echo $filtro_cargo === 'VENDEDOR' ? 'selected' : ''; ?>>Vendedor</option>
                     <option value="VISTORIADOR" <?php echo $filtro_cargo === 'VISTORIADOR' ? 'selected' : ''; ?>>Vistoriador</option>
                     <option value="ANALISTA" <?php echo $filtro_cargo === 'ANALISTA' ? 'selected' : ''; ?>>Analista</option>
@@ -229,6 +230,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <?php
                                 $cargoLabels = [
                                     'ADMIN' => ['Administrador', 'badge-success', 'fa-user-shield'],
+                                    'SECRETARIA' => ['Secretária', 'badge-success', 'fa-user-check'],
                                     'VENDEDOR' => ['Vendedor', 'badge-primary', 'fa-user-tie'],
                                     'VISTORIADOR' => ['Vistoriador', 'badge-info', 'fa-user-check'],
                                     'ANALISTA' => ['Analista', 'badge-warning', 'fa-user-pen'],

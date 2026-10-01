@@ -1,9 +1,13 @@
 <?php
-/**
- * Modal: Assinatura Digital do Ofício Naval (Dossiê e Saída)
- * Local: modules/protocolos/components/modal_assinar_oficio.php
- */
-$responsaveisAssinatura = $pdo->query("SELECT id, nome_completo, cargo_titulo, registro_profissional, assinatura_arquivo FROM responsaveis_assinatura WHERE ativo = 1 ORDER BY nome_completo")->fetchAll(PDO::FETCH_ASSOC);
+$usuarioLogadoId = $_SESSION['usuario_id'] ?? '';
+$responsaveisAssinatura = $pdo->query("SELECT id, usuario_id, nome_completo, cargo_titulo, registro_profissional, assinatura_arquivo FROM responsaveis_assinatura WHERE ativo = 1 ORDER BY nome_completo")->fetchAll(PDO::FETCH_ASSOC);
+$temLogadoVinculado = false;
+foreach ($responsaveisAssinatura as $rCheck) {
+    if (!empty($rCheck['usuario_id']) && $rCheck['usuario_id'] === $usuarioLogadoId) {
+        $temLogadoVinculado = true;
+        break;
+    }
+}
 ?>
 
 <div class="modal fade" id="modal-assinar-oficio" tabindex="-1" aria-labelledby="modalAssinarOficioLabel" aria-hidden="true">
@@ -67,15 +71,17 @@ $responsaveisAssinatura = $pdo->query("SELECT id, nome_completo, cargo_titulo, r
                             <i class="fa-solid fa-user-check text-accent"></i> Responsável que Assina o Ofício
                         </label>
                         <select class="form-control" id="modal_responsavel_select" name="responsavel_id" onchange="aoMudarResponsavelAssinatura(this)">
-                            <option value="" data-nome="THAINARA BARROS" data-cargo="Secretária">
+                            <option value="" data-nome="THAINARA BARROS" data-cargo="Secretária" <?= !$temLogadoVinculado ? 'selected' : '' ?>>
                                 Thainara Barros — Secretária (Padrão Operacional)
                             </option>
                             <?php foreach ($responsaveisAssinatura as $resp): ?>
+                                <?php $isLogado = (!empty($resp['usuario_id']) && $resp['usuario_id'] === $usuarioLogadoId); ?>
                                 <option value="<?= (int)$resp['id'] ?>" 
                                         data-nome="<?= h($resp['nome_completo']) ?>" 
                                         data-cargo="<?= h($resp['cargo_titulo'] . ($resp['registro_profissional'] ? ' - ' . $resp['registro_profissional'] : '')) ?>"
-                                        data-tem-imagem="<?= !empty($resp['assinatura_arquivo']) ? '1' : '0' ?>">
-                                    <?= h($resp['nome_completo']) ?> — <?= h($resp['cargo_titulo']) ?> <?= $resp['registro_profissional'] ? '(' . h($resp['registro_profissional']) . ')' : '' ?>
+                                        data-tem-imagem="<?= !empty($resp['assinatura_arquivo']) ? '1' : '0' ?>"
+                                        <?= $isLogado ? 'selected' : '' ?>>
+                                    <?= h($resp['nome_completo']) ?> — <?= h($resp['cargo_titulo']) ?> <?= $resp['registro_profissional'] ? '(' . h($resp['registro_profissional']) . ')' : '' ?> <?= $isLogado ? '★ (Você)' : '' ?>
                                 </option>
                             <?php endforeach; ?>
                             <option value="outro" data-nome="" data-cargo="">

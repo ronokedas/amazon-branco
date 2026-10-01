@@ -25,7 +25,7 @@ $stmtUsuarios = $pdo->prepare("SELECT u.id,u.nome,u.email,u.cargo
     FROM usuarios u
     LEFT JOIN responsaveis_assinatura ra ON ra.usuario_id=u.id AND ra.id<>:responsavel
     WHERE u.ativo=1 AND u.excluido_em IS NULL
-      AND u.cargo IN ('ADMIN','VISTORIADOR','ANALISTA')
+      AND u.cargo IN ('ADMIN','VISTORIADOR','ANALISTA','SECRETARIA')
       AND ra.id IS NULL
     ORDER BY u.nome");
 $stmtUsuarios->execute([':responsavel'=>$id]);

@@ -30,7 +30,7 @@ try {
     redirecionar(APP_URL . 'dashboard');
 }
 
-$podeAssinar = in_array($usuario['cargo'], ['ADMIN', 'VISTORIADOR', 'ANALISTA'], true);
+$podeAssinar = in_array($usuario['cargo'], ['ADMIN', 'VISTORIADOR', 'ANALISTA', 'SECRETARIA'], true);
 $responsavel = null;
 if ($podeAssinar) {
     try {
@@ -127,11 +127,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['atualizar_perfil'])) 
 
             $arquivoAssinatura = $_FILES['assinatura_imagem'] ?? [];
             $temArquivo = !empty($arquivoAssinatura['tmp_name']) && ($arquivoAssinatura['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
+            $assinaturaBase64 = trim($_POST['assinatura_base64'] ?? '');
+            $tmpSigFilePerfil = null;
 
-            // Validação mandante NORMAM-202: CPF é obrigatório para responsáveis técnicos (Analistas, Vistoriadores e Administradores)
+            if (!$temArquivo && !empty($assinaturaBase64) && str_starts_with($assinaturaBase64, 'data:image')) {
+                $rawBase64 = substr($assinaturaBase64, strpos($assinaturaBase64, ',') + 1);
+                $decodedImg = base64_decode($rawBase64);
+                if ($decodedImg !== false) {
+                    $tmpSigFilePerfil = tempnam(sys_get_temp_dir(), 'perfil_sig_') . '.png';
+                    file_put_contents($tmpSigFilePerfil, $decodedImg);
+                    $arquivoAssinatura = [
+                        'name' => 'assinatura_desenhada.png',
+                        'type' => 'image/png',
+                        'tmp_name' => $tmpSigFilePerfil,
+                        'error' => UPLOAD_ERR_OK,
+                        'size' => filesize($tmpSigFilePerfil),
+                    ];
+                    $temArquivo = true;
+                }
+            }
+
+            // Validação mandante NORMAM: CPF é obrigatório para responsáveis e emissão de documentos oficiais
             if ($responsavel || $temArquivo || $cargo_titulo !== '' || $registro_profissional !== '' || $cpf_cnpj !== '') {
                 if ($cpf_cnpj === '') {
-                    throw new RuntimeException('O CPF do responsável técnico é obrigatório pela NORMAM-202/DPC para validação e fé pública de laudos, relatórios (RAP) e pareceres.');
+                    throw new RuntimeException('O CPF do responsável é obrigatório pela NORMAM para validação, fé pública e assinatura de relatórios, ofícios e certificados.');
                 }
 
                 $digits = preg_replace('/\D+/', '', $cpf_cnpj);
@@ -210,6 +229,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['atualizar_perfil'])) 
                         $pdo->prepare("UPDATE responsaveis_assinatura SET assinatura_arquivo = :arq, assinatura_hash = :hash, assinatura_atualizada_em = NOW() WHERE id = :id")
                             ->execute([':arq' => $image['path'], ':hash' => $image['hash'], ':id' => $newRespId]);
                     }
+                }
+                if ($tmpSigFilePerfil && file_exists($tmpSigFilePerfil)) {
+                    @unlink($tmpSigFilePerfil);
                 }
             }
         }
@@ -372,16 +394,17 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <input type="text" 
                                id="cargo_titulo" 
                                name="cargo_titulo" 
-                               placeholder="Ex: Engenheiro Naval, Vistoriador Naval, Analista Técnico" 
+                               placeholder="Ex: Secretária, Engenheiro Naval, Vistoriador Naval, Analista Técnico" 
                                maxlength="255"
-                               value="<?php echo h($responsavel['cargo_titulo'] ?? ($usuario['cargo'] === 'VISTORIADOR' ? 'Vistoriador Naval' : ($usuario['cargo'] === 'ANALISTA' ? 'Analista Técnico de Projetos' : 'Responsável Técnico'))); ?>">
-                        <small class="text-muted">Como sua qualificação técnica será impressa no rodapé e no termo de assinatura dos documentos.</small>
+                               value="<?php echo h($responsavel['cargo_titulo'] ?? ($usuario['cargo'] === 'SECRETARIA' ? 'Secretária' : ($usuario['cargo'] === 'VISTORIADOR' ? 'Vistoriador Naval' : ($usuario['cargo'] === 'ANALISTA' ? 'Analista Técnico de Projetos' : 'Responsável Técnico')))); ?>">
+                        <small class="text-muted">Como sua qualificação técnica será impressa no rodapé e no termo de assinatura dos documentos e ofícios.</small>
                         <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
                             <span style="font-size: 11px; color: var(--text-secondary); align-self: center;">Sugestões:</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="document.getElementById('cargo_titulo').value='Secretária';">Secretária</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="document.getElementById('cargo_titulo').value='Secretária Executiva';">Secretária Executiva</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="document.getElementById('cargo_titulo').value='Engenheiro Naval';">Engenheiro Naval</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="document.getElementById('cargo_titulo').value='Vistoriador Naval';">Vistoriador Naval</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="document.getElementById('cargo_titulo').value='Analista Técnico de Projetos';">Analista Técnico</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="document.getElementById('cargo_titulo').value='Perito Naval / Vistoriador';">Perito Naval</button>
                         </div>
                     </div>
 
@@ -389,21 +412,21 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <!-- Registro Profissional -->
                         <div class="form-group">
                             <label for="registro_profissional">
-                                <i class="fas fa-id-card"></i> Registro Profissional (CREA / CFT)
+                                <i class="fas fa-id-card"></i> Registro Profissional (CREA / CFT) <small class="text-muted" style="font-weight: normal;">(Opcional para Secretaria)</small>
                             </label>
                             <input type="text" 
                                    id="registro_profissional" 
                                    name="registro_profissional" 
-                                   placeholder="Ex: CREA PA-12345/D ou CFT-BR" 
+                                   placeholder="Ex: CREA PA-12345/D ou deixe em branco" 
                                    maxlength="100"
                                    value="<?php echo h($responsavel['registro_profissional'] ?? ''); ?>">
-                            <small class="text-muted">Número do conselho regional de classe ou matrícula técnica.</small>
+                            <small class="text-muted">Número do conselho regional de classe ou matrícula técnica (se aplicável).</small>
                         </div>
 
                         <!-- CPF / CNPJ -->
                         <div class="form-group">
                             <label for="cpf_cnpj">
-                                <i class="fas fa-fingerprint"></i> CPF do Responsável Técnico *
+                                <i class="fas fa-fingerprint"></i> CPF do Responsável *
                             </label>
                             <?php
                             $cpfValorExibicao = $responsavel['cpf_cnpj'] ?? '';
@@ -423,24 +446,55 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                    oninput="mascararCpfCnpj(this)"
                                    <?= $responsavel ? 'required' : '' ?>
                                    value="<?php echo h($cpfValorExibicao); ?>">
-                            <small class="text-muted"><strong>Obrigatório (NORMAM-202/DPC):</strong> O CPF compõe o carimbo de fé pública e a validação de assinatura nos relatórios de planos (RAP) e licenças.</small>
+                            <small class="text-muted"><strong>Obrigatório (NORMAM):</strong> O CPF compõe o carimbo de fé pública e a validação de assinatura nos relatórios, ofícios e licenças.</small>
                         </div>
                     </div>
 
-                    <!-- Upload da Imagem da Assinatura -->
-                    <div class="form-group" style="margin-top: 10px;">
-                        <label for="assinatura_imagem">
-                            <i class="fas fa-pen-nib"></i> Arquivo da Assinatura Manuscrita (PNG ou JPEG)
-                        </label>
-                        <input type="file" 
-                               id="assinatura_imagem" 
-                               name="assinatura_imagem" 
-                               accept="image/png,image/jpeg"
-                               onchange="previewAssinaturaInstantanea(this)"
-                               style="background: var(--bg-surface-2); border: 1px dashed var(--border); padding: 10px; border-radius: 6px; width: 100%;">
-                        <small class="text-muted">
-                            Envie a imagem da sua assinatura com <strong>fundo transparente (PNG)</strong> ou papel branco bem iluminado (máx. 2 MB). O sistema ajustará o contraste e dimensionamento automaticamente.
-                        </small>
+                    <!-- Abas de Cadastro de Assinatura: Upload ou Desenhar -->
+                    <div style="margin-top: 14px; border: 1px solid var(--border); border-radius: 8px; padding: 14px; background: var(--bg-surface-2);">
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+                            <button type="button" id="btn-tab-upload" class="btn btn-sm btn-primary" onclick="trocarModoAssinaturaPerfil('upload')">
+                                <i class="fas fa-upload"></i> Enviar Arquivo de Imagem
+                            </button>
+                            <button type="button" id="btn-tab-desenho" class="btn btn-sm btn-outline-secondary" onclick="trocarModoAssinaturaPerfil('desenho')">
+                                <i class="fas fa-pen"></i> Desenhar Assinatura na Tela
+                            </button>
+                        </div>
+
+                        <!-- Modo 1: Upload de Imagem -->
+                        <div id="modo-upload-assinatura">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="assinatura_imagem">
+                                    <i class="fas fa-pen-nib"></i> Arquivo da Assinatura Manuscrita (PNG ou JPEG)
+                                </label>
+                                <input type="file" 
+                                       id="assinatura_imagem" 
+                                       name="assinatura_imagem" 
+                                       accept="image/png,image/jpeg"
+                                       onchange="previewAssinaturaInstantanea(this)"
+                                       style="background: var(--bg-surface); border: 1px dashed var(--border); padding: 10px; border-radius: 6px; width: 100%;">
+                                <small class="text-muted">
+                                    Envie a imagem da sua assinatura com <strong>fundo transparente (PNG)</strong> ou papel branco bem iluminado (máx. 2 MB). O sistema ajustará o contraste e dimensionamento automaticamente.
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Modo 2: Desenho em Canvas -->
+                        <div id="modo-desenho-assinatura" style="display: none;">
+                            <input type="hidden" name="assinatura_base64" id="perfil_assinatura_base64" value="">
+                            <label class="form-label" style="font-weight: 600; font-size: 13px;">
+                                <i class="fas fa-signature text-accent"></i> Rubrique ou desenhe sua assinatura no quadro abaixo:
+                            </label>
+                            <div style="background: #ffffff; border: 2px dashed #0d4941; border-radius: 6px; text-align: center; padding: 4px;">
+                                <canvas id="canvas-perfil-assinatura" width="550" height="150" style="width: 100%; max-width: 550px; height: 140px; touch-action: none; cursor: crosshair;"></canvas>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                <small class="text-muted"><i class="fas fa-info-circle"></i> Use o mouse ou a tela sensível ao toque do seu celular/tablet.</small>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="limparCanvasPerfil()">
+                                    <i class="fas fa-eraser"></i> Limpar Traçado
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Pré-visualização Instantânea da Nova Imagem Selecionada (ANTES de salvar) -->
@@ -571,6 +625,102 @@ function removerSelecaoAssinatura() {
     if (input) input.value = '';
     if (img) img.src = '';
     if (box) box.style.display = 'none';
+}
+
+function trocarModoAssinaturaPerfil(modo) {
+    const btnUpload = document.getElementById('btn-tab-upload');
+    const btnDesenho = document.getElementById('btn-tab-desenho');
+    const secUpload = document.getElementById('modo-upload-assinatura');
+    const secDesenho = document.getElementById('modo-desenho-assinatura');
+    
+    if (modo === 'desenho') {
+        btnUpload.className = 'btn btn-sm btn-outline-secondary';
+        btnDesenho.className = 'btn btn-sm btn-primary';
+        secUpload.style.display = 'none';
+        secDesenho.style.display = 'block';
+        removerSelecaoAssinatura();
+        inicializarCanvasPerfil();
+    } else {
+        btnUpload.className = 'btn btn-sm btn-primary';
+        btnDesenho.className = 'btn btn-sm btn-outline-secondary';
+        secUpload.style.display = 'block';
+        secDesenho.style.display = 'none';
+        limparCanvasPerfil();
+    }
+}
+
+let canvasPerfilCtx = null;
+let desenhandoPerfil = false;
+let canvasPerfilInicializado = false;
+
+function inicializarCanvasPerfil() {
+    const canvas = document.getElementById('canvas-perfil-assinatura');
+    if (!canvas || canvasPerfilInicializado) return;
+    canvasPerfilInicializado = true;
+    canvasPerfilCtx = canvas.getContext('2d');
+    canvasPerfilCtx.strokeStyle = '#000000';
+    canvasPerfilCtx.lineWidth = 2.5;
+    canvasPerfilCtx.lineCap = 'round';
+    canvasPerfilCtx.lineJoin = 'round';
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
+
+    function startDraw(e) {
+        desenhandoPerfil = true;
+        const pos = getPos(e);
+        canvasPerfilCtx.beginPath();
+        canvasPerfilCtx.moveTo(pos.x, pos.y);
+        e.preventDefault();
+    }
+
+    function moveDraw(e) {
+        if (!desenhandoPerfil) return;
+        const pos = getPos(e);
+        canvasPerfilCtx.lineTo(pos.x, pos.y);
+        canvasPerfilCtx.stroke();
+        e.preventDefault();
+    }
+
+    function endDraw(e) {
+        if (!desenhandoPerfil) return;
+        desenhandoPerfil = false;
+        atualizarBase64CanvasPerfil();
+    }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', moveDraw);
+    window.addEventListener('mouseup', endDraw);
+
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', moveDraw, { passive: false });
+    window.addEventListener('touchend', endDraw);
+}
+
+function atualizarBase64CanvasPerfil() {
+    const canvas = document.getElementById('canvas-perfil-assinatura');
+    const input = document.getElementById('perfil_assinatura_base64');
+    if (canvas && input) {
+        input.value = canvas.toDataURL('image/png');
+    }
+}
+
+function limparCanvasPerfil() {
+    const canvas = document.getElementById('canvas-perfil-assinatura');
+    const input = document.getElementById('perfil_assinatura_base64');
+    if (canvas && canvasPerfilCtx) {
+        canvasPerfilCtx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    if (input) input.value = '';
 }
 
 function escapeHtml(text) {

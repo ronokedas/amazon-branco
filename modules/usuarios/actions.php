@@ -90,7 +90,7 @@ switch ($action) {
             $errosCampos['email'] = 'Informe um e-mail valido.';
         }
 
-        if (!in_array($cargo, ['ADMIN', 'VENDEDOR', 'VISTORIADOR', 'ANALISTA'])) {
+        if (!in_array($cargo, ['ADMIN', 'VENDEDOR', 'VISTORIADOR', 'ANALISTA', 'SECRETARIA'], true)) {
             $erros[] = 'Cargo invalido.';
             $errosCampos['cargo'] = 'Selecione um cargo valido.';
         }

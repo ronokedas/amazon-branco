@@ -37,8 +37,8 @@ function getPerfisUsuario(?string $usuarioId = null): array {
 
 function temPerfil(string $perfil, ?string $usuarioId = null): bool {
     $perfis = getPerfisUsuario($usuarioId);
-    // Administradores podem operar qualquer perfil sem uma segunda conta.
-    return in_array('ADMIN', $perfis, true) || in_array($perfil, $perfis, true);
+    // Administradores e Secretárias podem operar qualquer perfil sem uma segunda conta.
+    return in_array('ADMIN', $perfis, true) || in_array('SECRETARIA', $perfis, true) || in_array($perfil, $perfis, true);
 }
 
 /** Lista canônica de todas as permissões granulares do sistema */
@@ -109,7 +109,7 @@ function permissoesPadraoCargo(string $cargo): array {
         'VISTORIADOR' => ['dashboard', 'vistorias', 'agendamentos', 'clientes', 'embarcacoes', 'documentacao', 'doc_csn', 'doc_cnbl', 'doc_cnarq', 'doc_nar', 'doc_lp', 'doc_lc', 'doc_cht', 'configuracoes_normam202', 'vencimentos_certificados'],
         'ANALISTA' => ['dashboard', 'analise_planos', 'doc_nar', 'doc_lp', 'doc_lc', 'configuracoes_normam202'],
         'VENDEDOR' => ['dashboard', 'comercial', 'servicos', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails', 'vencimentos_certificados'],
-        'ADMIN' => todasPermissoesSistema(),
+        'ADMIN', 'SECRETARIA' => todasPermissoesSistema(),
         default => ['dashboard'],
     };
 }
@@ -131,7 +131,7 @@ function aplicarPermissoesPadraoUsuario(PDO $pdo, string $usuarioId, string $car
 /** Permissões individuais definidas pelo administrador. */
 function podeAcessar(string $modulo): bool {
     if (!estaLogado()) return false;
-    if (getCargo() === 'ADMIN') return true;
+    if (in_array(getCargo(), ['ADMIN', 'SECRETARIA'], true)) return true;
 
     // Compatibilidade bidirecional com a unificação de cadastros:
     // 1. Permissão 'clientes' concede acesso a clientes, armadores, proprietários e despachantes.
@@ -242,8 +242,8 @@ function podeAcessarLegado($modulo) {
     
     $cargo = getCargo();
     
-    // ADMIN tem acesso a tudo
-    if ($cargo === 'ADMIN') {
+    // ADMIN e SECRETARIA têm acesso liberado a tudo
+    if (in_array($cargo, ['ADMIN', 'SECRETARIA'], true)) {
         return true;
     }
     

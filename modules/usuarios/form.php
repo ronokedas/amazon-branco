@@ -126,6 +126,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 Vendedor
                             </option>
 
+                            <option value="SECRETARIA" <?php echo ($usuario['cargo'] ?? '') === 'SECRETARIA' ? 'selected' : ''; ?>>
+                                Secretária
+                            </option>
                             <option value="ADMIN" <?php echo ($usuario['cargo'] ?? '') === 'ADMIN' ? 'selected' : ''; ?>>
                                 Administrador
                             </option>
