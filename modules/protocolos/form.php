@@ -55,6 +55,15 @@ if ($id) {
         }
     }
 }
+$acervoEmbarcacao = ['resumo' => ['total' => 0, 'propostas' => 0, 'vistorias' => 0, 'projetos' => 0, 'certificados' => 0, 'externos' => 0], 'itens' => []];
+$embAlvoAcervo = $d ? ($d['embarcacao_id'] ?? '') : ($preEmb ?: '');
+if ($embAlvoAcervo) {
+    try {
+        $acervoEmbarcacao = protocoloObterAcervoEmbarcacao($pdo, $embAlvoAcervo, $id ?: null);
+    } catch (Throwable $e) {
+        error_log('Erro ao carregar acervo em form.php: ' . $e->getMessage());
+    }
+}
 $analisePre = null;$arquivosAnalise = [];
 $analiseAlvoId = $d ? ($d['analise_id'] ?? null) : trim($_GET['analise_id'] ?? '');
 if ($analiseAlvoId) {
@@ -281,6 +290,10 @@ require __DIR__ . '/../../includes/sidebar.php';
                     <i class="fa-solid fa-plus-circle"></i> Nova Movimentação
                 </button>
             <?php endif; ?>
+            <button type="button" class="prot-tab-btn <?= $abaAtiva === 'acervo' ? 'active' : '' ?>" onclick="trocarAbaDossie('acervo')">
+                <i class="fa-solid fa-folder-tree"></i> Acervo da Embarcação
+                <span class="badge bg-success" id="badge-total-acervo"><?= count($acervoEmbarcacao['itens'] ?? []) ?></span>
+            </button>
             <button type="button" class="prot-tab-btn <?= $abaAtiva === 'marinha' ? 'active' : '' ?>" onclick="trocarAbaDossie('marinha')">
                 <i class="fa-solid fa-anchor"></i> Trâmite na Marinha
             </button>
@@ -302,6 +315,9 @@ require __DIR__ . '/../../includes/sidebar.php';
 
         <!-- Componente 2: Linha do Tempo e Movimentações Guiadas -->
         <?php require __DIR__ . '/components/movimentacoes_historico.php'; ?>
+
+        <!-- Componente 2.1: Central de Acervo Documental da Embarcação (AGENTS.md / NORMAM) -->
+        <?php require __DIR__ . '/components/acervo_documental.php'; ?>
 
         <!-- Componente 3: Trâmite Oficial na Capitania / SISAP -->
         <?php require __DIR__ . '/components/tramite_oficial.php'; ?>
@@ -348,7 +364,7 @@ require __DIR__ . '/../../includes/sidebar.php';
             let targetAba = urlParams.get('aba');
             if (!targetAba && window.location.hash) {
                 const hashClean = window.location.hash.replace('#pane-', '').replace('#', '');
-                if (['timeline', 'movimentacao', 'marinha', 'custodia', 'anexos', 'auditoria'].includes(hashClean)) {
+                if (['timeline', 'movimentacao', 'acervo', 'marinha', 'custodia', 'anexos', 'auditoria'].includes(hashClean)) {
                     targetAba = hashClean;
                 }
             }
@@ -357,7 +373,7 @@ require __DIR__ . '/../../includes/sidebar.php';
                     targetAba = sessionStorage.getItem('erp_aba_dossie_' + <?= json_encode($id) ?>);
                 } catch (e) {}
             }
-            if (targetAba && ['timeline', 'movimentacao', 'marinha', 'custodia', 'anexos', 'auditoria'].includes(targetAba)) {
+            if (targetAba && ['timeline', 'movimentacao', 'acervo', 'marinha', 'custodia', 'anexos', 'auditoria'].includes(targetAba)) {
                 trocarAbaDossie(targetAba, false);
             }
         });
@@ -376,6 +392,7 @@ require __DIR__ . '/../../includes/sidebar.php';
             let optionsHtml = catalogo.map(x => `<option value="${x.id}" data-codigo="${x.codigo}" data-nome="${x.nome.replaceAll('"', '&quot;')}" data-cat="${x.categoria}" ${x.codigo === catPre ? 'selected' : ''}>${x.nome}</option>`).join('');
             const sup = docData.suporte || 'FISICO';
             const form = docData.forma || 'ORIGINAL';
+            const revPre = docData.revisao || '';
 
             row.innerHTML = `
                 <div>
@@ -419,7 +436,7 @@ require __DIR__ . '/../../includes/sidebar.php';
 
                 <div>
                     <label class="form-label small text-secondary mb-1">Revisão / Custódia</label>
-                    <input class="form-control form-control-sm mb-1" name="item_revisao[${i}]" placeholder="Nº ou Revisão">
+                    <input class="form-control form-control-sm mb-1" name="item_revisao[${i}]" placeholder="Nº ou Revisão" value="${revPre ? revPre.replaceAll('"', '&quot;') : ''}">
                     <label class="small d-flex align-items-center gap-1 cursor-pointer m-0" style="color: #fbbf24;">
                         <input type="checkbox" name="item_devolucao[${i}]" value="1"> <strong>Exige Devolução</strong>
                     </label>

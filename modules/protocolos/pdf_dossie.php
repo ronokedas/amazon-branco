@@ -48,6 +48,8 @@ $q=$pdo->prepare("SELECT a.*,u.nome usuario_nome FROM protocolo_auditoria a
   WHERE a.dossie_id=:id ORDER BY a.criado_em,a.id");
 $q->execute([':id'=>$id]);$auditoria=$q->fetchAll(PDO::FETCH_ASSOC);
 
+$acervoEmbarcacao = protocoloObterAcervoEmbarcacao($pdo, $d['embarcacao_id'], $id);
+
 $ordenar=function(&$valor)use(&$ordenar):void{
     if(!is_array($valor))return;
     foreach($valor as &$item)$ordenar($item);
@@ -131,6 +133,19 @@ if($d['protocolo_externo_em'] || !empty($d['protocolo_externo_numero'])){
     $numProc = !empty($d['protocolo_externo_numero']) ? $e($d['protocolo_externo_numero']) : 'Não registrado';
     $html.='<table class="table" width="100%"><thead><tr><th width="35%">Unidade Marítima</th><th width="25%">Nº Processo / SISAP</th><th width="20%">Data do Atendimento</th><th width="20%">Validade do Protocolo</th></tr></thead><tbody><tr nobr="true"><td>'.$e($d['unidade_nome']?:'Não informada').'</td><td><b>'.$numProc.'</b></td><td>'.$e($data($d['protocolo_externo_em'])).'</td><td>'.$e($data($d['protocolo_externo_validade'],false)).'</td></tr></tbody></table>';
 }else $html.='<div class="note">Atendimento no órgão ainda não registrado.</div>';
+
+$html.='<h2>Acervo documental e versões vinculadas à embarcação</h2>';
+if(!empty($acervoEmbarcacao['itens'])){
+    $html.='<table class="table" width="100%"><thead><tr><th width="18%">Categoria</th><th width="34%">Documento</th><th width="24%">Versão / Revisão</th><th width="12%">Data</th><th width="12%">Situação</th></tr></thead><tbody>';
+    foreach($acervoEmbarcacao['itens'] as $it){
+        $dtDoc=$it['data_documento']?date('d/m/Y',strtotime($it['data_documento'])):'—';
+        $dtVal=!empty($it['data_validade'])?'<br><span class="muted">Val: '.date('d/m/Y',strtotime($it['data_validade'])).'</span>':'';
+        $html.='<tr nobr="true"><td><b>'.$e($it['categoria_rotulo']).'</b></td><td>'.$e($it['titulo']).(!empty($it['numero'])?'<br><span class="muted">Ref: '.$e($it['numero']).'</span>':'').'</td><td><b>'.$e($it['versao_label']).'</b></td><td>'.$e($dtDoc).$dtVal.'</td><td>'.$e($it['status_label']).'</td></tr>';
+    }
+    $html.='</tbody></table><br>';
+}else{
+    $html.='<div class="note">Nenhum documento ou relatório vinculado localizado.</div><br>';
+}
 
 $html.='<h2>Linha do tempo e documentos apresentados</h2>';
 if(!$movimentacoes)$html.='<div class="note">Nenhuma movimentação registrada neste dossiê.</div>';

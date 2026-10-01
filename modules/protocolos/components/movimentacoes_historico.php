@@ -404,6 +404,36 @@
                             </div>
                         </div>
 
+                        <!-- Documentos do Acervo Completo da Embarcação (Propostas, Vistorias com versões, Engenharia, Certificados) -->
+                        <?php if (!empty($acervoEmbarcacao['itens'])): ?>
+                            <div class="mb-3 p-3 rounded" style="background: rgba(86, 224, 173, 0.05); border: 1px solid var(--accent, #56e0ad);">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                    <span class="text-accent fw-bold small">
+                                        <i class="fa-solid fa-folder-tree me-1"></i> Puxar do Acervo da Embarcação (<?= count($acervoEmbarcacao['itens']) ?> disponíveis):
+                                    </span>
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-primary py-0 px-2" style="font-size: 0.75rem;" onclick="importarTodosAcervoMovimentacao()">
+                                            <i class="fa-solid fa-file-import me-1"></i> Importar Todos do Acervo
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-info py-0 px-2" style="font-size: 0.75rem;" onclick="trocarAbaDossie('acervo')">
+                                            <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Ver Central de Acervo
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="text-secondary small mb-2">Clique em qualquer documento abaixo para adicioná-lo instantaneamente com versão e vínculo:</p>
+                                <div class="d-flex flex-wrap gap-1" style="max-height: 220px; overflow-y: auto;">
+                                    <?php foreach ($acervoEmbarcacao['itens'] as $itIdx => $it): ?>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 text-start" style="font-size: 0.75rem;" 
+                                                onclick="importarItemAcervoPorIndice(<?= (int)$itIdx ?>)" 
+                                                title="<?= h($it['titulo'] . ' · ' . $it['versao_label']) ?>">
+                                            <i class="fa-solid fa-plus text-accent me-1"></i> <strong><?= h($it['titulo']) ?></strong>
+                                            <span class="badge bg-dark ms-1" style="font-size: 0.68rem;"><?= h($it['versao_label']) ?></span>
+                                        </button>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
                         <!-- Documentos da Análise Vinculada (se houver) -->
                         <?php if (!empty($arquivosAnalise)): ?>
                             <div class="mb-3 p-2 rounded" style="background: rgba(86, 224, 173, 0.08); border: 1px dashed var(--accent, #56e0ad);">
@@ -459,6 +489,16 @@
     function importarTodosArquivosAnalise() {
         if (!arquivosAnaliseDisponiveis || !arquivosAnaliseDisponiveis.length) return;
         arquivosAnaliseDisponiveis.forEach((_, idx) => importarArquivoAnalise(idx));
+    }
+    function importarItemAcervoPorIndice(idx) {
+        if (window.acervoDocumentalItens && window.acervoDocumentalItens[idx]) {
+            importarItemAcervoObjeto(window.acervoDocumentalItens[idx]);
+        }
+    }
+    function importarTodosAcervoMovimentacao() {
+        if (!window.acervoDocumentalItens || !window.acervoDocumentalItens.length) return;
+        window.acervoDocumentalItens.forEach(it => importarItemAcervoObjeto(it));
+        alert('Todos os ' + window.acervoDocumentalItens.length + ' documentos do acervo foram importados!');
     }
     </script>
 <?php endif; ?>

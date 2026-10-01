@@ -4,6 +4,22 @@ require_once __DIR__.'/../../includes/functions.php';
 require_once __DIR__.'/../../includes/auth.php';
 require_once __DIR__.'/../../includes/protocolos.php';
 protocoloExigirAcesso();
+
+$acao = trim($_POST['action'] ?? $_POST['acao'] ?? $_GET['action'] ?? $_GET['acao'] ?? '');
+if ($acao === 'obter_acervo_embarcacao') {
+    header('Content-Type: application/json; charset=utf-8');
+    $embId = trim($_GET['embarcacao_id'] ?? $_POST['embarcacao_id'] ?? '');
+    $dossieId = trim($_GET['dossie_id'] ?? $_POST['dossie_id'] ?? '');
+    try {
+        $acervo = protocoloObterAcervoEmbarcacao($pdo, $embId, $dossieId ?: null);
+        echo json_encode(['sucesso' => true, 'dados' => $acervo], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    } catch (Throwable $e) {
+        http_response_code(400);
+        echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+    exit;
+}
+
 if($_SERVER['REQUEST_METHOD']!=='POST'||!verificarCSRF($_POST['csrf_token']??'')){setMensagem('error','Sessão expirada.');redirecionar(APP_URL.'protocolos');}
 $abaRetorno = trim($_POST['aba'] ?? $_GET['aba'] ?? '');
 $voltar = function(?string $x = null, ?string $aba = null) use ($abaRetorno) {
@@ -11,7 +27,6 @@ $voltar = function(?string $x = null, ?string $aba = null) use ($abaRetorno) {
     $abaFinal = $aba !== null ? $aba : ($abaRetorno !== '' ? $abaRetorno : 'timeline');
     return APP_URL . 'protocolos/form?id=' . urlencode($x) . ($abaFinal !== '' ? '&aba=' . urlencode($abaFinal) : '');
 };
-$acao = trim($_POST['action'] ?? $_POST['acao'] ?? $_GET['action'] ?? $_GET['acao'] ?? '');
 $id = trim($_POST['dossie_id'] ?? $_POST['id'] ?? $_GET['dossie_id'] ?? $_GET['id'] ?? '');
 try{
  if($acao==='criar'){

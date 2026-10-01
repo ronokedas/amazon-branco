@@ -55,6 +55,7 @@
                             <?php endforeach; ?>
                         </select>
                         <small class="text-muted">A embarcação vinculada determina o histórico técnico, vistorias e armador responsável.</small>
+                        <div id="preview-acervo-resumo" class="mt-2" style="display: none;"></div>
                     </div>
 
                     <div class="col-md-6">
@@ -212,6 +213,48 @@
         for (let i = 1; i < selVistoria.options.length; i++) {
             const o = selVistoria.options[i];
             o.style.display = (!embId || o.dataset.embarcacao === embId) ? '' : 'none';
+        }
+
+        const boxPreview = document.getElementById('preview-acervo-resumo');
+        if (boxPreview) {
+            if (!embId) {
+                boxPreview.style.display = 'none';
+                boxPreview.innerHTML = '';
+            } else {
+                boxPreview.style.display = 'block';
+                boxPreview.innerHTML = '<span class="text-secondary small"><i class="fa-solid fa-spinner fa-spin text-accent"></i> Localizando acervo documental da embarcação...</span>';
+                fetch(`<?= APP_URL ?>protocolos/actions?action=obter_acervo_embarcacao&embarcacao_id=${encodeURIComponent(embId)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.sucesso && data.dados && data.dados.resumo) {
+                            const r = data.dados.resumo;
+                            if (r.total > 0) {
+                                let partes = [];
+                                if (r.propostas > 0) partes.push(`${r.propostas} Proposta(s)`);
+                                if (r.vistorias > 0) partes.push(`${r.vistorias} Vistoria(s)`);
+                                if (r.projetos > 0) partes.push(`${r.projetos} Projeto(s)/Plano(s)`);
+                                if (r.certificados > 0) partes.push(`${r.certificados} Certificado(s)`);
+                                if (r.externos > 0) partes.push(`${r.externos} Anexo(s)`);
+
+                                boxPreview.innerHTML = `
+                                    <div class="p-2 rounded small" style="background: rgba(86, 224, 173, 0.08); border: 1px solid var(--accent, #56e0ad); color: var(--text-primary);">
+                                        <i class="fa-solid fa-folder-tree text-accent me-1"></i>
+                                        <strong>Acervo Localizado:</strong> <strong>${r.total} documento(s)</strong> disponível(is) (${partes.join(', ')}). Eles estarão prontos para uso no dossiê.
+                                    </div>
+                                `;
+                            } else {
+                                boxPreview.innerHTML = `
+                                    <div class="p-2 rounded small text-secondary" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);">
+                                        <i class="fa-solid fa-info-circle me-1"></i> Nenhum documento ou relatório anterior vinculado a esta embarcação ainda.
+                                    </div>
+                                `;
+                            }
+                        }
+                    })
+                    .catch(() => {
+                        boxPreview.style.display = 'none';
+                    });
+            }
         }
     }
     document.addEventListener('DOMContentLoaded', function() {

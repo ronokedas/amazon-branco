@@ -156,3 +156,338 @@ function protocoloSnapshot(PDO $pdo,string $movId):array
     $q=$pdo->prepare('SELECT * FROM protocolo_movimentacao_itens WHERE movimentacao_id=:id ORDER BY criado_em,id');
     $q->execute([':id'=>$movId]);return $q->fetchAll(PDO::FETCH_ASSOC);
 }
+
+/**
+ * Agrega o Acervo Documental Completo vinculado a uma Embarcação (AGENTS.md / NORMAM).
+ * Localiza Propostas Comerciais, Relatórios de Vistoria (com multi-versões e retornos),
+ * Projetos e Pranchas de Engenharia Naval (com suas revisões REV), Pareceres Técnicos,
+ * Certificados/Licenças Oficiais e Documentos Externos anexados.
+ */
+function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string $dossieId = null): array
+{
+    $embarcacaoId = trim($embarcacaoId);
+    $resultado = [
+        'resumo' => [
+            'total' => 0,
+            'propostas' => 0,
+            'vistorias' => 0,
+            'projetos' => 0,
+            'certificados' => 0,
+            'externos' => 0,
+        ],
+        'itens' => [],
+    ];
+
+    if ($embarcacaoId === '') {
+        return $resultado;
+    }
+
+    // 1. PROPOSTAS COMERCIAIS
+    try {
+        $qProp = $pdo->prepare("
+            SELECT p.id, p.numero, p.data_emissao, p.data_validade, p.valor_total, p.status, p.assinado,
+                   p.created_at, u.nome AS criador_nome
+            FROM propostas p
+            INNER JOIN propostas_embarcacoes pe ON pe.proposta_id = p.id
+            LEFT JOIN usuarios u ON u.id = p.criado_por
+            WHERE pe.embarcacao_id = :emb_id AND p.status <> 'cancelada'
+            ORDER BY p.data_emissao DESC, p.created_at DESC
+        ");
+        $qProp->execute([':emb_id' => $embarcacaoId]);
+        $props = $qProp->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($props as $p) {
+            $statusLabel = strtoupper($p['status']);
+            if (!empty($p['assinado'])) {
+                $statusLabel = 'ASSINADA';
+            }
+            $valorFmt = 'R$ ' . number_format((float)$p['valor_total'], 2, ',', '.');
+            $versao = !empty($p['assinado']) ? 'Proposta Comercial (Assinada)' : 'Proposta Comercial (' . ucfirst($p['status']) . ')';
+
+            $resultado['itens'][] = [
+                'id' => 'prop_' . $p['id'],
+                'origem_tipo' => 'PROPOSTA',
+                'origem_id' => $p['id'],
+                'categoria_grupo' => 'PROPOSTAS',
+                'categoria_rotulo' => 'Proposta Comercial',
+                'numero' => $p['numero'],
+                'titulo' => 'Proposta Comercial nº ' . $p['numero'],
+                'versao_label' => $versao,
+                'versao_numero' => null,
+                'data_documento' => $p['data_emissao'],
+                'data_validade' => $p['data_validade'],
+                'status' => $p['status'],
+                'status_label' => $statusLabel,
+                'suporte' => 'DIGITAL',
+                'forma' => !empty($p['assinado']) ? 'NATO_DIGITAL' : 'DIGITALIZADO',
+                'tamanho_bytes' => null,
+                'hash' => null,
+                'url_pdf' => APP_URL . 'comercial/pdf?id=' . urlencode($p['id']),
+                'nome_arquivo' => 'Proposta_' . $p['numero'] . '.pdf',
+                'detalhes' => 'Valor: ' . $valorFmt . ($p['criador_nome'] ? ' · Emissor: ' . $p['criador_nome'] : ''),
+            ];
+            $resultado['resumo']['propostas']++;
+        }
+    } catch (Throwable $e) {
+        error_log('Erro ao buscar propostas no acervo: ' . $e->getMessage());
+    }
+
+    // 2. VISTORIAS EM CAMPO (Com rastreamento completo de Multi-Versões / Retornos / Exigências)
+    try {
+        $qVist = $pdo->prepare("
+            SELECT v.id, v.numero, v.finalidade, v.data_vistoria, v.data_emissao, v.status,
+                   v.mobile_versao, v.relatorio_anterior_id, v.criado_em,
+                   u.nome AS assinante_nome, va.numero AS relatorio_anterior_numero,
+                   r.tipo AS retorno_tipo
+            FROM vistorias v
+            LEFT JOIN vistorias va ON va.id = v.relatorio_anterior_id
+            LEFT JOIN vistoria_retornos r ON (r.relatorio_resultado_id = v.id OR r.relatorio_origem_id = v.id)
+            LEFT JOIN usuarios u ON u.id = v.criado_por
+            WHERE v.embarcacao_id = :emb_id AND v.status <> 'CANCELADA'
+            ORDER BY v.data_vistoria DESC, v.criado_em DESC
+        ");
+        $qVist->execute([':emb_id' => $embarcacaoId]);
+        $vists = $qVist->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($vists as $v) {
+            $num = $v['numero'] ?: 'Vistoria S/N';
+            $ehRetorno = ($v['finalidade'] === 'CUMPRIMENTO_EXIGENCIAS') || !empty($v['relatorio_anterior_id']) || !empty($v['retorno_tipo']);
+            
+            if ($ehRetorno) {
+                $ref = $v['relatorio_anterior_numero'] ? ' (Ref. ' . $v['relatorio_anterior_numero'] . ')' : '';
+                $versaoLabel = 'Revisão / Retorno de Exigências' . $ref;
+            } elseif (!empty($v['mobile_versao']) && (int)$v['mobile_versao'] > 1) {
+                $versaoLabel = 'Revisão ' . (int)$v['mobile_versao'] . ' (Vistoria de Campo)';
+            } else {
+                $versaoLabel = 'Versão Inicial (Vistoria em Campo)';
+            }
+
+            $resultado['itens'][] = [
+                'id' => 'vist_' . $v['id'],
+                'origem_tipo' => 'VISTORIA',
+                'origem_id' => $v['id'],
+                'categoria_grupo' => 'VISTORIAS',
+                'categoria_rotulo' => 'Vistoria em Campo',
+                'numero' => $num,
+                'titulo' => 'Relatório de Vistoria Naval (' . $num . ')',
+                'versao_label' => $versaoLabel,
+                'versao_numero' => (int)($v['mobile_versao'] ?? 1),
+                'data_documento' => $v['data_vistoria'] ?: ($v['data_emissao'] ?: substr($v['criado_em'], 0, 10)),
+                'data_validade' => null,
+                'status' => $v['status'] ?: 'CONCLUIDA',
+                'status_label' => str_replace('_', ' ', $v['status'] ?: 'CONCLUIDA'),
+                'suporte' => 'DIGITAL',
+                'forma' => 'NATO_DIGITAL',
+                'tamanho_bytes' => null,
+                'hash' => null,
+                'url_pdf' => APP_URL . 'vistorias/relatorio_pdf?id=' . urlencode($v['id']),
+                'nome_arquivo' => 'Relatorio_Vistoria_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $num) . '.pdf',
+                'detalhes' => 'Finalidade: ' . str_replace('_', ' ', $v['finalidade'] ?: 'VISTORIA') . ($v['assinante_nome'] ? ' · Vistoriador: ' . $v['assinante_nome'] : ''),
+            ];
+            $resultado['resumo']['vistorias']++;
+        }
+    } catch (Throwable $e) {
+        error_log('Erro ao buscar vistorias no acervo: ' . $e->getMessage());
+    }
+
+    // 3. ANÁLISE DE PLANOS & ENGENHARIA NAVAL (Pranchas, Memoriais e Pareceres por Revisão)
+    try {
+        // 3.1 Pranchas, Memoriais de Cálculo, Estabilidade por Revisão
+        $qArq = $pdo->prepare("
+            SELECT ar.id AS arquivo_id, ar.nome_original, ar.categoria, ar.classificacao,
+                   ar.tamanho_bytes, ar.sha256, ar.chave_arquivo, ar.criado_em,
+                   s.revisao, s.recebido_em,
+                   ap.id AS analise_id, ap.numero AS processo_numero, ap.tipo_processo, ap.enquadramento
+            FROM analise_planos_arquivos ar
+            INNER JOIN analise_planos_submissoes s ON s.id = ar.submissao_id
+            INNER JOIN analises_planos ap ON ap.id = s.analise_id
+            WHERE ap.embarcacao_id = :emb_id AND ap.status <> 'CANCELADA'
+            ORDER BY ap.numero DESC, s.revisao DESC, ar.criado_em DESC
+        ");
+        $qArq->execute([':emb_id' => $embarcacaoId]);
+        $arqs = $qArq->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($arqs as $ar) {
+            $revNum = (int)($ar['revisao'] ?? 0);
+            $revLabel = 'Revisão REV ' . str_pad((string)$revNum, 2, '0', STR_PAD_LEFT);
+            $catLabel = str_replace('_', ' ', $ar['categoria'] ?: 'PROJETO');
+
+            $resultado['itens'][] = [
+                'id' => 'proj_arq_' . $ar['arquivo_id'],
+                'origem_tipo' => 'ANALISE_PLANOS_ARQUIVO',
+                'origem_id' => $ar['arquivo_id'],
+                'categoria_grupo' => 'PROJETOS',
+                'categoria_rotulo' => 'Engenharia & Planos',
+                'numero' => $ar['processo_numero'] ?: 'Processo S/N',
+                'titulo' => $ar['nome_original'],
+                'versao_label' => $revLabel,
+                'versao_numero' => $revNum,
+                'data_documento' => $ar['recebido_em'] ?: substr($ar['criado_em'], 0, 10),
+                'data_validade' => null,
+                'status' => $ar['classificacao'] ?: 'RECEBIDO',
+                'status_label' => $ar['classificacao'] ?: 'RECEBIDO',
+                'suporte' => 'DIGITAL',
+                'forma' => 'NATO_DIGITAL',
+                'tamanho_bytes' => (int)($ar['tamanho_bytes'] ?? 0),
+                'hash' => $ar['sha256'] ?: null,
+                'url_pdf' => APP_URL . 'analises_planos/arquivo?id=' . urlencode($ar['arquivo_id']),
+                'nome_arquivo' => $ar['nome_original'],
+                'detalhes' => 'Processo: ' . ($ar['processo_numero'] ?: 'S/N') . ' (' . ($ar['tipo_processo'] ?: 'Análise') . ') · Categoria: ' . $catLabel,
+            ];
+            $resultado['resumo']['projetos']++;
+        }
+
+        // 3.2 Pareceres Técnicos Oficiais emitidos pelo Analista / Engenheiro
+        $qPar = $pdo->prepare("
+            SELECT p.id, p.numero, p.versao, p.finalidade, p.resultado, p.status,
+                   p.caminho_pdf_final, p.hash_pdf_final, p.publicado_em, p.criado_em,
+                   ap.numero AS processo_numero, ap.tipo_processo
+            FROM analise_planos_pareceres p
+            INNER JOIN analises_planos ap ON ap.id = p.analise_id
+            WHERE ap.embarcacao_id = :emb_id AND p.status NOT IN ('MINUTA', 'CANCELADO')
+            ORDER BY p.criado_em DESC, p.versao DESC
+        ");
+        $qPar->execute([':emb_id' => $embarcacaoId]);
+        $pares = $qPar->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($pares as $par) {
+            $numPar = $par['numero'] ?: 'Parecer S/N';
+            $versaoPar = 'Parecer Técnico V' . ((int)$par['versao']) . ' (' . str_replace('_', ' ', $par['finalidade'] ?: 'CONCLUSIVO') . ')';
+
+            $resultado['itens'][] = [
+                'id' => 'proj_par_' . $par['id'],
+                'origem_tipo' => 'ANALISE_PLANOS_PARECER',
+                'origem_id' => $par['id'],
+                'categoria_grupo' => 'PROJETOS',
+                'categoria_rotulo' => 'Parecer Técnico Naval',
+                'numero' => $numPar,
+                'titulo' => 'Parecer Técnico de Engenharia (' . $numPar . ')',
+                'versao_label' => $versaoPar,
+                'versao_numero' => (int)$par['versao'],
+                'data_documento' => $par['publicado_em'] ? substr($par['publicado_em'], 0, 10) : substr($par['criado_em'], 0, 10),
+                'data_validade' => null,
+                'status' => $par['resultado'] ?: 'APROVADO',
+                'status_label' => str_replace('_', ' ', $par['resultado'] ?: 'APROVADO'),
+                'suporte' => 'DIGITAL',
+                'forma' => 'NATO_DIGITAL',
+                'tamanho_bytes' => null,
+                'hash' => $par['hash_pdf_final'] ?: null,
+                'url_pdf' => APP_URL . 'analises_planos/parecer_pdf?id=' . urlencode($par['id']),
+                'nome_arquivo' => 'Parecer_Tecnico_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $numPar) . '.pdf',
+                'detalhes' => 'Processo: ' . ($par['processo_numero'] ?: 'S/N') . ' · Conclusão: ' . str_replace('_', ' ', $par['resultado'] ?: 'CONCLUÍDO'),
+            ];
+            $resultado['resumo']['projetos']++;
+        }
+    } catch (Throwable $e) {
+        error_log('Erro ao buscar engenharia/projetos no acervo: ' . $e->getMessage());
+    }
+
+    // 4. CERTIFICADOS NAVAIS E LICENÇAS OFICIAIS (CSN, CNBL, CNARQ, LP, LC, NAR, CHT)
+    $tabelasCert = [
+        ['tipo' => 'CSN', 'tabela' => 'certificados_csn', 'num_col' => 'numero', 'dt_val_col' => 'data_validade', 'pdf_route' => 'documentacao/certificados/pdf', 'nome' => 'Certificado de Segurança da Navegação (CSN)'],
+        ['tipo' => 'CNBL', 'tabela' => 'certificados_cnbl', 'num_col' => 'numero', 'dt_val_col' => 'data_validade', 'pdf_route' => 'documentacao/cnbl/pdf', 'nome' => 'Certificado Nacional de Borda Livre (CNBL)'],
+        ['tipo' => 'CNARQ', 'tabela' => 'certificados_cnarq', 'num_col' => 'numero', 'dt_val_col' => 'data_validade', 'pdf_route' => 'documentacao/cnarq/pdf', 'nome' => 'Certificado Nacional de Arqueação (CNARQ)'],
+        ['tipo' => 'LP', 'tabela' => 'certificados_lp', 'num_col' => 'numero_lp', 'dt_val_col' => 'validade_data', 'pdf_route' => 'documentacao/lp/pdf', 'nome' => 'Licença Provisória (LP)'],
+        ['tipo' => 'LC', 'tabela' => 'certificados_lc', 'num_col' => 'numero_lc', 'dt_val_col' => 'data_validade', 'pdf_route' => 'documentacao/lc/pdf', 'nome' => 'Licença de Construção / Alteração (LC/LA/LR)'],
+        ['tipo' => 'NAR', 'tabela' => 'certificados_nar', 'num_col' => 'numero', 'dt_val_col' => 'NULL', 'pdf_route' => 'documentacao/nar/pdf', 'nome' => 'Nota de Arqueação (NAR)'],
+        ['tipo' => 'CHT', 'tabela' => 'certificados_cht', 'num_col' => 'numero_certificado', 'dt_val_col' => 'data_validade', 'pdf_route' => 'documentacao/cht/pdf', 'nome' => 'Certificado de Homologação de Tirantes (CHT)'],
+    ];
+
+    foreach ($tabelasCert as $tc) {
+        try {
+            $sqlVal = $tc['dt_val_col'] === 'NULL' ? 'NULL AS dt_validade' : $tc['dt_val_col'] . ' AS dt_validade';
+            $qCert = $pdo->prepare("
+                SELECT id, {$tc['num_col']} AS num_cert, data_emissao, {$sqlVal}, status, assinado,
+                       caminho_arquivo_pdf, hash_arquivo_pdf
+                FROM {$tc['tabela']}
+                WHERE embarcacao_id = :emb_id AND ativo = 1 AND status <> 'cancelado'
+                ORDER BY data_emissao DESC
+            ");
+            $qCert->execute([':emb_id' => $embarcacaoId]);
+            $certs = $qCert->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($certs as $c) {
+                $numCert = $c['num_cert'] ?: 'S/N';
+                $statusCert = !empty($c['assinado']) ? 'ASSINADO' : strtoupper($c['status'] ?: 'EMITIDO');
+                $versaoLabel = 'Via Oficial Expedida' . (!empty($c['assinado']) ? ' (Assinada)' : '');
+
+                $resultado['itens'][] = [
+                    'id' => 'cert_' . strtolower($tc['tipo']) . '_' . $c['id'],
+                    'origem_tipo' => 'CERTIFICADO_' . $tc['tipo'],
+                    'origem_id' => $c['id'],
+                    'categoria_grupo' => 'CERTIFICADOS',
+                    'categoria_rotulo' => 'Certificado ' . $tc['tipo'],
+                    'numero' => $numCert,
+                    'titulo' => $tc['nome'] . ' - ' . $numCert,
+                    'versao_label' => $versaoLabel,
+                    'versao_numero' => null,
+                    'data_documento' => $c['data_emissao'],
+                    'data_validade' => $c['dt_validade'] ?: null,
+                    'status' => $statusCert,
+                    'status_label' => $statusCert,
+                    'suporte' => 'DIGITAL',
+                    'forma' => !empty($c['assinado']) ? 'NATO_DIGITAL' : 'ORIGINAL',
+                    'tamanho_bytes' => null,
+                    'hash' => $c['hash_arquivo_pdf'] ?: null,
+                    'url_pdf' => APP_URL . $tc['pdf_route'] . '?id=' . urlencode($c['id']),
+                    'nome_arquivo' => $tc['tipo'] . '_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $numCert) . '.pdf',
+                    'detalhes' => 'Emissão: ' . date('d/m/Y', strtotime($c['data_emissao'])) . ($c['dt_validade'] ? ' · Validade: ' . date('d/m/Y', strtotime($c['dt_validade'])) : ''),
+                ];
+                $resultado['resumo']['certificados']++;
+            }
+        } catch (Throwable $e) {
+            error_log('Erro ao buscar certificados ' . $tc['tipo'] . ': ' . $e->getMessage());
+        }
+    }
+
+    // 5. DOCUMENTOS EXTERNOS E COMPROVANTES DA EMBARCAÇÃO
+    try {
+        $qExt = $pdo->prepare("
+            SELECT c.id, c.dossie_id, c.movimentacao_id, c.tipo, c.nome_original,
+                   c.mime_type, c.tamanho_bytes, c.sha256, c.caminho, c.criado_em,
+                   d.numero AS dossie_numero, m.sequencia AS mov_sequencia
+            FROM protocolo_comprovantes c
+            INNER JOIN protocolo_dossies d ON d.id = c.dossie_id
+            LEFT JOIN protocolo_movimentacoes m ON m.id = c.movimentacao_id
+            WHERE d.embarcacao_id = :emb_id
+            ORDER BY c.criado_em DESC
+        ");
+        $qExt->execute([':emb_id' => $embarcacaoId]);
+        $exts = $qExt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($exts as $ext) {
+            $tipoLabel = str_replace('_', ' ', $ext['tipo'] ?: 'DOCUMENTO');
+            $movLabel = $ext['mov_sequencia'] ? ' (Evento #' . str_pad((string)$ext['mov_sequencia'], 2, '0', STR_PAD_LEFT) . ')' : ' (Dossiê Geral)';
+
+            $resultado['itens'][] = [
+                'id' => 'ext_' . $ext['id'],
+                'origem_tipo' => 'DOCUMENTO_EXTERNO',
+                'origem_id' => $ext['id'],
+                'categoria_grupo' => 'EXTERNOS',
+                'categoria_rotulo' => 'Anexo / Documento Externo',
+                'numero' => $ext['dossie_numero'],
+                'titulo' => $ext['nome_original'],
+                'versao_label' => 'Anexo Externo' . $movLabel,
+                'versao_numero' => null,
+                'data_documento' => substr($ext['criado_em'], 0, 10),
+                'data_validade' => null,
+                'status' => 'CONFERIDO',
+                'status_label' => 'CONFERIDO',
+                'suporte' => 'DIGITAL',
+                'forma' => 'DIGITALIZADO',
+                'tamanho_bytes' => (int)($ext['tamanho_bytes'] ?? 0),
+                'hash' => $ext['sha256'] ?: null,
+                'url_pdf' => APP_URL . 'protocolos/arquivo?id=' . urlencode($ext['id']),
+                'nome_arquivo' => $ext['nome_original'],
+                'detalhes' => 'Dossiê: ' . $ext['dossie_numero'] . ' · Tipo: ' . $tipoLabel,
+            ];
+            $resultado['resumo']['externos']++;
+        }
+    } catch (Throwable $e) {
+        error_log('Erro ao buscar documentos externos no acervo: ' . $e->getMessage());
+    }
+
+    $resultado['resumo']['total'] = count($resultado['itens']);
+    return $resultado;
+}
+
