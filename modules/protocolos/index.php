@@ -348,9 +348,9 @@ require __DIR__ . '/../../includes/sidebar.php';
             <p>Controle completo de entrada, custódia física, envio à Capitania dos Portos e devolução de documentos.</p>
         </div>
         <div class="d-flex gap-2">
-            <?php if (getCargo() === 'ADMIN'): ?>
+            <?php if (in_array(getCargo(), ['ADMIN', 'SECRETARIA'], true)): ?>
                 <a class="btn btn-secondary" href="<?= APP_URL ?>protocolos/configuracoes">
-                    <i class="fa-solid fa-gear"></i> Cadastros de Apoio
+                    <i class="fa-solid fa-building-flag text-accent"></i> Capitanias & Apoio
                 </a>
             <?php endif; ?>
             <a class="btn btn-primary" href="<?= APP_URL ?>protocolos/form">

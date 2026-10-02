@@ -452,7 +452,7 @@ require __DIR__ . '/../../includes/sidebar.php';
                 </div>
 
                 <div class="text-end">
-                    <button class="btn btn-sm btn-outline-danger" type="button" title="Remover item" onclick="this.closest('.prot-doc-item-card').remove()">
+                    <button class="btn btn-sm btn-outline-danger" type="button" title="Remover item" onclick="this.closest('.prot-doc-item-card').remove(); atualizarEmptyStateDocs();">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -477,7 +477,45 @@ require __DIR__ . '/../../includes/sidebar.php';
             }
 
             container.append(row);
+            atualizarEmptyStateDocs();
         }
+
+        function atualizarEmptyStateDocs() {
+            const container = document.getElementById('lista-docs-container');
+            if (!container) return;
+            let emptyState = document.getElementById('docs-empty-state');
+            const totalDocs = container.querySelectorAll('.prot-doc-item-card').length;
+            if (totalDocs === 0) {
+                if (!emptyState) {
+                    emptyState = document.createElement('div');
+                    emptyState.id = 'docs-empty-state';
+                    emptyState.className = 'text-center p-3 rounded mb-2';
+                    emptyState.style.cssText = 'background: rgba(255,255,255,0.02); border: 1px dashed var(--border, rgba(255,255,255,0.15)); color: var(--text-secondary);';
+                    emptyState.innerHTML = '<i class="fa-solid fa-file-circle-plus text-accent me-1"></i> Nenhum documento adicionado ainda. Escolha nos atalhos do acervo acima ou clique no botão <strong>+ Adicionar Documento Manual</strong>.';
+                    container.appendChild(emptyState);
+                }
+            } else if (emptyState) {
+                emptyState.remove();
+            }
+        }
+
+        window.importarItemAcervoObjeto = function(item) {
+            if (!item || typeof addDoc !== 'function') return;
+            const suporte = item.suporte || 'DIGITAL';
+            const forma = item.forma || (item.status === 'ASSINADO' || item.status === 'ASSINADA' ? 'NATO_DIGITAL' : 'DIGITALIZADO');
+            const revisao = item.versao_label || '';
+
+            addDoc('', item.titulo, {
+                suporte: suporte,
+                forma: forma,
+                categoria: item.categoria_grupo || 'OUTROS',
+                arquivo_origem_tipo: item.origem_tipo,
+                arquivo_origem_id: item.origem_id,
+                arquivo_nome: item.nome_arquivo || item.titulo,
+                arquivo_hash: item.hash || '',
+                revisao: revisao
+            });
+        };
 
         function adicionarDocCatalogo(codigo) {
             const item = catalogo.find(x => x.codigo === codigo);
@@ -491,11 +529,8 @@ require __DIR__ . '/../../includes/sidebar.php';
         const btnAdd = document.getElementById('btn-add-doc');
         if (btnAdd) {
             btnAdd.onclick = () => addDoc();
-            const container = document.getElementById('lista-docs-container');
-            if (container && !container.children.length) {
-                addDoc();
-            }
         }
+        atualizarEmptyStateDocs();
 
         function ajustarSentidoMovimentacao(sentido) {
             const nat = document.getElementById('mov_natureza');

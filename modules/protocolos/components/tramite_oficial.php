@@ -29,7 +29,14 @@ $chaveProc = 'protocolo_externo_' . 'numero';
                             <input type="hidden" name="aba" class="input-aba-ativa" value="marinha">
 
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Unidade Marítima (Capitania / Delegacia) *</label>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label fw-bold m-0">Unidade Marítima (Capitania / Delegacia) *</label>
+                                    <?php if (in_array(getCargo(), ['ADMIN', 'SECRETARIA'], true)): ?>
+                                        <a href="<?= APP_URL ?>protocolos/configuracoes?aba=unidades" target="_blank" class="small text-accent text-decoration-none fw-semibold" title="Cadastrar nova Capitania ou Delegacia">
+                                            <i class="fa-solid fa-plus-circle"></i> Cadastrar Nova
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
                                 <select class="form-control" name="unidade_maritima_id" required>
                                     <option value="">-- Selecione a Capitania / Órgão --</option>
                                     <?php foreach ($unidades as $u): ?>

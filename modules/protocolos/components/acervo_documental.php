@@ -52,6 +52,12 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary active py-1 px-3" data-filtro="TODOS" onclick="filtrarAcervo('TODOS', this)">
                         <i class="fa-solid fa-list-check"></i> Todos (<span id="acervo-count-total"><?= count($acervoEmbarcacao['itens'] ?? []) ?></span>)
                     </button>
+                    <button type="button" class="btn btn-sm btn-outline-success py-1 px-3" data-filtro="NOVOS" onclick="filtrarAcervo('NOVOS', this)">
+                        <i class="fa-solid fa-sparkles text-success"></i> Novos Disponíveis (<span id="acervo-count-novos"><?= $acervoEmbarcacao['resumo']['novos'] ?? count($acervoEmbarcacao['itens_novos'] ?? []) ?></span>)
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-warning py-1 px-3" data-filtro="UTILIZADOS" onclick="filtrarAcervo('UTILIZADOS', this)">
+                        <i class="fa-solid fa-folder-closed text-warning"></i> Já em Dossiês (<span id="acervo-count-utilizados"><?= $acervoEmbarcacao['resumo']['utilizados'] ?? count($acervoEmbarcacao['itens_utilizados'] ?? []) ?></span>)
+                    </button>
                     <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-3" data-filtro="PROPOSTAS" onclick="filtrarAcervo('PROPOSTAS', this)">
                         <i class="fa-solid fa-file-invoice-dollar text-success"></i> Propostas (<span id="acervo-count-propostas"><?= $acervoEmbarcacao['resumo']['propostas'] ?? 0 ?></span>)
                     </button>
@@ -111,10 +117,12 @@
                                     default => 'background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3);',
                                 };
                                 $itemJson = json_encode($it, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP|JSON_UNESCAPED_UNICODE);
+                                $statusUso = !empty($it['ja_utilizado']) ? 'UTILIZADO' : 'NOVO';
                                 ?>
                                 <tr class="item-linha-acervo" 
                                     data-grupo="<?= h($it['categoria_grupo']) ?>" 
                                     data-id="<?= h($it['id']) ?>"
+                                    data-status-uso="<?= $statusUso ?>"
                                     data-item='<?= $itemJson ?>'
                                     style="border-bottom: 1px solid var(--border);">
                                     <td>
@@ -150,9 +158,20 @@
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <span class="badge bg-secondary" style="font-size: 0.72rem;">
-                                            <?= h($it['status_label']) ?>
-                                        </span>
+                                        <?php if (!empty($it['ja_utilizado'])): ?>
+                                            <span class="badge bg-warning text-dark d-inline-flex align-items-center mb-1" style="font-size: 0.68rem;" title="Documento já vinculado em dossiê anterior">
+                                                <i class="fa-solid fa-link me-1"></i> <?= h($it['uso_dossie_numero'] ? 'Dossiê ' . $it['uso_dossie_numero'] : 'Já em Dossiê') ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-success d-inline-flex align-items-center mb-1" style="font-size: 0.68rem;">
+                                                <i class="fa-solid fa-sparkles me-1"></i> DISPONÍVEL
+                                            </span>
+                                        <?php endif; ?>
+                                        <div>
+                                            <span class="badge bg-secondary" style="font-size: 0.68rem;">
+                                                <?= h($it['status_label']) ?>
+                                            </span>
+                                        </div>
                                     </td>
                                     <td>
                                         <span class="text-secondary small"><?= h($it['detalhes'] ?? '—') ?></span>
@@ -189,7 +208,13 @@ function filtrarAcervo(grupo, btn) {
 
     const linhas = document.querySelectorAll('.item-linha-acervo');
     linhas.forEach(linha => {
-        if (grupo === 'TODOS' || linha.dataset.grupo === grupo) {
+        if (grupo === 'TODOS') {
+            linha.style.display = '';
+        } else if (grupo === 'NOVOS') {
+            linha.style.display = (linha.dataset.statusUso === 'NOVO') ? '' : 'none';
+        } else if (grupo === 'UTILIZADOS') {
+            linha.style.display = (linha.dataset.statusUso === 'UTILIZADO') ? '' : 'none';
+        } else if (linha.dataset.grupo === grupo) {
             linha.style.display = '';
         } else {
             linha.style.display = 'none';

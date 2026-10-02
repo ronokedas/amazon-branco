@@ -5,8 +5,8 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/protocolos.php';
 protocoloExigirAcesso();
 
-if (getCargo() !== 'ADMIN') {
-    setMensagem('error', 'Somente o administrador pode gerenciar os cadastros de apoio dos protocolos.');
+if (!in_array(getCargo(), ['ADMIN', 'SECRETARIA'], true)) {
+    setMensagem('error', 'Apenas Administradores e Secretárias podem gerenciar os cadastros de apoio dos protocolos.');
     redirecionar(APP_URL . 'protocolos');
 }
 

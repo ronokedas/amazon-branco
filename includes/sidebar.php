@@ -191,10 +191,16 @@ if (!function_exists('isActive')) {
                 </a>
             <?php endif; ?>
             <?php if (podeAcessar('protocolos_documentais')): ?>
-                <a href="<?= APP_URL ?>protocolos" class="nav-item<?= strpos($pagina_atual,'protocolos')===0?' active':'' ?>" data-label="Protocolos documentais">
+                <a href="<?= APP_URL ?>protocolos" class="nav-item<?= (strpos($pagina_atual,'protocolos')===0 && strpos($pagina_atual,'protocolos/configuracoes')!==0)?' active':'' ?>" data-label="Protocolos documentais">
                     <i class="fa-solid fa-folder-tree"></i>
                     <span class="nav-text">Protocolos & Dossiês</span>
                 </a>
+                <?php if (in_array(getCargo(), ['ADMIN', 'SECRETARIA'], true)): ?>
+                    <a href="<?= APP_URL ?>protocolos/configuracoes?aba=unidades" class="nav-item<?= strpos($pagina_atual,'protocolos/configuracoes')===0?' active':'' ?>" data-label="Capitanias e Órgãos">
+                        <i class="fa-solid fa-building-flag"></i>
+                        <span class="nav-text">Capitanias & Órgãos</span>
+                    </a>
+                <?php endif; ?>
             <?php endif; ?>
         <?php endif; ?>
 

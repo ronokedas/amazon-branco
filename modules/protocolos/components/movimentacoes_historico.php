@@ -323,7 +323,14 @@
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-bold" for="mov_unidade">Unidade Marítima (se houver envio ao órgão)</label>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label fw-bold m-0" for="mov_unidade">Unidade Marítima (se houver envio ao órgão)</label>
+                                <?php if (in_array(getCargo(), ['ADMIN', 'SECRETARIA'], true)): ?>
+                                    <a href="<?= APP_URL ?>protocolos/configuracoes?aba=unidades" target="_blank" class="small text-accent text-decoration-none fw-semibold" title="Cadastrar nova Capitania ou Delegacia">
+                                        <i class="fa-solid fa-plus-circle"></i> Cadastrar Nova
+                                    </a>
+                                <?php endif; ?>
+                            </div>
                             <select class="form-control" name="unidade_maritima_id" id="mov_unidade" onchange="aoSelecionarUnidadeMaritima(this)">
                                 <option value="">Selecione quando houver trâmite com a Marinha</option>
                                 <?php foreach ($unidades as $u): ?>
@@ -421,33 +428,132 @@
                             </div>
                         </div>
 
-                        <!-- Documentos do Acervo Completo da Embarcação (Propostas, Vistorias com versões, Engenharia, Certificados) -->
-                        <?php if (!empty($acervoEmbarcacao['itens'])): ?>
-                            <div class="mb-3 p-3 rounded" style="background: rgba(86, 224, 173, 0.05); border: 1px solid var(--accent, #56e0ad);">
+                        <!-- Documentos do Acervo Completo da Embarcação (Separados em Novos vs Já Utilizados) -->
+                        <?php if (!empty($acervoEmbarcacao['itens'])): 
+                            $itensNovos = $acervoEmbarcacao['itens_novos'] ?? array_values(array_filter($acervoEmbarcacao['itens'], fn($x) => empty($x['ja_utilizado'])));
+                            $itensUtilizados = $acervoEmbarcacao['itens_utilizados'] ?? array_values(array_filter($acervoEmbarcacao['itens'], fn($x) => !empty($x['ja_utilizado'])));
+                        ?>
+                            <div class="mb-3 p-3 rounded" style="background: rgba(86, 224, 173, 0.04); border: 1px solid var(--accent, #56e0ad);">
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                                    <span class="text-accent fw-bold small">
-                                        <i class="fa-solid fa-folder-tree me-1"></i> Puxar do Acervo da Embarcação (<?= count($acervoEmbarcacao['itens']) ?> disponíveis):
-                                    </span>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-accent fw-bold small">
+                                            <i class="fa-solid fa-folder-tree me-1"></i> Acervo Digital da Embarcação:
+                                        </span>
+                                        <span class="badge bg-success" style="font-size: 0.72rem;">
+                                            <?= count($itensNovos) ?> Novo(s) Disponível(is)
+                                        </span>
+                                        <?php if (!empty($itensUtilizados)): ?>
+                                            <span class="badge bg-secondary" style="font-size: 0.72rem;">
+                                                <?= count($itensUtilizados) ?> Já Utilizado(s) Anteriormente
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
                                     <div class="d-flex gap-1">
-                                        <button type="button" class="btn btn-sm btn-primary py-0 px-2" style="font-size: 0.75rem;" onclick="importarTodosAcervoMovimentacao()">
-                                            <i class="fa-solid fa-file-import me-1"></i> Importar Todos do Acervo
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-info py-0 px-2" style="font-size: 0.75rem;" onclick="trocarAbaDossie('acervo')">
-                                            <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Ver Central de Acervo
+                                        <?php if (!empty($itensNovos)): ?>
+                                            <button type="button" class="btn btn-sm btn-primary py-1 px-2" style="font-size: 0.75rem;" onclick="importarTodosNovosAcervo()">
+                                                <i class="fa-solid fa-file-import me-1"></i> Importar Todos os Novos (<?= count($itensNovos) ?>)
+                                            </button>
+                                        <?php endif; ?>
+                                        <button type="button" class="btn btn-sm btn-outline-info py-1 px-2" style="font-size: 0.75rem;" onclick="trocarAbaDossie('acervo')">
+                                            <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Central de Acervo
                                         </button>
                                     </div>
                                 </div>
-                                <p class="text-secondary small mb-2">Clique em qualquer documento abaixo para adicioná-lo instantaneamente com versão e vínculo:</p>
-                                <div class="d-flex flex-wrap gap-1" style="max-height: 220px; overflow-y: auto;">
-                                    <?php foreach ($acervoEmbarcacao['itens'] as $itIdx => $it): ?>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 text-start" style="font-size: 0.75rem;" 
-                                                onclick="importarItemAcervoPorIndice(<?= (int)$itIdx ?>)" 
-                                                title="<?= h($it['titulo'] . ' · ' . $it['versao_label']) ?>">
-                                            <i class="fa-solid fa-plus text-accent me-1"></i> <strong><?= h($it['titulo']) ?></strong>
-                                            <span class="badge bg-dark ms-1" style="font-size: 0.68rem;"><?= h($it['versao_label']) ?></span>
-                                        </button>
-                                    <?php endforeach; ?>
+
+                                <!-- SEÇÃO 1: DOCUMENTOS NOVOS (Ainda Não Vinculados a Nenhum Dossiê/Ofício) -->
+                                <div class="mb-2">
+                                    <div class="text-secondary small mb-2 d-flex align-items-center gap-1">
+                                        <i class="fa-solid fa-sparkles text-accent"></i>
+                                        <span><strong>Documentos Novos:</strong> Prontos para inclusão neste novo trâmite/ofício.</span>
+                                    </div>
+
+                                    <?php if (!empty($itensNovos)): ?>
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                                            <?php foreach ($itensNovos as $it): 
+                                                $origIdx = array_search($it['id'], array_column($acervoEmbarcacao['itens'], 'id'), true);
+                                                $badgeGrupoCor = match($it['categoria_grupo']) {
+                                                    'PROPOSTAS' => 'background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3);',
+                                                    'VISTORIAS' => 'background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);',
+                                                    'PROJETOS' => 'background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);',
+                                                    'CERTIFICADOS' => 'background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);',
+                                                    default => 'background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3);',
+                                                };
+                                            ?>
+                                                <div class="p-2 rounded d-flex align-items-center justify-content-between" 
+                                                     style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(86, 224, 173, 0.35);">
+                                                    <div style="min-width: 0; flex: 1; padding-right: 8px;">
+                                                        <div class="d-flex align-items-center gap-1 mb-1">
+                                                            <span class="badge" style="<?= $badgeGrupoCor ?> font-size: 0.65rem; padding: 2px 6px;">
+                                                                <?= h($it['categoria_rotulo']) ?>
+                                                            </span>
+                                                            <span class="badge bg-success" style="font-size: 0.62rem; padding: 2px 5px;">DISPONÍVEL</span>
+                                                        </div>
+                                                        <div class="fw-bold text-white text-truncate" style="font-size: 0.84rem;" title="<?= h($it['titulo']) ?>">
+                                                            <?= h($it['titulo']) ?>
+                                                        </div>
+                                                        <div class="text-secondary small d-flex align-items-center gap-2 mt-1" style="font-size: 0.72rem;">
+                                                            <span class="badge bg-dark border border-secondary text-truncate" style="max-width: 170px;" title="<?= h($it['versao_label']) ?>">
+                                                                <?= h($it['versao_label']) ?>
+                                                            </span>
+                                                            <?php if (!empty($it['data_documento'])): ?>
+                                                                <span class="text-nowrap"><i class="fa-regular fa-calendar"></i> <?= date('d/m/Y', strtotime($it['data_documento'])) ?></span>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-success px-2 py-1 text-nowrap" style="font-size: 0.75rem;" 
+                                                            onclick="importarItemAcervoPorIndice(<?= (int)$origIdx ?>)" title="Adicionar à movimentação">
+                                                        <i class="fa-solid fa-plus"></i> Adicionar
+                                                    </button>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="p-2 rounded text-secondary small" style="background: rgba(255,255,255,0.02); border: 1px dashed var(--border);">
+                                            <i class="fa-solid fa-circle-check text-accent me-1"></i> Todos os documentos atuais desta embarcação já foram vinculados a dossiês anteriores.
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
+
+                                <!-- SEÇÃO 2: DOCUMENTOS JÁ UTILIZADOS ANTERIORMENTE (Separados para não misturar) -->
+                                <?php if (!empty($itensUtilizados)): ?>
+                                    <div class="p-2 rounded mt-3" style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.08);">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="small text-muted fw-bold">
+                                                <i class="fa-solid fa-folder-closed me-1"></i> Documentos Já Utilizados em Dossiês Anteriores (<?= count($itensUtilizados) ?>):
+                                            </span>
+                                            <span class="badge bg-secondary" style="font-size: 0.65rem;">Separados para não misturar</span>
+                                        </div>
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; max-height: 200px; overflow-y: auto; padding-right: 4px;">
+                                            <?php foreach ($itensUtilizados as $it): 
+                                                $origIdx = array_search($it['id'], array_column($acervoEmbarcacao['itens'], 'id'), true);
+                                            ?>
+                                                <div class="p-2 rounded d-flex align-items-center justify-content-between" 
+                                                     style="background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(255, 255, 255, 0.08); opacity: 0.85;">
+                                                    <div style="min-width: 0; flex: 1; padding-right: 8px;">
+                                                        <div class="d-flex align-items-center gap-1 mb-1">
+                                                            <span class="badge bg-warning text-dark fw-bold" style="font-size: 0.65rem; padding: 2px 6px;">
+                                                                <i class="fa-solid fa-link me-1"></i> <?= h($it['uso_dossie_numero'] ? 'Dossiê ' . $it['uso_dossie_numero'] : 'Já em Dossiê') ?>
+                                                            </span>
+                                                            <span class="badge bg-dark border border-secondary" style="font-size: 0.65rem; padding: 2px 5px;">
+                                                                <?= h($it['categoria_rotulo']) ?>
+                                                            </span>
+                                                        </div>
+                                                        <div class="text-white text-truncate small" title="<?= h($it['titulo']) ?>">
+                                                            <?= h($it['titulo']) ?>
+                                                        </div>
+                                                        <div class="text-secondary small mt-1" style="font-size: 0.70rem;">
+                                                            Versão: <?= h($it['versao_label']) ?>
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-1 text-nowrap" style="font-size: 0.72rem;" 
+                                                            onclick="importarItemAcervoPorIndice(<?= (int)$origIdx ?>)" title="Reutilizar documento neste novo dossiê">
+                                                        <i class="fa-solid fa-plus"></i> Reutilizar
+                                                    </button>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
 
@@ -489,7 +595,9 @@
     </div>
 
     <script>
+    window.acervoDocumentalItens = <?= json_encode($acervoEmbarcacao['itens'] ?? [], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP|JSON_UNESCAPED_UNICODE) ?>;
     const arquivosAnaliseDisponiveis = <?= json_encode($arquivosAnalise ?? [], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP|JSON_UNESCAPED_UNICODE) ?>;
+
     function importarArquivoAnalise(idx) {
         const arq = arquivosAnaliseDisponiveis[idx];
         if (!arq || typeof addDoc !== 'function') return;
@@ -503,18 +611,42 @@
             arquivo_hash: arq.sha256
         });
     }
+
     function importarTodosArquivosAnalise() {
         if (!arquivosAnaliseDisponiveis || !arquivosAnaliseDisponiveis.length) return;
         arquivosAnaliseDisponiveis.forEach((_, idx) => importarArquivoAnalise(idx));
     }
+
     function importarItemAcervoPorIndice(idx) {
         if (window.acervoDocumentalItens && window.acervoDocumentalItens[idx]) {
-            importarItemAcervoObjeto(window.acervoDocumentalItens[idx]);
+            if (typeof window.importarItemAcervoObjeto === 'function') {
+                window.importarItemAcervoObjeto(window.acervoDocumentalItens[idx]);
+            }
         }
     }
+
+    function importarTodosNovosAcervo() {
+        if (!window.acervoDocumentalItens || !window.acervoDocumentalItens.length) return;
+        const novos = window.acervoDocumentalItens.filter(x => !x.ja_utilizado);
+        if (!novos.length) {
+            alert('Não há novos documentos pendentes para importar.');
+            return;
+        }
+        novos.forEach(it => {
+            if (typeof window.importarItemAcervoObjeto === 'function') {
+                window.importarItemAcervoObjeto(it);
+            }
+        });
+        alert(novos.length + ' novo(s) documento(s) foram inseridos na movimentação!');
+    }
+
     function importarTodosAcervoMovimentacao() {
         if (!window.acervoDocumentalItens || !window.acervoDocumentalItens.length) return;
-        window.acervoDocumentalItens.forEach(it => importarItemAcervoObjeto(it));
+        window.acervoDocumentalItens.forEach(it => {
+            if (typeof window.importarItemAcervoObjeto === 'function') {
+                window.importarItemAcervoObjeto(it);
+            }
+        });
         alert('Todos os ' + window.acervoDocumentalItens.length + ' documentos do acervo foram importados!');
     }
     </script>

@@ -549,7 +549,102 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
         error_log('Erro ao buscar documentos externos no acervo: ' . $e->getMessage());
     }
 
+    // 6. IDENTIFICAÇÃO E SEPARAÇÃO DE DOCUMENTOS JÁ UTILIZADOS EM DOSSIÊS / OFÍCIOS
+    $docsJaAnexados = [];
+    try {
+        $qUso = $pdo->prepare("
+            SELECT 
+                i.arquivo_origem_tipo,
+                i.arquivo_origem_id,
+                i.arquivo_nome,
+                i.descricao,
+                d.id AS dossie_id,
+                d.numero AS dossie_numero,
+                d.assunto AS dossie_assunto,
+                d.status AS dossie_status,
+                d.assinado AS dossie_assinado,
+                m.id AS mov_id,
+                m.sequencia AS mov_sequencia,
+                m.tipo AS mov_tipo,
+                m.assinado AS mov_assinado,
+                m.movimentado_em
+            FROM protocolo_movimentacao_itens i
+            INNER JOIN protocolo_movimentacoes m ON m.id = i.movimentacao_id
+            INNER JOIN protocolo_dossies d ON d.id = m.dossie_id
+            WHERE d.status <> 'CANCELADO'
+              AND (d.embarcacao_id = :emb_id OR i.arquivo_origem_id IS NOT NULL)
+            ORDER BY m.movimentado_em DESC, m.sequencia DESC
+        ");
+        $qUso->execute([':emb_id' => $embarcacaoId]);
+        $usos = $qUso->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($usos as $u) {
+            if (!empty($u['arquivo_origem_tipo']) && !empty($u['arquivo_origem_id'])) {
+                $k = $u['arquivo_origem_tipo'] . ':' . $u['arquivo_origem_id'];
+                if (!isset($docsJaAnexados[$k])) {
+                    $docsJaAnexados[$k] = $u;
+                }
+            }
+            if (!empty($u['arquivo_nome'])) {
+                $kNome = mb_strtolower(trim($u['arquivo_nome']), 'UTF-8');
+                if (!isset($docsJaAnexados[$kNome])) {
+                    $docsJaAnexados[$kNome] = $u;
+                }
+            }
+            if (!empty($u['descricao'])) {
+                $kDesc = mb_strtolower(trim($u['descricao']), 'UTF-8');
+                if (!isset($docsJaAnexados[$kDesc])) {
+                    $docsJaAnexados[$kDesc] = $u;
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('Erro ao mapear documentos já anexados a dossiês: ' . $e->getMessage());
+    }
+
+    // Marca cada item com status de utilização e separa novos vs já utilizados
+    foreach ($resultado['itens'] as &$it) {
+        $chaveTipoId = ($it['origem_tipo'] ?? '') . ':' . ($it['origem_id'] ?? '');
+        $chaveNome = !empty($it['nome_arquivo']) ? mb_strtolower(trim($it['nome_arquivo']), 'UTF-8') : '';
+        $chaveTit = !empty($it['titulo']) ? mb_strtolower(trim($it['titulo']), 'UTF-8') : '';
+
+        $matchUso = null;
+        if (isset($docsJaAnexados[$chaveTipoId])) {
+            $matchUso = $docsJaAnexados[$chaveTipoId];
+        } elseif ($chaveNome !== '' && isset($docsJaAnexados[$chaveNome])) {
+            $matchUso = $docsJaAnexados[$chaveNome];
+        } elseif ($chaveTit !== '' && isset($docsJaAnexados[$chaveTit])) {
+            $matchUso = $docsJaAnexados[$chaveTit];
+        }
+
+        if ($matchUso) {
+            $it['ja_utilizado'] = true;
+            $it['uso_dossie_numero'] = $matchUso['dossie_numero'];
+            $it['uso_dossie_id'] = $matchUso['dossie_id'];
+            $it['uso_dossie_status'] = $matchUso['dossie_status'];
+            $it['uso_mov_sequencia'] = $matchUso['mov_sequencia'];
+            $it['uso_mov_tipo'] = $matchUso['mov_tipo'];
+            $it['uso_data'] = $matchUso['movimentado_em'];
+            $it['uso_mesmo_dossie'] = ($dossieId && $matchUso['dossie_id'] === $dossieId);
+        } else {
+            $it['ja_utilizado'] = false;
+            $it['uso_dossie_numero'] = null;
+            $it['uso_dossie_id'] = null;
+            $it['uso_dossie_status'] = null;
+            $it['uso_mov_sequencia'] = null;
+            $it['uso_mov_tipo'] = null;
+            $it['uso_data'] = null;
+            $it['uso_mesmo_dossie'] = false;
+        }
+    }
+    unset($it);
+
+    $resultado['itens_novos'] = array_values(array_filter($resultado['itens'], fn($x) => empty($x['ja_utilizado'])));
+    $resultado['itens_utilizados'] = array_values(array_filter($resultado['itens'], fn($x) => !empty($x['ja_utilizado'])));
     $resultado['resumo']['total'] = count($resultado['itens']);
+    $resultado['resumo']['novos'] = count($resultado['itens_novos']);
+    $resultado['resumo']['utilizados'] = count($resultado['itens_utilizados']);
+
     return $resultado;
 }
 
