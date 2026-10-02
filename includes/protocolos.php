@@ -635,7 +635,70 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
     }
 
     // 6. IDENTIFICAÇÃO E SEPARAÇÃO DE DOCUMENTOS JÁ UTILIZADOS EM DOSSIÊS / OFÍCIOS
+    // Documentos já anexados a qualquer dossiê ativo (mesmo em rascunho ou sem assinatura digital ainda)
+    // são segregados para que o usuário saiba que já foram enviados ou vinculados anteriormente.
     $docsJaAnexados = [];
+    $extrairCodigoNaval = function(?string $texto): string {
+        if (!$texto) return '';
+        if (preg_match('/(?:AM-)?([A-Z]{2,4}(?:-[A-Z0-9]+)+(?:\/\d+)?)/i', $texto, $m)) {
+            return strtoupper(preg_replace('/[^A-Z0-9]/', '', $m[0]));
+        }
+        return '';
+    };
+
+    $registrarUso = function(array $dados) use (&$docsJaAnexados, $extrairCodigoNaval) {
+        $info = [
+            'dossie_id' => $dados['dossie_id'] ?? null,
+            'dossie_numero' => $dados['dossie_numero'] ?? null,
+            'dossie_assunto' => $dados['dossie_assunto'] ?? null,
+            'dossie_status' => $dados['dossie_status'] ?? null,
+            'mov_id' => $dados['mov_id'] ?? null,
+            'mov_sequencia' => $dados['mov_sequencia'] ?? null,
+            'mov_tipo' => $dados['mov_tipo'] ?? null,
+            'movimentado_em' => $dados['movimentado_em'] ?? null,
+        ];
+
+        // 1. Chave Tipo:ID
+        if (!empty($dados['origem_tipo']) && !empty($dados['origem_id'])) {
+            $kTipoId = $dados['origem_tipo'] . ':' . $dados['origem_id'];
+            if (!isset($docsJaAnexados[$kTipoId])) $docsJaAnexados[$kTipoId] = $info;
+        }
+
+        // 2. Chave ID direto
+        if (!empty($dados['origem_id'])) {
+            $kId = (string)$dados['origem_id'];
+            if (!isset($docsJaAnexados[$kId])) $docsJaAnexados[$kId] = $info;
+        }
+
+        // 3. Chave ID composto (ex: ext_..., prop_..., proj_...)
+        if (!empty($dados['item_id'])) {
+            $kItemId = (string)$dados['item_id'];
+            if (!isset($docsJaAnexados[$kItemId])) $docsJaAnexados[$kItemId] = $info;
+        }
+
+        // 4. Nome do arquivo
+        if (!empty($dados['arquivo_nome'])) {
+            $kNome = mb_strtolower(trim($dados['arquivo_nome']), 'UTF-8');
+            if (!isset($docsJaAnexados[$kNome])) $docsJaAnexados[$kNome] = $info;
+            $kSemExt = preg_replace('/\.[a-z0-9]+$/i', '', $kNome);
+            if (!isset($docsJaAnexados[$kSemExt])) $docsJaAnexados[$kSemExt] = $info;
+        }
+
+        // 5. Descrição / Título
+        if (!empty($dados['descricao'])) {
+            $kDesc = mb_strtolower(trim($dados['descricao']), 'UTF-8');
+            if (!isset($docsJaAnexados[$kDesc])) $docsJaAnexados[$kDesc] = $info;
+        }
+
+        // 6. Código naval / identificador
+        $cod = $extrairCodigoNaval($dados['descricao'] ?? ($dados['arquivo_nome'] ?? ($dados['numero'] ?? '')));
+        if ($cod !== '') {
+            $kCod = 'COD:' . $cod;
+            if (!isset($docsJaAnexados[$kCod])) $docsJaAnexados[$kCod] = $info;
+        }
+    };
+
+    // Fonte A: Documentos inseridos em movimentações de dossiês não cancelados
     try {
         $qUso = $pdo->prepare("
             SELECT 
@@ -647,11 +710,9 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
                 d.numero AS dossie_numero,
                 d.assunto AS dossie_assunto,
                 d.status AS dossie_status,
-                d.assinado AS dossie_assinado,
                 m.id AS mov_id,
                 m.sequencia AS mov_sequencia,
                 m.tipo AS mov_tipo,
-                m.assinado AS mov_assinado,
                 m.movimentado_em
             FROM protocolo_movimentacao_itens i
             INNER JOIN protocolo_movimentacoes m ON m.id = i.movimentacao_id
@@ -664,42 +725,143 @@ function protocoloObterAcervoEmbarcacao(PDO $pdo, string $embarcacaoId, ?string 
         $usos = $qUso->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($usos as $u) {
-            if (!empty($u['arquivo_origem_tipo']) && !empty($u['arquivo_origem_id'])) {
-                $k = $u['arquivo_origem_tipo'] . ':' . $u['arquivo_origem_id'];
-                if (!isset($docsJaAnexados[$k])) {
-                    $docsJaAnexados[$k] = $u;
-                }
+            $registrarUso([
+                'origem_tipo' => $u['arquivo_origem_tipo'],
+                'origem_id' => $u['arquivo_origem_id'],
+                'arquivo_nome' => $u['arquivo_nome'],
+                'descricao' => $u['descricao'],
+                'dossie_id' => $u['dossie_id'],
+                'dossie_numero' => $u['dossie_numero'],
+                'dossie_assunto' => $u['dossie_assunto'],
+                'dossie_status' => $u['dossie_status'],
+                'mov_id' => $u['mov_id'],
+                'mov_sequencia' => $u['mov_sequencia'],
+                'mov_tipo' => $u['mov_tipo'],
+                'movimentado_em' => $u['movimentado_em'],
+            ]);
+        }
+    } catch (Throwable $e) {
+        error_log('Erro ao mapear itens de movimentações já anexados: ' . $e->getMessage());
+    }
+
+    // Fonte B: Documentos e relatórios em anexo de dossiês (protocolo_comprovantes)
+    try {
+        $qComps = $pdo->prepare("
+            SELECT 
+                c.id AS comprovante_id,
+                c.nome_original AS arquivo_nome,
+                c.dossie_id,
+                c.criado_em AS movimentado_em,
+                d.numero AS dossie_numero,
+                d.assunto AS dossie_assunto,
+                d.status AS dossie_status,
+                m.id AS mov_id,
+                m.sequencia AS mov_sequencia,
+                m.tipo AS mov_tipo
+            FROM protocolo_comprovantes c
+            INNER JOIN protocolo_dossies d ON d.id = c.dossie_id
+            LEFT JOIN protocolo_movimentacoes m ON m.id = c.movimentacao_id
+            WHERE d.status <> 'CANCELADO'
+              AND d.embarcacao_id = :emb_id
+            ORDER BY c.criado_em DESC
+        ");
+        $qComps->execute([':emb_id' => $embarcacaoId]);
+        $comps = $qComps->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($comps as $cp) {
+            $registrarUso([
+                'origem_tipo' => 'DOCUMENTO_EXTERNO',
+                'origem_id' => $cp['comprovante_id'],
+                'item_id' => 'ext_' . $cp['comprovante_id'],
+                'arquivo_nome' => $cp['arquivo_nome'],
+                'descricao' => $cp['arquivo_nome'],
+                'dossie_id' => $cp['dossie_id'],
+                'dossie_numero' => $cp['dossie_numero'],
+                'dossie_assunto' => $cp['dossie_assunto'],
+                'dossie_status' => $cp['dossie_status'],
+                'mov_id' => $cp['mov_id'],
+                'mov_sequencia' => $cp['mov_sequencia'],
+                'mov_tipo' => $cp['mov_tipo'],
+                'movimentado_em' => $cp['movimentado_em'],
+            ]);
+        }
+    } catch (Throwable $e) {
+        error_log('Erro ao mapear comprovantes/anexos já utilizados: ' . $e->getMessage());
+    }
+
+    // Fonte C: Dossiês vinculados diretamente via chaves estrangeiras (proposta_id, analise_id, vistoria_id, certificado_id)
+    try {
+        $qDosDir = $pdo->prepare("
+            SELECT 
+                d.id AS dossie_id,
+                d.numero AS dossie_numero,
+                d.assunto AS dossie_assunto,
+                d.status AS dossie_status,
+                d.proposta_id,
+                d.analise_id,
+                d.vistoria_id,
+                d.certificado_id,
+                d.criado_em AS movimentado_em
+            FROM protocolo_dossies d
+            WHERE d.status <> 'CANCELADO'
+              AND d.embarcacao_id = :emb_id
+            ORDER BY d.criado_em DESC
+        ");
+        $qDosDir->execute([':emb_id' => $embarcacaoId]);
+        $dossiesDir = $qDosDir->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($dossiesDir as $dd) {
+            $baseInfo = [
+                'dossie_id' => $dd['dossie_id'],
+                'dossie_numero' => $dd['dossie_numero'],
+                'dossie_assunto' => $dd['dossie_assunto'],
+                'dossie_status' => $dd['dossie_status'],
+                'mov_id' => null,
+                'mov_sequencia' => null,
+                'mov_tipo' => null,
+                'movimentado_em' => $dd['movimentado_em'],
+            ];
+            if (!empty($dd['proposta_id'])) {
+                $registrarUso(array_merge($baseInfo, ['origem_tipo' => 'PROPOSTA', 'origem_id' => $dd['proposta_id'], 'item_id' => 'prop_' . $dd['proposta_id']]));
             }
-            if (!empty($u['arquivo_nome'])) {
-                $kNome = mb_strtolower(trim($u['arquivo_nome']), 'UTF-8');
-                if (!isset($docsJaAnexados[$kNome])) {
-                    $docsJaAnexados[$kNome] = $u;
-                }
+            if (!empty($dd['vistoria_id'])) {
+                $registrarUso(array_merge($baseInfo, ['origem_tipo' => 'VISTORIA', 'origem_id' => $dd['vistoria_id'], 'item_id' => 'vist_' . $dd['vistoria_id']]));
             }
-            if (!empty($u['descricao'])) {
-                $kDesc = mb_strtolower(trim($u['descricao']), 'UTF-8');
-                if (!isset($docsJaAnexados[$kDesc])) {
-                    $docsJaAnexados[$kDesc] = $u;
-                }
+            if (!empty($dd['certificado_id'])) {
+                $registrarUso(array_merge($baseInfo, ['origem_id' => $dd['certificado_id']]));
             }
         }
     } catch (Throwable $e) {
-        error_log('Erro ao mapear documentos já anexados a dossiês: ' . $e->getMessage());
+        error_log('Erro ao mapear vínculos diretos de dossiês: ' . $e->getMessage());
     }
 
     // Marca cada item com status de utilização e separa novos vs já utilizados
     foreach ($resultado['itens'] as &$it) {
         $chaveTipoId = ($it['origem_tipo'] ?? '') . ':' . ($it['origem_id'] ?? '');
+        $chaveId = (string)($it['origem_id'] ?? '');
+        $chaveItemId = (string)($it['id'] ?? '');
         $chaveNome = !empty($it['nome_arquivo']) ? mb_strtolower(trim($it['nome_arquivo']), 'UTF-8') : '';
+        $chaveNomeSemExt = $chaveNome !== '' ? preg_replace('/\.[a-z0-9]+$/i', '', $chaveNome) : '';
         $chaveTit = !empty($it['titulo']) ? mb_strtolower(trim($it['titulo']), 'UTF-8') : '';
+
+        $codNaval = $extrairCodigoNaval($it['numero'] ?? ($it['nome_arquivo'] ?? $it['titulo']));
+        $chaveCod = $codNaval !== '' ? 'COD:' . $codNaval : '';
 
         $matchUso = null;
         if (isset($docsJaAnexados[$chaveTipoId])) {
             $matchUso = $docsJaAnexados[$chaveTipoId];
+        } elseif ($chaveId !== '' && isset($docsJaAnexados[$chaveId])) {
+            $matchUso = $docsJaAnexados[$chaveId];
+        } elseif ($chaveItemId !== '' && isset($docsJaAnexados[$chaveItemId])) {
+            $matchUso = $docsJaAnexados[$chaveItemId];
         } elseif ($chaveNome !== '' && isset($docsJaAnexados[$chaveNome])) {
             $matchUso = $docsJaAnexados[$chaveNome];
+        } elseif ($chaveNomeSemExt !== '' && isset($docsJaAnexados[$chaveNomeSemExt])) {
+            $matchUso = $docsJaAnexados[$chaveNomeSemExt];
         } elseif ($chaveTit !== '' && isset($docsJaAnexados[$chaveTit])) {
             $matchUso = $docsJaAnexados[$chaveTit];
+        } elseif ($chaveCod !== '' && isset($docsJaAnexados[$chaveCod])) {
+            $matchUso = $docsJaAnexados[$chaveCod];
         }
 
         if ($matchUso) {

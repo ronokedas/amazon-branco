@@ -142,8 +142,8 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="badge bg-dark border border-secondary" style="font-size: 0.76rem; font-weight: 600; color: #f3f4f6;">
-                                            <i class="fa-solid fa-code-branch text-accent me-1"></i> <?= h($it['versao_label']) ?>
+                                        <span class="badge bg-dark border border-secondary" style="font-size: 0.75rem; font-weight: 600; color: #38bdf8; background: rgba(15, 23, 42, 0.8) !important; padding: 4px 8px;">
+                                            <i class="fa-solid fa-code-branch me-1"></i> <?= h($it['versao_label']) ?>
                                         </span>
                                     </td>
                                     <td>
@@ -159,19 +159,16 @@
                                     </td>
                                     <td>
                                         <?php if (!empty($it['ja_utilizado'])): ?>
-                                            <span class="badge bg-warning text-dark d-inline-flex align-items-center mb-1" style="font-size: 0.68rem;" title="Documento já vinculado em dossiê anterior">
+                                            <span class="badge bg-warning text-dark d-inline-flex align-items-center mb-1" style="font-size: 0.72rem; font-weight: 700; padding: 3px 6px;" title="Documento já vinculado em dossiê anterior">
                                                 <i class="fa-solid fa-link me-1"></i> <?= h($it['uso_dossie_numero'] ? 'Dossiê ' . $it['uso_dossie_numero'] : 'Já em Dossiê') ?>
                                             </span>
+                                            <div class="small text-warning-emphasis" style="font-size: 0.68rem;">Já vinculado</div>
                                         <?php else: ?>
-                                            <span class="badge bg-success d-inline-flex align-items-center mb-1" style="font-size: 0.68rem;">
-                                                <i class="fa-solid fa-sparkles me-1"></i> DISPONÍVEL
+                                            <span class="badge bg-success d-inline-flex align-items-center mb-1" style="font-size: 0.70rem; padding: 3px 6px;">
+                                                <i class="fa-solid fa-sparkles me-1"></i> DISPONÍVEL (NOVO)
                                             </span>
+                                            <div class="small text-success" style="font-size: 0.68rem;">Pronto para envio</div>
                                         <?php endif; ?>
-                                        <div>
-                                            <span class="badge bg-secondary" style="font-size: 0.68rem;">
-                                                <?= h($it['status_label']) ?>
-                                            </span>
-                                        </div>
                                     </td>
                                     <td>
                                         <span class="text-secondary small"><?= h($it['detalhes'] ?? '—') ?></span>

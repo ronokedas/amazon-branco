@@ -468,41 +468,31 @@
                                     </div>
 
                                     <?php if (!empty($itensNovos)): ?>
-                                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
                                             <?php foreach ($itensNovos as $it): 
                                                 $origIdx = array_search($it['id'], array_column($acervoEmbarcacao['itens'], 'id'), true);
-                                                $badgeGrupoCor = match($it['categoria_grupo']) {
-                                                    'PROPOSTAS' => 'background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3);',
-                                                    'VISTORIAS' => 'background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);',
-                                                    'PROJETOS' => 'background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);',
-                                                    'CERTIFICADOS' => 'background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);',
-                                                    default => 'background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3);',
-                                                };
+                                                $dataDoc = !empty($it['data_documento']) ? date('d/m/Y', strtotime($it['data_documento'])) : 'Sem data';
+                                                $labelDoc = $it['titulo'];
+                                                $subLabel = (!empty($it['numero']) && !str_contains($labelDoc, $it['numero'])) 
+                                                    ? $it['numero'] . ' · ' . $dataDoc 
+                                                    : $dataDoc;
                                             ?>
-                                                <div class="p-2 rounded d-flex align-items-center justify-content-between" 
-                                                     style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(86, 224, 173, 0.35);">
-                                                    <div style="min-width: 0; flex: 1; padding-right: 8px;">
-                                                        <div class="d-flex align-items-center gap-1 mb-1">
-                                                            <span class="badge" style="<?= $badgeGrupoCor ?> font-size: 0.65rem; padding: 2px 6px;">
-                                                                <?= h($it['categoria_rotulo']) ?>
-                                                            </span>
-                                                            <span class="badge bg-success" style="font-size: 0.62rem; padding: 2px 5px;">DISPONÍVEL</span>
+                                                <div class="p-2 rounded d-flex align-items-center justify-content-between gap-2" 
+                                                     style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(86, 224, 173, 0.35); min-height: 48px;">
+                                                    <div style="min-width: 0; flex: 1; line-height: 1.3;">
+                                                        <div class="fw-bold text-white text-truncate" style="font-size: 0.83rem;" title="<?= h($it['titulo']) ?>">
+                                                            <i class="fa-solid fa-file-lines text-accent me-1"></i>
+                                                            <?= h($labelDoc) ?>
                                                         </div>
-                                                        <div class="fw-bold text-white text-truncate" style="font-size: 0.84rem;" title="<?= h($it['titulo']) ?>">
-                                                            <?= h($it['titulo']) ?>
-                                                        </div>
-                                                        <div class="text-secondary small d-flex align-items-center gap-2 mt-1" style="font-size: 0.72rem;">
-                                                            <span class="badge bg-dark border border-secondary text-truncate" style="max-width: 170px;" title="<?= h($it['versao_label']) ?>">
-                                                                <?= h($it['versao_label']) ?>
-                                                            </span>
-                                                            <?php if (!empty($it['data_documento'])): ?>
-                                                                <span class="text-nowrap"><i class="fa-regular fa-calendar"></i> <?= date('d/m/Y', strtotime($it['data_documento'])) ?></span>
-                                                            <?php endif; ?>
+                                                        <div class="text-secondary small d-flex align-items-center gap-1 mt-1" style="font-size: 0.73rem;">
+                                                            <i class="fa-regular fa-calendar text-muted"></i>
+                                                            <span><?= h($subLabel) ?></span>
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.60rem; padding: 1px 4px;">NOVO</span>
                                                         </div>
                                                     </div>
-                                                    <button type="button" class="btn btn-sm btn-outline-success px-2 py-1 text-nowrap" style="font-size: 0.75rem;" 
-                                                            onclick="importarItemAcervoPorIndice(<?= (int)$origIdx ?>)" title="Adicionar à movimentação">
-                                                        <i class="fa-solid fa-plus"></i> Adicionar
+                                                    <button type="button" class="btn btn-sm btn-outline-success px-2 py-1 text-nowrap flex-shrink-0" style="font-size: 0.75rem; border-radius: 4px;" 
+                                                            onclick="importarItemAcervoPorIndice(<?= (int)$origIdx ?>)" title="Adicionar este documento à movimentação">
+                                                        <i class="fa-solid fa-plus me-1"></i> Adicionar
                                                     </button>
                                                 </div>
                                             <?php endforeach; ?>
@@ -523,31 +513,31 @@
                                             </span>
                                             <span class="badge bg-secondary" style="font-size: 0.65rem;">Separados para não misturar</span>
                                         </div>
-                                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; max-height: 200px; overflow-y: auto; padding-right: 4px;">
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; max-height: 200px; overflow-y: auto; padding-right: 4px;">
                                             <?php foreach ($itensUtilizados as $it): 
                                                 $origIdx = array_search($it['id'], array_column($acervoEmbarcacao['itens'], 'id'), true);
+                                                $dataDoc = !empty($it['data_documento']) ? date('d/m/Y', strtotime($it['data_documento'])) : 'Sem data';
+                                                $dossieRef = $it['uso_dossie_numero'] ? 'Dossiê ' . $it['uso_dossie_numero'] : 'Já em Dossiê';
+                                                $labelDoc = $it['titulo'];
                                             ?>
-                                                <div class="p-2 rounded d-flex align-items-center justify-content-between" 
-                                                     style="background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(255, 255, 255, 0.08); opacity: 0.85;">
-                                                    <div style="min-width: 0; flex: 1; padding-right: 8px;">
-                                                        <div class="d-flex align-items-center gap-1 mb-1">
-                                                            <span class="badge bg-warning text-dark fw-bold" style="font-size: 0.65rem; padding: 2px 6px;">
-                                                                <i class="fa-solid fa-link me-1"></i> <?= h($it['uso_dossie_numero'] ? 'Dossiê ' . $it['uso_dossie_numero'] : 'Já em Dossiê') ?>
+                                                <div class="p-2 rounded d-flex align-items-center justify-content-between gap-2" 
+                                                     style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.1); min-height: 48px; opacity: 0.9;">
+                                                    <div style="min-width: 0; flex: 1; line-height: 1.3;">
+                                                        <div class="text-white text-truncate fw-semibold" style="font-size: 0.83rem;" title="<?= h($it['titulo']) ?>">
+                                                            <span class="badge bg-warning text-dark fw-bold me-1" style="font-size: 0.62rem; padding: 2px 5px;">
+                                                                <i class="fa-solid fa-link me-1"></i><?= h($dossieRef) ?>
                                                             </span>
-                                                            <span class="badge bg-dark border border-secondary" style="font-size: 0.65rem; padding: 2px 5px;">
-                                                                <?= h($it['categoria_rotulo']) ?>
-                                                            </span>
+                                                            <?= h($labelDoc) ?>
                                                         </div>
-                                                        <div class="text-white text-truncate small" title="<?= h($it['titulo']) ?>">
-                                                            <?= h($it['titulo']) ?>
-                                                        </div>
-                                                        <div class="text-secondary small mt-1" style="font-size: 0.70rem;">
-                                                            Versão: <?= h($it['versao_label']) ?>
+                                                        <div class="text-secondary small d-flex align-items-center gap-1 mt-1" style="font-size: 0.73rem;">
+                                                            <i class="fa-regular fa-calendar text-muted"></i>
+                                                            <span><?= h($dataDoc) ?></span>
+                                                            <span class="text-muted ms-1">· Já vinculado</span>
                                                         </div>
                                                     </div>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-1 text-nowrap" style="font-size: 0.72rem;" 
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-1 text-nowrap flex-shrink-0" style="font-size: 0.75rem; border-radius: 4px;" 
                                                             onclick="importarItemAcervoPorIndice(<?= (int)$origIdx ?>)" title="Reutilizar documento neste novo dossiê">
-                                                        <i class="fa-solid fa-plus"></i> Reutilizar
+                                                        <i class="fa-solid fa-plus me-1"></i> Reutilizar
                                                     </button>
                                                 </div>
                                             <?php endforeach; ?>
