@@ -183,79 +183,63 @@ $pdf->AddPage();
 $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
 // =========================================================================
-// OFÍCIO OFICIAL AMAZON NAVAL (PÁGINA ÚNICA ESTILIZADA E MODERNA)
+// OFÍCIO OFICIAL AMAZON NAVAL (PÁGINA ÚNICA - MODELO OFICIAL LIMPO)
 // =========================================================================
 
 // 1. Logotipo oficial centralizado (destacado e proporcional ao modelo oficial)
 $logoFile = __DIR__ . '/../../img/logo.png';
 if (is_file($logoFile)) {
-    $pdf->Image($logoFile, 91, 7.5, 28, 0, 'PNG', '', '', true, 300, 'C');
+    $pdf->Image($logoFile, 92, 10, 26, 0, 'PNG', '', '', true, 300, 'C');
     $pdf->SetY(37);
 } else {
-    $pdf->SetY(12);
+    $pdf->SetY(14);
 }
 
-// 2. Cabeçalho Institucional
-$pdf->SetFont('helvetica', 'B', 12);
-$pdf->SetTextColor(13, 73, 65); // Verde naval oficial da Amazon
-$pdf->Cell(0, 5, 'AMAZON NAVAL', 0, 1, 'C');
+// 2. Cabeçalho Institucional Oficial (idêntico ao documento original)
+$pdf->SetFont('helvetica', 'B', 11);
+$pdf->SetTextColor(17, 17, 17);
+$pdf->Cell(0, 4.5, 'AMAZON NAVAL', 0, 1, 'C');
 
-$pdf->SetFont('helvetica', 'B', 7.5);
-$pdf->SetTextColor(85, 105, 98);
-$pdf->Cell(0, 3.5, 'ENTIDADE CERTIFICADORA NAVAL CREDENCIADA PELA DPC / MARINHA DO BRASIL', 0, 1, 'C');
-
-$pdf->SetFont('helvetica', '', 7.2);
-$pdf->SetTextColor(55, 65, 60);
-$pdf->Cell(0, 3.4, 'TRAVESSA QUINTINO BOCAIÚVA, Nº 2301, EDIFÍCIO ROGÉLIO FERNANDEZ, SALA 1116. CREMAÇÃO,', 0, 1, 'C');
-$pdf->Cell(0, 3.4, 'BELÉM, PA – CEP: 66063-015 · FONE: (91) 99111-2065', 0, 1, 'C');
-$pdf->SetFont('helvetica', 'B', 7.2);
-$pdf->SetTextColor(13, 73, 65);
-$pdf->Cell(0, 3.4, 'www.amazonnaval.com.br · amazoncertificados@gmail.com', 0, 1, 'C');
-
-// Linha decorativa naval dupla (Verde e Dourado)
-$pdf->Ln(2);
-$yLinha = $pdf->GetY();
-$pdf->SetDrawColor(13, 73, 65);
-$pdf->SetLineWidth(0.55);
-$pdf->Line(16, $yLinha, 194, $yLinha);
-$pdf->SetDrawColor(184, 157, 82); // Dourado naval sutil
-$pdf->SetLineWidth(0.25);
-$pdf->Line(16, $yLinha + 0.8, 194, $yLinha + 0.8);
+$pdf->SetFont('helvetica', '', 7.5);
+$pdf->SetTextColor(34, 34, 34);
+$pdf->Cell(0, 3.4, 'TRAVESSA QUINTINO BOCAIÚVA, Nº 2301 EDIFÍCIO ROGÉLIO FERNANDEZ, SALA 1116. CREMAÇÃO,', 0, 1, 'C');
+$pdf->Cell(0, 3.4, 'Belém, PA – (91) 99111-2065.', 0, 1, 'C');
+$pdf->Cell(0, 3.4, 'www.amazonnaval.com.br - amazoncertificados@gmail.com', 0, 1, 'C');
 
 $pdf->Ln(3.5);
 
-// 3. Tabela Estruturada do Ofício (Modernizada combinando com a identidade visual)
+// 3. Tabela Estruturada do Ofício (Padrão Oficial Amazon Naval, sem negritos excessivos e fundo limpo)
 $htmlTabela = '
-<table cellpadding="4.5" cellspacing="0" style="border-collapse: collapse; font-family: helvetica; width: 100%; border: 0.8px solid #0d4941;">
+<table cellpadding="4.5" cellspacing="0" style="border-collapse: collapse; font-family: helvetica; width: 100%; border: 0.5px solid #222222;">
     <tr>
-        <td width="48%" style="font-size: 8.5pt; font-weight: bold; background-color: #f4f8f6; color: #0d4941; border: 0.8px solid #0d4941;">
-            TIPO DE DOCUMENTO: <span style="color: #111111;">OFÍCIO</span>
+        <td width="38%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
+            Tipo de Documento: OFÍCIO
         </td>
-        <td width="52%" style="font-size: 8.5pt; font-weight: bold; background-color: #f4f8f6; color: #0d4941; border: 0.8px solid #0d4941;">
-            NÚM. DOC.: <span style="color: #111111;">' . $e($numeroOficio) . '</span>
+        <td width="62%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
+            Núm. Doc.: ' . $e($numeroOficio) . '
         </td>
     </tr>
     <tr>
-        <td width="15%" style="font-size: 8.5pt; font-weight: bold; background-color: #f4f8f6; color: #0d4941; border: 0.8px solid #0d4941;">
-            PARA:
+        <td width="38%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
+            Para:
         </td>
-        <td width="85%" style="font-size: 8.5pt; color: #111111; border: 0.8px solid #0d4941;">
+        <td width="62%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
             ' . $e($destinatarioPara) . '
         </td>
     </tr>
     <tr>
-        <td width="15%" style="font-size: 8.5pt; font-weight: bold; background-color: #f4f8f6; color: #0d4941; border: 0.8px solid #0d4941;">
+        <td width="38%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
             A/C:
         </td>
-        <td width="85%" style="font-size: 8.5pt; font-weight: bold; color: #111111; border: 0.8px solid #0d4941;">
+        <td width="62%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
             ' . $e($destinatarioAC) . '
         </td>
     </tr>
     <tr>
-        <td width="15%" style="font-size: 8.5pt; font-weight: bold; background-color: #f4f8f6; color: #0d4941; border: 0.8px solid #0d4941;">
-            ASSUNTO:
+        <td width="38%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
+            Assunto:
         </td>
-        <td width="85%" style="font-size: 8.5pt; color: #111111; border: 0.8px solid #0d4941;">
+        <td width="62%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
             Encaminhamento de documentos emitidos/aprovados por esta Entidade Certificadora para arquivo nesta OM.
         </td>
     </tr>
@@ -265,20 +249,20 @@ $pdf->writeHTML($htmlTabela, true, false, true, false, '');
 
 $pdf->Ln(6);
 
-// 4. Texto Formal do Ofício
+// 4. Texto Formal do Ofício (Limpo, sem negritos indevidos, idêntico ao modelo)
 $htmlCorpo = '
-<div style="font-family: helvetica; font-size: 9.5pt; color: #1a1a1a; line-height: 1.65;">
-    <p style="margin-bottom: 12px; font-weight: bold; color: #0d4941;">Prezado Senhor,</p>
+<div style="font-family: helvetica; font-size: 9.5pt; color: #111111; line-height: 1.55;">
+    <p style="margin-bottom: 12px;">Prezado Senhor,</p>
 
     <p style="text-align: justify; margin-bottom: 16px;">
-        Atendendo ao disposto no artigo pertinente da <b>' . $e($normamRef) . '</b>, a Entidade Certificadora Amazon Naval vem, através do presente ofício, encaminhar os documentos anexados da seguinte embarcação:
+        Atendendo ao disposto no artigo da ' . $e($normamRef) . ', a Entidade Certificadora Amazon Naval vem, através do presente ofício, encaminhar os documentos anexados da seguinte embarcação:
     </p>
 
-    <div style="margin-bottom: 18px; padding: 8px 12px; background-color: #f9fbfb; border-left: 3px solid #0d4941; border-radius: 3px;">
-        • <b style="color: #0d4941;">' . $e(mb_strtoupper($d['embarcacao_nome'], 'UTF-8')) . '</b> – <span style="color: #222222;">' . $e($citacaoDocumentos) . '</span>
-    </div>
+    <p style="margin-bottom: 20px; line-height: 1.6;">
+        • <b>' . $e(mb_strtoupper($d['embarcacao_nome'], 'UTF-8')) . '</b> – ' . $e($citacaoDocumentos) . '
+    </p>
 
-    <p style="margin-bottom: 16px;">
+    <p style="margin-bottom: 14px;">
         ' . $e($dataPorExtenso) . '
     </p>
 
@@ -326,19 +310,19 @@ if ($temImagemAssinatura && $tmpSigFile) {
     $pdf->SetY($yAssinatura + 18);
 } else {
     $pdf->SetY($yAssinatura + 12);
-    $pdf->SetDrawColor(13, 73, 65);
-    $pdf->SetLineWidth(0.4);
+    $pdf->SetDrawColor(40, 40, 40);
+    $pdf->SetLineWidth(0.3);
     $pdf->Line(68, $pdf->GetY(), 142, $pdf->GetY());
     $pdf->Ln(1.5);
 }
 
 // Nome e Cargo do Assinante
 $pdf->SetFont('helvetica', 'B', 10);
-$pdf->SetTextColor(13, 73, 65);
+$pdf->SetTextColor(20, 20, 20);
 $pdf->Cell(0, 4.5, $assinanteNome, 0, 1, 'C');
 
 $pdf->SetFont('helvetica', '', 8.5);
-$pdf->SetTextColor(60, 75, 70);
+$pdf->SetTextColor(60, 60, 60);
 $pdf->Cell(0, 4, $assinanteCargo, 0, 1, 'C');
 
 // Carimbo / Selo de Autenticidade Digital
