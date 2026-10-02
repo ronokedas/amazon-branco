@@ -207,57 +207,78 @@ if ($ehSaida) {
     }
 
     $html = '
-    <table cellpadding="4.5" cellspacing="0" style="border-collapse: collapse; font-family: helvetica; width: 100%; border: 0.5px solid #222222;">
+    <table cellpadding="3.5" cellspacing="0" style="border-collapse: collapse; font-family: helvetica; width: 100%; border: 0.5px solid #003D34;">
         <tr>
-            <td width="38%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
-                Tipo de Documento: OFÍCIO
+            <td width="30%" style="font-size: 8pt; font-weight: bold; color: #003D34; background-color: #E7F3EE; border: 0.5px solid #003D34;">
+                TIPO DE DOCUMENTO
             </td>
-            <td width="62%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
-                Núm. Doc.: ' . $e($numOf) . '
+            <td width="70%" style="font-size: 8pt; color: #1F2925; background-color: #FFFFFF; border: 0.5px solid #003D34;">
+                <b>OFÍCIO Nº</b> ' . $e($numOf) . '
             </td>
         </tr>
         <tr>
-            <td width="38%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
-                Para:
+            <td width="30%" style="font-size: 8pt; font-weight: bold; color: #003D34; background-color: #E7F3EE; border: 0.5px solid #003D34;">
+                DESTINATÁRIO (PARA):
             </td>
-            <td width="62%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
+            <td width="70%" style="font-size: 8pt; color: #1F2925; background-color: #FFFFFF; border: 0.5px solid #003D34;">
                 ' . $e($destPara) . '
             </td>
         </tr>
         <tr>
-            <td width="38%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
-                A/C:
+            <td width="30%" style="font-size: 8pt; font-weight: bold; color: #003D34; background-color: #E7F3EE; border: 0.5px solid #003D34;">
+                À ATENÇÃO (A/C):
             </td>
-            <td width="62%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
+            <td width="70%" style="font-size: 8pt; color: #1F2925; background-color: #FFFFFF; border: 0.5px solid #003D34;">
                 ' . $e($destAC) . '
             </td>
         </tr>
         <tr>
-            <td width="38%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
-                Assunto:
+            <td width="30%" style="font-size: 8pt; font-weight: bold; color: #003D34; background-color: #E7F3EE; border: 0.5px solid #003D34;">
+                ASSUNTO:
             </td>
-            <td width="62%" style="font-size: 8.5pt; color: #111111; border: 0.5px solid #222222;">
+            <td width="70%" style="font-size: 8pt; color: #1F2925; background-color: #FFFFFF; border: 0.5px solid #003D34;">
                 Encaminhamento de documentos emitidos/aprovados por esta Entidade Certificadora para arquivo nesta OM.
             </td>
         </tr>
     </table>
 
-    <div style="font-family: helvetica; font-size: 9.5pt; color: #111111; line-height: 1.55; margin-top: 10px;">
-        <p style="margin-bottom: 12px;">Prezado Senhor,</p>
+    <div style="font-family: helvetica; font-size: 8.8pt; color: #1F2925; line-height: 1.45; margin-top: 10px;">
+        <p style="margin-bottom: 6px;">Prezado Senhor,</p>
 
-        <p style="text-align: justify; margin-bottom: 14px;">
+        <p style="text-align: justify; margin-bottom: 8px;">
             Atendendo ao disposto no artigo da ' . $e($normamRef) . ', a Entidade Certificadora Amazon Naval vem, através do presente ofício, encaminhar os documentos anexados da seguinte embarcação:
         </p>
 
-        <p style="margin-bottom: 16px; line-height: 1.6;">
-            • <b>' . $e(mb_strtoupper($m['embarcacao_nome'], 'UTF-8')) . '</b> – ' . $e($citacaoDocumentos) . '
-        </p>
+        <table cellpadding="4" cellspacing="0" style="border-collapse: collapse; font-family: helvetica; width: 100%; border: 0.5px solid #003D34; margin-bottom: 8px;">
+            <thead>
+                <tr style="background-color: #003D34; color: #FFFFFF;">
+                    <th width="32%" style="font-size: 7.8pt; font-weight: bold; border: 0.5px solid #003D34; text-align: left;">
+                        EMBARCAÇÃO VINCULADA
+                    </th>
+                    <th width="68%" style="font-size: 7.8pt; font-weight: bold; border: 0.5px solid #003D34; text-align: left;">
+                        DOCUMENTOS TÉCNICOS ENCAMINHADOS
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td width="32%" style="font-size: 8pt; color: #1F2925; background-color: #F8FCFA; border: 0.5px solid #B8D9CC; vertical-align: top;">
+                        <b style="color: #003D34; font-size: 8.5pt;">' . $e(mb_strtoupper($m['embarcacao_nome'], 'UTF-8')) . '</b>' .
+                        (!empty($m['registro']) ? '<br><span style="font-size: 7.2pt; color: #557067;">Reg. Marinha: ' . $e($m['registro']) . '</span>' : '') .
+                        (!empty($m['cliente_nome']) ? '<br><span style="font-size: 7.2pt; color: #557067;">Armador: ' . $e($m['cliente_nome']) . '</span>' : '') . '
+                    </td>
+                    <td width="68%" style="font-size: 8pt; color: #1F2925; background-color: #FFFFFF; border: 0.5px solid #B8D9CC; vertical-align: top; line-height: 1.4;">
+                        • ' . $e($citacaoDocumentos) . '
+                    </td>
+                </tr>
+            </tbody>
+        </table>
 
-        <p style="margin-bottom: 14px;">
+        <p style="margin-bottom: 6px;">
             ' . $e($dataPorExtenso) . '
         </p>
 
-        <p style="margin-bottom: 8px;">
+        <p style="margin-bottom: 4px;">
             Atenciosamente,
         </p>
     </div>
@@ -265,16 +286,16 @@ if ($ehSaida) {
     <div style="height: 6px;">&nbsp;</div>
     <div style="text-align: center; width: 100%;">
         <div style="width: 260px; margin: 0 auto; text-align: center;">
-            <div style="border-bottom: 0.5px solid #222222; height: 26px; width: 180px; margin: 0 auto 4px auto;">&nbsp;</div>
-            <strong style="font-size: 9.5pt; color: #111111;">' . $e($assinanteNome) . '</strong><br>
-            <span style="font-size: 8.5pt; color: #555555;">' . $e($assinanteCargo) . '</span>' .
+            <div style="border-bottom: 0.5px solid #003D34; height: 18px; width: 180px; margin: 0 auto 4px auto;">&nbsp;</div>
+            <strong style="font-size: 9.5pt; color: #003D34;">' . $e($assinanteNome) . '</strong><br>
+            <span style="font-size: 8pt; color: #4A6B63;">' . $e($assinanteCargo) . '</span>' .
             ($assinado ? '
-            <div style="margin-top: 4px; font-size: 6.8pt; color: #087653; font-weight: bold;">
-                Documento Assinado Digitalmente com Fé Pública via Sistema Amazon Naval<br>
-                <span style="font-weight: normal; color: #555555;">Data: ' . date('d/m/Y \à\s H:i:s', strtotime($m['assinatura_em'] ?: 'now')) . ' · Hash: ' . $codigo . '</span>
+            <div style="margin-top: 6px; padding: 4px; border: 0.5px solid #B8D9CC; background-color: #E7F3EE; font-size: 6.8pt; color: #087653; font-weight: bold;">
+                CHANCELA DIGITAL COM FÉ PÚBLICA NAVAL · SISTEMA AMAZON NAVAL<br>
+                <span style="font-weight: normal; color: #4A6B63;">Data: ' . date('d/m/Y \à\s H:i:s', strtotime($m['assinatura_em'] ?: 'now')) . ' · Validação: ' . $codigo . '</span>
             </div>' : '
-            <div style="margin-top: 4px; font-size: 6.8pt; color: #888888; font-style: italic;">
-                (Ofício emitido aguardando assinatura digital no sistema)
+            <div style="margin-top: 6px; padding: 4px; border: 0.5px solid #D0DDD8; background-color: #F8FAF9; font-size: 6.5pt; color: #6A857D; font-style: italic;">
+                (Ofício oficial emitido no sistema aguardando assinatura digital)
             </div>') . '
         </div>
     </div>
@@ -347,40 +368,42 @@ if ($ehSaida) {
     </table>';
 }
 
-if (!empty($m['observacoes'])) {
-    $html .= '
-    <div style="height: 6px;">&nbsp;</div>
-    <div style="padding: 6px; border-left: 3px solid #087653; background-color: #f7faf9; font-size: 8pt; color: #2d4c42;">
-      <b>OBSERVAÇÕES:</b> ' . $e($m['observacoes']) . '
-    </div>';
-}
+if (!$ehSaida) {
+    if (!empty($m['observacoes'])) {
+        $html .= '
+        <div style="height: 6px;">&nbsp;</div>
+        <div style="padding: 6px; border-left: 3px solid #087653; background-color: #f7faf9; font-size: 8pt; color: #2d4c42;">
+          <b>OBSERVAÇÕES:</b> ' . $e($m['observacoes']) . '
+        </div>';
+    }
 
-$html .= '
-<div style="height: 12px;">&nbsp;</div>
-<table width="100%" cellpadding="5" cellspacing="0" style="border: 1px solid #cce0d8; background-color: #f4f9f7;" nobr="true">
-<tr>
-  <td>
-    <table width="100%" cellpadding="0" cellspacing="0">
+    $html .= '
+    <div style="height: 12px;">&nbsp;</div>
+    <table width="100%" cellpadding="5" cellspacing="0" style="border: 1px solid #cce0d8; background-color: #f4f9f7;" nobr="true">
     <tr>
-      <td width="65%">
-        <span style="font-size: 7pt; color: #087653; font-weight: bold;">CÓDIGO DE VALIDAÇÃO CRIPTOGRÁFICA (SHA-256):</span><br>
-        <span style="font-family: courier, monospace; font-size: 8.5pt; font-weight: bold; color: #173b32;">Código de validação: ' . $codigo . '</span>
-      </td>
-      <td width="35%" align="right">
-        <span style="font-size: 6.8pt; color: #608075;">Emitido digitalmente via Sistema Amazon Naval<br>Chave de Registro e Custódia Naval</span>
+      <td>
+        <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td width="65%">
+            <span style="font-size: 7pt; color: #087653; font-weight: bold;">CÓDIGO DE VALIDAÇÃO CRIPTOGRÁFICA (SHA-256):</span><br>
+            <span style="font-family: courier, monospace; font-size: 8.5pt; font-weight: bold; color: #173b32;">Código de validação: ' . $codigo . '</span>
+          </td>
+          <td width="35%" align="right">
+            <span style="font-size: 6.8pt; color: #608075;">Emitido digitalmente via Sistema Amazon Naval<br>Chave de Registro e Custódia Naval</span>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style="padding-top: 4px; border-top: 1px dashed #d0e2db;">
+            <span style="font-size: 6.8pt; color: #527066;">
+              Documento emitido nos termos das normas da Marinha do Brasil (DPC/NORMAM) com valor probatório de protocolo e custódia documental.
+            </span>
+          </td>
+        </tr>
+        </table>
       </td>
     </tr>
-    <tr>
-      <td colspan="2" style="padding-top: 4px; border-top: 1px dashed #d0e2db;">
-        <span style="font-size: 6.8pt; color: #527066;">
-          Documento emitido nos termos das normas da Marinha do Brasil (DPC/NORMAM) com valor probatório de protocolo e custódia documental.
-        </span>
-      </td>
-    </tr>
-    </table>
-  </td>
-</tr>
-</table>';
+    </table>';
+}
 
 $pdf->writeHTML($html, true, false, true, false, '');
 

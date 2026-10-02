@@ -331,7 +331,21 @@ function formatarCitacaoItemNaval(array $it): string
 
     // 4. Reconhecimento por palavras-chave com extração de número
     $descUpper = mb_strtoupper($descLimpa, 'UTF-8');
-    $ehProjeto = str_contains($descUpper, 'MEMORIAL') || str_contains($descUpper, 'PLANO') || str_contains($descUpper, 'PRANCHA') || str_contains($descUpper, 'ESTUDO') || str_contains($descUpper, 'CALCULO') || str_contains($descUpper, 'CÁLCULO') || str_contains($descUpper, 'DESENHO');
+    
+    // Tratamento prioritário para Análise de Planos / Pareceres Técnicos (evita falso positivo com "PLANO")
+    if (str_contains($descUpper, 'ANALISE') || str_contains($descUpper, 'ANÁLISE') || str_contains($descUpper, 'PARECER') || str_contains($descUpper, 'REL:AP') || str_contains($descUpper, 'RAP')) {
+        $numEncontrado = '';
+        if ($revLimpa !== '' && preg_match('/[0-9]+(?:\/[0-9]{2,4})?/', $revLimpa, $mR)) {
+            $numEncontrado = $mR[0];
+        } elseif (preg_match('/[0-9]+(?:\/[0-9]{2,4})?/', $descLimpa, $mD)) {
+            $numEncontrado = $mD[0];
+        }
+        if ($numEncontrado !== '') {
+            return 'AM-REL:AP ' . $numEncontrado;
+        }
+    }
+
+    $ehProjeto = str_contains($descUpper, 'MEMORIAL') || (str_contains($descUpper, 'PLANO') && !str_contains($descUpper, 'ANALIS')) || str_contains($descUpper, 'PRANCHA') || str_contains($descUpper, 'ESTUDO') || str_contains($descUpper, 'CALCULO') || str_contains($descUpper, 'CÁLCULO') || str_contains($descUpper, 'DESENHO');
 
     if (!$ehProjeto) {
         $sigla = null;
@@ -339,7 +353,6 @@ function formatarCitacaoItemNaval(array $it): string
         elseif (str_contains($descUpper, 'CSN') || (str_contains($descUpper, 'SEGURANÇA') && str_contains($descUpper, 'CERTIFICADO'))) $sigla = 'AM-CSN';
         elseif (str_contains($descUpper, 'CNARQ') || (str_contains($descUpper, 'ARQUEAÇÃO') && str_contains($descUpper, 'CERTIFICADO'))) $sigla = 'AM-CNARQ';
         elseif (str_contains($descUpper, 'CNBL') || (str_contains($descUpper, 'BORDA LIVRE') && str_contains($descUpper, 'CERTIFICADO'))) $sigla = 'AM-CNBL';
-        elseif (str_contains($descUpper, 'ANALISE') || str_contains($descUpper, 'PARECER') || str_contains($descUpper, 'REL:AP')) $sigla = 'AM-REL:AP';
         elseif (str_contains($descUpper, 'NARQ') || str_contains($descUpper, 'NOTA DE ARQUEAÇÃO')) $sigla = 'AM-NARQ';
         elseif (str_contains($descUpper, 'LP') || str_contains($descUpper, 'LICENÇA PROVISÓRIA')) $sigla = 'AM-LP';
         elseif (str_contains($descUpper, 'LC') || str_contains($descUpper, 'LICENÇA DE CONSTRUÇÃO')) $sigla = 'AM-LC';
