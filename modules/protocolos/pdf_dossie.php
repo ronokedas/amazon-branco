@@ -85,8 +85,14 @@ $codigoIntegridade = strtoupper(substr($hashDados, 0, 24));
 // Coleta estrita dos documentos enviados
 $docsCitados = [];
 foreach ($itens as $it) {
-    if (empty($it['mov_status']) || in_array($it['mov_status'], ['CONFIRMADA', 'RETIFICADA'], true)) {
+    if (empty($it['mov_status']) || $it['mov_status'] !== 'CANCELADA') {
         $docsCitados[] = formatarCitacaoItemNaval($it);
+    }
+}
+foreach ($documentos as $doc) {
+    $nomeDoc = trim($doc['nome_original'] ?? '');
+    if ($nomeDoc !== '') {
+        $docsCitados[] = $nomeDoc;
     }
 }
 $docsCitados = array_unique(array_filter($docsCitados));
@@ -104,6 +110,11 @@ if (empty($docsCitados)) {
     }
     if (!empty($d['certificado_tipo']) && !empty($d['certificado_id'])) {
         $docsCitados[] = 'AM-' . strtoupper($d['certificado_tipo']) . ': ' . $d['certificado_id'];
+    }
+    if (!empty($d['proposta_id'])) {
+        $qP = $pdo->prepare("SELECT numero FROM propostas WHERE id = :id");
+        $qP->execute([':id' => $d['proposta_id']]);
+        if ($numP = $qP->fetchColumn()) $docsCitados[] = 'AM-PROP: ' . $numP;
     }
 }
 
@@ -175,43 +186,43 @@ $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'
 // OFÍCIO OFICIAL AMAZON NAVAL (PÁGINA ÚNICA ESTILIZADA E MODERNA)
 // =========================================================================
 
-// 1. Logotipo oficial centralizado
+// 1. Logotipo oficial centralizado (destacado e proporcional ao modelo oficial)
 $logoFile = __DIR__ . '/../../img/logo.png';
 if (is_file($logoFile)) {
-    $pdf->Image($logoFile, 96, 10, 18, 0, 'PNG', '', '', true, 300, 'C');
-    $pdf->SetY(29.5);
+    $pdf->Image($logoFile, 91, 7.5, 28, 0, 'PNG', '', '', true, 300, 'C');
+    $pdf->SetY(37);
 } else {
     $pdf->SetY(12);
 }
 
 // 2. Cabeçalho Institucional
-$pdf->SetFont('helvetica', 'B', 11.5);
+$pdf->SetFont('helvetica', 'B', 12);
 $pdf->SetTextColor(13, 73, 65); // Verde naval oficial da Amazon
 $pdf->Cell(0, 5, 'AMAZON NAVAL', 0, 1, 'C');
 
-$pdf->SetFont('helvetica', 'B', 7);
+$pdf->SetFont('helvetica', 'B', 7.5);
 $pdf->SetTextColor(85, 105, 98);
 $pdf->Cell(0, 3.5, 'ENTIDADE CERTIFICADORA NAVAL CREDENCIADA PELA DPC / MARINHA DO BRASIL', 0, 1, 'C');
 
 $pdf->SetFont('helvetica', '', 7.2);
 $pdf->SetTextColor(55, 65, 60);
-$pdf->Cell(0, 3.5, 'TRAVESSA QUINTINO BOCAIÚVA, Nº 2301, EDIFÍCIO ROGÉLIO FERNANDEZ, SALA 1116. CREMAÇÃO,', 0, 1, 'C');
-$pdf->Cell(0, 3.5, 'BELÉM, PA – CEP: 66063-015 · FONE: (91) 99111-2065', 0, 1, 'C');
-$pdf->SetFont('helvetica', '', 7.2);
+$pdf->Cell(0, 3.4, 'TRAVESSA QUINTINO BOCAIÚVA, Nº 2301, EDIFÍCIO ROGÉLIO FERNANDEZ, SALA 1116. CREMAÇÃO,', 0, 1, 'C');
+$pdf->Cell(0, 3.4, 'BELÉM, PA – CEP: 66063-015 · FONE: (91) 99111-2065', 0, 1, 'C');
+$pdf->SetFont('helvetica', 'B', 7.2);
 $pdf->SetTextColor(13, 73, 65);
-$pdf->Cell(0, 3.5, 'www.amazonaval.com.br · amazoncertificados@gmail.com', 0, 1, 'C');
+$pdf->Cell(0, 3.4, 'www.amazonnaval.com.br · amazoncertificados@gmail.com', 0, 1, 'C');
 
 // Linha decorativa naval dupla (Verde e Dourado)
 $pdf->Ln(2);
 $yLinha = $pdf->GetY();
 $pdf->SetDrawColor(13, 73, 65);
-$pdf->SetLineWidth(0.5);
+$pdf->SetLineWidth(0.55);
 $pdf->Line(16, $yLinha, 194, $yLinha);
 $pdf->SetDrawColor(184, 157, 82); // Dourado naval sutil
-$pdf->SetLineWidth(0.2);
+$pdf->SetLineWidth(0.25);
 $pdf->Line(16, $yLinha + 0.8, 194, $yLinha + 0.8);
 
-$pdf->Ln(4);
+$pdf->Ln(3.5);
 
 // 3. Tabela Estruturada do Ofício (Modernizada combinando com a identidade visual)
 $htmlTabela = '

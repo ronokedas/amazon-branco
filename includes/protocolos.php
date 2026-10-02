@@ -176,45 +176,77 @@ function formatarDataExtensoNaval(?string $dt): string
 
 /**
  * Formata a citação estrita de um documento para o corpo do ofício naval (ex: AM-CSN: 107/26).
+ * Mantém o código normativo naval e preserva integralmente o nome dos documentos anexados.
  */
 function formatarCitacaoItemNaval(array $it): string
 {
     $desc = trim($it['descricao'] ?? '');
     $rev = trim($it['numero_revisao'] ?? '');
+    $arqNome = trim($it['arquivo_nome'] ?? '');
 
+    if ($desc === '' && $arqNome !== '') {
+        $desc = pathinfo($arqNome, PATHINFO_FILENAME);
+    }
+    if ($desc === '') {
+        return 'Documento Técnico';
+    }
+
+    // Se já for código canônico naval puro (ex: "AM-CSN: 107/26" ou "AM-REL-V: 51/26")
+    if (preg_match('/^AM-[A-Z0-9:\/\-\.\s]+$/i', $desc)) {
+        return strtoupper(trim($desc));
+    }
+
+    // Se contiver código oficial AM-XXX no texto (ex: "Proposta nº AM-ORC-901/26")
     if (preg_match('/AM-[A-Z0-9:\/\-\.]+/i', $desc, $mMatch)) {
-        return strtoupper(trim($mMatch[0]));
+        $cod = strtoupper(trim($mMatch[0]));
+        $resto = trim(preg_replace('/AM-[A-Z0-9:\/\-\.]+/i', '', $desc));
+        $resto = trim(preg_replace('/^(nº|no\.|n\.|#|[\(\-\:\s,])+|(\s*(nº|no\.|n\.|#|[\)\-\:\s,]))+$/iu', '', $resto));
+        if ($resto !== '' && mb_strlen($resto) > 2) {
+            return $cod . ' – ' . $resto . ($rev !== '' ? ' (Rev. ' . $rev . ')' : '');
+        }
+        return $cod . ($rev !== '' ? ' (Rev. ' . $rev . ')' : '');
     }
 
-    $sigla = 'AM-DOC';
     $descUpper = mb_strtoupper($desc, 'UTF-8');
-    if (str_contains($descUpper, 'VISTORIA') || str_contains($descUpper, 'REL-V')) {
-        $sigla = 'AM-REL-V';
-    } elseif (str_contains($descUpper, 'CSN') || str_contains($descUpper, 'SEGURANÇA')) {
-        $sigla = 'AM-CSN';
-    } elseif (str_contains($descUpper, 'CNARQ') || str_contains($descUpper, 'ARQUEAÇÃO')) {
-        $sigla = 'AM-CNARQ';
-    } elseif (str_contains($descUpper, 'CNBL') || str_contains($descUpper, 'BORDA LIVRE')) {
-        $sigla = 'AM-CNBL';
-    } elseif (str_contains($descUpper, 'ANALISE') || str_contains($descUpper, 'PARECER') || str_contains($descUpper, 'REL:AP') || str_contains($descUpper, 'PLANO')) {
-        $sigla = 'AM-REL:AP';
-    } elseif (str_contains($descUpper, 'NARQ') || str_contains($descUpper, 'NOTA DE ARQUEAÇÃO')) {
-        $sigla = 'AM-NARQ';
-    } elseif (str_contains($descUpper, 'LP') || str_contains($descUpper, 'LICENÇA PROVISÓRIA')) {
-        $sigla = 'AM-LP';
-    } elseif (str_contains($descUpper, 'LC') || str_contains($descUpper, 'CONSTRUÇÃO') || str_contains($descUpper, 'ALTERAÇÃO')) {
-        $sigla = 'AM-LC';
-    } elseif (str_contains($descUpper, 'CHT')) {
-        $sigla = 'AM-CHT';
+    $ehProjetoOuMemorial = str_contains($descUpper, 'MEMORIAL') || str_contains($descUpper, 'PLANO') || str_contains($descUpper, 'PRANCHA') || str_contains($descUpper, 'ESTUDO') || str_contains($descUpper, 'CALCULO') || str_contains($descUpper, 'CÁLCULO') || str_contains($descUpper, 'DESENHO');
+
+    $sigla = null;
+    if (!$ehProjetoOuMemorial) {
+        if (str_contains($descUpper, 'VISTORIA') || str_contains($descUpper, 'REL-V')) {
+            $sigla = 'AM-REL-V';
+        } elseif (str_contains($descUpper, 'CSN') || (str_contains($descUpper, 'SEGURANÇA') && str_contains($descUpper, 'CERTIFICADO'))) {
+            $sigla = 'AM-CSN';
+        } elseif (str_contains($descUpper, 'CNARQ') || (str_contains($descUpper, 'ARQUEAÇÃO') && str_contains($descUpper, 'CERTIFICADO'))) {
+            $sigla = 'AM-CNARQ';
+        } elseif (str_contains($descUpper, 'CNBL') || (str_contains($descUpper, 'BORDA LIVRE') && str_contains($descUpper, 'CERTIFICADO'))) {
+            $sigla = 'AM-CNBL';
+        } elseif (str_contains($descUpper, 'ANALISE') || str_contains($descUpper, 'PARECER') || str_contains($descUpper, 'REL:AP')) {
+            $sigla = 'AM-REL:AP';
+        } elseif (str_contains($descUpper, 'NARQ') || str_contains($descUpper, 'NOTA DE ARQUEAÇÃO')) {
+            $sigla = 'AM-NARQ';
+        } elseif (str_contains($descUpper, 'LP') || str_contains($descUpper, 'LICENÇA PROVISÓRIA')) {
+            $sigla = 'AM-LP';
+        } elseif (str_contains($descUpper, 'LC') || str_contains($descUpper, 'LICENÇA DE CONSTRUÇÃO')) {
+            $sigla = 'AM-LC';
+        } elseif (str_contains($descUpper, 'CHT')) {
+            $sigla = 'AM-CHT';
+        }
     }
 
-    if ($rev !== '') {
-        return $sigla . ': ' . $rev;
+    $numOuRev = $rev;
+    if ($numOuRev === '' && preg_match('/[0-9]+(\/[0-9]{2,4})?/', $desc, $mNum)) {
+        $numOuRev = $mNum[0];
     }
-    if (preg_match('/[0-9]+(\/[0-9]{2,4})?/', $desc, $mNum)) {
-        return $sigla . ': ' . $mNum[0];
+
+    if ($sigla && $numOuRev !== '') {
+        return $sigla . ': ' . $numOuRev;
     }
-    return $sigla . ': ' . $desc;
+
+    $res = $desc;
+    if ($rev !== '' && !str_contains($desc, $rev)) {
+        $res .= ' (Rev. ' . $rev . ')';
+    }
+    return $res;
 }
 
 /**
