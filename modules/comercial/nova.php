@@ -32,8 +32,8 @@ if ($modoEdicao) {
     $cargoEdicao = getCargo();
     $usuarioEdicao = (string)($_SESSION['usuario_id'] ?? '');
     $podeEditar = $propostaEdicao
-        && in_array($cargoEdicao, ['ADMIN', 'VENDEDOR'], true)
-        && ($cargoEdicao === 'ADMIN' || (string)$propostaEdicao['criado_por'] === $usuarioEdicao)
+        && in_array($cargoEdicao, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)
+        && ($cargoEdicao === 'ADMIN' || $cargoEdicao === 'SECRETARIA' || (string)$propostaEdicao['criado_por'] === $usuarioEdicao)
         && ($propostaEdicao['status'] ?? '') === 'rascunho'
         && empty($propostaEdicao['assinado'])
         && financeiroPodeAcessarEscritorio($pdo, (string)($propostaEdicao['escritorio_id'] ?? ''));

@@ -69,10 +69,10 @@ if (!empty($where)) {
 }
 
 // ============================================
-// INDICADORES COMERCIAIS (APENAS ADMIN)
+// INDICADORES COMERCIAIS (ADMIN E SECRETARIA)
 // ============================================
 $indicadores = [];
-if ($cargo === 'ADMIN') {
+if ($cargo === 'ADMIN' || $cargo === 'SECRETARIA') {
     // Mês atual
     $mesAtual = date('Y-m');
 
@@ -262,7 +262,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </div>
     </div>
 
-    <?php if ($cargo === 'ADMIN'): ?>
+    <?php if ($cargo === 'ADMIN' || $cargo === 'SECRETARIA'): ?>
     <!-- ===== INDICADORES COMERCIAIS ===== -->
     <div class="cards-grid" data-testid="indicadores-comerciais"
          data-total-propostas="<?php echo $indicadores['total_mes']; ?>"
@@ -340,10 +340,15 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     <?php
         $statusFoco = $statusConfig[$propostaFoco['status']] ?? ['label' => $propostaFoco['status'], 'cor' => 'secondary'];
         $embarcacoesFoco = $embarcacoesPorProposta[$propostaFoco['id']] ?? [];
-        $podeEditarFoco = in_array($cargo, ['ADMIN', 'VENDEDOR'], true)
-            && ($cargo === 'ADMIN' || ($propostaFoco['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
+        $podeEditarFoco = in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)
+            && ($cargo === 'ADMIN' || $cargo === 'SECRETARIA' || ($propostaFoco['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
             && ($propostaFoco['status'] ?? '') === 'rascunho'
             && empty($propostaFoco['assinado']);
+        $podeAprovarManualFoco = in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)
+            && empty($propostaFoco['assinado'])
+            && ($propostaFoco['status'] ?? '') !== 'assinada'
+            && !in_array(($propostaFoco['status'] ?? ''), ['cancelada', 'recusada'], true)
+            && ($cargo === 'ADMIN' || $cargo === 'SECRETARIA' || ($propostaFoco['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''));
     ?>
     <div data-testid="proposta-foco-card" style="margin-bottom: 22px; border: 1px solid rgba(52, 152, 219, 0.45); border-left: 6px solid #3498DB; border-radius: 8px; background: linear-gradient(135deg, rgba(52, 152, 219, 0.16), rgba(46, 204, 113, 0.08)); overflow: hidden;">
         <div style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; align-items: center;">
@@ -387,6 +392,17 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <i class="fas fa-list"></i> Ver todas
                     </a>
                 </div>
+                <?php if ($podeAprovarManualFoco): ?>
+                <form method="POST" action="<?php echo APP_URL; ?>comercial/propostas/actions" style="margin: 0;"
+                      onsubmit="return confirm('Aceitar e marcar a proposta <?php echo h(addslashes($propostaFoco['numero'])); ?> como assinada manualmente? Ela seguirá para o fluxo de agendamento e financeiro.');">
+                    <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
+                    <input type="hidden" name="action" value="aprovar_assinatura_manual">
+                    <input type="hidden" name="id" value="<?php echo h($propostaFoco['id']); ?>">
+                    <button type="submit" class="btn btn-success btn-sm" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fas fa-circle-check"></i> Aceitar / Assinar Manualmente
+                    </button>
+                </form>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -463,7 +479,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         Clique em "Nova Proposta" para criar a primeira proposta do sistema.
                     <?php endif; ?>
                 </p>
-                <?php if ($cargo === 'ADMIN'): ?>
+                <?php if ($cargo === 'ADMIN' || $cargo === 'SECRETARIA'): ?>
                 <a href="<?php echo APP_URL; ?>comercial/nova" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Nova Proposta
                 </a>
@@ -478,12 +494,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     $embNomes = !empty($embarcacoesLista) ? implode(', ', $embarcacoesLista) : 'N/I';
                     $statusCfg = $statusConfig[$p['status']] ?? ['label' => $p['status'], 'cor' => 'secondary'];
                     $assinada = !empty($p['assinado']) || ($p['status'] ?? '') === 'assinada';
-                    $podeEditar = in_array($cargo, ['ADMIN', 'VENDEDOR'], true)
-                        && ($cargo === 'ADMIN' || ($p['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
+                    $podeEditar = in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)
+                        && ($cargo === 'ADMIN' || $cargo === 'SECRETARIA' || ($p['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
                         && ($p['status'] ?? '') === 'rascunho'
                         && !$assinada;
-                    $podeAprovarManual = in_array($cargo, ['ADMIN', 'VENDEDOR'], true)
-                        && ($cargo === 'ADMIN' || ($p['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
+                    $podeAprovarManual = in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)
+                        && ($cargo === 'ADMIN' || $cargo === 'SECRETARIA' || ($p['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
                         && !$assinada
                         && !in_array(($p['status'] ?? ''), ['cancelada', 'recusada'], true);
                 ?>
@@ -532,7 +548,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                            class="proposal-action proposal-action-pdf" title="Abrir PDF" target="_blank">
                             <i class="fas fa-file-pdf"></i>
                         </a>
-                        <?php if ($cargo === 'ADMIN' && ($p['status'] ?? '') !== 'cancelada'): ?>
+                        <?php if (($cargo === 'ADMIN' || $cargo === 'SECRETARIA') && ($p['status'] ?? '') !== 'cancelada'): ?>
                             <form method="POST" action="<?php echo APP_URL; ?>comercial/propostas/actions"
                                   onsubmit="return confirm('Enviar proposta <?php echo h(addslashes($p['numero'])); ?> por e-mail para o cliente?')">
                                 <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
@@ -551,11 +567,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <?php endif; ?>
                         <?php if ($podeAprovarManual): ?>
                             <form method="POST" action="<?php echo APP_URL; ?>comercial/propostas/actions"
-                                  onsubmit="return confirm('Autorizar <?php echo h(addslashes($p['numero'])); ?> sem a assinatura digital do cliente? A proposta será marcada como assinada e criará os lançamentos e agendamentos.');">
+                                  onsubmit="return confirm('Aceitar e marcar a proposta <?php echo h(addslashes($p['numero'])); ?> como assinada manualmente? Ela seguirá para o fluxo de agendamento e financeiro.');">
                                 <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
                                 <input type="hidden" name="action" value="aprovar_assinatura_manual">
                                 <input type="hidden" name="id" value="<?php echo h($pid); ?>">
-                                <button type="submit" class="proposal-action proposal-action-approve" title="Autorizar e marcar como assinada" aria-label="Autorizar <?php echo h($p['numero']); ?> sem assinatura digital">
+                                <button type="submit" class="proposal-action proposal-action-approve" title="Aceitar / Assinar Proposta Manualmente" aria-label="Aceitar e marcar <?php echo h($p['numero']); ?> como assinada">
                                     <i class="fas fa-circle-check"></i>
                                 </button>
                             </form>

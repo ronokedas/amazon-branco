@@ -222,10 +222,15 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
         </div>
         <div style="display: flex; gap: 10px;">
             <?php
-                $podeEditarDetalhe = in_array($cargo, ['ADMIN', 'VENDEDOR'], true)
-                    && ($cargo === 'ADMIN' || ($propostaDetalhe['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
+                $podeEditarDetalhe = in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)
+                    && ($cargo === 'ADMIN' || $cargo === 'SECRETARIA' || ($propostaDetalhe['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
                     && ($propostaDetalhe['status'] ?? '') === 'rascunho'
                     && empty($propostaDetalhe['assinado']);
+                $podeAprovarManualDetalhe = in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)
+                    && empty($propostaDetalhe['assinado'])
+                    && ($propostaDetalhe['status'] ?? '') !== 'assinada'
+                    && !in_array(($propostaDetalhe['status'] ?? ''), ['cancelada', 'recusada'], true)
+                    && ($cargo === 'ADMIN' || $cargo === 'SECRETARIA' || ($propostaDetalhe['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''));
             ?>
             <?php if ($podeEditarDetalhe): ?>
             <a href="<?php echo APP_URL; ?>comercial/nova?id=<?php echo urlencode($idDetalhe); ?>" class="btn btn-primary">
@@ -235,6 +240,17 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
             <a href="<?php echo APP_URL; ?>comercial/pdf?id=<?php echo urlencode($idDetalhe); ?>" class="btn btn-primary" target="_blank">
                 <i class="fas fa-file-pdf"></i> Gerar PDF
             </a>
+            <?php if ($podeAprovarManualDetalhe): ?>
+            <form method="POST" action="<?php echo APP_URL; ?>comercial/propostas/actions" style="display: inline;"
+                  onsubmit="return confirm('Aceitar e marcar a proposta <?php echo h(addslashes($propostaDetalhe['numero'])); ?> como assinada manualmente? Ela seguirá para o fluxo de agendamento e financeiro.');">
+                <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
+                <input type="hidden" name="action" value="aprovar_assinatura_manual">
+                <input type="hidden" name="id" value="<?php echo h($idDetalhe); ?>">
+                <button type="submit" class="btn btn-success" title="Aceitar e Marcar como Assinada">
+                    <i class="fas fa-circle-check"></i> Aceitar / Assinar Manualmente
+                </button>
+            </form>
+            <?php endif; ?>
             <?php if (in_array($cargo, ['ADMIN', 'VENDEDOR']) && !empty($propostaDetalhe['cliente_email'])): ?>
             <form method="POST" action="<?php echo APP_URL; ?>comercial/propostas/actions" style="display: inline;"
                   onsubmit="return confirm('Enviar proposta <?php echo h(addslashes($propostaDetalhe['numero'])); ?> por e-mail para <?php echo h(addslashes($propostaDetalhe['cliente_email'])); ?>?')">
@@ -462,7 +478,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                         Clique em "Nova Proposta" para criar a primeira proposta.
                     <?php endif; ?>
                 </p>
-                <?php if (in_array($cargo, ['ADMIN', 'VENDEDOR'])): ?>
+                <?php if (in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'])): ?>
                 <a href="<?php echo APP_URL; ?>comercial/nova" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Nova Proposta
                 </a>
@@ -489,10 +505,15 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                         $embarcacoesLista = $embarcacoesPorProposta[$pid] ?? [];
                         $embNomes = !empty($embarcacoesLista) ? implode(', ', $embarcacoesLista) : '<em class="text-muted">N/I</em>';
                         $statusCfg = $statusConfig[$p['status']] ?? ['label' => $p['status'], 'cor' => 'secondary'];
-                        $podeEditar = in_array($cargo, ['ADMIN', 'VENDEDOR'], true)
-                            && ($cargo === 'ADMIN' || ($p['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
+                        $podeEditar = in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)
+                            && ($cargo === 'ADMIN' || $cargo === 'SECRETARIA' || ($p['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
                             && ($p['status'] ?? '') === 'rascunho'
                             && empty($p['assinado']);
+                        $podeAprovarManual = in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)
+                            && ($cargo === 'ADMIN' || $cargo === 'SECRETARIA' || ($p['criado_por'] ?? '') === ($_SESSION['usuario_id'] ?? ''))
+                            && empty($p['assinado'])
+                            && ($p['status'] ?? '') !== 'assinada'
+                            && !in_array(($p['status'] ?? ''), ['cancelada', 'recusada'], true);
                     ?>
                     <tr>
                         <td>
@@ -544,7 +565,18 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                     <i class="fas fa-envelope"></i>
                                 </button>
                                 <?php endif; ?>
-                                <?php if ($cargo === 'ADMIN'): ?>
+                                <?php if ($podeAprovarManual): ?>
+                                <form method="POST" action="<?php echo APP_URL; ?>comercial/propostas/actions" style="display: inline;"
+                                      onsubmit="return confirm('Aceitar e marcar a proposta <?php echo h(addslashes($p['numero'])); ?> como assinada manualmente? Ela seguirá para o fluxo de agendamento e financeiro.');">
+                                    <input type="hidden" name="csrf_token" value="<?php echo gerarCSRF(); ?>">
+                                    <input type="hidden" name="action" value="aprovar_assinatura_manual">
+                                    <input type="hidden" name="id" value="<?php echo h($p['id']); ?>">
+                                    <button type="submit" class="btn btn-success btn-sm" title="Aceitar / Assinar Manualmente" style="padding: 4px 8px;">
+                                        <i class="fas fa-circle-check"></i>
+                                    </button>
+                                </form>
+                                <?php endif; ?>
+                                <?php if ($cargo === 'ADMIN' || $cargo === 'SECRETARIA'): ?>
                                     <?php if ($p['status'] === 'enviada' || $p['status'] === 'rascunho'): ?>
                                     <form method="POST" action="<?php echo APP_URL; ?>comercial/propostas/actions" style="display: inline;"
                                           onsubmit="return confirm('Marcar proposta <?php echo h(addslashes($p['numero'])); ?> como APROVADA?')">

@@ -5,7 +5,8 @@
 const ESCRITORIO_MATRIZ_ID = '00000000-0000-4000-8000-000000000100';
 
 function financeiroEhAdmin(): bool {
-    return getCargo() === 'ADMIN';
+    $cargo = getCargo();
+    return $cargo === 'ADMIN' || $cargo === 'SECRETARIA';
 }
 
 function financeiroEscritorios(PDO $pdo, bool $somenteAtivos = true): array {

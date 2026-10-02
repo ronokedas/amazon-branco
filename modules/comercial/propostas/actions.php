@@ -499,7 +499,7 @@ if ($action !== '') {
 
             $cargoAtual = getCargo();
             $usuarioAtual = (string)($_SESSION['usuario_id'] ?? '');
-            if (!in_array($cargoAtual, ['ADMIN', 'VENDEDOR'], true)) {
+            if (!in_array($cargoAtual, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)) {
                 throw new RuntimeException('Seu perfil não pode editar propostas.');
             }
 
@@ -923,7 +923,7 @@ if ($action !== '') {
         try {
             $cargoAtual = getCargo();
             $usuarioAtualId = (string)($_SESSION['usuario_id'] ?? '');
-            if (!in_array($cargoAtual, ['ADMIN', 'VENDEDOR'], true)) {
+            if (!in_array($cargoAtual, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)) {
                 setMensagem('error', 'Seu perfil não pode autorizar propostas sem assinatura digital.');
                 redirecionar(APP_URL . 'comercial');
             }
@@ -980,7 +980,7 @@ if ($action !== '') {
                 ':ip' => $assinaturaIp,
                 ':data' => $dataAssinatura,
                 ':nome' => $assinanteNome,
-                ':doc' => 'Autorização interna sem assinatura digital',
+                ':doc' => 'Autorização interna sem assinatura digital (' . ($cargoAtual === 'SECRETARIA' ? 'Secretaria' : $cargoAtual) . ')',
                 ':id' => $id,
             ]);
 
@@ -995,15 +995,15 @@ if ($action !== '') {
 
             $pdo->commit();
 
-            log_atividade('proposta_aprovada_assinatura_manual', "Proposta {$prop['numero']} autorizada internamente sem assinatura digital por {$assinanteNome}.");
+            log_atividade('proposta_aprovada_assinatura_manual', "Proposta {$prop['numero']} aceita/autorizada internamente por {$assinanteNome} ({$cargoAtual}).");
             if ($proximoAgendamentoId !== null) {
-                setMensagem('success', "Proposta {$prop['numero']} autorizada e marcada como assinada. Complete agora os dados do agendamento.");
+                setMensagem('success', "Proposta {$prop['numero']} aceita e marcada como assinada. Complete agora os dados do agendamento.");
                 redirecionar(
                     APP_URL . 'agendamentos/form?id=' . urlencode($proximoAgendamentoId) . '&fluxo_proposta=1'
                 );
             }
 
-            setMensagem('success', "Proposta {$prop['numero']} autorizada e marcada como assinada. Não há vistoria pendente para agendar.");
+            setMensagem('success', "Proposta {$prop['numero']} aceita e marcada como assinada. Não há vistoria pendente para agendar.");
             redirecionar(APP_URL . 'comercial?proposta=' . urlencode($id));
         } catch (Exception $e) {
             if ($pdo->inTransaction()) {
