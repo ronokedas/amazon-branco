@@ -65,7 +65,7 @@ try {
         $params[':busca2'] = '%' . $busca . '%';
     }
 
-    if ($filtro_cargo !== '' && in_array($filtro_cargo, ['ADMIN', 'VENDEDOR', 'VISTORIADOR', 'ANALISTA'], true)) {
+    if ($filtro_cargo !== '' && in_array($filtro_cargo, ['ADMIN', 'VENDEDOR', 'VISTORIADOR', 'ANALISTA', 'SECRETARIA'], true)) {
         $where .= " AND u.cargo = :cargo";
         $params[':cargo'] = $filtro_cargo;
     }

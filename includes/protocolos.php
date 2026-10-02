@@ -1,13 +1,66 @@
 <?php
+function protocoloGarantirEstruturaOficio(?PDO $pdo = null): void
+{
+    static $verificado = false;
+    if ($verificado) return;
+    $verificado = true;
+
+    $pdo = $pdo ?: ($GLOBALS['pdo'] ?? null);
+    if (!$pdo) return;
+
+    try {
+        $colsDossies = $pdo->query("SHOW COLUMNS FROM protocolo_dossies")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $novasColsDossies = [
+            'destinatario_autoridade' => 'VARCHAR(255) NULL',
+            'numero_oficio' => 'VARCHAR(50) NULL',
+            'normam_referencia' => "VARCHAR(50) NULL DEFAULT 'NORMAM 202/DPC'",
+            'assinado' => 'TINYINT(1) NOT NULL DEFAULT 0',
+            'assinatura_em' => 'DATETIME NULL',
+            'responsavel_assinatura_id' => 'INT NULL',
+            'assinante_nome' => 'VARCHAR(200) NULL',
+            'assinante_cargo' => 'VARCHAR(200) NULL',
+            'assinante_registro' => 'VARCHAR(100) NULL',
+            'assinatura_imagem' => 'LONGTEXT NULL',
+            'assinatura_ip' => 'VARCHAR(45) NULL',
+        ];
+        foreach ($novasColsDossies as $col => $def) {
+            if (!in_array($col, $colsDossies, true)) {
+                $pdo->exec("ALTER TABLE protocolo_dossies ADD COLUMN {$col} {$def}");
+            }
+        }
+
+        $colsMovs = $pdo->query("SHOW COLUMNS FROM protocolo_movimentacoes")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $novasColsMovs = [
+            'destinatario_autoridade' => 'VARCHAR(255) NULL',
+            'numero_oficio' => 'VARCHAR(50) NULL',
+            'assinado' => 'TINYINT(1) NOT NULL DEFAULT 0',
+            'assinatura_em' => 'DATETIME NULL',
+            'responsavel_assinatura_id' => 'INT NULL',
+            'assinante_nome' => 'VARCHAR(200) NULL',
+            'assinante_cargo' => 'VARCHAR(200) NULL',
+            'assinante_registro' => 'VARCHAR(100) NULL',
+            'assinatura_imagem' => 'LONGTEXT NULL',
+            'assinatura_ip' => 'VARCHAR(45) NULL',
+        ];
+        foreach ($novasColsMovs as $col => $def) {
+            if (!in_array($col, $colsMovs, true)) {
+                $pdo->exec("ALTER TABLE protocolo_movimentacoes ADD COLUMN {$col} {$def}");
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('Erro ao garantir estrutura de ofício: ' . $e->getMessage());
+    }
+}
 
 function protocoloExigirAcesso(): void
 {
     exigirAcesso('protocolos_documentais');
+    protocoloGarantirEstruturaOficio();
 }
 
 function protocoloUsuarioPodeAcessar(PDO $pdo, array $dossie): bool
 {
-    if (getCargo() === 'ADMIN') return true;
+    if (in_array(getCargo(), ['ADMIN', 'SECRETARIA'], true)) return true;
     if (!podeAcessar('protocolos_documentais')) return false;
     $usuario = (string)($_SESSION['usuario_id'] ?? '');
     if ($usuario === '') return false;

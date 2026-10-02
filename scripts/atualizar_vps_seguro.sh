@@ -73,12 +73,22 @@ if docker ps --format '{{.Names}}' | grep -q "erp_db"; then
         done
     fi
 
-    # 3. Garantia explícita de colunas críticas para emissão de licenças e catálogo de serviços (MySQL 8.0)
+    # 3. Garantia explícita de colunas críticas para emissão de licenças, ofícios e assinaturas (MySQL 8.0)
     docker exec -i erp_db mysql -u"$DB_USER" -p"$DB_PASS" --default-character-set=utf8mb4 "$DB_NAME" -e "
         SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'certificados_lc' AND COLUMN_NAME = 'observacoes');
         SET @sql = IF(@col_exists = 0, 'ALTER TABLE certificados_lc ADD COLUMN observacoes TEXT NULL AFTER dados_json', 'SELECT 1');
         PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
         ALTER TABLE servicos MODIFY COLUMN certificado_modelo VARCHAR(20) NULL;
+
+        -- Garantir colunas de ofício e assinatura em protocolo_dossies
+        SET @col_pd = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'protocolo_dossies' AND COLUMN_NAME = 'assinado');
+        SET @sql_pd = IF(@col_pd = 0, 'ALTER TABLE protocolo_dossies ADD COLUMN destinatario_autoridade VARCHAR(255) NULL, ADD COLUMN numero_oficio VARCHAR(50) NULL, ADD COLUMN normam_referencia VARCHAR(50) NULL DEFAULT \"NORMAM 202/DPC\", ADD COLUMN assinado TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN assinatura_em DATETIME NULL, ADD COLUMN responsavel_assinatura_id INT NULL, ADD COLUMN assinante_nome VARCHAR(200) NULL, ADD COLUMN assinante_cargo VARCHAR(200) NULL, ADD COLUMN assinante_registro VARCHAR(100) NULL, ADD COLUMN assinatura_imagem LONGTEXT NULL, ADD COLUMN assinatura_ip VARCHAR(45) NULL', 'SELECT 1');
+        PREPARE stmt_pd FROM @sql_pd; EXECUTE stmt_pd; DEALLOCATE PREPARE stmt_pd;
+
+        -- Garantir colunas de ofício e assinatura em protocolo_movimentacoes
+        SET @col_pm = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'protocolo_movimentacoes' AND COLUMN_NAME = 'assinado');
+        SET @sql_pm = IF(@col_pm = 0, 'ALTER TABLE protocolo_movimentacoes ADD COLUMN destinatario_autoridade VARCHAR(255) NULL, ADD COLUMN numero_oficio VARCHAR(50) NULL, ADD COLUMN assinado TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN assinatura_em DATETIME NULL, ADD COLUMN responsavel_assinatura_id INT NULL, ADD COLUMN assinante_nome VARCHAR(200) NULL, ADD COLUMN assinante_cargo VARCHAR(200) NULL, ADD COLUMN assinante_registro VARCHAR(100) NULL, ADD COLUMN assinatura_imagem LONGTEXT NULL, ADD COLUMN assinatura_ip VARCHAR(45) NULL', 'SELECT 1');
+        PREPARE stmt_pm FROM @sql_pm; EXECUTE stmt_pm; DEALLOCATE PREPARE stmt_pm;
     " 2>/dev/null || true
 
     # 4. Executa dinamicamente TODAS as migrações novas que ainda não foram aplicadas (099, 100, 101, 102, 103, 104, 105...)

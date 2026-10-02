@@ -21,12 +21,12 @@ function dashMetaDoMes(PDO $pdo, string $cargo, string $usuarioId): array
     $fim = date('Y-m-t');
     $escritorioId = null;
 
-    if ($cargo !== 'ADMIN') {
+    if ($cargo !== 'ADMIN' && $cargo !== 'SECRETARIA') {
         $escritorios = financeiroEscritoriosUsuario($pdo, $usuarioId);
         $escritorioId = $escritorios[0]['id'] ?? null;
     }
 
-    if ($cargo === 'ADMIN') {
+    if ($cargo === 'ADMIN' || $cargo === 'SECRETARIA') {
         $meta = dashScalar($pdo, "SELECT COALESCE(SUM(fm.valor),0) FROM financeiro_metas_mensais fm JOIN escritorios e ON e.id=fm.escritorio_id AND e.ativo=1 WHERE fm.usuario_id IS NULL AND fm.competencia=:competencia", [':competencia'=>$competencia]);
         $realizado = dashScalar($pdo, "SELECT COALESCE(SUM(valor),0) FROM financeiro_lancamentos WHERE ativo=1 AND tipo='RECEITA' AND status='PAGO' AND data BETWEEN :inicio AND :fim", [':inicio'=>$inicio, ':fim'=>$fim]);
         $mensagens = dashRows($pdo, "SELECT e.nome,fm.mensagem FROM financeiro_metas_mensais fm JOIN escritorios e ON e.id=fm.escritorio_id AND e.ativo=1 WHERE fm.usuario_id IS NULL AND fm.competencia=:competencia AND TRIM(COALESCE(fm.mensagem,''))<>'' ORDER BY e.nome", [':competencia'=>$competencia]);
@@ -42,7 +42,7 @@ function dashMetaDoMes(PDO $pdo, string $cargo, string $usuarioId): array
         $mensagem = '';
     }
 
-    $escopo = $cargo === 'ADMIN' ? 'todos os escritórios' : (string)($escritorios[0]['nome'] ?? 'seu escritório');
+    $escopo = ($cargo === 'ADMIN' || $cargo === 'SECRETARIA') ? 'todos os escritórios' : (string)($escritorios[0]['nome'] ?? 'seu escritório');
     return ['valor'=>$meta, 'realizado'=>$realizado, 'mensagem'=>$mensagem, 'escopo'=>$escopo];
 }
 

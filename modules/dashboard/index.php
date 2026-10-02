@@ -12,16 +12,16 @@ $cargo = getCargo() ?: 'VISTORIADOR';
 $usuarioId = $_SESSION['usuario_id'] ?? '';
 $forceRefresh = !empty($_GET['refresh']);
 $dashboard = dashboardGetCachedData($pdo, $cargo, $usuarioId, $forceRefresh, 45);
-$viewMap = ['ADMIN'=>'admin.php','VENDEDOR'=>'vendedor.php','VISTORIADOR'=>'vistoriador.php','ANALISTA'=>'analista.php'];
-$titulo_page = match($cargo) { 'ADMIN'=>'Central de comando', 'VENDEDOR'=>'Painel comercial', 'ANALISTA'=>'Central de análise', default=>'Minha operação' } . ' - Amazon Certificadora';
+$viewMap = ['ADMIN'=>'admin.php','SECRETARIA'=>'admin.php','VENDEDOR'=>'vendedor.php','VISTORIADOR'=>'vistoriador.php','ANALISTA'=>'analista.php'];
+$titulo_page = match($cargo) { 'ADMIN', 'SECRETARIA'=>'Central de comando', 'VENDEDOR'=>'Painel comercial', 'ANALISTA'=>'Central de análise', default=>'Minha operação' } . ' - Amazon Certificadora';
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 ?>
-<main class="role-dashboard role-dashboard--<?= strtolower(h($cargo)) ?>" id="mainContent">
+<main class="role-dashboard role-dashboard--<?= in_array($cargo, ['ADMIN', 'SECRETARIA'], true) ? 'admin' : strtolower(h($cargo)) ?>" id="mainContent">
     <?php $feedbackDashboard=feedbackResumoNaoLidas($pdo,$usuarioId,3); if($feedbackDashboard['count']): ?>
     <section class="feedback-dashboard-card"><div><i class="fa-regular fa-comments"></i><span><strong><?= $feedbackDashboard['count'] ?> conversa<?= $feedbackDashboard['count']===1?'':'s' ?> com novidades</strong><small><?php foreach($feedbackDashboard['recentes'] as $i=>$r):?><?= $i?' · ':'' ?><?=h($r['remetente'])?>: <?=h(mb_strimwidth($r['previa'],0,45,'…'))?><?php endforeach;?></small></span></div><a href="<?=APP_URL?>feedback">Abrir Central <i class="fa-solid fa-arrow-right"></i></a></section>
     <?php endif; ?>
-    <?php require __DIR__ . '/views/' . ($viewMap[$cargo] ?? 'vistoriador.php'); ?>
+    <?php require __DIR__ . '/views/' . ($viewMap[$cargo] ?? 'admin.php'); ?>
     <footer class="role-dashboard__footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
         <span>
             Dados atualizados em <?= date('d/m/Y H:i', $dashboard['_cache']['cached_at'] ?? time()) ?>
