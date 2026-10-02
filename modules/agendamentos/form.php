@@ -55,8 +55,8 @@ $agendamento = [
 ];
 
 if (!$editando && $relatorioOrigemId !== '') {
-    if ($cargo !== 'ADMIN') {
-        setMensagem('error', 'Somente o administrador pode agendar retorno de cumprimento A/S.');
+    if (!in_array($cargo, ['ADMIN', 'SECRETARIA'], true)) {
+        setMensagem('error', 'Somente o administrador ou secretaria pode agendar retorno de cumprimento A/S.');
         redirecionar(APP_URL . 'vistorias');
     }
     $stmtRetorno = $pdo->prepare("SELECT v.id,v.numero,v.agendamento_id,v.embarcacao_id,v.pessoa_id,v.armador_id,
@@ -126,8 +126,8 @@ if ($editando) {
         $stmt->execute([':id' => $id]);
         $dados = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($dados) {
-            if (!empty($dados['relatorio_origem_id']) && $cargo !== 'ADMIN') {
-                setMensagem('error', 'Somente o administrador pode editar um retorno A/S.');
+            if (!empty($dados['relatorio_origem_id']) && !in_array($cargo, ['ADMIN', 'SECRETARIA'], true)) {
+                setMensagem('error', 'Somente o administrador ou secretaria pode editar um retorno A/S.');
                 redirecionar(APP_URL . 'agendamentos');
             }
             $agendamento = array_merge($agendamento, $dados);
@@ -170,7 +170,7 @@ try {
     ")->fetchAll(PDO::FETCH_ASSOC);
 
     $vistoriadores = [];
-    if ($cargo === 'ADMIN' || $cargo === 'VENDEDOR') {
+    if (in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)) {
         $vistoriadores = $pdo->query("SELECT DISTINCT u.id, u.nome, u.email, u.status_sgq, u.credencial_marinha_numero, u.credencial_marinha_validade, u.registro_conselho_tipo, u.registro_conselho_validade FROM usuarios u LEFT JOIN usuario_perfis up ON up.usuario_id = u.id WHERE u.ativo = 1 AND (u.cargo = 'VISTORIADOR' OR up.perfil = 'VISTORIADOR') ORDER BY u.nome ASC")->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -347,7 +347,7 @@ $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['
                     </div>
                     <div class="form-group col-6">
                         <label for="vistoriador_id">Vistoriador responsável *</label>
-                        <?php if ($cargo === 'ADMIN' || $cargo === 'VENDEDOR'): ?>
+                        <?php if (in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)): ?>
                             <select id="vistoriador_id" name="vistoriador_id" required>
                                 <option value="">-- Selecione o vistoriador --</option>
                                 <?php foreach ($vistoriadores as $v): ?>
@@ -366,6 +366,7 @@ $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['
                                     </option>
                                 <?php endforeach; ?>
                             </select>
+                            <small class="text-muted">Selecione o engenheiro/vistoriador naval credenciado que realizará a vistoria técnica em campo.</small>
                         <?php else: ?>
                             <input type="text" class="form-control" readonly value="<?php echo h($_SESSION['usuario_nome'] ?? 'Você (VISTORIADOR)'); ?>">
                             <input type="hidden" name="vistoriador_id" value="<?php echo h($_SESSION['usuario_id']); ?>">

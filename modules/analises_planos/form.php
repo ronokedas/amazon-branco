@@ -213,10 +213,10 @@ if (getCargo() === 'ADMIN' && $isLegadoBloqueado) {
 
 $cargo = getCargo();
 $usuario = (string)($_SESSION['usuario_id'] ?? '');
-$podeTecnico = ($cargo === 'ANALISTA' && $a['analista_id'] === $usuario) || $cargo === 'ADMIN';
+$podeTecnico = ($cargo === 'ANALISTA' && $a['analista_id'] === $usuario) || in_array($cargo, ['ADMIN', 'SECRETARIA'], true);
 $podeEmitirLicenca = $podeTecnico && ($temRapPublicado || $temParecerConclusivoAprovado) && $asPendentesTotal === 0;
 $origemComercialCompleta = !empty($a['proposta_id']) && !empty($a['servico_id']) && !empty($a['vendedor_origem_id']);
-$podeAgenda = ($cargo === 'ADMIN' || ($cargo === 'VENDEDOR' && $a['vendedor_origem_id'] === $usuario) || ($cargo === 'ANALISTA' && $a['analista_id'] === $usuario)) && !$isLegadoBloqueado;
+$podeAgenda = (in_array($cargo, ['ADMIN', 'SECRETARIA'], true) || ($cargo === 'VENDEDOR' && $a['vendedor_origem_id'] === $usuario) || ($cargo === 'ANALISTA' && $a['analista_id'] === $usuario)) && !$isLegadoBloqueado;
 $iniciada = !empty($a['iniciado_em']) || in_array($a['status'], ['EM_ANALISE','AGUARDANDO_DOCUMENTOS','AGUARDANDO_ASSINATURA_ANALISTA','AGUARDANDO_APROVACAO_ADMIN','CONCLUIDA'], true);
 $tecnicoEditavel = $podeTecnico && in_array($a['status'], ['AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS'], true);
 $analiseAberta = $podeTecnico && in_array($a['status'], ['AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS'], true);
@@ -1365,7 +1365,7 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                                     <button class="btn btn-success btn-sm"><i class="fas fa-signature"></i> Assinar e Finalizar Documento</button>
                                 </form>
                             <?php endif; ?>
-                            <?php if ($p['status'] === 'AGUARDANDO_APROVACAO_ADMIN' && $cargo === 'ADMIN'): ?>
+                            <?php if ($p['status'] === 'AGUARDANDO_APROVACAO_ADMIN' && in_array($cargo, ['ADMIN', 'SECRETARIA'], true)): ?>
                                 <form method="post" action="<?= APP_URL ?>analises-planos/actions" style="display:inline-flex; gap:6px; align-items:center;">
                                     <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                                     <input type="hidden" name="action" value="publicar">
@@ -1828,13 +1828,13 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
 
                     <div class="form-group">
                         <label>Analista Responsável *</label>
-                        <select name="analista_id" required <?= ($iniciada && $cargo !== 'ADMIN') ? 'disabled' : '' ?> class="form-control form-control-sm">
+                        <select name="analista_id" required <?= ($iniciada && !in_array($cargo, ['ADMIN', 'SECRETARIA'], true)) ? 'disabled' : '' ?> class="form-control form-control-sm">
                             <option value="">Selecione</option>
                             <?php foreach ($analistas as $u): ?>
                                 <option value="<?= h($u['id']) ?>" <?= $a['analista_id'] === $u['id'] ? 'selected' : '' ?>><?= h($u['nome']) ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <?php if ($iniciada && $cargo !== 'ADMIN'): ?>
+                        <?php if ($iniciada && !in_array($cargo, ['ADMIN', 'SECRETARIA'], true)): ?>
                             <input type="hidden" name="analista_id" value="<?= h($a['analista_id']) ?>">
                         <?php endif; ?>
                     </div>

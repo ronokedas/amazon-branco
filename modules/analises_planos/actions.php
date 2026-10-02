@@ -158,7 +158,7 @@ try {
         $primeiro = empty($analise['prazo_agendado_em']);
         $vendedorOrigem = $cargo === 'VENDEDOR' && $analise['vendedor_origem_id'] === $usuario;
         $analistaAtual = $cargo === 'ANALISTA' && $analise['analista_id'] === $usuario;
-        if ($cargo !== 'ADMIN' && !($primeiro ? $vendedorOrigem : ($vendedorOrigem || $analistaAtual))) throw new RuntimeException('Você não pode alterar esta agenda.');
+        if (!in_array($cargo, ['ADMIN', 'SECRETARIA'], true) && !($primeiro ? $vendedorOrigem : ($vendedorOrigem || $analistaAtual))) throw new RuntimeException('Você não pode alterar esta agenda.');
         $analistaId = trim($_POST['analista_id'] ?? '');
         $prazoInput = trim($_POST['prazo_agendado_em'] ?? '');
         $motivo = trim($_POST['motivo'] ?? '');
@@ -168,7 +168,7 @@ try {
         if (!$primeiro && $motivo === '') throw new InvalidArgumentException('Informe o motivo do reagendamento.');
         $q=$pdo->prepare("SELECT COUNT(*) FROM usuarios u LEFT JOIN usuario_perfis p ON p.usuario_id=u.id WHERE u.id=:id AND u.ativo=1 AND u.excluido_em IS NULL AND (u.cargo='ANALISTA' OR p.perfil='ANALISTA')");
         $q->execute([':id'=>$analistaId]);if(!(int)$q->fetchColumn())throw new InvalidArgumentException('Selecione um analista ativo.');
-        if (!empty($analise['iniciado_em']) && $cargo !== 'ADMIN' && $analistaId !== $analise['analista_id']) throw new RuntimeException('Depois do início, somente o admin pode trocar o analista.');
+        if (!empty($analise['iniciado_em']) && !in_array($cargo, ['ADMIN', 'SECRETARIA'], true) && $analistaId !== $analise['analista_id']) throw new RuntimeException('Depois do início, somente o admin pode trocar o analista.');
         $pdo->beginTransaction();
         $acaoAgenda=$primeiro?'AGENDAMENTO':($analistaId!==$analise['analista_id']?'REATRIBUICAO':'REAGENDAMENTO');
         $pdo->prepare("UPDATE analises_planos SET analista_id=:analista,prazo_agendado_em=:prazo,status=IF(status='AGUARDANDO_AGENDAMENTO','AGENDADA',status) WHERE id=:id")
@@ -795,7 +795,7 @@ try {
     }
 
     if ($acao === 'publicar') {
-        if ($cargo !== 'ADMIN') throw new RuntimeException('Somente o admin pode publicar ou devolver.');
+        if (!in_array($cargo, ['ADMIN', 'SECRETARIA'], true)) throw new RuntimeException('Somente o admin ou secretaria pode publicar ou devolver.');
         $pdo->beginTransaction();
         $parecerId = trim($_POST['parecer_id'] ?? '');
         $stmt = $pdo->prepare("SELECT * FROM analise_planos_pareceres WHERE id=:id AND analise_id=:analise AND status IN ('AGUARDANDO_APROVACAO_ADMIN','AGUARDANDO_ASSINATURA_ANALISTA') FOR UPDATE");

@@ -203,8 +203,8 @@ switch ($action) {
             $motivo_reatribuicao = trim(sanitizar($_POST['motivo_reatribuicao'] ?? ''));
             $vistoriador_origem_id = null;
 
-            if ($relatorio_origem_id !== '' && $cargo !== 'ADMIN') {
-                throw new RuntimeException('Somente o administrador pode criar retorno de cumprimento A/S.');
+            if ($relatorio_origem_id !== '' && !in_array($cargo, ['ADMIN', 'SECRETARIA'], true)) {
+                throw new RuntimeException('Somente o administrador ou secretaria pode criar retorno de cumprimento A/S.');
             }
 
             if (!empty($proposta_id) && $relatorio_origem_id === '') {
@@ -461,8 +461,8 @@ switch ($action) {
             $motivo_reatribuicao = trim(sanitizar($_POST['motivo_reatribuicao'] ?? ''));
 
             $agendamentoAtual = !empty($id) ? obterAgendamento($pdo, $id) : null;
-            if ($agendamentoAtual && !empty($agendamentoAtual['relatorio_origem_id']) && $cargo !== 'ADMIN') {
-                throw new RuntimeException('Somente o administrador pode alterar um retorno A/S.');
+            if ($agendamentoAtual && !empty($agendamentoAtual['relatorio_origem_id']) && !in_array($cargo, ['ADMIN', 'SECRETARIA'], true)) {
+                throw new RuntimeException('Somente o administrador ou secretaria pode alterar um retorno A/S.');
             }
             if ($agendamentoAtual && !empty($agendamentoAtual['proposta_id'])) {
                 $proposta_id = $agendamentoAtual['proposta_id'];
@@ -675,8 +675,8 @@ switch ($action) {
                 setMensagem('error', 'Agendamento não encontrado.');
                 redirecionar(APP_URL . 'agendamentos');
             }
-            if (!empty($ag['relatorio_origem_id']) && $cargo !== 'ADMIN') {
-                setMensagem('error', 'Somente o administrador pode confirmar e gerar a OS de um retorno A/S.');
+            if (!empty($ag['relatorio_origem_id']) && !in_array($cargo, ['ADMIN', 'SECRETARIA'], true)) {
+                setMensagem('error', 'Somente o administrador ou secretaria pode confirmar e gerar a OS de um retorno A/S.');
                 redirecionar(APP_URL . 'agendamentos');
             }
 
@@ -884,8 +884,8 @@ switch ($action) {
                 setMensagem('error', 'Apenas agendamentos pendentes ou confirmados podem ser cancelados.');
                 redirecionar(APP_URL . 'agendamentos');
             }
-            if (!empty($ag['relatorio_origem_id']) && $cargo !== 'ADMIN') {
-                setMensagem('error', 'Somente o administrador pode cancelar um retorno A/S.');
+            if (!empty($ag['relatorio_origem_id']) && !in_array($cargo, ['ADMIN', 'SECRETARIA'], true)) {
+                setMensagem('error', 'Somente o administrador ou secretaria pode cancelar um retorno A/S.');
                 redirecionar(APP_URL . 'agendamentos');
             }
             if (!empty($ag['relatorio_origem_id']) && $motivoCancelamento === '') {

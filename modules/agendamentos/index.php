@@ -283,7 +283,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <div class="schedule-card-actions">
                             <?php if (!empty($a['os_id'])): ?><a href="<?= APP_URL ?>agendamentos/os?id=<?= urlencode($a['os_id']) ?>"><i class="fa-solid fa-file-lines"></i> Ver OS <?= h($a['os_numero']) ?></a><?php endif; ?>
                             <?php if ($cargo !== 'VISTORIADOR'): ?><a href="<?= APP_URL ?>agendamentos/form?id=<?= urlencode($a['id']) ?>"><i class="fa-solid fa-pen"></i> Editar agendamento</a><?php endif; ?>
-                            <?php if ($a['status'] === 'pendente' && in_array($cargo, ['ADMIN', 'VENDEDOR'], true)): ?>
+                            <?php if ($a['status'] === 'pendente' && in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)): ?>
                                 <form method="post" action="<?= APP_URL ?>agendamentos/actions" onsubmit="return confirm('Confirmar agendamento e gerar Ordem de Serviço?')"><input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>"><input type="hidden" name="action" value="confirmar"><input type="hidden" name="id" value="<?= h($a['id']) ?>"><button type="submit"><i class="fa-solid fa-check-double"></i> Confirmar e gerar OS</button></form>
                             <?php endif; ?>
                             <?php if (in_array($a['status'], ['pendente', 'confirmado'], true) && $cargo !== 'VISTORIADOR'): ?>
