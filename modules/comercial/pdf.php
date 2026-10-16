@@ -59,7 +59,7 @@ $servicos_todos = $stmtServ->fetchAll(PDO::FETCH_ASSOC);
 // Agrupar serviços por embarcação
 $servicos_por_embarcacao = [];
 foreach ($servicos_todos as $sv) {
-    $embId = $sv['embarcacao_id'] ?? 'sem_embarcacao';
+    $embId = !empty($sv['embarcacao_id']) ? $sv['embarcacao_id'] : ((count($embarcacoes) === 1) ? $embarcacoes[0]['id'] : 'sem_embarcacao');
     if (!isset($servicos_por_embarcacao[$embId])) {
         $servicos_por_embarcacao[$embId] = [];
     }
@@ -345,8 +345,17 @@ $pdf->SetFont('helvetica', '', 8);
 $pdf->SetFillColor(255, 255, 255);
 
 // Nome contratante
-$clienteNome = mb_strtoupper($proposta['cliente_nome'] ?? '');
+$clienteNomeLimpo = html_entity_decode($proposta['cliente_nome'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8');
+$clienteNome = mb_strtoupper(trim($clienteNomeLimpo));
+
+$fontClienteTopo = 8;
+$pdf->SetFont('helvetica', '', $fontClienteTopo);
+while ($fontClienteTopo > 6 && $pdf->GetStringWidth($clienteNome) > ($colEsq - 4)) {
+    $fontClienteTopo -= 0.5;
+    $pdf->SetFont('helvetica', '', $fontClienteTopo);
+}
 $pdf->Cell($colEsq, 5, $clienteNome, 1, 0, 'L', true);
+$pdf->SetFont('helvetica', '', 8);
 $pdf->Cell($colDir, 5, 'AMAZON NAVAL LTDA', 1, 1, 'L', true);
 
 // CPF/CNPJ
@@ -388,11 +397,12 @@ $pdf->SetFont('helvetica', 'B', 8);
 $pdf->SetFillColor(0, 61, 52);
 $pdf->SetTextColor(255, 255, 255);
 
-$wServ = [10, 125, 15, 40];
+$wServ = [10, 85, 15, 35, 35];
 $pdf->Cell($wServ[0], 6, 'Nº', 1, 0, 'C', true);
 $pdf->Cell($wServ[1], 6, 'DESCRIÇÃO DOS SERVIÇOS', 1, 0, 'C', true);
 $pdf->Cell($wServ[2], 6, 'QTD', 1, 0, 'C', true);
-$pdf->Cell($wServ[3], 6, 'SUBTOTAL', 1, 1, 'C', true);
+$pdf->Cell($wServ[3], 6, 'VALOR UNIT.', 1, 0, 'C', true);
+$pdf->Cell($wServ[4], 6, 'SUBTOTAL', 1, 1, 'C', true);
 
 
 $pdf->SetTextColor(0, 0, 0);
@@ -413,15 +423,21 @@ if (empty($servicos_todos)) {
                 break;
             }
         }
-        if ($embId === 'sem_embarcacao') {
+        if (empty($nomeEmbServ) && count($embarcacoes) === 1) {
+            $nomeEmbServ = $embarcacoes[0]['nome'] . (!empty($embarcacoes[0]['registro']) ? ' (' . $embarcacoes[0]['registro'] . ')' : '');
+        }
+        if ($embId === 'sem_embarcacao' && empty($nomeEmbServ)) {
             $nomeEmbServ = 'Serviços Gerais';
         }
 
-        if (!empty($nomeEmbServ) && count($servicos_por_embarcacao) > 1) {
+        if (!empty($nomeEmbServ)) {
+            $labelEmbServ = (strpos(mb_strtoupper($nomeEmbServ), 'EMBARCAÇÃO') === false && $nomeEmbServ !== 'Serviços Gerais')
+                ? 'EMBARCAÇÃO: ' . mb_strtoupper($nomeEmbServ)
+                : mb_strtoupper($nomeEmbServ);
             $pdf->SetFont('helvetica', 'B', 8);
             $pdf->SetFillColor(242, 248, 245);
             $pdf->SetTextColor(0, 61, 52);
-            $pdf->Cell(array_sum($wServ), 5, mb_strtoupper($nomeEmbServ), 1, 1, 'L', true);
+            $pdf->Cell(array_sum($wServ), 5.5, '   ' . $labelEmbServ, 1, 1, 'L', true);
             $pdf->SetTextColor(0, 0, 0);
             $pdf->SetFont('helvetica', '', 8);
         }
@@ -441,7 +457,8 @@ if (empty($servicos_todos)) {
             $pdf->Cell($wServ[0], $hLinha, $contador, 1, 0, 'C', true);
             $pdf->Cell($wServ[1], $hLinha, $nomeServ, 1, 0, 'L', true);
             $pdf->Cell($wServ[2], $hLinha, $qtd, 1, 0, 'C', true);
-            $pdf->Cell($wServ[3], $hLinha, 'R$ ' . formatarMoedaPDF($sub), 1, 1, 'R', true);
+            $pdf->Cell($wServ[3], $hLinha, 'R$ ' . formatarMoedaPDF($preco), 1, 0, 'R', true);
+            $pdf->Cell($wServ[4], $hLinha, 'R$ ' . formatarMoedaPDF($sub), 1, 1, 'R', true);
 
         }
     }
@@ -465,8 +482,8 @@ $pdf->Ln(2);
 $pdf->SetFont('helvetica', 'B', 9);
 
 // Linha Subtotal
-$colTotalLabel = $wServ[0] + $wServ[1] + $wServ[2]; // 150
-$colTotalValor = $wServ[3]; // 40
+$colTotalLabel = $wServ[0] + $wServ[1] + $wServ[2] + $wServ[3]; // 145
+$colTotalValor = $wServ[4]; // 35
 
 $pdf->SetFillColor(240, 247, 243);
 $pdf->Cell($colTotalLabel, 6, 'TOTAL DOS SERVIÇOS', 1, 0, 'R', true);
@@ -704,14 +721,28 @@ $pdf->SetLineWidth(0.2);
 $pdf->Rect(109, $assinaturaY + 2, 84, $alturaQuadro - 4);
 
 // Título ACEITANTE (esquerda)
-$pdf->SetXY(17, $assinaturaY + 4);
+$pdf->SetXY(17, $assinaturaY + 3.5);
 $pdf->SetFont('helvetica', 'B', 9);
 $pdf->SetTextColor(0, 61, 52);
-$pdf->Cell(84, 5, 'ACEITANTE', 0, 1, 'C');
+$pdf->Cell(84, 4.5, 'ACEITANTE', 0, 1, 'C');
 $pdf->SetTextColor(0, 0, 0);
-$pdf->SetXY(17, $assinaturaY + 9);
-$pdf->SetFont('helvetica', '', 8);
-$pdf->Cell(84, 5, $clienteNome, 0, 1, 'C');
+
+// Nome da empresa / proprietário com autoajuste de largura e quebra para nunca estourar o quadro
+$larguraUtilAceitante = 80;
+$fontSizeAceitante = 8;
+$pdf->SetFont('helvetica', '', $fontSizeAceitante);
+if ($pdf->GetStringWidth($clienteNome) > $larguraUtilAceitante) {
+    $fontSizeAceitante = ($pdf->GetStringWidth($clienteNome) > ($larguraUtilAceitante * 1.5)) ? 6.5 : 7;
+    $pdf->SetFont('helvetica', '', $fontSizeAceitante);
+}
+
+$pdf->SetXY(19, $assinaturaY + 8);
+if ($pdf->GetStringWidth($clienteNome) <= $larguraUtilAceitante) {
+    $pdf->Cell($larguraUtilAceitante, 5, $clienteNome, 0, 1, 'C');
+} else {
+    $lineHAceitante = ($fontSizeAceitante <= 6.5) ? 3.0 : 3.3;
+    $pdf->MultiCell($larguraUtilAceitante, $lineHAceitante, $clienteNome, 0, 'C', false, 1);
+}
 
 // Título PROPONENTE (direita)
 $pdf->SetXY(109, $assinaturaY + 4);
