@@ -304,7 +304,7 @@ if (strpos($path, 'api/campo/v1') === 0) {
         'gestao-acessos-portal' => 'gestao_acessos_portal', 'gestao-acessos-portal/actions' => 'gestao_acessos_portal',
         'portal-clientes' => 'portal_clientes', 'portal-clientes/actions' => 'portal_clientes',
         'configuracoes' => 'configuracoes', 'configuracoes/basicas' => 'configuracoes_basicas', 'configuracoes/financeiro' => 'configuracoes_financeiro', 'configuracoes/normam202' => 'configuracoes_normam202', 'configuracoes/normam202/actions' => 'configuracoes_normam202', 'configuracoes/backup' => 'configuracoes_backup', 'configuracoes/exportacoes' => 'configuracoes_exportacoes', 'configuracoes/exportacoes_actions' => 'configuracoes_exportacoes', 'configuracoes/exportacoes_download' => 'configuracoes_exportacoes', 'configuracoes/actions' => 'configuracoes',
-        'responsaveis_assinatura' => 'responsaveis_assinatura', 'responsaveis_assinatura/form' => 'responsaveis_assinatura', 'responsaveis_assinatura/actions' => 'responsaveis_assinatura', 'responsaveis_assinatura/assinatura' => 'responsaveis_assinatura',
+        'responsaveis_assinatura' => 'responsaveis_assinatura', 'responsaveis_assinatura/form' => 'responsaveis_assinatura', 'responsaveis_assinatura/actions' => 'responsaveis_assinatura',
         'documentos/aprovar' => 'documentacao', 'documentos/cancelar' => 'documentacao',
         'autenticidade' => 'documentacao', 'autenticidade/aprovar' => 'documentacao', 'autenticidade/cancelar' => 'documentacao',
         'documentacao' => 'documentacao', 'documentacao/aprovacao_relatorios' => 'relatorios_aprovacao',
