@@ -326,7 +326,7 @@ if ($isAssinado) {
     $sigX = 15;
     $sigW = 180;
     $sigH = 34;
-    $colImgW = 50;
+    $colImgW = 52;
     $colQrW = 28;
 
     $pdf->SetDrawColor(13, 73, 65);
@@ -341,7 +341,7 @@ if ($isAssinado) {
         if (function_exists('garantirAssinaturaTransparente')) {
             garantirAssinaturaTransparente($sigFileAbs);
         }
-        $pdf->Image($sigFileAbs, $sigX + 3, $sigY + 3, 44, 0, 'PNG', '', '', false, 300);
+        $pdf->Image($sigFileAbs, $sigX + 2, $sigY + 2.5, 48, 0, 'PNG', '', '', false, 300);
     } else {
         $pdf->SetXY($sigX + 2, $sigY + 8);
         $pdf->SetFont('helvetica', 'I', 8);
@@ -349,12 +349,12 @@ if ($isAssinado) {
         $pdf->Cell($colImgW - 4, 8, '[Assinatura Cadastrada]', 0, 0, 'C');
     }
 
-    $pdf->SetXY($sigX + 1, $sigY + 22);
+    $pdf->SetXY($sigX + 1, $sigY + 22.5);
     $pdf->SetFont('helvetica', 'I', 5.8);
     $pdf->SetTextColor(90, 100, 95);
     $pdf->Cell($colImgW, 3.5, 'Representação gráfica da assinatura', 0, 1, 'C');
 
-    $pdf->SetXY($sigX + 1, $sigY + 26);
+    $pdf->SetXY($sigX + 1, $sigY + 26.5);
     $pdf->SetFont('helvetica', 'B', 6.5);
     $pdf->SetTextColor(13, 73, 65);
     $pdf->Cell($colImgW, 4, 'ASSINADO DIGITALMENTE', 0, 1, 'C');

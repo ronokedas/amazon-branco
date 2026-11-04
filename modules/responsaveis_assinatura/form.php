@@ -127,7 +127,7 @@ require_once __DIR__ . '/../../includes/header.php';
                         <label for="assinatura_imagem" class="form-label">Assinatura manuscrita <?= $id ? '' : '*' ?></label>
                         <input type="file" class="form-control" id="assinatura_imagem" name="assinatura_imagem"
                                accept="image/png,image/jpeg,.png,.jpg,.jpeg" onchange="previewAssinaturaInstantanea(this)" <?= $id ? '' : 'required' ?>>
-                        <small class="form-text text-muted">PNG ou JPEG, até 2 MB. Use fundo branco ou transparente, boa resolução e proporção aproximada de 3:1.</small>
+                        <small class="form-text text-muted">PNG ou JPEG até 2 MB. <strong>Recomendação de qualidade:</strong> Assine com <strong>caneta de ponta média ou grossa (0.7mm ou 1.0mm)</strong> azul ou preta em papel branco liso. Tire a foto de cima e recorte rente à assinatura. O sistema ajusta a transparência e centralização automaticamente.</small>
 
                         <!-- Preview Instantaneo -->
                         <div id="box_preview_nova_assinatura" style="display: none; margin-top: 12px; padding: 14px; background: rgba(56, 189, 248, 0.08); border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.35);">

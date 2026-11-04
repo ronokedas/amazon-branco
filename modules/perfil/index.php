@@ -474,7 +474,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                        onchange="previewAssinaturaInstantanea(this)"
                                        style="background: var(--bg-surface); border: 1px dashed var(--border); padding: 10px; border-radius: 6px; width: 100%;">
                                 <small class="text-muted">
-                                    Envie a imagem da sua assinatura com <strong>fundo transparente (PNG)</strong> ou papel branco bem iluminado (máx. 2 MB). O sistema ajustará o contraste e dimensionamento automaticamente.
+                                    Envie a imagem da sua assinatura com <strong>fundo transparente (PNG)</strong> ou papel branco bem iluminado (máx. 2 MB).<br>
+                                    <strong class="text-primary">Dica para melhor legibilidade no PDF:</strong> Assine com <strong>caneta de ponta média ou grossa (0.7mm ou 1.0mm)</strong> azul ou preta em papel sulfite branco. Tire a foto bem de cima e recorte rente à assinatura. O sistema ajusta contraste, remoção de fundo e centralização automaticamente.
                                 </small>
                             </div>
                         </div>

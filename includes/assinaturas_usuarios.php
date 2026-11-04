@@ -436,6 +436,68 @@ if (!function_exists('removerFundoBrancoImagemAssinatura')) {
     }
 }
 
+if (!function_exists('apararBordasAssinatura')) {
+    /**
+     * Apara bordas transparentes/vazias ao redor do traço da assinatura manuscrita (autocrop),
+     * garantindo que a caligrafia ocupe a proporção máxima da área útil nos relatórios e certificados.
+     */
+    function apararBordasAssinatura($im)
+    {
+        $w = imagesx($im);
+        $h = imagesy($im);
+        $minX = $w; $maxX = 0; $minY = $h; $maxY = 0;
+        $achou = false;
+
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                $rgba = imagecolorsforindex($im, imagecolorat($im, $x, $y));
+                // Considera pixel como parte da assinatura se tiver tinta visivel (nao totalmente transparente e nao branco puro)
+                if ($rgba['alpha'] < 115) {
+                    $dr = 255 - $rgba['red'];
+                    $dg = 255 - $rgba['green'];
+                    $db = 255 - $rgba['blue'];
+                    $dist = sqrt($dr * $dr + $dg * $dg + $db * $db);
+                    if ($dist > 25) {
+                        $achou = true;
+                        if ($x < $minX) $minX = $x;
+                        if ($x > $maxX) $maxX = $x;
+                        if ($y < $minY) $minY = $y;
+                        if ($y > $maxY) $maxY = $y;
+                    }
+                }
+            }
+        }
+
+        if (!$achou || $minX > $maxX || $minY > $maxY) {
+            return $im;
+        }
+
+        $cropW = $maxX - $minX + 1;
+        $cropH = $maxY - $minY + 1;
+        if ($cropW < 20 || $cropH < 10) {
+            return $im;
+        }
+
+        // Margem de respiro suave de 2% para evitar encostar nas bordas extremas
+        $padX = max(4, (int)round($cropW * 0.02));
+        $padY = max(4, (int)round($cropH * 0.02));
+
+        $cropX = max(0, $minX - $padX);
+        $cropY = max(0, $minY - $padY);
+        $finalW = min($w - $cropX, $cropW + 2 * $padX);
+        $finalH = min($h - $cropY, $cropH + 2 * $padY);
+
+        $out = imagecreatetruecolor($finalW, $finalH);
+        imagealphablending($out, false);
+        imagesavealpha($out, true);
+        $trans = imagecolorallocatealpha($out, 255, 255, 255, 127);
+        imagefill($out, 0, 0, $trans);
+
+        imagecopy($out, $im, 0, 0, $cropX, $cropY, $finalW, $finalH);
+        return $out;
+    }
+}
+
 if (!function_exists('garantirAssinaturaTransparente')) {
     function garantirAssinaturaTransparente(string $caminhoAbsoluto): bool
     {
@@ -491,7 +553,12 @@ if (!function_exists('salvarImagemAssinaturaResponsavel')) {
         // Remove automaticamente fundos brancos/claros com suavização de bordas (anti-aliasing)
         $cleanSource = removerFundoBrancoImagemAssinatura($source);
         imagedestroy($source);
-        $source = $cleanSource;
+        // Apara automaticamente bordas vazias (autocrop) para maximizar o traço no documento
+        $croppedSource = apararBordasAssinatura($cleanSource);
+        if ($croppedSource !== $cleanSource) {
+            imagedestroy($cleanSource);
+        }
+        $source = $croppedSource;
 
         $sourceW = imagesx($source);
         $sourceH = imagesy($source);
