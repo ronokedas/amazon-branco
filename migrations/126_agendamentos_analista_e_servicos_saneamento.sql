@@ -73,3 +73,4 @@ SET `analista_id` = 'b2645d7e-83df-400b-90a9-37b060e82880',
     `prazo_analise` = COALESCE(`prazo_analise`, '2026-11-10 18:00:00')
 WHERE `proposta_id` = '8351de41-d7e0-11f1-9768-22806dd0d3e3'
   AND EXISTS (SELECT 1 FROM `usuarios` WHERE `id` = 'b2645d7e-83df-400b-90a9-37b060e82880' AND `ativo` = 1);
+

@@ -229,3 +229,4 @@ $pdo->prepare("DELETE FROM clientes WHERE id='{$clienteId}'")->execute();
 echo "\n=======================================================================\n";
 echo " TESTE E2E EXECUTADO COM 100% DE SUCESSO!\n";
 echo "=======================================================================\n";
+

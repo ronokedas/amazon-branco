@@ -127,3 +127,4 @@ Parâmetros de segurança e marcação do Disco de Plimsoll para navegação int
   * Arquivo: [`docs/video_tutorial_cadastro_embarcacao.mp4`](file:///c:/sistema/docs/video_tutorial_cadastro_embarcacao.mp4)
 * **Simulador Interativo Web (Player HTML5 c/ Destaques Passo a Passo)**:
   * Arquivo: [`tutorial_cadastro_embarcacao.html`](file:///C:/Users/ronok/.gemini/antigravity/brain/d27d3526-ed01-43d2-95f6-62d87b1448aa/tutorial_cadastro_embarcacao.html)
+

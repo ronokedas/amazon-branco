@@ -230,3 +230,4 @@ flowchart TD
 - **Usabilidade Autodidática:** Todo formulário operacional possui orientações em texto cinza abaixo do campo (`<small class="text-muted">`), instruindo claramente qual dado preencher e qual norma fundamenta a exigência.
 - **Identificação Clara de Usuários:** Nunca selecionar contas genéricas ou de teste; use sempre as opções contendo o e-mail oficial (`neto@amazonnaval.com.br`, `jersonalmeida.tec@hotmail.com`).
 - **Idempotência Operacional:** Propostas assinadas não geram agendamentos duplicados; ao alterar dados da proposta ou de agendamentos pendentes, o sistema preserva a unicidade da ordem de serviço.
+
