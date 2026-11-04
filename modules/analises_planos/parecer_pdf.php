@@ -412,7 +412,7 @@ if ($isAssinado) {
     $qrX = $sigX + $sigW - $colQrW;
     $pdf->Line($qrX - 1, $sigY + 2, $qrX - 1, $sigY + $sigH - 2);
 
-    $qrUrl = APP_URL . 'validar/' . urlencode($p['id']);
+    $qrUrl = rtrim((string)APP_URL, '/') . '/validar/' . rawurlencode($p['id']);
     $pdf->write2DBarcode($qrUrl, 'QRCODE,L', $qrX + 3, $sigY + 3, 22, 22, [
         'border' => false,
         'padding' => 0,

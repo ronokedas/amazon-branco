@@ -246,7 +246,7 @@ $rotas = [
 // Se nao esta logado, sempre ir para login (exceto proprio login)
 if (!isset($_SESSION['usuario_logado']) && $path !== '' && $path !== 'login') {
     // Verificar se é rota pública de assinatura
-    $is_rota_publica = (strpos($path, 'assinar/') === 0 || strpos($path, 'assinatura-certificado/') === 0 || strpos($path, 'validar/') === 0 || strpos($path, 'validar-assinatura/') === 0 || strpos($path, 'protocolo-aceite/') === 0);
+    $is_rota_publica = (strpos($path, 'assinar/') === 0 || strpos($path, 'assinatura-certificado/') === 0 || strpos($path, 'validar/') === 0 || $path === 'validar' || strpos($path, 'validar-assinatura/') === 0 || strpos($path, 'protocolo-aceite/') === 0);
     if ($path === 'portal' || strpos($path, 'portal/') === 0) {
         $is_rota_publica = true;
     }
@@ -352,8 +352,10 @@ if (strpos($path, 'api/campo/v1') === 0) {
     $_GET['token'] = substr($path, strlen('protocolo-aceite/'));
     require_once __DIR__ . '/modules/protocolos/aceite.php';
     exit;
-} elseif (strpos($path, 'validar/') === 0) {
-    $_GET['token'] = substr($path, 8);
+} elseif (strpos($path, 'validar/') === 0 || $path === 'validar') {
+    if (strpos($path, 'validar/') === 0) {
+        $_GET['token'] = substr($path, 8);
+    }
     require_once __DIR__ . '/modules/autenticidade/validar.php';
     exit;
 } elseif (strpos($path, 'validar-assinatura/') === 0) {
