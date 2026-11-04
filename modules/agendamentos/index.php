@@ -82,6 +82,24 @@ try {
         $escapedAgIds = "'" . implode("','", array_map('addslashes', $vistoriadorIds)) . "'";
         $where[] = "(a.vistoriador_id IN ({$escapedAgIds}) OR a.vistoriador_id IS NULL)";
     }
+    $escapedAnaIds = "''";
+    if ($cargo === 'ANALISTA') {
+        $uEmail = trim((string)($_SESSION['usuario_email'] ?? ''));
+        $analistaIds = array_values(array_filter([$usuario_id]));
+        if ($uEmail !== '') {
+            try {
+                $stmtIds = $pdo->prepare("SELECT id FROM usuarios WHERE email = :mail");
+                $stmtIds->execute([':mail' => $uEmail]);
+                $idsEncontrados = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
+                if (!empty($idsEncontrados)) {
+                    $analistaIds = array_values(array_unique(array_merge($analistaIds, $idsEncontrados)));
+                }
+            } catch (Throwable $e) {}
+        }
+        $escapedAnaIds = "'" . implode("','", array_map('addslashes', $analistaIds)) . "'";
+        $where[] = "(a.analista_id IN ({$escapedAnaIds}) OR (a.analista_id IS NULL AND (a.tipo_vistoria LIKE '%Análise%' OR a.tipo_vistoria LIKE '%Analise%')))";
+    }
+
 
     // Calcular KPIs
     $sqlKpi = "SELECT COUNT(*) AS total,
@@ -90,6 +108,8 @@ try {
                FROM agendamentos a";
     if ($cargo === 'VISTORIADOR') {
         $sqlKpi .= " WHERE (a.vistoriador_id IN ({$escapedAgIds}) OR a.vistoriador_id IS NULL)";
+    } elseif ($cargo === 'ANALISTA') {
+        $sqlKpi .= " WHERE (a.analista_id IN ({$escapedAnaIds}) OR (a.analista_id IS NULL AND (a.tipo_vistoria LIKE '%Análise%' OR a.tipo_vistoria LIKE '%Analise%')))";
     }
     $kpiRow = $pdo->query($sqlKpi)->fetch(PDO::FETCH_ASSOC);
     $kpi_total = (int)($kpiRow['total'] ?? 0);
@@ -135,7 +155,10 @@ try {
 
     $sql = "
         SELECT a.*, c.nome AS cliente_nome, e.nome AS embarcacao_nome,
-               u.nome AS vistoriador_nome, os.id AS os_id, os.numero AS os_numero,
+               u.nome AS vistoriador_nome,
+               ua.nome AS analista_nome,
+               ap.id AS analise_plano_id, ap.numero AS analise_plano_numero, ap.status AS analise_plano_status,
+               os.id AS os_id, os.numero AS os_numero,
                os.status AS os_status, v.id AS vistoria_id, v.status AS vistoria_status,
                vr.tipo AS retorno_tipo, vo.numero AS relatorio_origem_numero
         FROM agendamentos a
@@ -147,6 +170,8 @@ try {
         LEFT JOIN clientes c ON a.cliente_id = c.id
         LEFT JOIN embarcacoes e ON a.embarcacao_id = e.id
         LEFT JOIN usuarios u ON a.vistoriador_id = u.id
+        LEFT JOIN usuarios ua ON a.analista_id = ua.id
+        LEFT JOIN analises_planos ap ON (ap.proposta_id = a.proposta_id AND ap.embarcacao_id = a.embarcacao_id)
         LEFT JOIN ordens_servico os ON os.agendamento_id = a.id
         LEFT JOIN vistoria_retornos vr ON vr.agendamento_id = a.id
         LEFT JOIN vistorias vo ON vo.id = vr.relatorio_origem_id
@@ -235,7 +260,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
             <div class="schedule-table-wrap">
                 <table id="tabelaAgendamentos" class="schedule-table" data-responsive="off">
-                    <thead><tr><th>Data e local</th><th>Cliente / embarcação</th><th>Tipo de vistoria</th><th>Vistoriador</th><th>Status</th><th>OS</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>Data e local</th><th>Cliente / embarcação</th><th>Tipo de vistoria / serviços</th><th>Responsável</th><th>Status</th><th>OS / Análise</th><th>Ações</th></tr></thead>
                     <tbody>
                     <?php foreach ($agendamentos as $a):
                         $st = $status_labels[$a['status']] ?? ['label' => ucfirst($a['status']), 'class' => 'neutral'];
@@ -245,10 +270,42 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <td><strong><?= !empty($a['data_vistoria']) ? formatarData($a['data_vistoria']) : 'Sem data' ?></strong><small><?= !empty($a['hora_vistoria']) ? h(substr($a['hora_vistoria'], 0, 5)) : 'Horário não definido' ?><?= !empty($a['local']) ? ' · ' . h(agendaTexto($a['local'])) : '' ?></small></td>
                             <td><strong><?= h(agendaTexto($a['embarcacao_nome'])) ?></strong><small><?= h(agendaTexto($a['cliente_nome'])) ?></small></td>
                             <td><?php if ($retorno): ?><span class="schedule-return-badge is-<?= h($retorno['class']) ?>"><?= h($retorno['label']) ?></span><?php endif; ?><?= h(agendaTexto($a['tipo_vistoria'] ?: 'Não informado')) ?><?php if (!empty($a['relatorio_origem_numero'])): ?><small>Origem: <?= h($a['relatorio_origem_numero']) ?></small><?php endif; ?></td>
-                            <td><?= h(agendaTexto($a['vistoriador_nome'] ?: 'Não definido')) ?></td>
+                            <td>
+                                <?php if (!empty($a['vistoriador_nome'])): ?>
+                                    <div style="font-weight:600;"><i class="fa-solid fa-compass" style="color:#0284c7;"></i> <?= h(agendaTexto($a['vistoriador_nome'])) ?> <span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:0.7rem;padding:2px 5px;border-radius:4px;">Vistoriador</span></div>
+                                <?php endif; ?>
+                                <?php if (!empty($a['analista_nome'])): ?>
+                                    <div style="font-weight:600;margin-top:3px;"><i class="fa-solid fa-drafting-compass" style="color:#6366f1;"></i> <?= h(agendaTexto($a['analista_nome'])) ?> <span class="badge" style="background:#ede9fe;color:#4338ca;font-size:0.7rem;padding:2px 5px;border-radius:4px;">Analista</span></div>
+                                <?php endif; ?>
+                                <?php if (empty($a['vistoriador_nome']) && empty($a['analista_nome'])): ?>
+                                    <span class="text-muted">Não definido</span>
+                                <?php endif; ?>
+                            </td>
                             <td><span class="schedule-status schedule-status--<?= h($st['class']) ?>"><?= h($st['label']) ?></span></td>
-                            <td><?= !empty($a['os_id']) ? '<a class="schedule-os" href="' . APP_URL . 'agendamentos/os?id=' . urlencode($a['os_id']) . '">' . h($a['os_numero']) . '</a>' : '<span class="schedule-muted">–</span>' ?></td>
-                            <td><div class="schedule-table-actions"><a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($a['id']) ?><?= !empty($a['vistoria_id']) ? '&amp;vistoria_id=' . urlencode($a['vistoria_id']) : '' ?>" title="Abrir relatório"><i class="fa-solid fa-clipboard-list"></i></a><?php if ($cargo !== 'VISTORIADOR'): ?><a href="<?= APP_URL ?>agendamentos/form?id=<?= urlencode($a['id']) ?>" title="Editar"><i class="fa-solid fa-pen"></i></a><?php endif; ?></div></td>
+                            <td>
+                                <?php if (!empty($a['os_id'])): ?>
+                                    <a class="schedule-os" href="<?= APP_URL ?>agendamentos/os?id=<?= urlencode($a['os_id']) ?>"><?= h($a['os_numero']) ?></a>
+                                <?php endif; ?>
+                                <?php if (!empty($a['analise_plano_id'])): ?>
+                                    <div style="<?= !empty($a['os_id']) ? 'margin-top:3px;' : '' ?>">
+                                        <a href="<?= APP_URL ?>analises-planos/form?id=<?= urlencode($a['analise_plano_id']) ?>" style="background:#ede9fe;color:#4338ca;font-size:0.75rem;padding:2px 6px;border-radius:4px;text-decoration:none;font-weight:600;" title="Abrir processo de Análise de Planos"><i class="fa-solid fa-drafting-compass"></i> <?= h($a['analise_plano_numero'] ?: 'AM-RAP') ?></a>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (empty($a['os_id']) && empty($a['analise_plano_id'])): ?>
+                                    <span class="schedule-muted">–</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <div class="schedule-table-actions">
+                                    <?php if (!empty($a['analise_plano_id'])): ?>
+                                        <a href="<?= APP_URL ?>analises-planos/form?id=<?= urlencode($a['analise_plano_id']) ?>" title="Abrir Análise de Planos"><i class="fa-solid fa-drafting-compass" style="color:#6366f1;"></i></a>
+                                    <?php endif; ?>
+                                    <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($a['id']) ?><?= !empty($a['vistoria_id']) ? '&amp;vistoria_id=' . urlencode($a['vistoria_id']) : '' ?>" title="Abrir relatório"><i class="fa-solid fa-clipboard-list"></i></a>
+                                    <?php if ($cargo !== 'VISTORIADOR' && $cargo !== 'ANALISTA'): ?>
+                                        <a href="<?= APP_URL ?>agendamentos/form?id=<?= urlencode($a['id']) ?>" title="Editar"><i class="fa-solid fa-pen"></i></a>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -275,13 +332,22 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <div class="schedule-card-meta">
                         <span><i class="fa-solid fa-location-dot"></i><?= h(agendaTexto($a['local'] ?: 'Local não informado')) ?></span>
                         <span><i class="fa-solid fa-clipboard-check"></i><?= h(agendaTexto($a['tipo_vistoria'] ?: 'Tipo não informado')) ?></span>
-                        <span><i class="fa-solid fa-user-check"></i><?= h(agendaTexto($a['vistoriador_nome'] ?: 'Vistoriador não definido')) ?></span>
+                        <?php if (!empty($a['vistoriador_nome'])): ?>
+                        <span><i class="fa-solid fa-compass" style="color:#0284c7;"></i> <?= h(agendaTexto($a['vistoriador_nome'])) ?> (Vistoriador)</span>
+                    <?php endif; ?>
+                    <?php if (!empty($a['analista_nome'])): ?>
+                        <span><i class="fa-solid fa-drafting-compass" style="color:#6366f1;"></i> <?= h(agendaTexto($a['analista_nome'])) ?> (Analista)</span>
+                    <?php endif; ?>
+                    <?php if (empty($a['vistoriador_nome']) && empty($a['analista_nome'])): ?>
+                        <span><i class="fa-solid fa-user-check"></i> Responsável não definido</span>
+                    <?php endif; ?>
                     </div>
                     <a class="schedule-card-primary" href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode($a['id']) ?><?= !empty($a['vistoria_id']) ? '&amp;vistoria_id=' . urlencode($a['vistoria_id']) : '' ?>"><i class="fa-solid fa-clipboard-list"></i> Abrir relatório da vistoria</a>
                     <details class="schedule-card-more">
                         <summary>Detalhes e ações <i class="fa-solid fa-chevron-down"></i></summary>
                         <div class="schedule-card-actions">
                             <?php if (!empty($a['os_id'])): ?><a href="<?= APP_URL ?>agendamentos/os?id=<?= urlencode($a['os_id']) ?>"><i class="fa-solid fa-file-lines"></i> Ver OS <?= h($a['os_numero']) ?></a><?php endif; ?>
+                            <?php if (!empty($a['analise_plano_id'])): ?><a href="<?= APP_URL ?>analises-planos/form?id=<?= urlencode($a['analise_plano_id']) ?>" style="color:#6366f1;"><i class="fa-solid fa-drafting-compass"></i> Ver Análise <?= h($a['analise_plano_numero'] ?: 'AM-RAP') ?></a><?php endif; ?>
                             <?php if ($cargo !== 'VISTORIADOR'): ?><a href="<?= APP_URL ?>agendamentos/form?id=<?= urlencode($a['id']) ?>"><i class="fa-solid fa-pen"></i> Editar agendamento</a><?php endif; ?>
                             <?php if ($a['status'] === 'pendente' && in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)): ?>
                                 <form method="post" action="<?= APP_URL ?>agendamentos/actions" onsubmit="return confirm('Confirmar agendamento e gerar Ordem de Serviço?')"><input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>"><input type="hidden" name="action" value="confirmar"><input type="hidden" name="id" value="<?= h($a['id']) ?>"><button type="submit"><i class="fa-solid fa-check-double"></i> Confirmar e gerar OS</button></form>

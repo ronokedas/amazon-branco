@@ -223,14 +223,15 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
 
     $stmtEmb = $pdo->prepare("
         SELECT pe.embarcacao_id,
-               GROUP_CONCAT(CASE WHEN COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN s.nome END SEPARATOR ', ') AS servicos_nomes,
-               SUM(CASE WHEN COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN 1 ELSE 0 END) AS servicos_vistoria
+               GROUP_CONCAT(CASE WHEN COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN s.nome END SEPARATOR ', ') AS servicos_vistoria_nomes,
+               GROUP_CONCAT(CASE WHEN COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN s.nome END SEPARATOR ', ') AS servicos_analise_nomes,
+               SUM(CASE WHEN COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN 1 ELSE 0 END) AS servicos_vistoria,
+               SUM(CASE WHEN COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN 1 ELSE 0 END) AS servicos_analise
         FROM propostas_embarcacoes pe
         LEFT JOIN propostas_servicos ps ON ps.proposta_id = pe.proposta_id AND ps.embarcacao_id = pe.embarcacao_id
         LEFT JOIN servicos s ON ps.servico_id = s.id
         WHERE pe.proposta_id = :proposta_id
         GROUP BY pe.embarcacao_id
-        HAVING servicos_vistoria > 0
     ");
     $stmtEmb->execute([':proposta_id' => $prop['id']]);
     $embarcacoes = $stmtEmb->fetchAll(PDO::FETCH_ASSOC);
@@ -240,6 +241,7 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
         FROM agendamentos
         WHERE proposta_id = :proposta_id
           AND embarcacao_id = :embarcacao_id
+          AND status <> 'cancelado'
     ");
     $stmtAgendamento = $pdo->prepare("
         INSERT INTO agendamentos (
@@ -260,17 +262,30 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
             continue;
         }
 
+        $temVistoria = ((int)($emb['servicos_vistoria'] ?? 0)) > 0;
+        $temAnalise = ((int)($emb['servicos_analise'] ?? 0)) > 0;
+
+        if ($temVistoria) {
+            $tipoServicos = !empty($emb['servicos_vistoria_nomes']) ? $emb['servicos_vistoria_nomes'] : 'Vistoria Geral';
+            $obs = $manual
+                ? 'Agendamento gerado automaticamente a partir da aprovação interna da proposta. Favor definir data e vistoriador.'
+                : 'Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data e vistoriador.';
+        } else {
+            $tipoServicos = !empty($emb['servicos_analise_nomes']) ? $emb['servicos_analise_nomes'] : 'Análise de Planos';
+            $obs = $manual
+                ? 'Agendamento técnico gerado a partir da aprovação interna da proposta. Favor definir analista responsável e prazo.'
+                : 'Agendamento técnico gerado a partir da proposta assinada. Favor definir analista responsável e prazo.';
+        }
+
         $stmtAgendamento->execute([
             ':proposta_id' => $prop['id'],
             ':embarcacao_id' => $emb['embarcacao_id'],
             ':cliente_id' => $prop['cliente_id'],
             ':vendedor_id' => $prop['criado_por'] ?? null,
-            ':tipo_vistoria' => !empty($emb['servicos_nomes']) ? $emb['servicos_nomes'] : 'Vistoria Geral',
+            ':tipo_vistoria' => $tipoServicos,
             ':contato_nome' => $prop['responsavel_fechamento_nome'] ?? null,
             ':contato_telefone' => $prop['responsavel_fechamento_telefone'] ?? null,
-            ':observacoes' => $manual
-                ? 'Agendamento gerado automaticamente a partir da aprovação interna da proposta. Favor definir data e vistoriador.'
-                : 'Agendamento gerado automaticamente a partir da proposta assinada. Favor definir data e vistoriador.',
+            ':observacoes' => $obs,
             ':criado_por' => $criado_por,
         ]);
     }

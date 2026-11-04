@@ -52,6 +52,8 @@ $agendamento = [
     'vistoriador_origem_id' => '',
     'motivo_reatribuicao' => '',
     'retorno_tipo' => '',
+    'analista_id' => '',
+    'prazo_analise' => '',
 ];
 
 if (!$editando && $relatorioOrigemId !== '') {
@@ -131,6 +133,15 @@ if ($editando) {
                 redirecionar(APP_URL . 'agendamentos');
             }
             $agendamento = array_merge($agendamento, $dados);
+            if (empty($agendamento['analista_id']) && !empty($agendamento['proposta_id'])) {
+                $stmtApCheck = $pdo->prepare("SELECT analista_id, prazo_agendado_em FROM analises_planos WHERE proposta_id = :prop ORDER BY criado_em DESC LIMIT 1");
+                $stmtApCheck->execute([':prop' => $agendamento['proposta_id']]);
+                $apDados = $stmtApCheck->fetch(PDO::FETCH_ASSOC);
+                if ($apDados) {
+                    $agendamento['analista_id'] = $apDados['analista_id'] ?? '';
+                    $agendamento['prazo_analise'] = $apDados['prazo_agendado_em'] ?? '';
+                }
+            }
             if (!empty($dados['relatorio_origem_id'])) {
                 $stmtAuditRetorno = $pdo->prepare("SELECT vr.vistoriador_origem_id,vr.motivo_reatribuicao,
                         a0.vistoriador_id vistoriador_original
@@ -176,6 +187,10 @@ try {
 
     $servicos = $pdo->query("SELECT id, nome FROM servicos WHERE ativo = 1 ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
     $embarcacoes = $pdo->query("SELECT id, nome, registro FROM embarcacoes WHERE ativo = 1 ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $analistas = [];
+    if (in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)) {
+        $analistas = $pdo->query("SELECT DISTINCT u.id, u.nome, u.email FROM usuarios u LEFT JOIN usuario_perfis up ON up.usuario_id = u.id WHERE u.ativo = 1 AND u.excluido_em IS NULL AND (u.cargo = 'ANALISTA' OR up.perfil = 'ANALISTA') ORDER BY u.nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+    }
 } catch (Exception $e) {
     error_log('Erro ao carregar listas: ' . $e->getMessage());
     $clientes = [];
@@ -184,6 +199,7 @@ try {
     $vistoriadores = [];
     $servicos = [];
     $embarcacoes = [];
+    $analistas = [];
 }
 
 $titulo_page = ($editando ? 'Editar' : 'Novo') . ' Agendamento - ERP Sistema';
@@ -194,6 +210,9 @@ $servicosTravados = !empty($agendamento['proposta_id']);
 $origemTravada = ($editando && !empty($agendamento['proposta_id'])) || !empty($agendamento['relatorio_origem_id']);
 $fluxoProposta = $fluxoPropostaSolicitado && $editando && !empty($agendamento['proposta_id']);
 $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['hora_vistoria'], 0, 5) : '';
+$inicialTemAnalise = !empty($agendamento['analista_id']) || stripos((string)$agendamento['tipo_vistoria'], 'Análise de Planos') !== false || stripos((string)$agendamento['tipo_vistoria'], 'Analise de Planos') !== false;
+$inicialTemVistoria = empty($agendamento['proposta_id']) || !empty($agendamento['vistoriador_id']) || stripos((string)$agendamento['tipo_vistoria'], 'Vistoria') !== false || !$inicialTemAnalise;
+
 
 ?>
 
@@ -339,67 +358,115 @@ $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['
             </div>
 
             <div class="form-section">
-                <h4 class="form-section-title"><i class="fas fa-clipboard-check"></i> Execução da vistoria</h4>
+                <h4 class="form-section-title"><i class="fas fa-tasks"></i> Serviços e Responsáveis Técnicos</h4>
                 <div class="form-row">
-                    <div class="form-group col-6">
-                        <label for="tipo_vistoria">Tipo de vistoria / serviços *</label>
-                        <textarea id="tipo_vistoria" name="tipo_vistoria" required rows="2" placeholder="Ex.: CSN inicial, CNBL, arqueação, convalidação..."><?php echo h($agendamento['tipo_vistoria']); ?></textarea>
+                    <div class="form-group col-12">
+                        <label for="tipo_vistoria">Serviços / Tipo de vistoria *</label>
+                        <textarea id="tipo_vistoria" name="tipo_vistoria" required rows="2" placeholder="Ex.: CSN inicial, CNBL, arqueação, Análise de Planos EC1..."><?php echo h($agendamento['tipo_vistoria']); ?></textarea>
+                        <small class="text-muted">Serviços contratados que demandam vistoria naval em campo ou análise técnica de engenharia.</small>
                     </div>
-                    <div class="form-group col-6">
-                        <label for="vistoriador_id">Vistoriador responsável *</label>
-                        <?php if (in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)): ?>
-                            <select id="vistoriador_id" name="vistoriador_id" required>
-                                <option value="">-- Selecione o vistoriador --</option>
-                                <?php foreach ($vistoriadores as $v): ?>
-                                    <?php
-                                    $statusSgq = $v['status_sgq'] ?? 'QUALIFICADO';
-                                    $marinhaVal = !empty($v['credencial_marinha_validade']) ? date('d/m/Y', strtotime($v['credencial_marinha_validade'])) : '';
-                                    $vencido = !empty($v['credencial_marinha_validade']) && $v['credencial_marinha_validade'] < date('Y-m-d');
-                                    $tagSgq = $vencido
-                                        ? ' [INAPTO - Credencial Marinha Vencida]'
-                                        : ($statusSgq !== 'QUALIFICADO' ? " [SGQ: {$statusSgq}]" : ($marinhaVal ? " (Qualificado - Marinha: {$marinhaVal})" : ' (Qualificado)'));
-                                    ?>
-                                    <option value="<?php echo h($v['id']); ?>"
-                                            <?php echo $vencido ? 'style="color:#b42318;font-weight:600;"' : ''; ?>
-                                            <?php echo $agendamento['vistoriador_id'] === $v['id'] ? 'selected' : ''; ?>>
-                                        <?php echo h($v['nome'] . $tagSgq); ?>
+                </div>
+
+                <div id="alertaServicosMistos" style="display:none;" class="alert alert-info col-12 mb-3">
+                    <i class="fas fa-info-circle"></i> <strong>Proposta Integrada (Vistoria de Campo + Análise de Planos):</strong> Selecione o Vistoriador Naval para a vistoria na embarcação e o Analista Naval para aprovação dos projetos.
+                </div>
+
+                <!-- BLOCO 1: VISTORIA DE CAMPO -->
+                <div id="blocoVistoriaCampo" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px; background: #fafafa;">
+                    <div style="font-weight: 600; color: #1e293b; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fas fa-compass" style="color: #0284c7;"></i> Vistoria Técnica em Campo
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-12">
+                            <label for="vistoriador_id">Vistoriador naval responsável <span id="labelVistObrigatorio">*</span></label>
+                            <?php if (in_array($cargo, ['ADMIN', 'SECRETARIA', 'VENDEDOR'], true)): ?>
+                                <select id="vistoriador_id" name="vistoriador_id">
+                                    <option value="">-- Selecione o vistoriador --</option>
+                                    <?php foreach ($vistoriadores as $v): ?>
+                                        <?php
+                                        $statusSgq = $v['status_sgq'] ?? 'QUALIFICADO';
+                                        $marinhaVal = !empty($v['credencial_marinha_validade']) ? date('d/m/Y', strtotime($v['credencial_marinha_validade'])) : '';
+                                        $vencido = !empty($v['credencial_marinha_validade']) && $v['credencial_marinha_validade'] < date('Y-m-d');
+                                        $tagSgq = $vencido
+                                            ? ' [INAPTO - Credencial Marinha Vencida]'
+                                            : ($statusSgq !== 'QUALIFICADO' ? " [SGQ: {$statusSgq}]" : ($marinhaVal ? " (Marinha: {$marinhaVal})" : ' (Qualificado)'));
+                                        ?>
+                                        <option value="<?php echo h($v['id']); ?>"
+                                                <?php echo $vencido ? 'style="color:#b42318;font-weight:600;"' : ''; ?>
+                                                <?php echo ($agendamento['vistoriador_id'] ?? '') === $v['id'] ? 'selected' : ''; ?>>
+                                            <?php echo h($v['nome']) . ' (' . h($v['email']) . ')' . $tagSgq; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <small class="text-muted">Selecione o engenheiro/vistoriador naval credenciado que realizará a vistoria técnica em campo.</small>
+                            <?php else: ?>
+                                <input type="text" class="form-control" readonly value="<?php echo h($_SESSION['usuario_nome'] ?? 'Você (VISTORIADOR)'); ?>">
+                                <input type="hidden" name="vistoriador_id" value="<?php echo h($_SESSION['usuario_id']); ?>">
+                                <small>Como vistoriador, você será automaticamente atribuído.</small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php if (!empty($agendamento['relatorio_origem_id'])): ?>
+                        <div class="form-row">
+                            <div class="form-group col-12">
+                                <label for="motivo_reatribuicao">Motivo da troca de vistoriador</label>
+                                <textarea id="motivo_reatribuicao" name="motivo_reatribuicao" rows="2"
+                                          placeholder="Obrigatório somente se o responsável pelo retorno for diferente do vistoriador anterior."><?php echo h($agendamento['motivo_reatribuicao']); ?></textarea>
+                                <small>O mesmo vistoriador é mantido por padrão. Toda substituição ficará registrada para auditoria.</small>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                    <div class="form-row">
+                        <div class="form-group col-4">
+                            <label for="data_vistoria">Data da vistoria <span id="labelDataObrigatorio">*</span></label>
+                            <input type="date" id="data_vistoria" name="data_vistoria"
+                                   value="<?php echo h($agendamento['data_vistoria']); ?>"
+                                   min="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                        <div class="form-group col-3">
+                            <label for="hora_vistoria">Hora</label>
+                            <input type="time" id="hora_vistoria" name="hora_vistoria" value="<?php echo h($agendamento['hora_vistoria']); ?>">
+                        </div>
+                        <div class="form-group col-5">
+                            <label for="local">Local da vistoria</label>
+                            <input type="text" id="local" name="local" value="<?php echo h($agendamento['local']); ?>" placeholder="Endereço / estaleiro / porto">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BLOCO 2: ANÁLISE TÉCNICA DE PLANOS -->
+                <div id="blocoAnalisePlanos" style="border: 1px solid #e0e7ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; background: #f8faff;">
+                    <div style="font-weight: 600; color: #3730a3; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fas fa-drafting-compass" style="color: #6366f1;"></i> Análise Técnica de Planos (Gabinete / Engenharia)
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-7">
+                            <label for="analista_id">Analista naval responsável <span id="labelAnalistaObrigatorio">*</span></label>
+                            <select id="analista_id" name="analista_id">
+                                <option value="">-- Selecione o analista técnico --</option>
+                                <?php foreach ($analistas as $a): ?>
+                                    <option value="<?php echo h($a['id']); ?>"
+                                            <?php echo ($agendamento['analista_id'] ?? '') === $a['id'] ? 'selected' : ''; ?>>
+                                        <?php echo h($a['nome']); ?> (<?php echo h($a['email']); ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <small class="text-muted">Selecione o engenheiro/vistoriador naval credenciado que realizará a vistoria técnica em campo.</small>
-                        <?php else: ?>
-                            <input type="text" class="form-control" readonly value="<?php echo h($_SESSION['usuario_nome'] ?? 'Você (VISTORIADOR)'); ?>">
-                            <input type="hidden" name="vistoriador_id" value="<?php echo h($_SESSION['usuario_id']); ?>">
-                            <small>Como vistoriador, você será automaticamente atribuído.</small>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <?php if (!empty($agendamento['relatorio_origem_id'])): ?>
-                    <div class="form-row">
-                        <div class="form-group col-12">
-                            <label for="motivo_reatribuicao">Motivo da troca de vistoriador</label>
-                            <textarea id="motivo_reatribuicao" name="motivo_reatribuicao" rows="2"
-                                      placeholder="Obrigatório somente se o responsável pelo retorno for diferente do vistoriador anterior."><?php echo h($agendamento['motivo_reatribuicao']); ?></textarea>
-                            <small>O mesmo vistoriador é mantido por padrão. Toda substituição ficará registrada para auditoria.</small>
+                            <small class="text-muted">Engenheiro ou analista naval responsável pela análise de conformidade (NORMAM-201/NORMAM-202).</small>
+                        </div>
+                        <div class="form-group col-5">
+                            <label for="prazo_analise">Prazo para conclusão da análise <span id="labelPrazoObrigatorio">*</span></label>
+                            <?php
+                            $prazoVal = '';
+                            if (!empty($agendamento['prazo_analise'])) {
+                                $prazoVal = date('Y-m-d\TH:i', strtotime($agendamento['prazo_analise']));
+                            }
+                            ?>
+                            <input type="datetime-local" id="prazo_analise" name="prazo_analise" value="<?php echo h($prazoVal); ?>">
+                            <small class="text-muted">Prazo limite para emissão de exigências ou parecer de aprovação.</small>
                         </div>
                     </div>
-                <?php endif; ?>
-                <div class="form-row">
-                    <div class="form-group col-4">
-                        <label for="data_vistoria">Data da vistoria *</label>
-                        <input type="date" id="data_vistoria" name="data_vistoria" required
-                               value="<?php echo h($agendamento['data_vistoria']); ?>"
-                               min="<?php echo date('Y-m-d'); ?>">
-                    </div>
-                    <div class="form-group col-3">
-                        <label for="hora_vistoria">Hora</label>
-                        <input type="time" id="hora_vistoria" name="hora_vistoria" value="<?php echo h($agendamento['hora_vistoria']); ?>">
-                    </div>
-                    <div class="form-group col-5">
-                        <label for="local">Local</label>
-                        <input type="text" id="local" name="local" value="<?php echo h($agendamento['local']); ?>" placeholder="Endereço / estaleiro / porto">
-                    </div>
                 </div>
+
             </div>
 
             <div class="form-section">
@@ -457,6 +524,59 @@ function atualizarEstadoServicosTravados(travado) {
         campoVistoria.insertAdjacentElement('afterend', hint);
     }
     hint.style.display = travado ? '' : 'none';
+}
+
+
+function ajustarVisibilidadeBlocos(temVistoria, temAnalise) {
+    const blocoVist = document.getElementById('blocoVistoriaCampo');
+    const blocoAna = document.getElementById('blocoAnalisePlanos');
+    const alertaMistos = document.getElementById('alertaServicosMistos');
+    const vistoriadorInput = document.getElementById('vistoriador_id');
+    const dataVistoriaInput = document.getElementById('data_vistoria');
+    const analistaInput = document.getElementById('analista_id');
+    const prazoAnaliseInput = document.getElementById('prazo_analise');
+    const labelVistObrigatorio = document.getElementById('labelVistObrigatorio');
+    const labelDataObrigatorio = document.getElementById('labelDataObrigatorio');
+    const labelAnalistaObrigatorio = document.getElementById('labelAnalistaObrigatorio');
+    const labelPrazoObrigatorio = document.getElementById('labelPrazoObrigatorio');
+
+    if (alertaMistos) alertaMistos.style.display = (temVistoria && temAnalise) ? 'block' : 'none';
+
+    if (temAnalise) {
+        if (blocoAna) blocoAna.style.display = 'block';
+        if (analistaInput) analistaInput.required = true;
+        if (prazoAnaliseInput) prazoAnaliseInput.required = true;
+        if (labelAnalistaObrigatorio) labelAnalistaObrigatorio.style.display = 'inline';
+        if (labelPrazoObrigatorio) labelPrazoObrigatorio.style.display = 'inline';
+    } else {
+        if (blocoAna) blocoAna.style.display = 'none';
+        if (analistaInput) {
+            analistaInput.required = false;
+        }
+        if (prazoAnaliseInput) {
+            prazoAnaliseInput.required = false;
+        }
+        if (labelAnalistaObrigatorio) labelAnalistaObrigatorio.style.display = 'none';
+        if (labelPrazoObrigatorio) labelPrazoObrigatorio.style.display = 'none';
+    }
+
+    if (temVistoria) {
+        if (blocoVist) blocoVist.style.display = 'block';
+        if (vistoriadorInput && vistoriadorInput.tagName.toLowerCase() === 'select') vistoriadorInput.required = true;
+        if (dataVistoriaInput) dataVistoriaInput.required = true;
+        if (labelVistObrigatorio) labelVistObrigatorio.style.display = 'inline';
+        if (labelDataObrigatorio) labelDataObrigatorio.style.display = 'inline';
+    } else if (temAnalise) {
+        if (blocoVist) blocoVist.style.display = 'none';
+        if (vistoriadorInput && vistoriadorInput.tagName.toLowerCase() === 'select') vistoriadorInput.required = false;
+        if (dataVistoriaInput) dataVistoriaInput.required = false;
+        if (labelVistObrigatorio) labelVistObrigatorio.style.display = 'none';
+        if (labelDataObrigatorio) labelDataObrigatorio.style.display = 'none';
+    } else {
+        if (blocoVist) blocoVist.style.display = 'block';
+        if (vistoriadorInput && vistoriadorInput.tagName.toLowerCase() === 'select') vistoriadorInput.required = true;
+        if (dataVistoriaInput) dataVistoriaInput.required = true;
+    }
 }
 
 function transformarHoraEmSelecao() {
@@ -539,6 +659,13 @@ function carregarDadosProposta(propostaId) {
                     });
                     selectEmbarcacao.innerHTML = options;
                 }
+                                if (data.analista_id && document.getElementById('analista_id')) {
+                    document.getElementById('analista_id').value = data.analista_id;
+                }
+                if (data.prazo_analise && document.getElementById('prazo_analise')) {
+                    document.getElementById('prazo_analise').value = data.prazo_analise;
+                }
+                ajustarVisibilidadeBlocos(data.tem_vistoria, data.tem_analise);
                 if (campoVistoria && data.tipo_vistoria) {
                     campoVistoria.value = data.tipo_vistoria;
                     atualizarEstadoServicosTravados(true);
@@ -599,6 +726,8 @@ function restaurarEmbarcacoes() {
 
 transformarHoraEmSelecao();
 atualizarEstadoServicosTravados(servicosIniciamTravados);
+ajustarVisibilidadeBlocos(<?php echo $inicialTemVistoria ? 'true' : 'false'; ?>, <?php echo $inicialTemAnalise ? 'true' : 'false'; ?>);
+
 
 const propSelectInicial = document.getElementById('proposta_id');
 if (propSelectInicial && propSelectInicial.value && !<?php echo $editando ? 'true' : 'false'; ?>) {

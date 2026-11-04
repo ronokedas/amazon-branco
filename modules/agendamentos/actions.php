@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/analise_planos.php';
 
 verificar_sessao();
 $cargo = getCargo();
@@ -47,7 +48,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {
         $stmtEmb->execute([':id' => $proposta_id]);
         $embarcacoes = $stmtEmb->fetchAll(PDO::FETCH_ASSOC);
         
-        // Buscar serviços de VISTORIA da proposta (excluindo Análise de Planos que é tratada separadamente pela engenharia)
+        // Buscar serviços de VISTORIA da proposta (excluindo Análise de Planos)
         $stmtSrv = $pdo->prepare("
             SELECT s.nome 
             FROM propostas_servicos ps
@@ -57,6 +58,35 @@ if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {
         ");
         $stmtSrv->execute([':id' => $proposta_id]);
         $servicos = array_column($stmtSrv->fetchAll(PDO::FETCH_ASSOC), 'nome');
+
+        // Buscar serviços de ANÁLISE DE PLANOS da proposta
+        $stmtAna = $pdo->prepare("
+            SELECT s.nome 
+            FROM propostas_servicos ps
+            INNER JOIN servicos s ON ps.servico_id = s.id
+            WHERE ps.proposta_id = :id
+              AND COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
+        ");
+        $stmtAna->execute([':id' => $proposta_id]);
+        $servicosAnalise = array_column($stmtAna->fetchAll(PDO::FETCH_ASSOC), 'nome');
+
+        $temVistoria = !empty($servicos);
+        $temAnalise = !empty($servicosAnalise);
+
+        if ($temVistoria) {
+            $tipoVistoriaTexto = implode(', ', $servicos);
+        } elseif ($temAnalise) {
+            $tipoVistoriaTexto = implode(', ', $servicosAnalise);
+        } else {
+            $tipoVistoriaTexto = 'Vistoria Geral';
+        }
+
+        // Buscar dados de análise técnica pré-existente
+        $stmtAp = $pdo->prepare("SELECT analista_id, prazo_agendado_em FROM analises_planos WHERE proposta_id = :id ORDER BY criado_em DESC LIMIT 1");
+        $stmtAp->execute([':id' => $proposta_id]);
+        $apRow = $stmtAp->fetch(PDO::FETCH_ASSOC) ?: [];
+        $analistaIdAtual = $apRow['analista_id'] ?? null;
+        $prazoAnaliseAtual = !empty($apRow['prazo_agendado_em']) ? date('Y-m-d\TH:i', strtotime($apRow['prazo_agendado_em'])) : null;
 
         // Verificar se já existe agendamento rascunho/pendente desta proposta para atualizar ao invés de duplicar
         $agendamentoIdExistente = null;
@@ -77,7 +107,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {
             'contato_telefone' => $proposta['responsavel_fechamento_telefone'] ?? null,
             'embarcacoes'      => $embarcacoes,
             'embarcacao_id'    => !empty($embarcacoes) ? $embarcacoes[0]['id'] : null,
-            'tipo_vistoria'    => !empty($servicos) ? implode(', ', $servicos) : 'Vistoria Geral',
+            'tipo_vistoria'    => $tipoVistoriaTexto,
+            'tem_vistoria'     => $temVistoria,
+            'tem_analise'      => $temAnalise,
+            'servicos_vistoria'=> $servicos,
+            'servicos_analise' => $servicosAnalise,
+            'analista_id'      => $analistaIdAtual,
+            'prazo_analise'    => $prazoAnaliseAtual,
         ]);
         exit;
         
@@ -98,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
-function validarCamposAgendamento(string $data_vistoria, string $embarcacao_id, string $cliente_id, string $tipo_vistoria): array
+function validarCamposAgendamento(string $data_vistoria, string $embarcacao_id, string $cliente_id, string $tipo_vistoria, bool $requerDataVistoria = true): array
 {
     $errosCampos = [];
 
@@ -111,13 +147,15 @@ function validarCamposAgendamento(string $data_vistoria, string $embarcacao_id, 
     }
 
     if (empty($tipo_vistoria)) {
-        $errosCampos['tipo_vistoria'] = 'Informe o tipo de vistoria.';
+        $errosCampos['tipo_vistoria'] = 'Informe o tipo de serviço / vistoria.';
     }
 
-    if (empty($data_vistoria)) {
-        $errosCampos['data_vistoria'] = 'Informe a data da vistoria.';
-    } elseif ($data_vistoria < date('Y-m-d')) {
-        $errosCampos['data_vistoria'] = 'A data da vistoria não pode ser no passado.';
+    if ($requerDataVistoria) {
+        if (empty($data_vistoria)) {
+            $errosCampos['data_vistoria'] = 'Informe a data da vistoria.';
+        } elseif ($data_vistoria < date('Y-m-d')) {
+            $errosCampos['data_vistoria'] = 'A data da vistoria não pode ser no passado.';
+        }
     }
 
     return $errosCampos;
@@ -129,17 +167,35 @@ function obterTipoVistoriaDaProposta(PDO $pdo, ?string $proposta_id): string
         return '';
     }
 
+    // Primeiro busca se há serviços de vistoria de campo
     $stmt = $pdo->prepare("
         SELECT s.nome
         FROM propostas_servicos ps
         INNER JOIN servicos s ON ps.servico_id = s.id
         WHERE ps.proposta_id = :id
+          AND COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
         ORDER BY s.nome ASC
     ");
     $stmt->execute([':id' => $proposta_id]);
     $servicos = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'nome');
 
-    return !empty($servicos) ? implode(', ', $servicos) : '';
+    if (!empty($servicos)) {
+        return implode(', ', $servicos);
+    }
+
+    // Se só houver serviços de análise de planos
+    $stmtAna = $pdo->prepare("
+        SELECT s.nome
+        FROM propostas_servicos ps
+        INNER JOIN servicos s ON ps.servico_id = s.id
+        WHERE ps.proposta_id = :id
+          AND COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
+        ORDER BY s.nome ASC
+    ");
+    $stmtAna->execute([':id' => $proposta_id]);
+    $servicosAna = array_column($stmtAna->fetchAll(PDO::FETCH_ASSOC), 'nome');
+
+    return !empty($servicosAna) ? implode(', ', $servicosAna) : '';
 }
 
 function obterDadosResponsavelDaProposta(PDO $pdo, ?string $proposta_id): array
@@ -180,6 +236,62 @@ function horaVistoriaValida(?string $hora_vistoria): bool
     return in_array($matches[2], ['00', '30'], true);
 }
 
+
+function sincronizarAnalisesPlanosAgendamento(PDO $pdo, ?string $proposta_id, ?string $embarcacao_id, ?string $analista_id, ?string $prazo_analise, ?string $usuario_id): void
+{
+    if (empty($proposta_id) || empty($analista_id)) {
+        return;
+    }
+
+    $stmtDemandas = $pdo->prepare("SELECT * FROM analises_planos WHERE proposta_id = :prop AND (embarcacao_id = :emb OR :emb IS NULL)");
+    $stmtDemandas->execute([':prop' => $proposta_id, ':emb' => $embarcacao_id ?: null]);
+    $demandas = $stmtDemandas->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($demandas as $d) {
+        $apId = $d['id'];
+        $prazoFormatado = !empty($prazo_analise) ? date('Y-m-d H:i:s', strtotime($prazo_analise)) : null;
+        $novoStatus = in_array($d['status'], ['AGUARDANDO_AGENDAMENTO', 'AGENDADA'], true) ? 'AGENDADA' : $d['status'];
+        $acaoAgenda = empty($d['prazo_agendado_em']) ? 'AGENDAMENTO' : ($analista_id !== $d['analista_id'] ? 'REATRIBUICAO' : 'REAGENDAMENTO');
+
+        $pdo->prepare("UPDATE analises_planos SET analista_id = :analista, prazo_agendado_em = COALESCE(:prazo, prazo_agendado_em), status = :status WHERE id = :id")
+            ->execute([
+                ':analista' => $analista_id,
+                ':prazo' => $prazoFormatado,
+                ':status' => $novoStatus,
+                ':id' => $apId
+            ]);
+
+        if ($prazoFormatado) {
+            $pdo->prepare("INSERT INTO analise_planos_agenda_historico
+                (analise_id, analista_anterior_id, analista_novo_id, prazo_anterior_em, prazo_novo_em, motivo, acao, criado_por)
+                VALUES (:analise, :ant_id, :novo_id, :prazo_ant, :prazo_novo, 'Definido no agendamento da proposta', :acao, :usuario)")
+                ->execute([
+                    ':analise' => $apId,
+                    ':ant_id' => $d['analista_id'],
+                    ':novo_id' => $analista_id,
+                    ':prazo_ant' => $d['prazo_agendado_em'],
+                    ':prazo_novo' => $prazoFormatado,
+                    ':acao' => $acaoAgenda,
+                    ':usuario' => $usuario_id ?: $analista_id
+                ]);
+        }
+
+        if ($analista_id !== $d['analista_id']) {
+            if (function_exists('analisePlanosNotificar')) {
+                analisePlanosNotificar(
+                    $pdo,
+                    $analista_id,
+                    'ANALISE_AGENDADA',
+                    'Nova Análise de Planos atribuída',
+                    "Você foi atribuído à análise {$d['numero']}" . ($prazoFormatado ? " com prazo até " . date('d/m/Y H:i', strtotime($prazoFormatado)) : "") . ".",
+                    $apId,
+                    'analises-planos/form?id=' . urlencode($apId)
+                );
+            }
+        }
+    }
+}
+
 switch ($action) {
 
     // ==================== INSERIR ====================
@@ -197,7 +309,9 @@ switch ($action) {
             $contato_nome    = sanitizar($_POST['contato_nome'] ?? '');
             $contato_telefone = preg_replace('/\D/', '', $_POST['contato_telefone'] ?? '') ?: null;
             $observacoes     = sanitizar($_POST['observacoes'] ?? '');
-            $vistoriador_id  = $_POST['vistoriador_id'] ?? null;
+            $vistoriador_id  = !empty($_POST['vistoriador_id']) ? trim($_POST['vistoriador_id']) : null;
+            $analista_id     = !empty($_POST['analista_id']) ? trim($_POST['analista_id']) : null;
+            $prazo_analise   = !empty($_POST['prazo_analise']) ? trim($_POST['prazo_analise']) : null;
             $vendedor_id     = $_POST['vendedor_id'] ?? null;
             $relatorio_origem_id = trim((string)($_POST['relatorio_origem_id'] ?? ''));
             $motivo_reatribuicao = trim(sanitizar($_POST['motivo_reatribuicao'] ?? ''));
@@ -220,7 +334,33 @@ switch ($action) {
                     $contato_telefone = preg_replace('/\D/', '', $responsavelProposta['contato_telefone']) ?: null;
                 }
             }
-            if (!horaVistoriaValida($hora_vistoria)) {
+
+            // Identificar escopo da demanda: vistoria de campo, analise de planos, ou ambos
+            $temVistoria = true;
+            $temAnalise = false;
+            if (!empty($proposta_id)) {
+                $stmtSrvCheck = $pdo->prepare("SELECT COUNT(*) FROM propostas_servicos ps JOIN servicos s ON ps.servico_id = s.id WHERE ps.proposta_id = :id AND COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')");
+                $stmtSrvCheck->execute([':id' => $proposta_id]);
+                $temVistoria = ((int)$stmtSrvCheck->fetchColumn()) > 0;
+
+                $stmtAnaCheck = $pdo->prepare("SELECT COUNT(*) FROM propostas_servicos ps JOIN servicos s ON ps.servico_id = s.id WHERE ps.proposta_id = :id AND COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')");
+                $stmtAnaCheck->execute([':id' => $proposta_id]);
+                $temAnalise = ((int)$stmtAnaCheck->fetchColumn()) > 0;
+            } else {
+                $temAnalise = !empty($analista_id) || (stripos($tipo_vistoria, 'Análise de Planos') !== false || stripos($tipo_vistoria, 'Analise de Planos') !== false);
+                $temVistoria = !empty($vistoriador_id) || !$temAnalise;
+            }
+
+            if (!$temVistoria && $temAnalise) {
+                if (empty($data_vistoria)) {
+                    $data_vistoria = !empty($prazo_analise) ? date('Y-m-d', strtotime($prazo_analise)) : date('Y-m-d');
+                }
+                if (empty($hora_vistoria) && !empty($prazo_analise)) {
+                    $hora_vistoria = date('H:i', strtotime($prazo_analise));
+                }
+            }
+
+            if ($temVistoria && !horaVistoriaValida($hora_vistoria)) {
                 setMensagem('error', 'Selecione um horário redondo, de meia em meia hora.');
                 redirecionar(APP_URL . 'agendamentos/form');
             }
@@ -230,46 +370,54 @@ switch ($action) {
                 $vistoriador_id = $_SESSION['usuario_id'];
             }
 
-            $errosCampos = validarCamposAgendamento($data_vistoria, $embarcacao_id, $cliente_id, $tipo_vistoria);
-            if (empty($vistoriador_id)) {
-                $errosCampos['vistoriador_id'] = 'Selecione o vistoriador responsável.';
-            } else {
-                $stmtCheckVist = $pdo->prepare("SELECT id, ativo, nome FROM usuarios WHERE id = :id LIMIT 1");
-                $stmtCheckVist->execute([':id' => $vistoriador_id]);
-                $uVist = $stmtCheckVist->fetch(PDO::FETCH_ASSOC);
-                if (!$uVist || (int)$uVist['ativo'] !== 1) {
-                    $errosCampos['vistoriador_id'] = 'O vistoriador selecionado não foi encontrado ou está inativo.';
-                    $isApi = isAjax() || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') || str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') || isset($_GET['api']);
-                    if ($isApi) {
-                        http_response_code(400);
-                        header('Content-Type: application/json; charset=utf-8');
-                        echo json_encode([
-                            'sucesso' => false,
-                            'codigo' => 'VISTORIADOR_INVALIDO',
-                            'erro' => 'O vistoriador selecionado não está ativo no sistema.',
-                            'mensagem' => $errosCampos['vistoriador_id'],
-                        ], JSON_UNESCAPED_UNICODE);
-                        exit;
+            $errosCampos = validarCamposAgendamento($data_vistoria, $embarcacao_id, $cliente_id, $tipo_vistoria, $temVistoria);
+
+            if ($temVistoria) {
+                if (empty($vistoriador_id)) {
+                    $errosCampos['vistoriador_id'] = 'Selecione o vistoriador responsável.';
+                } else {
+                    $stmtCheckVist = $pdo->prepare("SELECT id, ativo, nome FROM usuarios WHERE id = :id LIMIT 1");
+                    $stmtCheckVist->execute([':id' => $vistoriador_id]);
+                    $uVist = $stmtCheckVist->fetch(PDO::FETCH_ASSOC);
+                    if (!$uVist || (int)$uVist['ativo'] !== 1) {
+                        $errosCampos['vistoriador_id'] = 'O vistoriador selecionado não foi encontrado ou está inativo.';
                     }
                 }
+            } else {
+                $vistoriador_id = null;
             }
+
+            if ($temAnalise) {
+                if (empty($analista_id)) {
+                    $errosCampos['analista_id'] = 'Selecione o analista naval responsável pela análise de planos.';
+                } else {
+                    $stmtCheckAna = $pdo->prepare("SELECT id, ativo, nome FROM usuarios WHERE id = :id LIMIT 1");
+                    $stmtCheckAna->execute([':id' => $analista_id]);
+                    $uAna = $stmtCheckAna->fetch(PDO::FETCH_ASSOC);
+                    if (!$uAna || (int)$uAna['ativo'] !== 1) {
+                        $errosCampos['analista_id'] = 'O analista selecionado não foi encontrado ou está inativo.';
+                    }
+                }
+                if (empty($prazo_analise)) {
+                    $errosCampos['prazo_analise'] = 'Informe o prazo limite para a análise técnica.';
+                }
+            }
+
             if (!empty($errosCampos)) {
                 setMensagem('error', 'Erro no agendamento: ' . implode(' ', $errosCampos), $errosCampos);
                 redirecionar(APP_URL . 'agendamentos/form');
             }
 
-            if (empty($embarcacao_id) || empty($cliente_id) || empty($tipo_vistoria) || empty($data_vistoria)) {
-                setMensagem('error', 'Preencha todos os campos obrigatórios (cliente, embarcação, tipo e data).');
+            if (empty($embarcacao_id) || empty($cliente_id) || empty($tipo_vistoria)) {
+                setMensagem('error', 'Preencha todos os campos obrigatórios (cliente, embarcação e tipo).');
                 redirecionar(APP_URL . 'agendamentos/form');
             }
 
-            // Validar que a data da vistoria não está no passado
-            if ($data_vistoria < date('Y-m-d')) {
+            if ($temVistoria && $data_vistoria < date('Y-m-d')) {
                 setMensagem('error', 'A data da vistoria não pode ser no passado.');
                 redirecionar(APP_URL . 'agendamentos/form');
             }
 
-            // Se VENDEDOR, atribuir vendedor_id automaticamente
             if ($cargo === 'VENDEDOR') {
                 $vendedor_id = $_SESSION['usuario_id'];
             }
@@ -322,6 +470,7 @@ switch ($action) {
                     throw new RuntimeException('Este retorno A/S ja possui agendamento ou foi concluido.');
                 }
             }
+
             // Se foi informada proposta e não é retorno A/S, verificar se já existe rascunho de agendamento criado para ela
             $agendamentoAlvoId = null;
             if (!empty($proposta_id) && empty($relatorio_origem_id)) {
@@ -330,6 +479,8 @@ switch ($action) {
                 $agendamentoAlvoId = $stmtCheckAg->fetchColumn() ?: null;
             }
 
+            $prazoAnaliseSql = !empty($prazo_analise) ? date('Y-m-d H:i:s', strtotime($prazo_analise)) : null;
+
             if ($agendamentoAlvoId) {
                 $novoAgendamentoId = $agendamentoAlvoId;
                 $stmt = $pdo->prepare("
@@ -337,6 +488,8 @@ switch ($action) {
                         armador_id = :armador_id,
                         operador_nome = :operador_nome,
                         vistoriador_id = :vistoriador_id,
+                        analista_id = :analista_id,
+                        prazo_analise = :prazo_analise,
                         vendedor_id = COALESCE(:vendedor_id, vendedor_id),
                         tipo_vistoria = :tipo_vistoria,
                         data_vistoria = :data_vistoria,
@@ -351,9 +504,11 @@ switch ($action) {
                     ':armador_id'       => $armador_id ?: null,
                     ':operador_nome'    => $operador_nome ?: null,
                     ':vistoriador_id'   => $vistoriador_id ?: null,
+                    ':analista_id'      => $analista_id ?: null,
+                    ':prazo_analise'    => $prazoAnaliseSql,
                     ':vendedor_id'      => $vendedor_id ?: null,
                     ':tipo_vistoria'    => $tipo_vistoria,
-                    ':data_vistoria'    => $data_vistoria,
+                    ':data_vistoria'    => $data_vistoria ?: null,
                     ':hora_vistoria'    => $hora_vistoria ?: null,
                     ':local'            => $local ?: null,
                     ':contato_nome'     => $contato_nome ?: null,
@@ -365,11 +520,13 @@ switch ($action) {
                 $novoAgendamentoId = gerarUUID();
                 $stmt = $pdo->prepare("
                     INSERT INTO agendamentos (
-                        id, proposta_id, relatorio_origem_id, embarcacao_id, cliente_id, armador_id, operador_nome, vistoriador_id, vendedor_id,
+                        id, proposta_id, relatorio_origem_id, embarcacao_id, cliente_id, armador_id, operador_nome,
+                        vistoriador_id, analista_id, prazo_analise, vendedor_id,
                         tipo_vistoria, data_vistoria, hora_vistoria, local,
                         contato_nome, contato_telefone, status, observacoes, criado_por
                     ) VALUES (
-                        :id, :proposta_id, :relatorio_origem_id, :embarcacao_id, :cliente_id, :armador_id, :operador_nome, :vistoriador_id, :vendedor_id,
+                        :id, :proposta_id, :relatorio_origem_id, :embarcacao_id, :cliente_id, :armador_id, :operador_nome,
+                        :vistoriador_id, :analista_id, :prazo_analise, :vendedor_id,
                         :tipo_vistoria, :data_vistoria, :hora_vistoria, :local,
                         :contato_nome, :contato_telefone, 'pendente', :observacoes, :criado_por
                     )
@@ -383,9 +540,11 @@ switch ($action) {
                     ':armador_id'       => $armador_id ?: null,
                     ':operador_nome'    => $operador_nome ?: null,
                     ':vistoriador_id'   => $vistoriador_id ?: null,
+                    ':analista_id'      => $analista_id ?: null,
+                    ':prazo_analise'    => $prazoAnaliseSql,
                     ':vendedor_id'      => $vendedor_id ?: null,
                     ':tipo_vistoria'    => $tipo_vistoria,
-                    ':data_vistoria'    => $data_vistoria,
+                    ':data_vistoria'    => $data_vistoria ?: null,
                     ':hora_vistoria'    => $hora_vistoria ?: null,
                     ':local'            => $local ?: null,
                     ':contato_nome'     => $contato_nome ?: null,
@@ -394,6 +553,7 @@ switch ($action) {
                     ':criado_por'       => $_SESSION['usuario_id'],
                 ]);
             }
+
             if ($relatorio_origem_id !== '') {
                 $stmtVincularRetorno = $pdo->prepare("UPDATE vistoria_retornos
                     SET status='AGENDADO',agendamento_id=:agendamento,
@@ -418,16 +578,20 @@ switch ($action) {
                     throw new RuntimeException('O retorno A/S foi agendado por outra operacao.');
                 }
             }
+
+            // Sincronizar processos de análise de planos vinculados à proposta
+            sincronizarAnalisesPlanosAgendamento($pdo, $proposta_id, $embarcacao_id, $analista_id, $prazo_analise, $_SESSION['usuario_id'] ?? null);
+
             $pdo->commit();
 
-            log_atividade('agendamento_criado', "Agendamento de {$tipo_vistoria} criado para data {$data_vistoria}.");
+            log_atividade('agendamento_criado', "Agendamento de {$tipo_vistoria} criado.");
             setMensagem('success', 'Agendamento criado com sucesso!');
             redirecionar(APP_URL . 'agendamentos');
 
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao inserir agendamento: ' . $e->getMessage());
-            setMensagem('error', 'Erro ao criar agendamento.');
+            setMensagem('error', 'Erro ao criar agendamento: ' . $e->getMessage());
             redirecionar(APP_URL . 'agendamentos/form');
         }
         break;
@@ -439,11 +603,10 @@ switch ($action) {
         $destinoFormulario = APP_URL . 'agendamentos/form?id=' . urlencode($id)
             . ($fluxoProposta ? '&fluxo_proposta=1' : '');
         try {
-        // VISTORIADOR não pode editar agendamentos
-        if ($cargo === 'VISTORIADOR') {
-            setMensagem('error', 'Acesso negado. Vistoriadores não podem editar agendamentos.');
-            redirecionar(APP_URL . 'agendamentos');
-        }
+            if ($cargo === 'VISTORIADOR') {
+                setMensagem('error', 'Acesso negado. Vistoriadores não podem editar agendamentos.');
+                redirecionar(APP_URL . 'agendamentos');
+            }
             $proposta_id     = !empty($_POST['proposta_id']) ? $_POST['proposta_id'] : null;
             $embarcacao_id   = $_POST['embarcacao_id'] ?? '';
             $cliente_id      = $_POST['cliente_id'] ?? '';
@@ -456,7 +619,9 @@ switch ($action) {
             $contato_nome    = sanitizar($_POST['contato_nome'] ?? '');
             $contato_telefone = preg_replace('/\D/', '', $_POST['contato_telefone'] ?? '') ?: null;
             $observacoes     = sanitizar($_POST['observacoes'] ?? '');
-            $vistoriador_id  = $_POST['vistoriador_id'] ?? null;
+            $vistoriador_id  = !empty($_POST['vistoriador_id']) ? trim($_POST['vistoriador_id']) : null;
+            $analista_id     = !empty($_POST['analista_id']) ? trim($_POST['analista_id']) : null;
+            $prazo_analise   = !empty($_POST['prazo_analise']) ? trim($_POST['prazo_analise']) : null;
             $vendedor_id     = $_POST['vendedor_id'] ?? null;
             $motivo_reatribuicao = trim(sanitizar($_POST['motivo_reatribuicao'] ?? ''));
 
@@ -484,58 +649,82 @@ switch ($action) {
                     $contato_telefone = preg_replace('/\D/', '', $responsavelProposta['contato_telefone']) ?: null;
                 }
             }
-            if (!horaVistoriaValida($hora_vistoria)) {
+
+            $temVistoria = true;
+            $temAnalise = false;
+            if (!empty($proposta_id)) {
+                $stmtSrvCheck = $pdo->prepare("SELECT COUNT(*) FROM propostas_servicos ps JOIN servicos s ON ps.servico_id = s.id WHERE ps.proposta_id = :id AND COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')");
+                $stmtSrvCheck->execute([':id' => $proposta_id]);
+                $temVistoria = ((int)$stmtSrvCheck->fetchColumn()) > 0;
+
+                $stmtAnaCheck = $pdo->prepare("SELECT COUNT(*) FROM propostas_servicos ps JOIN servicos s ON ps.servico_id = s.id WHERE ps.proposta_id = :id AND COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')");
+                $stmtAnaCheck->execute([':id' => $proposta_id]);
+                $temAnalise = ((int)$stmtAnaCheck->fetchColumn()) > 0;
+            } else {
+                $temAnalise = !empty($analista_id) || (stripos($tipo_vistoria, 'Análise de Planos') !== false || stripos($tipo_vistoria, 'Analise de Planos') !== false);
+                $temVistoria = !empty($vistoriador_id) || !$temAnalise;
+            }
+
+            if (!$temVistoria && $temAnalise) {
+                if (empty($data_vistoria)) {
+                    $data_vistoria = !empty($prazo_analise) ? date('Y-m-d', strtotime($prazo_analise)) : date('Y-m-d');
+                }
+                if (empty($hora_vistoria) && !empty($prazo_analise)) {
+                    $hora_vistoria = date('H:i', strtotime($prazo_analise));
+                }
+            }
+
+            if ($temVistoria && !horaVistoriaValida($hora_vistoria)) {
                 setMensagem('error', 'Selecione um horário redondo, de meia em meia hora.');
                 redirecionar($destinoFormulario);
             }
             $hora_vistoria = !empty($hora_vistoria) ? substr($hora_vistoria, 0, 5) : null;
 
-            if ($cargo === 'VISTORIADOR') {
-                $vistoriador_id = $_SESSION['usuario_id'];
-            }
-
-            $errosCampos = validarCamposAgendamento($data_vistoria, $embarcacao_id, $cliente_id, $tipo_vistoria);
+            $errosCampos = validarCamposAgendamento($data_vistoria, $embarcacao_id, $cliente_id, $tipo_vistoria, $temVistoria);
             if (empty($id)) {
                 $errosCampos['id'] = 'Agendamento não informado.';
             }
-            if (empty($vistoriador_id)) {
-                $errosCampos['vistoriador_id'] = 'Selecione o vistoriador responsável.';
-            } else {
-                $stmtCheckVist = $pdo->prepare("SELECT id, ativo, nome FROM usuarios WHERE id = :id LIMIT 1");
-                $stmtCheckVist->execute([':id' => $vistoriador_id]);
-                $uVist = $stmtCheckVist->fetch(PDO::FETCH_ASSOC);
-                if (!$uVist || (int)$uVist['ativo'] !== 1) {
-                    $errosCampos['vistoriador_id'] = 'O vistoriador selecionado não foi encontrado ou está inativo.';
-                    $isApi = isAjax() || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') || str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') || isset($_GET['api']);
-                    if ($isApi) {
-                        http_response_code(400);
-                        header('Content-Type: application/json; charset=utf-8');
-                        echo json_encode([
-                            'sucesso' => false,
-                            'codigo' => 'VISTORIADOR_INVALIDO',
-                            'erro' => 'O vistoriador selecionado não está ativo no sistema.',
-                            'mensagem' => $errosCampos['vistoriador_id'],
-                        ], JSON_UNESCAPED_UNICODE);
-                        exit;
+
+            if ($temVistoria) {
+                if (empty($vistoriador_id)) {
+                    $errosCampos['vistoriador_id'] = 'Selecione o vistoriador responsável.';
+                } else {
+                    $stmtCheckVist = $pdo->prepare("SELECT id, ativo, nome FROM usuarios WHERE id = :id LIMIT 1");
+                    $stmtCheckVist->execute([':id' => $vistoriador_id]);
+                    $uVist = $stmtCheckVist->fetch(PDO::FETCH_ASSOC);
+                    if (!$uVist || (int)$uVist['ativo'] !== 1) {
+                        $errosCampos['vistoriador_id'] = 'O vistoriador selecionado não foi encontrado ou está inativo.';
                     }
+                }
+            } else {
+                $vistoriador_id = null;
+            }
+
+            if ($temAnalise) {
+                if (empty($analista_id)) {
+                    $errosCampos['analista_id'] = 'Selecione o analista naval responsável pela análise de planos.';
+                } else {
+                    $stmtCheckAna = $pdo->prepare("SELECT id, ativo, nome FROM usuarios WHERE id = :id LIMIT 1");
+                    $stmtCheckAna->execute([':id' => $analista_id]);
+                    $uAna = $stmtCheckAna->fetch(PDO::FETCH_ASSOC);
+                    if (!$uAna || (int)$uAna['ativo'] !== 1) {
+                        $errosCampos['analista_id'] = 'O analista selecionado não foi encontrado ou está inativo.';
+                    }
+                }
+                if (empty($prazo_analise)) {
+                    $errosCampos['prazo_analise'] = 'Informe o prazo limite para a análise técnica.';
                 }
             }
 
             if (!empty($errosCampos)) {
                 setMensagem('error', 'Erro no agendamento: ' . implode(' ', $errosCampos), $errosCampos);
-                $destino = !empty($id)
-                    ? $destinoFormulario
-                    : APP_URL . 'agendamentos';
+                $destino = !empty($id) ? $destinoFormulario : APP_URL . 'agendamentos';
                 redirecionar($destino);
             }
 
-            if (empty($id) || empty($embarcacao_id) || empty($cliente_id) || empty($tipo_vistoria) || empty($data_vistoria)) {
+            if (empty($id) || empty($embarcacao_id) || empty($cliente_id) || empty($tipo_vistoria)) {
                 setMensagem('error', 'Dados incompletos para atualização.');
                 redirecionar(APP_URL . 'agendamentos');
-            }
-
-            if ($cargo === 'VISTORIADOR') {
-                $vistoriador_id = $_SESSION['usuario_id'];
             }
 
             $pdo->beginTransaction();
@@ -555,6 +744,8 @@ switch ($action) {
                 }
             }
 
+            $prazoAnaliseSql = !empty($prazo_analise) ? date('Y-m-d H:i:s', strtotime($prazo_analise)) : null;
+
             $stmt = $pdo->prepare("
                 UPDATE agendamentos 
                 SET proposta_id = :proposta_id,
@@ -563,6 +754,8 @@ switch ($action) {
                     armador_id = :armador_id,
                     operador_nome = :operador_nome,
                     vistoriador_id = :vistoriador_id,
+                    analista_id = :analista_id,
+                    prazo_analise = :prazo_analise,
                     vendedor_id = :vendedor_id,
                     tipo_vistoria = :tipo_vistoria,
                     data_vistoria = :data_vistoria,
@@ -580,9 +773,11 @@ switch ($action) {
                 ':armador_id'      => $armador_id ?: null,
                 ':operador_nome'   => $operador_nome ?: null,
                 ':vistoriador_id'  => $vistoriador_id ?: null,
+                ':analista_id'     => $analista_id ?: null,
+                ':prazo_analise'   => $prazoAnaliseSql,
                 ':vendedor_id'     => $vendedor_id ?: null,
                 ':tipo_vistoria'   => $tipo_vistoria,
-                ':data_vistoria'   => $data_vistoria,
+                ':data_vistoria'   => $data_vistoria ?: null,
                 ':hora_vistoria'   => $hora_vistoria ?: null,
                 ':local'           => $local ?: null,
                 ':contato_nome'    => $contato_nome ?: null,
@@ -590,6 +785,7 @@ switch ($action) {
                 ':observacoes'     => $observacoes ?: null,
                 ':id'              => $id,
             ]);
+
             if ($agendamentoAtual && !empty($agendamentoAtual['relatorio_origem_id'])) {
                 $stmtAudit = $pdo->prepare("UPDATE vistoria_retornos
                     SET vistoriador_origem_id=COALESCE(vistoriador_origem_id,:origem),
@@ -607,16 +803,11 @@ switch ($action) {
                     ':data' => $trocou ? date('Y-m-d H:i:s') : null,
                     ':agendamento' => $id,
                 ]);
-                if ($stmtAudit->rowCount() === 0) {
-                    $stmtAuditCheck = $pdo->prepare('SELECT 1 FROM vistoria_retornos WHERE agendamento_id=:agendamento');
-                    $stmtAuditCheck->execute([':agendamento' => $id]);
-                    if ($stmtAuditCheck->fetchColumn()) {
-                        // Atualizacao idempotente: o vinculo auditavel continua valido.
-                    } else {
-                    throw new RuntimeException('A auditoria da reatribuição foi alterada por outra operação.');
-                }
             }
-            }
+
+            // Sincronizar analises de planos
+            sincronizarAnalisesPlanosAgendamento($pdo, $proposta_id, $embarcacao_id, $analista_id, $prazo_analise, $_SESSION['usuario_id'] ?? null);
+
             $proximoAgendamentoId = null;
             if ($fluxoProposta && !empty($proposta_id)) {
                 $proximoAgendamentoId = proximoAgendamentoPendenteProposta(
@@ -646,7 +837,7 @@ switch ($action) {
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao editar agendamento: ' . $e->getMessage());
-            setMensagem('error', 'Erro ao atualizar agendamento.');
+            setMensagem('error', 'Erro ao atualizar agendamento: ' . $e->getMessage());
             redirecionar($destinoFormulario);
         }
         break;
@@ -660,13 +851,11 @@ switch ($action) {
             }
 
             $id = $_POST['id'] ?? '';
-
             if (empty($id)) {
                 setMensagem('error', 'ID do agendamento não informado.');
                 redirecionar(APP_URL . 'agendamentos');
             }
 
-            // Buscar dados do agendamento
             $stmt = $pdo->prepare("SELECT * FROM agendamentos WHERE id = :id");
             $stmt->execute([':id' => $id]);
             $ag = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -685,19 +874,24 @@ switch ($action) {
                 redirecionar(APP_URL . 'agendamentos');
             }
 
-            if (empty($ag['vistoriador_id'])) {
+            // Identificar se tem vistoria ou apenas analise de planos
+            $temVistoria = true;
+            if (!empty($ag['proposta_id'])) {
+                $stmtCheckVist = $pdo->prepare("SELECT COUNT(*) FROM propostas_servicos ps JOIN servicos s ON ps.servico_id = s.id WHERE ps.proposta_id = :id AND COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')");
+                $stmtCheckVist->execute([':id' => $ag['proposta_id']]);
+                $temVistoria = ((int)$stmtCheckVist->fetchColumn()) > 0;
+            } else {
+                $temVistoria = stripos((string)$ag['tipo_vistoria'], 'Análise de Planos') === false && stripos((string)$ag['tipo_vistoria'], 'Analise de Planos') === false;
+            }
+
+            if ($temVistoria && empty($ag['vistoriador_id'])) {
                 setMensagem('error', 'Antes de confirmar, atribua um vistoriador responsável ao agendamento.');
                 redirecionar(APP_URL . 'agendamentos/form?id=' . urlencode($id));
             }
 
-            // Verificar se já existe OS para este agendamento
-            $stmtCheck = $pdo->prepare("SELECT id FROM ordens_servico WHERE agendamento_id = :agendamento_id");
-            $stmtCheck->execute([':agendamento_id' => $id]);
-            $os_existente = $stmtCheck->fetch();
-
-            if ($os_existente) {
-                setMensagem('error', 'Já existe uma Ordem de Serviço para este agendamento.');
-                redirecionar(APP_URL . 'agendamentos');
+            if (!$temVistoria && empty($ag['analista_id'])) {
+                setMensagem('error', 'Antes de confirmar, atribua o analista responsável pela análise técnica.');
+                redirecionar(APP_URL . 'agendamentos/form?id=' . urlencode($id));
             }
 
             $pdo->beginTransaction();
@@ -708,14 +902,6 @@ switch ($action) {
             if (!$ag || (string)$ag['status'] !== 'pendente') {
                 throw new RuntimeException('O agendamento foi confirmado ou alterado por outra operação.');
             }
-            $stmtOsLock = $pdo->prepare('SELECT id FROM ordens_servico WHERE agendamento_id=:id LIMIT 1 FOR UPDATE');
-            $stmtOsLock->execute([':id' => $id]);
-            if ($stmtOsLock->fetchColumn()) {
-                throw new RuntimeException('Já existe uma Ordem de Serviço para este agendamento.');
-            }
-
-            // Gerar número da OS
-            $numero_os = gerarNumeroDocumento('OS', 'AM-OS');
 
             // Atualizar status do agendamento para confirmado
             $stmtUpd = $pdo->prepare("UPDATE agendamentos SET status = 'confirmado' WHERE id = :id AND status='pendente'");
@@ -724,127 +910,83 @@ switch ($action) {
                 throw new RuntimeException('O agendamento foi confirmado por outra operação.');
             }
 
-            // Criar OS
-            $stmtOs = $pdo->prepare("
-                INSERT INTO ordens_servico (
-                    id, numero, agendamento_id, proposta_id, embarcacao_id,
-                    cliente_id, vistoriador_id, tipo_vistoria, data_vistoria,
-                    hora_vistoria, local, contato_nome, contato_telefone,
-                    status, observacoes, criado_por
-                ) VALUES (
-                    UUID(), :numero, :agendamento_id, :proposta_id, :embarcacao_id,
-                    :cliente_id, :vistoriador_id, :tipo_vistoria, :data_vistoria,
-                    :hora_vistoria, :local, :contato_nome, :contato_telefone,
-                    'pendente', :observacoes, :criado_por
-                )
-            ");
-            $stmtOs->execute([
-                ':numero'           => $numero_os,
-                ':agendamento_id'   => $id,
-                ':proposta_id'      => $ag['proposta_id'],
-                ':embarcacao_id'    => $ag['embarcacao_id'],
-                ':cliente_id'       => $ag['cliente_id'],
-                ':vistoriador_id'   => $ag['vistoriador_id'],
-                ':tipo_vistoria'    => $ag['tipo_vistoria'],
-                ':data_vistoria'    => $ag['data_vistoria'],
-                ':hora_vistoria'    => $ag['hora_vistoria'],
-                ':local'            => $ag['local'],
-                ':contato_nome'     => $ag['contato_nome'],
-                ':contato_telefone' => $ag['contato_telefone'],
-                ':observacoes'      => $ag['observacoes'],
-                ':criado_por'       => $_SESSION['usuario_id'],
-            ]);
+            $numero_os = null;
+            if ($temVistoria && !empty($ag['vistoriador_id'])) {
+                $stmtOsLock = $pdo->prepare('SELECT id FROM ordens_servico WHERE agendamento_id=:id LIMIT 1 FOR UPDATE');
+                $stmtOsLock->execute([':id' => $id]);
+                if ($stmtOsLock->fetchColumn()) {
+                    throw new RuntimeException('Já existe uma Ordem de Serviço para este agendamento.');
+                }
 
-            $relatorioCumprimentoId = criarRelatorioCumprimentoAgendamento(
-                $pdo,
-                $ag,
-                (string)($_SESSION['usuario_id'] ?? '')
-            );
+                // Gerar número da OS
+                $numero_os = gerarNumeroDocumento('OS', 'AM-OS');
+
+                // Criar OS de vistoria em campo
+                $stmtOs = $pdo->prepare("
+                    INSERT INTO ordens_servico (
+                        id, numero, agendamento_id, proposta_id, embarcacao_id,
+                        cliente_id, vistoriador_id, tipo_vistoria, data_vistoria,
+                        hora_vistoria, local, contato_nome, contato_telefone,
+                        status, observacoes, criado_por
+                    ) VALUES (
+                        UUID(), :numero, :agendamento_id, :proposta_id, :embarcacao_id,
+                        :cliente_id, :vistoriador_id, :tipo_vistoria, :data_vistoria,
+                        :hora_vistoria, :local, :contato_nome, :contato_telefone,
+                        'pendente', :observacoes, :criado_por
+                    )
+                ");
+                $stmtOs->execute([
+                    ':numero'           => $numero_os,
+                    ':agendamento_id'   => $id,
+                    ':proposta_id'      => $ag['proposta_id'],
+                    ':embarcacao_id'    => $ag['embarcacao_id'],
+                    ':cliente_id'       => $ag['cliente_id'],
+                    ':vistoriador_id'   => $ag['vistoriador_id'],
+                    ':tipo_vistoria'    => $ag['tipo_vistoria'],
+                    ':data_vistoria'    => $ag['data_vistoria'] ?: date('Y-m-d'),
+                    ':hora_vistoria'    => $ag['hora_vistoria'],
+                    ':local'            => $ag['local'],
+                    ':contato_nome'     => $ag['contato_nome'],
+                    ':contato_telefone' => $ag['contato_telefone'],
+                    ':observacoes'      => $ag['observacoes'],
+                    ':criado_por'       => $_SESSION['usuario_id'],
+                ]);
+
+                $relatorioCumprimentoId = criarRelatorioCumprimentoAgendamento(
+                    $pdo,
+                    $ag,
+                    (string)($_SESSION['usuario_id'] ?? '')
+                );
+                log_atividade('os_gerada', "OS {$numero_os} gerada a partir do agendamento ID: {$id}.");
+                if ($relatorioCumprimentoId) {
+                    log_atividade('relatorio_cumprimento_criado', "Relatorio {$relatorioCumprimentoId} criado para o retorno A/S do agendamento {$id}.");
+                }
+            }
+
+            if (!empty($ag['analista_id'])) {
+                sincronizarAnalisesPlanosAgendamento(
+                    $pdo,
+                    $ag['proposta_id'] ?? null,
+                    $ag['embarcacao_id'] ?? null,
+                    $ag['analista_id'],
+                    $ag['prazo_analise'] ?? null,
+                    $_SESSION['usuario_id'] ?? null
+                );
+            }
+
             $pdo->commit();
 
-            log_atividade('os_gerada', "OS {$numero_os} gerada a partir do agendamento ID: {$id}.");
-            if ($relatorioCumprimentoId) {
-                log_atividade('relatorio_cumprimento_criado', "Relatorio {$relatorioCumprimentoId} criado para o retorno A/S do agendamento {$id}.");
+            if ($numero_os) {
+                setMensagem('success', "Agendamento confirmado com sucesso! Ordem de Serviço {$numero_os} gerada para o vistoriador.");
+            } else {
+                setMensagem('success', "Agendamento técnico de Análise de Planos confirmado com sucesso!");
             }
-            // ============================================================
-            // DISPARO AUTOMÁTICO DE E-MAIL DE CONFIRMAÇÃO
-            // ============================================================
-            try {
-                $stmtEmail = $pdo->prepare("
-                    SELECT c.nome AS cliente_nome, c.email AS cliente_email,
-                           e.nome AS embarcacao_nome
-                    FROM agendamentos a
-                    INNER JOIN clientes c ON c.id = a.cliente_id
-                    INNER JOIN embarcacoes e ON e.id = a.embarcacao_id
-                    WHERE a.id = :id
-                ");
-                $stmtEmail->execute([':id' => $id]);
-                $dadosEmail = $stmtEmail->fetch(PDO::FETCH_ASSOC);
-
-                if (!empty($dadosEmail['cliente_email'])) {
-                    $templatePath = __DIR__ . '/../../templates/email/agendamento.html';
-                    if (file_exists($templatePath)) {
-                        $htmlBody = file_get_contents($templatePath);
-
-                        $hora = !empty($ag['hora_vistoria']) ? substr($ag['hora_vistoria'], 0, 5) . 'h' : 'A confirmar';
-                        $local = !empty($ag['local']) ? $ag['local'] : 'A definir';
-                        $contatoNome = !empty($ag['contato_nome']) ? $ag['contato_nome'] : 'Não informado';
-                        $contatoTel = !empty($ag['contato_telefone']) ? $ag['contato_telefone'] : '-';
-                        $obsHtml = !empty($ag['observacoes'])
-                            ? '<div style="background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 4px; margin: 15px 0;"><strong>Observações:</strong><br>' . h($ag['observacoes']) . '</div>'
-                            : '';
-
-                        $replacements = [
-                            '{{NOME_CLIENTE}}'     => h($dadosEmail['cliente_nome']),
-                            '{{TIPO_VISTORIA}}'    => h($ag['tipo_vistoria']),
-                            '{{EMBARCACAO_NOME}}'  => h($dadosEmail['embarcacao_nome']),
-                            '{{DATA_VISTORIA}}'    => date('d/m/Y', strtotime($ag['data_vistoria'])),
-                            '{{HORA_VISTORIA}}'    => $hora,
-                            '{{LOCAL}}'            => $local,
-                            '{{OS_NUMERO}}'        => $numero_os,
-                            '{{CONTATO_NOME}}'     => $contatoNome,
-                            '{{CONTATO_TELEFONE}}' => $contatoTel,
-                            '{{OBSERVACOES}}'      => $obsHtml,
-                            '{{EMAIL_CONTATO}}'    => EMAIL_CONTATO,
-                            '{{TELEFONE_CONTATO}}' => TELEFONE_CONTATO,
-                        ];
-                        $htmlBody = str_replace(array_keys($replacements), array_values($replacements), $htmlBody);
-
-                        require_once __DIR__ . '/../../includes/mailer.php';
-
-                        $resultado = enviarEmail(
-                            $dadosEmail['cliente_email'],
-                            $dadosEmail['cliente_nome'],
-                            'Confirmação de Agendamento - ' . $ag['tipo_vistoria'],
-                            $htmlBody
-                        );
-
-                        // Registrar no log de e-mails
-                        $stmtLog = $pdo->prepare("
-                            INSERT INTO email_logs (id, destinatario, assunto, tipo, referencia_tipo, referencia_id, status, mensagem_erro, enviado_por)
-                            VALUES (UUID(), :destinatario, :assunto, 'agendamento', 'agendamentos', :referencia_id, :status, :mensagem_erro, :enviado_por)
-                        ");
-                        $stmtLog->execute([
-                            ':destinatario'  => $dadosEmail['cliente_email'],
-                            ':assunto'       => 'Confirmação de Agendamento - ' . $ag['tipo_vistoria'],
-                            ':referencia_id' => $id,
-                            ':status'        => $resultado['success'] ? 'enviado' : 'erro',
-                            ':mensagem_erro' => $resultado['success'] ? null : $resultado['message'],
-                            ':enviado_por'   => $_SESSION['usuario_id'],
-                        ]);
-                    }
-                }
-            } catch (Exception $emailErr) {
-                error_log('Erro ao enviar e-mail de confirmação de agendamento: ' . $emailErr->getMessage());
-            }
-
-            setMensagem('success', "Agendamento confirmado! Ordem de Serviço <strong>{$numero_os}</strong> gerada com sucesso.");
             redirecionar(APP_URL . 'agendamentos');
 
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Erro ao confirmar agendamento: ' . $e->getMessage());
-            setMensagem('error', 'Erro ao gerar Ordem de Serviço.');
+            setMensagem('error', 'Erro ao confirmar agendamento: ' . $e->getMessage());
             redirecionar(APP_URL . 'agendamentos');
         }
         break;

@@ -20,7 +20,7 @@ $cargo = getCargo();
 $usuarioId = (string)($_SESSION['usuario_id'] ?? '');
 
 if ($cargo === 'ANALISTA') {
-    $where[] = 'ap.analista_id=:usuario';
+    $where[] = '(ap.analista_id=:usuario OR ap.analista_id IS NULL)';
     $params[':usuario'] = $usuarioId;
 } elseif ($cargo === 'VENDEDOR') {
     $where[] = 'ap.vendedor_origem_id=:usuario';

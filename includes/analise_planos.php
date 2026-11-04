@@ -175,7 +175,7 @@ function analisePlanosSemearChecklist(PDO $pdo, string $analiseId, string $tipo,
     }
 }
 
-function analisePlanosCriarDemandasProposta(PDO $pdo, array $proposta, ?string $criadoPor = null): int
+function analisePlanosCriarDemandasProposta(PDO $pdo, array $proposta, ?string $criadoPor = null, ?string $analistaPredefinidoId = null): int
 {
     $stmt = $pdo->prepare("SELECT ps.servico_id,ps.embarcacao_id,s.codigo_operacional
         FROM propostas_servicos ps INNER JOIN servicos s ON s.id=ps.servico_id
@@ -186,18 +186,28 @@ function analisePlanosCriarDemandasProposta(PDO $pdo, array $proposta, ?string $
     $servicos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (!$servicos) return 0;
 
-    // Buscar automaticamente o Analista Naval ativo do sistema
-    $stmtAnalista = $pdo->query("
-        SELECT DISTINCT u.id, u.nome, u.email
-        FROM usuarios u
-        LEFT JOIN usuario_perfis up ON up.usuario_id = u.id
-        WHERE u.ativo = 1
-          AND u.excluido_em IS NULL
-          AND (u.cargo = 'ANALISTA' OR up.perfil = 'ANALISTA')
-        ORDER BY u.id ASC
-        LIMIT 1
-    ");
-    $analistaPadrao = $stmtAnalista->fetch(PDO::FETCH_ASSOC) ?: null;
+    $analistaPadrao = null;
+    if (!empty($analistaPredefinidoId)) {
+        $stmtChk = $pdo->prepare("SELECT id, nome, email FROM usuarios WHERE id = :uid AND ativo = 1 AND excluido_em IS NULL LIMIT 1");
+        $stmtChk->execute([':uid' => $analistaPredefinidoId]);
+        $analistaPadrao = $stmtChk->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    if (!$analistaPadrao) {
+        // Buscar preferencialmente o Analista Naval ativo mais recente do sistema
+        $stmtAnalista = $pdo->query("
+            SELECT DISTINCT u.id, u.nome, u.email, u.criado_em
+            FROM usuarios u
+            LEFT JOIN usuario_perfis up ON up.usuario_id = u.id
+            WHERE u.ativo = 1
+              AND u.excluido_em IS NULL
+              AND (u.cargo = 'ANALISTA' OR up.perfil = 'ANALISTA')
+            ORDER BY u.criado_em DESC, u.id ASC
+            LIMIT 1
+        ");
+        $analistaPadrao = $stmtAnalista->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     $analistaId = $analistaPadrao['id'] ?? null;
     $statusInicial = $analistaId ? 'AGENDADA' : 'AGUARDANDO_AGENDAMENTO';
     $prazoInicial = $analistaId ? date('Y-m-d 18:00:00', strtotime('+7 days')) : null;
