@@ -95,24 +95,30 @@ $pdf->SetTextColor(0, 0, 0);
 $pdf->SetDrawColor(0, 0, 0);
 $pdf->SetLineWidth(0.25);
 
-// Brasão da República
+// Brasão da República / Marinha do Brasil e Logo da Entidade Certificadora (Bilateral Simétrico)
 $brasao = __DIR__ . '/../../../assets/img/brasao.png';
+$logo = __DIR__ . '/../../../assets/img/logo.png';
+
 if (lcImagemValida($brasao)) {
-    $pdf->Image($brasao, 14, 7, 20, 20, '', '', '', true, 300);
+    $pdf->Image($brasao, 12, 4.5, 27, 27, '', '', '', true, 300);
+}
+if (lcImagemValida($logo)) {
+    $pdf->Image($logo, 172, 5.0, 26, 26, '', '', '', true, 300);
 }
 
-// Cabeçalho Oficial
-$pdf->SetXY(38, 6.5);
-$pdf->SetFont('helvetica', 'B', 7.8);
-$pdf->Cell(157, 4.2, 'ANEXO 3-A - NORMAM 202/DPC', 0, 1, 'C');
-$pdf->SetX(38);
+// Cabeçalho Oficial Centralizado
+$pdf->SetXY(40, 5.5);
+$pdf->SetFont('helvetica', 'B', 8.5);
+$pdf->Cell(130, 4.2, 'ANEXO 3-A - NORMAM 202/DPC', 0, 1, 'C');
+$pdf->SetX(40);
+$pdf->SetFont('helvetica', 'B', 12.0);
+$pdf->Cell(130, 5.2, 'MARINHA DO BRASIL', 0, 1, 'C');
+$pdf->SetX(40);
 $pdf->SetFont('helvetica', 'B', 10.5);
-$pdf->Cell(157, 4.8, 'MARINHA DO BRASIL', 0, 1, 'C');
-$pdf->SetX(38);
-$pdf->Cell(157, 4.8, 'DIRETORIA DE PORTOS E COSTAS', 0, 1, 'C');
-$pdf->SetX(38);
-$pdf->SetFont('helvetica', 'B', 9.2);
-$pdf->Cell(157, 4.5, 'AMAZON NAVAL LTDA', 0, 1, 'C');
+$pdf->Cell(130, 5.0, 'DIRETORIA DE PORTOS E COSTAS', 0, 1, 'C');
+$pdf->SetX(40);
+$pdf->SetFont('helvetica', 'B', 9.5);
+$pdf->Cell(130, 4.5, 'AMAZON NAVAL LTDA', 0, 1, 'C');
 
 // Quadro das quatro modalidades oficiais
 $tipos = [
@@ -121,7 +127,7 @@ $tipos = [
     'LR' => ['LICENÇA DE RECLASSIFICAÇÃO', 'AM-LR'],
     'LCEC' => ['LICENÇA DE CONSTRUÇÃO PARA EMBARCAÇÕES JÁ CONSTRUÍDAS (LCEC)', 'AM-EC'],
 ];
-$y = 28.5;
+$y = 33.0;
 foreach ($tipos as $codigo => [$rotulo, $prefixo]) {
     $altura = $codigo === 'LCEC' ? 7.0 : 5.2;
     $pdf->SetXY(10, $y);

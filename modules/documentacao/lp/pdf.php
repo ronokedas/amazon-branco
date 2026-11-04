@@ -144,9 +144,12 @@ $logo = __DIR__ . '/../../../assets/img/logo.png';
 $x = 15;
 $w = 180;
 
-// Cabeçalho oficial
+// Cabeçalho oficial (Bilateral Simétrico)
 if (lpImgOK($brasao)) {
-    $pdf->Image($brasao, 30, 12, 24, 24, 'PNG', '', '', true, 150);
+    $pdf->Image($brasao, 20, 11, 26, 26, 'PNG', '', '', true, 300);
+}
+if (lpImgOK($logo)) {
+    $pdf->Image($logo, 164, 11, 26, 26, 'PNG', '', '', true, 300);
 }
 
 $pdf->SetTextColor(0, 0, 0);
