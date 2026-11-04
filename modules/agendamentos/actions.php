@@ -243,8 +243,13 @@ function sincronizarAnalisesPlanosAgendamento(PDO $pdo, ?string $proposta_id, ?s
         return;
     }
 
-    $stmtDemandas = $pdo->prepare("SELECT * FROM analises_planos WHERE proposta_id = :prop AND (embarcacao_id = :emb OR :emb IS NULL)");
-    $stmtDemandas->execute([':prop' => $proposta_id, ':emb' => $embarcacao_id ?: null]);
+    if (!empty($embarcacao_id)) {
+            $stmtDemandas = $pdo->prepare("SELECT * FROM analises_planos WHERE proposta_id = :prop AND (embarcacao_id = :emb OR embarcacao_id IS NULL)");
+            $stmtDemandas->execute([':prop' => $proposta_id, ':emb' => $embarcacao_id]);
+        } else {
+            $stmtDemandas = $pdo->prepare("SELECT * FROM analises_planos WHERE proposta_id = :prop");
+            $stmtDemandas->execute([':prop' => $proposta_id]);
+        }
     $demandas = $stmtDemandas->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($demandas as $d) {
