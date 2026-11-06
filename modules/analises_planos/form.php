@@ -1126,25 +1126,39 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                         <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
 
                         <?php 
+                        $ehPrimeiroRap = empty($pareceres);
                         $todasCumpridas = !empty($exigencias) && count(array_filter($exigencias, fn($e) => $e['status'] === 'CUMPRIDA')) === count($exigencias);
-                        $resultadoPadrao = $todasCumpridas ? 'APROVADO' : 'EXIGENCIAS';
+                        // No primeiro RAP com exigencias pendentes, o padrao do ciclo e sempre EXIGENCIAS
+                        if ($ehPrimeiroRap && !empty($exigencias)) {
+                            $resultadoPadrao = 'EXIGENCIAS';
+                        } else {
+                            $resultadoPadrao = $todasCumpridas ? 'APROVADO' : 'EXIGENCIAS';
+                        }
                         $ultimaSubmissaoId = !empty($submissoes) ? ($submissoes[0]['id'] ?? '') : '';
+                        $defRes = $formValores['resultado'] ?? $resultadoPadrao;
                         ?>
+
+                        <?php if ($ehPrimeiroRap && !empty($exigencias)): ?>
+                            <div class="alert alert-info py-2 px-3 mb-3" style="font-size:0.85rem; border-radius:8px; border-left:4px solid #0284c7; background:#f0f9ff; color:#0369a1;">
+                                <i class="fa-solid fa-circle-info"></i> <strong>Primeiro Relatório do Processo (Análise Inicial):</strong>
+                                Como é o primeiro ciclo e existem não-conformidades apontadas, este relatório é gerado automaticamente com resultado <strong>Exigências pendentes</strong>. Nenhum campo é obrigatório.
+                            </div>
+                        <?php endif; ?>
+
                         <div class="form-row">
                             <div class="form-group col-4">
-                                <label class="form-label-bold">Resultado do Ciclo *</label>
-                                <?php $defRes = $formValores['resultado'] ?? $resultadoPadrao; ?>
-                                <select name="resultado" id="resultado_ciclo_select" class="form-control form-control-sm" required>
-                                    <option value="APROVADO" <?= $defRes === 'APROVADO' ? 'selected' : '' ?>>Conclusivo — Aprovado sem exigências</option>
+                                <label class="form-label-bold">Resultado do Ciclo</label>
+                                <select name="resultado" id="resultado_ciclo_select" class="form-control form-control-sm">
                                     <option value="EXIGENCIAS" <?= $defRes === 'EXIGENCIAS' ? 'selected' : '' ?>>Exigências pendentes (Ciclo Preliminar)</option>
+                                    <option value="APROVADO" <?= $defRes === 'APROVADO' ? 'selected' : '' ?>>Conclusivo — Aprovado sem exigências</option>
                                     <option value="REPROVADO" <?= $defRes === 'REPROVADO' ? 'selected' : '' ?>>Reprovado</option>
                                 </select>
                                 <small class="text-muted">Para "Aprovado", todas as exigências devem ser baixadas como "Cumprida".</small>
                             </div>
 
                             <div class="form-group col-4">
-                                <label class="form-label-bold">Revisão Documental Analisada *</label>
-                                <select name="submissao_id" id="submissao_id_select" class="form-control form-control-sm" required>
+                                <label class="form-label-bold">Revisão Documental Analisada</label>
+                                <select name="submissao_id" id="submissao_id_select" class="form-control form-control-sm">
                                     <?php if (empty($submissoes)): ?>
                                         <option value="auto_inicial" selected>Revisão 0 · Entrada Inicial de Documentos e Pranchas</option>
                                     <?php else: ?>
@@ -1159,8 +1173,8 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                             </div>
 
                             <div class="form-group col-4">
-                                <label class="form-label-bold">Resumo Executivo *</label>
-                                <textarea name="resumo" id="resumo_parecer" required rows="2" class="form-control" placeholder="Síntese técnica da conferência documental deste ciclo..."><?= h($formValores['resumo'] ?? ($todasCumpridas ? 'Conferência técnica documental e de pranchas concluída sem pendências.' : '')) ?></textarea>
+                                <label class="form-label-bold">Resumo Executivo <small class="text-muted" style="font-weight:normal;">(Opcional)</small></label>
+                                <textarea name="resumo" id="resumo_parecer" rows="2" class="form-control" placeholder="Síntese técnica da conferência documental deste ciclo (opcional)..."><?= h($formValores['resumo'] ?? ($defRes === 'APROVADO' ? 'Conferência técnica documental e de pranchas concluída sem pendências.' : 'Análise técnica preliminar de pranchas e documentos realizada com apontamento de exigências técnicas para saneamento.')) ?></textarea>
                             </div>
                         </div>
 
@@ -1232,21 +1246,14 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                                             <div style="background:#fcfcfd; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
                                                 <div style="margin-bottom:10px;">
                                                     <label class="form-label-bold" style="font-size:0.82rem; margin-bottom:4px; display:block;">
-                                                        Resultado da Revisão Técnica *
+                                                        Resultado da Revisão Técnica
                                                     </label>
                                                     <?php $defBRes = $formValores['baixa_resultado'][$ex['id']] ?? $ex['status']; ?>
-                                                    <select name="baixa_resultado[<?= h($ex['id']) ?>]" id="baixa_res_<?= h($ex['id']) ?>" class="form-control form-control-sm select-baixa-resultado" required onchange="aoMudarResultadoBaixa('<?= h($ex['id']) ?>', this.value)" style="font-weight:600;">
+                                                    <select name="baixa_resultado[<?= h($ex['id']) ?>]" id="baixa_res_<?= h($ex['id']) ?>" class="form-control form-control-sm select-baixa-resultado" onchange="aoMudarResultadoBaixa('<?= h($ex['id']) ?>', this.value)" style="font-weight:600;">
                                                         <option value="CUMPRIDA" <?= $defBRes === 'CUMPRIDA' ? 'selected' : '' ?>>Cumprida (Atendida integralmente)</option>
                                                         <option value="PARCIAL" <?= $defBRes === 'PARCIAL' ? 'selected' : '' ?>>Parcial (Atendida em parte)</option>
                                                         <option value="NAO_CUMPRIDA" <?= ($defBRes !== 'CUMPRIDA' && $defBRes !== 'PARCIAL') ? 'selected' : '' ?>>Não cumprida (Permanece pendente)</option>
                                                     </select>
-                                                </div>
-                                                <div>
-                                                    <label class="form-label-bold" style="font-size:0.82rem; margin-bottom:4px; display:block;">
-                                                        Manifestação Técnica do Analista <small class="text-muted" style="font-weight:normal;">(Opcional)</small>
-                                                    </label>
-                                                    <?php $defBMan = $formValores['baixa_manifestacao'][$ex['id']] ?? ($ex['status'] === 'CUMPRIDA' ? 'Atendido conforme revisão técnica apresentada.' : ''); ?>
-                                                    <textarea name="baixa_manifestacao[<?= h($ex['id']) ?>]" id="baixa_man_<?= h($ex['id']) ?>" rows="2" class="form-control form-control-sm textarea-baixa-manifestacao" placeholder="Evidência ou prancha examinada (opcional; preenchimento automático se vazio)..."><?= h($defBMan) ?></textarea>
                                                 </div>
                                                 <?php $defBAs = isset($formValores['baixa_as']) ? !empty($formValores['baixa_as'][$ex['id']]) : !empty($ex['as_impeditivo']); ?>
                                                 <div class="baixa-as-box" id="baixa-as-box-<?= h($ex['id']) ?>" style="margin-top:10px; padding:8px 10px; background:<?= $defBAs ? '#fff1f2' : '#f8fafc' ?>; border:1px solid <?= $defBAs ? '#fecdd3' : '#e2e8f0' ?>; border-radius:6px;">
@@ -4148,19 +4155,13 @@ function sincronizarAbaRapExigencias() {
                     <div style="background:#fcfcfd; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
                         <div style="margin-bottom:10px;">
                             <label class="form-label-bold" style="font-size:0.82rem; margin-bottom:4px; display:block;">
-                                Resultado da Revisão Técnica *
+                                Resultado da Revisão Técnica
                             </label>
-                            <select name="baixa_resultado[${escapeHtml(id)}]" id="baixa_res_${escapeHtml(id)}" class="form-control form-control-sm select-baixa-resultado" required onchange="aoMudarResultadoBaixa('${escapeHtml(id)}', this.value)" style="font-weight:600;">
+                            <select name="baixa_resultado[${escapeHtml(id)}]" id="baixa_res_${escapeHtml(id)}" class="form-control form-control-sm select-baixa-resultado" onchange="aoMudarResultadoBaixa('${escapeHtml(id)}', this.value)" style="font-weight:600;">
                                 <option value="CUMPRIDA" ${defResultado === 'CUMPRIDA' ? 'selected' : ''}>Cumprida (Atendida integralmente)</option>
                                 <option value="PARCIAL" ${defResultado === 'PARCIAL' ? 'selected' : ''}>Parcial (Atendida em parte)</option>
                                 <option value="NAO_CUMPRIDA" ${defResultado === 'NAO_CUMPRIDA' ? 'selected' : ''}>Não cumprida (Permanece pendente)</option>
                             </select>
-                        </div>
-                        <div>
-                            <label class="form-label-bold" style="font-size:0.82rem; margin-bottom:4px; display:block;">
-                                Manifestação Técnica do Analista *
-                            </label>
-                            <textarea name="baixa_manifestacao[${escapeHtml(id)}]" id="baixa_man_${escapeHtml(id)}" required rows="2" class="form-control form-control-sm textarea-baixa-manifestacao" placeholder="Indique a evidência ou prancha examinada (ex.: Atendido na folha 02/04)...">${escapeHtml(defManifestacao)}</textarea>
                         </div>
                         <div class="baixa-as-box" id="baixa-as-box-${escapeHtml(id)}" style="margin-top:10px; padding:8px 10px; background:${asImpeditivo ? '#fff1f2' : '#f8fafc'}; border:1px solid ${asImpeditivo ? '#fecdd3' : '#e2e8f0'}; border-radius:6px;">
                             <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer; font-size:0.80rem; font-weight:700; color:${asImpeditivo ? '#991b1b' : '#334155'};">

@@ -593,42 +593,57 @@ try {
             $submissaoId = analisePlanosGarantirSubmissaoInicial($pdo, $analiseId, $usuario);
         }
 
-        if (!$submissaoId || !in_array($resultado, ['APROVADO', 'EXIGENCIAS', 'REPROVADO'], true) || !$resumo) {
-            throw new InvalidArgumentException('Preencha os campos obrigatórios do relatório técnico (Revisão e Resumo Executivo).');
+        $q = $pdo->prepare('SELECT * FROM analise_planos_exigencias WHERE analise_id=:id ORDER BY ordem,id');
+        $q->execute([':id' => $analiseId]);
+        $exigenciasCiclo = $q->fetchAll(PDO::FETCH_ASSOC);
+
+        // Se o resultado não foi selecionado, define padrão inteligente
+        // No primeiro RAP com exigências cadastradas, o padrão é sempre EXIGENCIAS (Pendente)
+        if (!$resultado || !in_array($resultado, ['APROVADO', 'EXIGENCIAS', 'REPROVADO'], true)) {
+            $resultado = (!empty($exigenciasCiclo)) ? 'EXIGENCIAS' : 'APROVADO';
         }
 
-        // Conclusão automática opcional se deixada em branco
+        // Resumo executivo facultativo com preenchimento automático se vazio
+        if (empty($resumo)) {
+            $resumo = ($resultado === 'APROVADO')
+                ? 'Conferência técnica documental e de pranchas concluída sem pendências em conformidade com a NORMAM-202/DPC.'
+                : 'Análise técnica preliminar de pranchas e documentos realizada com apontamento de exigências técnicas para saneamento.';
+        }
+
+        // Conclusão técnica facultativa com parecer padrão se deixada em branco
         if (empty($conclusao)) {
             if ($resultado === 'APROVADO') {
-                $conclusao = 'Projeto técnico naval aprovado em conformidade com as diretrizes da NORMAM-202/DPC, com parecer técnico conclusivo favorável à certificação naval.';
+                $conclusao = 'Projeto técnico naval aprovado em conformidade com as diretrizes da NORMAM-202/DPC da Marinha do Brasil, com parecer técnico conclusivo favorável à certificação naval.';
             } else {
                 $conclusao = 'Processo com exigências técnicas pendentes de saneamento pelo Responsável Técnico, conforme detalhado no corpo deste relatório.';
             }
         }
+
         // Classifica automaticamente os arquivos recebidos desta revisão como ACEITO
         $pdo->prepare("UPDATE analise_planos_arquivos SET classificacao='ACEITO', justificativa_classificacao=COALESCE(NULLIF(justificativa_classificacao,''),'Aceito na emissão do relatório técnico.'), classificado_por=:usuario, classificado_em=NOW() WHERE submissao_id=:id AND classificacao='RECEBIDO'")->execute([':id' => $submissaoId, ':usuario' => $usuario]);
 
-        $q = $pdo->prepare('SELECT * FROM analise_planos_exigencias WHERE analise_id=:id ORDER BY ordem,id');
-        $q->execute([':id' => $analiseId]);
-        $exigenciasCiclo = $q->fetchAll(PDO::FETCH_ASSOC);
-        if ($resultado === 'EXIGENCIAS' && !$exigenciasCiclo) throw new RuntimeException('Cadastre ao menos uma exigência.');
+        if ($resultado === 'EXIGENCIAS' && !$exigenciasCiclo) {
+            throw new RuntimeException('Cadastre ao menos uma exigência para emissão do relatório com pendências.');
+        }
+
         $resultadosEx = $_POST['baixa_resultado'] ?? [];
         $manifestacoes = $_POST['baixa_manifestacao'] ?? [];
         foreach ($exigenciasCiclo as $ex) {
             $r = $resultadosEx[$ex['id']] ?? 'NAO_CUMPRIDA';
+            if (!in_array($r, ['CUMPRIDA', 'PARCIAL', 'NAO_CUMPRIDA'], true)) {
+                $r = 'NAO_CUMPRIDA';
+            }
             $m = trim($manifestacoes[$ex['id']] ?? '');
             if ($m === '') {
                 $m = ($r === 'CUMPRIDA') 
                     ? 'Atendido conforme revisão técnica apresentada.' 
-                    : ($r === 'PARCIAL' ? 'Atendido parcialmente conforme pranchas apresentadas.' : 'Permanece pendente de saneamento pelo Responsável Técnico.');
+                    : ($r === 'PARCIAL' ? 'Atendido parcialmente; pendente de complementação.' : 'Permanece pendente de saneamento pelo Responsável Técnico.');
                 $manifestacoes[$ex['id']] = $m;
-            }
-            if (!in_array($r, ['CUMPRIDA', 'PARCIAL', 'NAO_CUMPRIDA'], true)) {
-                throw new RuntimeException('Informe o resultado válido de todas as exigências.');
             }
             if ($resultado === 'APROVADO' && $r !== 'CUMPRIDA') {
                 throw new RuntimeException('O relatório conclusivo exige baixa integral de todas as exigências.');
             }
+            $resultadosEx[$ex['id']] = $r;
         }
         if ($resultado === 'APROVADO') {
             // Em conclusão aprovada, aceita quaisquer arquivos ainda pendentes na análise
