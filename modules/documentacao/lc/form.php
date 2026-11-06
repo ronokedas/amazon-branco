@@ -71,10 +71,10 @@ $stmtTodosProcessos = $pdo->query("
     SELECT ap.id, ap.numero, ap.tipo_processo, ap.status, e.id as emb_id, e.nome as emb_nome
     FROM analises_planos ap
     JOIN embarcacoes e ON e.id = ap.embarcacao_id
-    WHERE ap.ativo = 1
+    WHERE ap.status <> 'CANCELADA'
     ORDER BY ap.criado_em DESC LIMIT 80
 ");
-$todosProcessos = $stmtTodosProcessos->fetchAll(PDO::FETCH_ASSOC);
+$todosProcessos = $stmtTodosProcessos ? $stmtTodosProcessos->fetchAll(PDO::FETCH_ASSOC) : [];
 
 // Embarcações
 $stmt_emb = $pdo->prepare("SELECT * FROM embarcacoes WHERE ativo = 1 ORDER BY nome");
