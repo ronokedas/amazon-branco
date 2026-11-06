@@ -1243,10 +1243,10 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                                                 </div>
                                                 <div>
                                                     <label class="form-label-bold" style="font-size:0.82rem; margin-bottom:4px; display:block;">
-                                                        Manifestação Técnica do Analista *
+                                                        Manifestação Técnica do Analista <small class="text-muted" style="font-weight:normal;">(Opcional)</small>
                                                     </label>
                                                     <?php $defBMan = $formValores['baixa_manifestacao'][$ex['id']] ?? ($ex['status'] === 'CUMPRIDA' ? 'Atendido conforme revisão técnica apresentada.' : ''); ?>
-                                                    <textarea name="baixa_manifestacao[<?= h($ex['id']) ?>]" id="baixa_man_<?= h($ex['id']) ?>" required rows="2" class="form-control form-control-sm textarea-baixa-manifestacao" placeholder="Indique a evidência ou prancha examinada (ex.: Atendido na folha 02/04)..."><?= h($defBMan) ?></textarea>
+                                                    <textarea name="baixa_manifestacao[<?= h($ex['id']) ?>]" id="baixa_man_<?= h($ex['id']) ?>" rows="2" class="form-control form-control-sm textarea-baixa-manifestacao" placeholder="Evidência ou prancha examinada (opcional; preenchimento automático se vazio)..."><?= h($defBMan) ?></textarea>
                                                 </div>
                                                 <?php $defBAs = isset($formValores['baixa_as']) ? !empty($formValores['baixa_as'][$ex['id']]) : !empty($ex['as_impeditivo']); ?>
                                                 <div class="baixa-as-box" id="baixa-as-box-<?= h($ex['id']) ?>" style="margin-top:10px; padding:8px 10px; background:<?= $defBAs ? '#fff1f2' : '#f8fafc' ?>; border:1px solid <?= $defBAs ? '#fecdd3' : '#e2e8f0' ?>; border-radius:6px;">
@@ -1301,8 +1301,39 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label-bold">Conclusão Técnica do Analista *</label>
-                            <textarea name="conclusao" id="conclusao_parecer" required rows="2" class="form-control" placeholder="Parecer conclusivo sobre a conformidade das plantas com a NORMAM-202/DPC..."><?= h($formValores['conclusao'] ?? ($todasCumpridas ? 'Projeto técnico naval aprovado em conformidade com as diretrizes da NORMAM-202/DPC, apto para emissão da Licença Técnica Oficial.' : '')) ?></textarea>
+                            <label class="form-label-bold">Conclusão Técnica do Analista <small class="text-muted" style="font-weight:normal;">(Opcional — o sistema gera o parecer técnico padrão se vazio)</small></label>
+                            <textarea name="conclusao" id="conclusao_parecer" rows="2" class="form-control" placeholder="Parecer conclusivo sobre a conformidade das plantas com a NORMAM-202/DPC (deixe vazio para usar a conclusão oficial padrão)..."><?= h($formValores['conclusao'] ?? '') ?></textarea>
+                        </div>
+
+                        <?php
+                        $obsPadraoArr = function_exists('analisePlanosObservacoesPadrao') ? analisePlanosObservacoesPadrao($a) : [];
+                        $obsPadraoTexto = '';
+                        foreach ($obsPadraoArr as $num => $txt) {
+                            $obsPadraoTexto .= "{$num}. {$txt}\n\n";
+                        }
+                        $obsPadraoTexto = trim($obsPadraoTexto);
+                        ?>
+                        <div class="form-group" style="margin-top:16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+                                <label class="form-label-bold" style="margin:0; font-size:0.9rem; color:#0f172a;">
+                                    <i class="fas fa-list-check text-success"></i> Observações Técnicas no Relatório (Seção 3 do RAP)
+                                </label>
+                                <div style="display:flex; gap:6px;">
+                                    <button type="button" class="btn btn-xs btn-outline-secondary" onclick="carregarTemplateObs('padrao')" title="Restaurar 6 observações oficiais NORMAM-202">
+                                        <i class="fas fa-rotate-left"></i> Padrão Oficial
+                                    </button>
+                                    <button type="button" class="btn btn-xs btn-outline-primary" onclick="carregarTemplateObs('balsa')" title="Template para balsa de carga sem plano de linhas">
+                                        Balsa de Carga
+                                    </button>
+                                    <button type="button" class="btn btn-xs btn-outline-info" onclick="carregarTemplateObs('empurrador')" title="Template para empurrador fluvial">
+                                        Empurrador
+                                    </button>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block" style="margin-bottom:8px;">
+                                Você pode ajustar livremente os memoriais e pranchas citados no Item 02 de acordo com a documentação real da embarcação.
+                            </small>
+                            <textarea name="observacoes_texto" id="observacoes_texto_rap" rows="6" class="form-control" style="font-size:0.83rem; line-height:1.45; font-family:monospace;"><?= h($obsPadraoTexto) ?></textarea>
                         </div>
 
                         <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:14px; margin-top:14px; margin-bottom:18px;">
@@ -1453,13 +1484,18 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                                 </small>
                             </div>
                             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                                <form method="post" action="<?= APP_URL ?>analises-planos/actions" style="display:inline;" onsubmit="return confirm('Deseja emitir e numerar a Licença Oficial <?= h($a['tipo_processo']) ?> agora?');">
+                                <form method="post" action="<?= APP_URL ?>analises-planos/actions" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                     <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                                     <input type="hidden" name="action" value="emitir_licenca">
                                     <input type="hidden" name="analise_id" value="<?= h($id) ?>">
-                                    <input type="hidden" name="tipo_licenca" value="<?= h($a['tipo_processo']) ?>">
-                                    <button type="submit" class="btn btn-success" style="font-weight:600;">
-                                        <i class="fa-solid fa-certificate"></i> Emitir Licença em 1 Clique
+                                    <select name="tipo_licenca" class="form-control form-control-sm" style="width:auto; font-weight:700; min-width:210px; border-color:#10b981;">
+                                        <option value="LC" <?= ($a['tipo_processo'] === 'LC') ? 'selected' : '' ?>>LC — Licença de Construção</option>
+                                        <option value="LA" <?= ($a['tipo_processo'] === 'LA') ? 'selected' : '' ?>>LA — Licença de Alteração</option>
+                                        <option value="LR" <?= ($a['tipo_processo'] === 'LR') ? 'selected' : '' ?>>LR — Licença de Reclassificação</option>
+                                        <option value="LCEC" <?= ($a['tipo_processo'] === 'LCEC') ? 'selected' : '' ?>>LCEC — Construção Já Construída</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-success" style="font-weight:600;" onclick="return confirm('Deseja emitir e numerar a Licença Oficial na modalidade selecionada agora?');">
+                                        <i class="fa-solid fa-certificate"></i> Emitir Licença
                                     </button>
                                 </form>
                                 <a href="<?= APP_URL ?>documentacao/lc/form?analise_id=<?= urlencode($id) ?>" class="btn btn-outline-primary" style="font-weight:600;">
@@ -4462,6 +4498,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     sincronizarAbaRapExigencias();
 });
+
+const templatesObs = {
+    padrao: document.getElementById('observacoes_texto_rap')?.value || '',
+    balsa: (document.getElementById('observacoes_texto_rap')?.value || '').replace(
+        "ART; Memorial Descritivo; Declaração; Notas para Arqueação; Notas para Marcação de Borda Livre; Tabela de Cotas; Tabela de Curvas Hidrostáticas; Tabela de Curvas Cruzadas; Relatório de Porte Bruto / Prova de Inclinação; Estudo de Estabilidade Definitivo; Altura de Carga x Calados; Plano de Linhas; Plano de Arranjo Geral, Segurança, Capacidade e Luzes de Navegação; Plano de Perfil Estrutural e Seção Mestra.",
+        "ART; Memorial Descritivo; Declaração; Notas para Arqueação; Notas para Marcação de Borda Livre; Tabela de Cotas; Tabela de Curvas Hidrostáticas; Estudo de Estabilidade; Altura de Carga x Calados; Plano de Arranjo Geral, Capacidade e Luzes de Navegação; Plano de Perfil Estrutural e Seção Mestra."
+    ),
+    empurrador: (document.getElementById('observacoes_texto_rap')?.value || '').replace(
+        "elaborados pelo responsável técnico",
+        "elaborados pelo responsável técnico para empurrador fluvial com conjunto propulsor e manobra,"
+    )
+};
+function carregarTemplateObs(tipo) {
+    const el = document.getElementById('observacoes_texto_rap');
+    if (el && templatesObs[tipo]) {
+        el.value = templatesObs[tipo];
+    }
+}
 </script>
 
 <?php

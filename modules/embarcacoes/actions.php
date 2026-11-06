@@ -62,6 +62,21 @@ switch ($action) {
 
         // Tab Dimensoes
         $comprimento_total = trim($_POST['comprimento_total'] ?? '');
+        $comprimento_regra = trim($_POST['comprimento_regra'] ?? '');
+        $contorno_co = trim($_POST['contorno_co'] ?? '');
+        $comprimento_arqueacao_ca = trim($_POST['comprimento_arqueacao_ca'] ?? '');
+        $pontal_arqueacao_h = trim($_POST['pontal_arqueacao_h'] ?? '');
+        $pontal_arqueacao_hc = trim($_POST['pontal_arqueacao_hc'] ?? '');
+        $pontal_arqueacao_hl = trim($_POST['pontal_arqueacao_hl'] ?? '');
+        $data_batimento_quilha = trim($_POST['data_batimento_quilha'] ?? '');
+        $calado_leve_av = trim($_POST['calado_leve_av'] ?? '');
+        $calado_leve_ar = trim($_POST['calado_leve_ar'] ?? '');
+        $calado_leve_med = trim($_POST['calado_leve_med'] ?? '');
+        $calado_carregado_av = trim($_POST['calado_carregado_av'] ?? '');
+        $calado_carregado_ar = trim($_POST['calado_carregado_ar'] ?? '');
+        $calado_carregado_med = trim($_POST['calado_carregado_med'] ?? '');
+        $deslocamento_leve = trim($_POST['deslocamento_leve'] ?? '');
+        $deslocamento_carregado = trim($_POST['deslocamento_carregado'] ?? '');
         $comprimento_casco = trim($_POST['comprimento_casco'] ?? '');
         $comprimento_lpp = trim($_POST['comprimento_lpp'] ?? '');
         $pontal_moldado = trim($_POST['pontal_moldado'] ?? '');
@@ -243,6 +258,21 @@ switch ($action) {
             ':dist_linha_conves_abaixo_disco' => $dist_linha_conves_abaixo_disco ?: null,
             ':marca_linha_carga_area1' => $marca_linha_carga_area1 ?: null,
             ':marca_linha_carga_area2' => $marca_linha_carga_area2 ?: null,
+            ':comprimento_regra' => $comprimento_regra !== '' ? (float)$comprimento_regra : null,
+            ':contorno_co' => $contorno_co !== '' ? (float)$contorno_co : null,
+            ':comprimento_arqueacao_ca' => $comprimento_arqueacao_ca !== '' ? (float)$comprimento_arqueacao_ca : null,
+            ':pontal_arqueacao_h' => $pontal_arqueacao_h !== '' ? (float)$pontal_arqueacao_h : null,
+            ':pontal_arqueacao_hc' => $pontal_arqueacao_hc !== '' ? (float)$pontal_arqueacao_hc : null,
+            ':pontal_arqueacao_hl' => $pontal_arqueacao_hl !== '' ? (float)$pontal_arqueacao_hl : null,
+            ':data_batimento_quilha' => !empty($data_batimento_quilha) ? $data_batimento_quilha : null,
+            ':calado_leve_av' => $calado_leve_av !== '' ? (float)$calado_leve_av : null,
+            ':calado_leve_ar' => $calado_leve_ar !== '' ? (float)$calado_leve_ar : null,
+            ':calado_leve_med' => $calado_leve_med !== '' ? (float)$calado_leve_med : null,
+            ':calado_carregado_av' => $calado_carregado_av !== '' ? (float)$calado_carregado_av : null,
+            ':calado_carregado_ar' => $calado_carregado_ar !== '' ? (float)$calado_carregado_ar : null,
+            ':calado_carregado_med' => $calado_carregado_med !== '' ? (float)$calado_carregado_med : null,
+            ':deslocamento_leve' => $deslocamento_leve !== '' ? (float)$deslocamento_leve : null,
+            ':deslocamento_carregado' => $deslocamento_carregado !== '' ? (float)$deslocamento_carregado : null,
         ];
 
         try {
@@ -316,7 +346,22 @@ switch ($action) {
                     dist_linha_conves_bico_proa = :dist_linha_conves_bico_proa, 
                     dist_linha_conves_abaixo_disco = :dist_linha_conves_abaixo_disco, 
                     marca_linha_carga_area1 = :marca_linha_carga_area1, 
-                    marca_linha_carga_area2 = :marca_linha_carga_area2 
+                    marca_linha_carga_area2 = :marca_linha_carga_area2,
+                    comprimento_regra = :comprimento_regra,
+                    contorno_co = :contorno_co,
+                    comprimento_arqueacao_ca = :comprimento_arqueacao_ca,
+                    pontal_arqueacao_h = :pontal_arqueacao_h,
+                    pontal_arqueacao_hc = :pontal_arqueacao_hc,
+                    pontal_arqueacao_hl = :pontal_arqueacao_hl,
+                    data_batimento_quilha = :data_batimento_quilha,
+                    calado_leve_av = :calado_leve_av,
+                    calado_leve_ar = :calado_leve_ar,
+                    calado_leve_med = :calado_leve_med,
+                    calado_carregado_av = :calado_carregado_av,
+                    calado_carregado_ar = :calado_carregado_ar,
+                    calado_carregado_med = :calado_carregado_med,
+                    deslocamento_leve = :deslocamento_leve,
+                    deslocamento_carregado = :deslocamento_carregado
                 WHERE id = :id";
                 $stmt = $pdo->prepare($sql);
                 $dados[':id'] = $id;
@@ -336,9 +381,9 @@ switch ($action) {
                 // Criar
                 $novoId = gerarUUID();
                 $sql = "INSERT INTO embarcacoes (
-                    id, nome, proprietario_id, cliente_id, proprietario, registro, tipo_embarcacao_id, tipo_embarcacao, cnbl_tipo_embarcacao, ano, porto_inscricao, numero_inscricao, indicativo_chamada, observacoes, possui_propulsao, fabricante_motor, modelo_motor, numero_motor, potencia_kw, material_casco, tipo_navegacao, area_navegacao, cnbl_area_navegacao, tipo_servico, autorizado_carga, numero_tripulantes, numero_passageiros_n1, numero_passageiros_n2, obs_passageiros, acessibilidade, comprimento_total, comprimento_casco, comprimento_lpp, pontal_moldado, boca_moldada, boca_maxima, arqueacao_bruta, arqueacao_liquida, metodo_arqueacao, cnarq_data_quilha, cnarq_calado_moldado_m, cnarq_espacos_incluidos_ab, cnarq_espacos_incluidos_al, cnarq_espacos_excluidos_m3, cnarq_data_local_arqueacao_original, cnarq_data_local_ultima_rearqueacao, local_construcao, numero_casco, porte_bruto, estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco, borda_livre_mm, borda_livre_tipo, calado_maximo_m, aresta_superior_linha_conves, centro_disco_situado, acrescimo_agua_salgada, dist_linha_conves_bico_proa, dist_linha_conves_abaixo_disco, marca_linha_carga_area1, marca_linha_carga_area2, criado_por
+                    id, nome, proprietario_id, cliente_id, proprietario, registro, tipo_embarcacao_id, tipo_embarcacao, cnbl_tipo_embarcacao, ano, porto_inscricao, numero_inscricao, indicativo_chamada, observacoes, possui_propulsao, fabricante_motor, modelo_motor, numero_motor, potencia_kw, material_casco, tipo_navegacao, area_navegacao, cnbl_area_navegacao, tipo_servico, autorizado_carga, numero_tripulantes, numero_passageiros_n1, numero_passageiros_n2, obs_passageiros, acessibilidade, comprimento_total, comprimento_casco, comprimento_lpp, pontal_moldado, boca_moldada, boca_maxima, arqueacao_bruta, arqueacao_liquida, metodo_arqueacao, cnarq_data_quilha, cnarq_calado_moldado_m, cnarq_espacos_incluidos_ab, cnarq_espacos_incluidos_al, cnarq_espacos_excluidos_m3, cnarq_data_local_arqueacao_original, cnarq_data_local_ultima_rearqueacao, local_construcao, numero_casco, porte_bruto, estaleiro_nome, estaleiro_cpf_cnpj, estaleiro_endereco, borda_livre_mm, borda_livre_tipo, calado_maximo_m, aresta_superior_linha_conves, centro_disco_situado, acrescimo_agua_salgada, dist_linha_conves_bico_proa, dist_linha_conves_abaixo_disco, marca_linha_carga_area1, marca_linha_carga_area2, comprimento_regra, contorno_co, comprimento_arqueacao_ca, pontal_arqueacao_h, pontal_arqueacao_hc, pontal_arqueacao_hl, data_batimento_quilha, calado_leve_av, calado_leve_ar, calado_leve_med, calado_carregado_av, calado_carregado_ar, calado_carregado_med, deslocamento_leve, deslocamento_carregado, criado_por
                 ) VALUES (
-                    :id, :nome, :proprietario_id, :cliente_id, :proprietario, :registro, :tipo_embarcacao_id, :tipo_embarcacao, :cnbl_tipo_embarcacao, :ano, :porto_inscricao, :numero_inscricao, :indicativo_chamada, :observacoes, :possui_propulsao, :fabricante_motor, :modelo_motor, :numero_motor, :potencia_kw, :material_casco, :tipo_navegacao, :area_navegacao, :cnbl_area_navegacao, :tipo_servico, :autorizado_carga, :numero_tripulantes, :numero_passageiros_n1, :numero_passageiros_n2, :obs_passageiros, :acessibilidade, :comprimento_total, :comprimento_casco, :comprimento_lpp, :pontal_moldado, :boca_moldada, :boca_maxima, :arqueacao_bruta, :arqueacao_liquida, :metodo_arqueacao, :cnarq_data_quilha, :cnarq_calado_moldado_m, :cnarq_espacos_incluidos_ab, :cnarq_espacos_incluidos_al, :cnarq_espacos_excluidos_m3, :cnarq_data_local_arqueacao_original, :cnarq_data_local_ultima_rearqueacao, :local_construcao, :numero_casco, :porte_bruto, :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco, :borda_livre_mm, :borda_livre_tipo, :calado_maximo_m, :aresta_superior_linha_conves, :centro_disco_situado, :acrescimo_agua_salgada, :dist_linha_conves_bico_proa, :dist_linha_conves_abaixo_disco, :marca_linha_carga_area1, :marca_linha_carga_area2, :criado_por
+                    :id, :nome, :proprietario_id, :cliente_id, :proprietario, :registro, :tipo_embarcacao_id, :tipo_embarcacao, :cnbl_tipo_embarcacao, :ano, :porto_inscricao, :numero_inscricao, :indicativo_chamada, :observacoes, :possui_propulsao, :fabricante_motor, :modelo_motor, :numero_motor, :potencia_kw, :material_casco, :tipo_navegacao, :area_navegacao, :cnbl_area_navegacao, :tipo_servico, :autorizado_carga, :numero_tripulantes, :numero_passageiros_n1, :numero_passageiros_n2, :obs_passageiros, :acessibilidade, :comprimento_total, :comprimento_casco, :comprimento_lpp, :pontal_moldado, :boca_moldada, :boca_maxima, :arqueacao_bruta, :arqueacao_liquida, :metodo_arqueacao, :cnarq_data_quilha, :cnarq_calado_moldado_m, :cnarq_espacos_incluidos_ab, :cnarq_espacos_incluidos_al, :cnarq_espacos_excluidos_m3, :cnarq_data_local_arqueacao_original, :cnarq_data_local_ultima_rearqueacao, :local_construcao, :numero_casco, :porte_bruto, :estaleiro_nome, :estaleiro_cpf_cnpj, :estaleiro_endereco, :borda_livre_mm, :borda_livre_tipo, :calado_maximo_m, :aresta_superior_linha_conves, :centro_disco_situado, :acrescimo_agua_salgada, :dist_linha_conves_bico_proa, :dist_linha_conves_abaixo_disco, :marca_linha_carga_area1, :marca_linha_carga_area2, :comprimento_regra, :contorno_co, :comprimento_arqueacao_ca, :pontal_arqueacao_h, :pontal_arqueacao_hc, :pontal_arqueacao_hl, :data_batimento_quilha, :calado_leve_av, :calado_leve_ar, :calado_leve_med, :calado_carregado_av, :calado_carregado_ar, :calado_carregado_med, :deslocamento_leve, :deslocamento_carregado, :criado_por
                 )";
                 $stmt = $pdo->prepare($sql);
                 $dados[':id'] = $novoId;

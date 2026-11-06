@@ -351,7 +351,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                                value="<?php echo $editando ? h($licenca['data_emissao']) : date('Y-m-d'); ?>">
                     </div>
                     <div class="form-group">
-                        <label for="data_validade">Data de Validade</label>
+                        <label for="data_validade">Data de Validade <small class="text-muted">(Apenas Licença Provisória - LP; deixe vazio para licenças definitivas LC/LA/LR/LCEC)</small></label>
                         <input type="date" name="data_validade" id="data_validade" class="form-control"
                                value="<?php echo $editando ? h($licenca['data_validade']) : ''; ?>">
                     </div>

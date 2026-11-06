@@ -616,7 +616,7 @@ function analiseAcaoResponsavelDoAnalista(PDO $pdo, array $analise): array
     throw new RuntimeException("O analista ({$nomeAnalista}) precisa ter identidade técnica e assinatura válidas vinculadas à própria conta (NORMAM-202).");
 }
 
-function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel): string
+function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel, ?string $tipoLicencaEscolhida = null): string
 {
     analisePlanosExigirNormam202($analise);
     $pdo->prepare("UPDATE analise_planos_itens SET resultado='CONFORME' WHERE analise_id=:id AND resultado NOT IN ('CONFORME','NAO_APLICA')")->execute([':id' => $analise['id']]);
@@ -637,7 +637,9 @@ function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel): 
     $idExistente = $existente->fetchColumn();
     if ($idExistente) return (string)$idExistente;
 
-    $tipo = (string)$analise['tipo_processo'];
+    $tipo = ($tipoLicencaEscolhida && in_array($tipoLicencaEscolhida, ['LC', 'LA', 'LR', 'LCEC'], true)) 
+        ? $tipoLicencaEscolhida 
+        : (string)($analise['tipo_processo'] ?: 'LC');
     $tipoSequencial = $tipo === 'LCEC' ? 'EC' : $tipo;
     $numero = gerarNumeroDocumento($tipoSequencial, $tipo === 'LCEC' ? 'AM-EC' : 'AM-' . $tipo);
     $id = gerarUUID();

@@ -593,8 +593,17 @@ try {
             $submissaoId = analisePlanosGarantirSubmissaoInicial($pdo, $analiseId, $usuario);
         }
 
-        if (!$submissaoId || !in_array($resultado, ['APROVADO', 'EXIGENCIAS', 'REPROVADO'], true) || !$resumo || !$conclusao) {
-            throw new InvalidArgumentException('Preencha os campos obrigatórios do relatório técnico.');
+        if (!$submissaoId || !in_array($resultado, ['APROVADO', 'EXIGENCIAS', 'REPROVADO'], true) || !$resumo) {
+            throw new InvalidArgumentException('Preencha os campos obrigatórios do relatório técnico (Revisão e Resumo Executivo).');
+        }
+
+        // Conclusão automática opcional se deixada em branco
+        if (empty($conclusao)) {
+            if ($resultado === 'APROVADO') {
+                $conclusao = 'Projeto técnico naval aprovado em conformidade com as diretrizes da NORMAM-202/DPC, com parecer técnico conclusivo favorável à certificação naval.';
+            } else {
+                $conclusao = 'Processo com exigências técnicas pendentes de saneamento pelo Responsável Técnico, conforme detalhado no corpo deste relatório.';
+            }
         }
         // Classifica automaticamente os arquivos recebidos desta revisão como ACEITO
         $pdo->prepare("UPDATE analise_planos_arquivos SET classificacao='ACEITO', justificativa_classificacao=COALESCE(NULLIF(justificativa_classificacao,''),'Aceito na emissão do relatório técnico.'), classificado_por=:usuario, classificado_em=NOW() WHERE submissao_id=:id AND classificacao='RECEBIDO'")->execute([':id' => $submissaoId, ':usuario' => $usuario]);
@@ -606,10 +615,16 @@ try {
         $resultadosEx = $_POST['baixa_resultado'] ?? [];
         $manifestacoes = $_POST['baixa_manifestacao'] ?? [];
         foreach ($exigenciasCiclo as $ex) {
-            $r = $resultadosEx[$ex['id']] ?? '';
+            $r = $resultadosEx[$ex['id']] ?? 'NAO_CUMPRIDA';
             $m = trim($manifestacoes[$ex['id']] ?? '');
-            if (!in_array($r, ['CUMPRIDA', 'PARCIAL', 'NAO_CUMPRIDA'], true) || $m === '') {
-                throw new RuntimeException('Informe o resultado e a manifestação técnica de todas as exigências.');
+            if ($m === '') {
+                $m = ($r === 'CUMPRIDA') 
+                    ? 'Atendido conforme revisão técnica apresentada.' 
+                    : ($r === 'PARCIAL' ? 'Atendido parcialmente conforme pranchas apresentadas.' : 'Permanece pendente de saneamento pelo Responsável Técnico.');
+                $manifestacoes[$ex['id']] = $m;
+            }
+            if (!in_array($r, ['CUMPRIDA', 'PARCIAL', 'NAO_CUMPRIDA'], true)) {
+                throw new RuntimeException('Informe o resultado válido de todas as exigências.');
             }
             if ($resultado === 'APROVADO' && $r !== 'CUMPRIDA') {
                 throw new RuntimeException('O relatório conclusivo exige baixa integral de todas as exigências.');
@@ -637,6 +652,23 @@ try {
         $parecerId = gerarUUID();
         $finalidade = $resultado === 'APROVADO' ? 'CONCLUSIVO' : ($anterior ? 'CUMPRIMENTO_EXIGENCIAS' : 'ANALISE_INICIAL');
         $snapshot = analisePlanosSnapshot($pdo, $analise, $submissaoId);
+        if (!empty($_POST['observacoes_texto'])) {
+            $linhas = preg_split('/\r\n|\r|\n/', trim($_POST['observacoes_texto']));
+            $obsArray = [];
+            $contador = 1;
+            foreach ($linhas as $linha) {
+                $linha = trim($linha);
+                if ($linha !== '') {
+                    $linhaLimpa = preg_replace('/^(?:\d{1,2}[\.\-\)]\s*)/', '', $linha);
+                    $idx = str_pad((string)$contador, 2, '0', STR_PAD_LEFT);
+                    $obsArray[$idx] = $linhaLimpa;
+                    $contador++;
+                }
+            }
+            if (!empty($obsArray)) {
+                $snapshot['observacoes'] = $obsArray;
+            }
+        }
 
         $assinarAgora = !empty($_POST['assinar_agora']);
         $statusInicial = $assinarAgora ? 'PUBLICADO' : 'AGUARDANDO_ASSINATURA_ANALISTA';
@@ -851,7 +883,11 @@ try {
 
         $pdo->beginTransaction();
         $responsavel = analiseAcaoResponsavelDoAnalista($pdo, $analise);
-        $licencaId = analiseAcaoCriarLicenca($pdo, $analise, $responsavel);
+        $tipoLicencaEscolhida = trim($_POST['tipo_licenca'] ?? '');
+        if (!in_array($tipoLicencaEscolhida, ['LC', 'LA', 'LR', 'LCEC'], true)) {
+            $tipoLicencaEscolhida = $analise['tipo_processo'] ?: 'LC';
+        }
+        $licencaId = analiseAcaoCriarLicenca($pdo, $analise, $responsavel, $tipoLicencaEscolhida);
 
         $stmtPendGeral = $pdo->prepare("SELECT COUNT(*) FROM analise_planos_exigencias WHERE analise_id = :id AND (status <> 'CUMPRIDA' OR saneamento_pendente = 1)");
         $stmtPendGeral->execute([':id' => $analiseId]);

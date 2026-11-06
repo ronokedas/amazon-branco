@@ -330,6 +330,10 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                         Arqueação e Dimensões
                         <span class="tab-error-badge"></span>
                     </li>
+                    <li class="tab-item" data-tab="tab-engenharia" onclick="openTab('tab-engenharia', this)">
+                        <i class="fas fa-drafting-compass"></i> Engenharia Naval (NORMAM-202)
+                        <span class="tab-error-badge"></span>
+                    </li>
                     <li class="tab-item" data-tab="tab-bordalivre" onclick="openTab('tab-bordalivre', this)">
                         Linha de Carga (CNBL)
                         <span class="tab-error-badge"></span>
@@ -676,6 +680,128 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                     </div>
                 </div>
 
+                <!-- TAB: ENGENHARIA NAVAL & ARQUEAÇÃO (NORMAM-202) -->
+                <div id="tab-engenharia" class="tab-pane">
+                    <div style="margin-bottom: 20px; padding: 14px 18px; background: rgba(9, 155, 112, 0.08); border: 1px solid rgba(9, 155, 112, 0.3); border-radius: 8px; font-size: 0.9rem; color: var(--cor-texto);">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom: 6px;">
+                            <i class="fas fa-drafting-compass fa-lg" style="color: var(--cor-destaque);"></i>
+                            <strong style="font-size: 1rem;">Engenharia Naval & Parâmetros NORMAM-202 (Anexo 7-B):</strong>
+                        </div>
+                        Estes parâmetros alimentam automaticamente a emissão oficial de <strong>Notas de Arqueação (NAR)</strong>, <strong>Licenças de Construção/Alteração (LC/LA)</strong> e <strong>Relatórios de Análise de Planos (RAP)</strong>.
+                        O valor do Comprimento de Regra (<em>L</em>) define se a embarcação adota o modelo oficial para <strong>L &lt; 24 m</strong> ou <strong>L &ge; 24 m</strong>.
+                    </div>
+
+                    <h4 style="margin: 15px 0 10px 0; font-size: 0.95rem; color: var(--cor-destaque); display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-ruler"></i> Parâmetros Oficiais de Arqueação (Anexo 7-B DPC)
+                    </h4>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="comprimento_regra">Comprimento de Regra — L (m)</label>
+                            <input type="number" step="0.001" min="0" id="comprimento_regra" name="comprimento_regra" value="<?php echo h($embarcacao['comprimento_regra'] ?? ''); ?>">
+                            <small class="text-muted">Divisor legal da DPC: &lt; 24 m (Anexo 7-B págs 1 e 2) ou &ge; 24 m (págs 3 e 4).</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="comprimento_arqueacao_ca">Comprimento de Arqueação — Ca (m)</label>
+                            <input type="number" step="0.001" min="0" id="comprimento_arqueacao_ca" name="comprimento_arqueacao_ca" value="<?php echo h($embarcacao['comprimento_arqueacao_ca'] ?? ''); ?>">
+                            <small class="text-muted">Extensão entre os limites do convés para cálculo do volume V1.</small>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="contorno_co">Contorno a Meia-Nau — Co (m)</label>
+                            <input type="number" step="0.001" min="0" id="contorno_co" name="contorno_co" value="<?php echo h($embarcacao['contorno_co'] ?? ''); ?>">
+                            <small class="text-muted">Contorno da seção a meia-nau da borda ao bojo (utilizado na Tabela 7-F).</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="pontal_arqueacao_h">Pontal de Arqueação — H (m)</label>
+                            <input type="number" step="0.001" min="0" id="pontal_arqueacao_h" name="pontal_arqueacao_h" value="<?php echo h($embarcacao['pontal_arqueacao_h'] ?? ''); ?>">
+                            <small class="text-muted">Distância vertical na meia-nau da quilha à linha do convés de arqueação.</small>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="pontal_arqueacao_hc">Pontal com Casaria — Hc (m)</label>
+                            <input type="number" step="0.001" min="0" id="pontal_arqueacao_hc" name="pontal_arqueacao_hc" value="<?php echo h($embarcacao['pontal_arqueacao_hc'] ?? ''); ?>">
+                            <small class="text-muted">Altura total considerando as superestruturas/casarias.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="pontal_arqueacao_hl">Pontal sem Casaria — Hl (m)</label>
+                            <input type="number" step="0.001" min="0" id="pontal_arqueacao_hl" name="pontal_arqueacao_hl" value="<?php echo h($embarcacao['pontal_arqueacao_hl'] ?? ''); ?>">
+                            <small class="text-muted">Altura do pontal livre sem superestruturas.</small>
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 20px 0 10px 0; font-size: 0.95rem; color: var(--cor-destaque); display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-ship"></i> Deslocamentos e Batimento de Quilha
+                    </h4>
+
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label for="data_batimento_quilha">Data de Batimento de Quilha</label>
+                            <input type="date" id="data_batimento_quilha" name="data_batimento_quilha" value="<?php echo h($embarcacao['data_batimento_quilha'] ?? ''); ?>">
+                            <small class="text-muted">Data oficial exigida para embarcações L &ge; 24 m.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="deslocamento_leve">Deslocamento Leve — Dl (t)</label>
+                            <input type="number" step="0.001" min="0" id="deslocamento_leve" name="deslocamento_leve" value="<?php echo h($embarcacao['deslocamento_leve'] ?? ''); ?>">
+                            <small class="text-muted">Peso do navio vazio em toneladas métricas.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="deslocamento_carregado">Deslocamento Carregado — Dc (t)</label>
+                            <input type="number" step="0.001" min="0" id="deslocamento_carregado" name="deslocamento_carregado" value="<?php echo h($embarcacao['deslocamento_carregado'] ?? ''); ?>">
+                            <small class="text-muted">Peso com carga máxima na linha d'água de projeto.</small>
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 20px 0 10px 0; font-size: 0.95rem; color: var(--cor-destaque); display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-water"></i> Quadro Oficial de Calados (Anexo 7-B — L &ge; 24 m)
+                    </h4>
+                    <div class="alert alert-secondary" style="font-size:0.85rem; margin-bottom:12px; padding:8px 12px;">
+                        <i class="fas fa-info-circle"></i> O preenchimento dos calados Avante (AV) e A Ré (AR) calcula o Calado Médio automaticamente.
+                    </div>
+
+                    <div class="grid-2">
+                        <div style="border: 1px solid var(--cor-borda); border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.02);">
+                            <strong style="display:block; margin-bottom: 8px; color: var(--cor-texto);">Calado na Condição Leve (m)</strong>
+                            <div class="grid-3">
+                                <div class="form-group">
+                                    <label for="calado_leve_av"><small>Avante (AV)</small></label>
+                                    <input type="number" step="0.001" min="0" id="calado_leve_av" name="calado_leve_av" value="<?php echo h($embarcacao['calado_leve_av'] ?? ''); ?>" oninput="calcularCaladoMedio('leve')">
+                                </div>
+                                <div class="form-group">
+                                    <label for="calado_leve_ar"><small>A Ré (AR)</small></label>
+                                    <input type="number" step="0.001" min="0" id="calado_leve_ar" name="calado_leve_ar" value="<?php echo h($embarcacao['calado_leve_ar'] ?? ''); ?>" oninput="calcularCaladoMedio('leve')">
+                                </div>
+                                <div class="form-group">
+                                    <label for="calado_leve_med"><small>Médio</small></label>
+                                    <input type="number" step="0.001" min="0" id="calado_leve_med" name="calado_leve_med" value="<?php echo h($embarcacao['calado_leve_med'] ?? ''); ?>">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="border: 1px solid var(--cor-borda); border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.02);">
+                            <strong style="display:block; margin-bottom: 8px; color: var(--cor-texto);">Calado na Condição Carregada (m)</strong>
+                            <div class="grid-3">
+                                <div class="form-group">
+                                    <label for="calado_carregado_av"><small>Avante (AV)</small></label>
+                                    <input type="number" step="0.001" min="0" id="calado_carregado_av" name="calado_carregado_av" value="<?php echo h($embarcacao['calado_carregado_av'] ?? ''); ?>" oninput="calcularCaladoMedio('carregado')">
+                                </div>
+                                <div class="form-group">
+                                    <label for="calado_carregado_ar"><small>A Ré (AR)</small></label>
+                                    <input type="number" step="0.001" min="0" id="calado_carregado_ar" name="calado_carregado_ar" value="<?php echo h($embarcacao['calado_carregado_ar'] ?? ''); ?>" oninput="calcularCaladoMedio('carregado')">
+                                </div>
+                                <div class="form-group">
+                                    <label for="calado_carregado_med"><small>Médio</small></label>
+                                    <input type="number" step="0.001" min="0" id="calado_carregado_med" name="calado_carregado_med" value="<?php echo h($embarcacao['calado_carregado_med'] ?? ''); ?>">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- TAB: BORDA LIVRE -->
                 <div id="tab-bordalivre" class="tab-pane">
                     <div class="alert alert-info" style="margin-bottom: 16px;">
@@ -788,6 +914,15 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
 </div>
 
 <script>
+function calcularCaladoMedio(tipo) {
+    const av = parseFloat(document.getElementById('calado_' + tipo + '_av')?.value) || 0;
+    const ar = parseFloat(document.getElementById('calado_' + tipo + '_ar')?.value) || 0;
+    const medInput = document.getElementById('calado_' + tipo + '_med');
+    if (medInput && (av > 0 || ar > 0)) {
+        medInput.value = ((av + ar) / 2).toFixed(3);
+    }
+}
+
 function openTab(tabId, element) {
     // Esconder todos os painéis
     document.querySelectorAll('.tab-pane').forEach(el => {

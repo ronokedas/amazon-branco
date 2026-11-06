@@ -31,7 +31,9 @@ assertTrue(!in_array('doc_csn', $padraoAnalista, true), "Analista NÃO pode ter 
 assertTrue(!in_array('doc_cnbl', $padraoAnalista, true), "Analista NÃO pode ter doc_cnbl");
 assertTrue(!in_array('doc_cnarq', $padraoAnalista, true), "Analista NÃO pode ter doc_cnarq");
 assertTrue(!in_array('doc_cht', $padraoAnalista, true), "Analista NÃO pode ter doc_cht");
-assertTrue(!in_array('embarcacoes', $padraoAnalista, true), "Analista NÃO pode ter embarcacoes");
+// Conforme aprovado no plano NORMAM-202 / Reunião do Analista:
+// Analista tem acesso ao módulo de embarcações para preenchimento de dados de engenharia/arqueação
+assertTrue(in_array('embarcacoes', $padraoAnalista, true), "Analista deve ter embarcacoes para dados de engenharia");
 assertTrue(!in_array('clientes', $padraoAnalista, true), "Analista NÃO pode ter clientes");
 assertTrue(!in_array('protocolos_documentais', $padraoAnalista, true), "Analista NÃO pode ter protocolos_documentais");
 assertTrue(!in_array('certificados', $padraoAnalista, true), "Analista NÃO pode ter certificados");
@@ -53,12 +55,12 @@ assertTrue(podeAcessar('analise_planos'), "Analista deve ter podeAcessar('analis
 assertTrue(podeAcessar('doc_nar'), "Analista deve ter podeAcessar('doc_nar') === true");
 assertTrue(podeAcessar('doc_lp'), "Analista deve ter podeAcessar('doc_lp') === true");
 assertTrue(podeAcessar('doc_lc'), "Analista deve ter podeAcessar('doc_lc') === true");
+assertTrue(podeAcessar('embarcacoes'), "Analista deve ter podeAcessar('embarcacoes') === true");
 
 // Bloqueados
 assertTrue(!podeAcessar('doc_csn'), "Analista deve ter podeAcessar('doc_csn') === false");
 assertTrue(!podeAcessar('doc_cnbl'), "Analista deve ter podeAcessar('doc_cnbl') === false");
 assertTrue(!podeAcessar('doc_cnarq'), "Analista deve ter podeAcessar('doc_cnarq') === false");
-assertTrue(!podeAcessar('embarcacoes'), "Analista deve ter podeAcessar('embarcacoes') === false");
 assertTrue(!podeAcessar('clientes'), "Analista deve ter podeAcessar('clientes') === false");
 assertTrue(!podeAcessar('protocolos_documentais'), "Analista deve ter podeAcessar('protocolos_documentais') === false");
 assertTrue(!podeAcessar('certificados'), "Analista deve ter podeAcessar('certificados') === false");
@@ -72,7 +74,7 @@ $html = ob_get_clean();
 assertTrue(strpos($html, 'href="' . APP_URL . 'documentacao/certificados"') === false, "Sidebar NÃO deve conter link para CSN");
 assertTrue(strpos($html, 'href="' . APP_URL . 'documentacao/cnbl"') === false, "Sidebar NÃO deve conter link para CNBL");
 assertTrue(strpos($html, 'href="' . APP_URL . 'documentacao/cnarq"') === false, "Sidebar NÃO deve conter link para CNARQ");
-assertTrue(strpos($html, 'href="' . APP_URL . 'embarcacoes"') === false, "Sidebar NÃO deve conter link para Embarcações");
+assertTrue(strpos($html, 'href="' . APP_URL . 'embarcacoes"') !== false, "Sidebar DEVE conter link para Embarcações");
 assertTrue(strpos($html, 'href="' . APP_URL . 'clientes"') === false, "Sidebar NÃO deve conter link para Clientes");
 assertTrue(strpos($html, 'href="' . APP_URL . 'protocolos"') === false, "Sidebar NÃO deve conter link para Protocolos");
 assertTrue(strpos($html, 'href="' . APP_URL . 'vistorias"') === false, "Sidebar NÃO deve conter link para Vistorias");

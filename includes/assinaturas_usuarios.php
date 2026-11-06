@@ -614,3 +614,4 @@ if (!function_exists('salvarImagemAssinaturaResponsavel')) {
         return ['path' => $relative, 'hash' => hash_file('sha256', $absolute)];
     }
 }
+

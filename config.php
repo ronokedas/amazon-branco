@@ -17,9 +17,10 @@ if (APP_DEBUG) {
     ini_set('opcache.enable_cli', '0');
 }
 
-// Configurar encoding UTF-8 para PHP
+// Configurar encoding UTF-8 para PHP e Fuso Horário de Brasília
 mb_internal_encoding('UTF-8');
 mb_http_output('UTF-8');
+date_default_timezone_set('America/Sao_Paulo');
 
 // Sessao
 if (session_status() === PHP_SESSION_NONE) {

@@ -22,7 +22,17 @@ if (empty($id)) {
     die('ID ou token não informado.');
 }
 
-$stmt = $pdo->prepare("SELECT * FROM certificados_nar WHERE id = :id AND ativo = 1");
+$stmt = $pdo->prepare("SELECT c.*, 
+    COALESCE(NULLIF(c.numero_casco, ''), e.numero_casco) AS numero_casco,
+    COALESCE(NULLIF(c.porto_inscricao, ''), e.porto_inscricao) AS porto_inscricao,
+    e.numero_inscricao, e.indicativo_chamada, e.local_construcao, e.data_batimento_quilha,
+    e.contorno_co, e.comprimento_arqueacao_ca, e.pontal_arqueacao_h, e.pontal_arqueacao_hc, e.pontal_arqueacao_hl,
+    e.calado_leve_av AS emb_calado_leve_av, e.calado_leve_ar AS emb_calado_leve_ar, e.calado_leve_med AS emb_calado_leve_med,
+    e.calado_carregado_av AS emb_calado_carregado_av, e.calado_carregado_ar AS emb_calado_carregado_ar, e.calado_carregado_med AS emb_calado_carregado_med,
+    e.deslocamento_leve AS emb_deslocamento_leve, e.deslocamento_carregado AS emb_deslocamento_carregado
+    FROM certificados_nar c 
+    LEFT JOIN embarcacoes e ON e.id = c.embarcacao_id 
+    WHERE c.id = :id AND c.ativo = 1");
 $stmt->execute([':id' => $id]);
 $nar = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -158,53 +168,103 @@ $pdf->SetLineWidth(0.2);
 // Estilos de caixa
 $hLinha = 5.2;
 
-// --- 1. Características Gerais ---
+// --- 1. Características Gerais (Diferenciadas por L < 24m ou L >= 24m NORMAM-202) ---
 $pdf->SetFont('helvetica', 'B', 8.5);
 $pdf->SetFillColor(241, 245, 249);
 $pdf->Cell(180, 5.5, ' 1. Características Gerais', 1, 1, 'L', true);
 
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(40, $hLinha, ' Nome da Embarcação:', 'LT', 0);
-$pdf->SetFont('helvetica', 'B', 7.5);
-$pdf->Cell(140, $hLinha, ' ' . $nar['nome_embarcacao'], 'TR', 1);
+$isMaior24 = ($nar['enquadramento_comprimento'] === 'L_MAIOR_IGUAL_24');
 
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(40, $hLinha, ' Armador:', 'LT', 0);
-$pdf->SetFont('helvetica', 'B', 7.5);
-$pdf->Cell(140, $hLinha, ' ' . ($nar['armador'] ?: 'x-x-x'), 'TR', 1);
+if ($isMaior24) {
+    // Padrão Obrigatório DPC Anexo 7-B Páginas 7-B-3 e 7-B-4 (L >= 24 m)
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Nome:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(65, $hLinha, ' ' . $nar['nome_embarcacao'], 'T', 0);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(25, $hLinha, ' Tipo:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(55, $hLinha, ' ' . ($nar['tipo_embarcacao'] ?: 'BALSA'), 'TR', 1);
 
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(40, $hLinha, ' Construtor:', 'LT', 0);
-$pdf->SetFont('helvetica', 'B', 7.5);
-$pdf->Cell(140, $hLinha, ' ' . ($nar['construtor'] ?: 'x-x-x'), 'TR', 1);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Armador:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(65, $hLinha, ' ' . ($nar['armador'] ?: 'x-x-x'), 'T', 0);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Nº Inscrição:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(45, $hLinha, ' ' . ($nar['numero_inscricao'] ?: ($nar['registro'] ?: 'x-x-x')), 'TR', 1);
 
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(40, $hLinha, ' Número do Casco:', 'LT', 0);
-$pdf->SetFont('helvetica', 'B', 7.5);
-$pdf->Cell(50, $hLinha, ' ' . ($nar['numero_casco'] ?: 'x-x-x'), 'T', 0);
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(40, $hLinha, ' Material do Casco:', 'LT', 0);
-$pdf->SetFont('helvetica', 'B', 7.5);
-$pdf->Cell(50, $hLinha, ' ' . ($nar['material_casco'] ?: 'AÇO'), 'TR', 1);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Indicativo de Chamada:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(65, $hLinha, ' ' . ($nar['indicativo_chamada'] ?: 'x-x-x'), 'T', 0);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Porto de Inscrição:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(45, $hLinha, ' ' . ($nar['porto_inscricao'] ?: 'BELÉM - PA'), 'TR', 1);
 
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(40, $hLinha, ' Tipo:', 'LT', 0);
-$pdf->SetFont('helvetica', 'B', 7.5);
-$pdf->Cell(50, $hLinha, ' ' . ($nar['tipo_embarcacao'] ?: 'BALSA'), 'T', 0);
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(40, $hLinha, ' Classificação:', 'LT', 0);
-$pdf->SetFont('helvetica', 'B', 7.5);
-$pdf->Cell(50, $hLinha, ' ' . ($nar['classificacao'] ?: 'CARGA GERAL'), 'TR', 1);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Construtor:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(65, $hLinha, ' ' . ($nar['construtor'] ?: 'x-x-x'), 'T', 0);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Local de Construção:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(45, $hLinha, ' ' . ($nar['local_construcao'] ?: 'Belém - PA'), 'TR', 1);
 
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(40, $hLinha, ' Porto de Inscrição:', 'LT', 0);
-$pdf->SetFont('helvetica', 'B', 7.5);
-$pdf->Cell(50, $hLinha, ' ' . ($nar['porto_inscricao'] ?: 'BELÉM - PA'), 'T', 0);
-$pdf->SetFont('helvetica', '', 7.5);
-$pdf->Cell(40, $hLinha, ' Ano de Construção / Quilha:', 'LT', 0);
-$pdf->SetFont('helvetica', 'B', 7.5);
-$pdf->Cell(50, $hLinha, ' ' . ($nar['data_construcao_quilha'] ?: date('Y')), 'TR', 1);
-$pdf->Cell(180, 0, '', 'T', 1);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Material do Casco:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(65, $hLinha, ' ' . ($nar['material_casco'] ?: 'AÇO'), 'T', 0);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Classificação:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(45, $hLinha, ' ' . ($nar['classificacao'] ?: 'CARGA GERAL'), 'TR', 1);
+
+    $dataQuilhaFmt = !empty($nar['data_batimento_quilha']) ? date('d/m/Y', strtotime($nar['data_batimento_quilha'])) : ($nar['data_construcao_quilha'] ?: date('Y'));
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(70, $hLinha, ' Data de Batimento de Quilha / Construção:', 'LTB', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(110, $hLinha, ' ' . $dataQuilhaFmt, 'TRB', 1);
+} else {
+    // Padrão Obrigatório DPC Anexo 7-B Páginas 7-B-1 e 7-B-2 (L < 24 m)
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Nome:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(65, $hLinha, ' ' . $nar['nome_embarcacao'], 'T', 0);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(25, $hLinha, ' Tipo:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(55, $hLinha, ' ' . ($nar['tipo_embarcacao'] ?: 'BALSA'), 'TR', 1);
+
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Armador:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(65, $hLinha, ' ' . ($nar['armador'] ?: 'x-x-x'), 'T', 0);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Classificação:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(45, $hLinha, ' ' . ($nar['classificacao'] ?: 'CARGA GERAL'), 'TR', 1);
+
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Construtor:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(65, $hLinha, ' ' . ($nar['construtor'] ?: 'x-x-x'), 'T', 0);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Porto de Inscrição:', 'LT', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(45, $hLinha, ' ' . ($nar['porto_inscricao'] ?: 'BELÉM - PA'), 'TR', 1);
+
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Material do Casco:', 'LTB', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(65, $hLinha, ' ' . ($nar['material_casco'] ?: 'AÇO'), 'TB', 0);
+    $pdf->SetFont('helvetica', '', 7.5);
+    $pdf->Cell(35, $hLinha, ' Ano de Construção:', 'LTB', 0);
+    $pdf->SetFont('helvetica', 'B', 7.5);
+    $pdf->Cell(45, $hLinha, ' ' . ($nar['data_construcao_quilha'] ?: date('Y')), 'TRB', 1);
+}
 
 $pdf->Ln(2);
 

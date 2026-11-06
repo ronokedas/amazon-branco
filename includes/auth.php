@@ -107,7 +107,7 @@ function exigirAcessoOuSub(string $moduloPai, string $subModulo, string $destino
 function permissoesPadraoCargo(string $cargo): array {
     return match ($cargo) {
         'VISTORIADOR' => ['dashboard', 'vistorias', 'agendamentos', 'clientes', 'embarcacoes', 'documentacao', 'doc_csn', 'doc_cnbl', 'doc_cnarq', 'doc_nar', 'doc_lp', 'doc_lc', 'doc_cht', 'configuracoes_normam202', 'vencimentos_certificados'],
-        'ANALISTA' => ['dashboard', 'analise_planos', 'doc_nar', 'doc_lp', 'doc_lc', 'configuracoes_normam202'],
+        'ANALISTA' => ['dashboard', 'analise_planos', 'embarcacoes', 'doc_nar', 'doc_lp', 'doc_lc', 'configuracoes_normam202'],
         'VENDEDOR' => ['dashboard', 'comercial', 'servicos', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails', 'vencimentos_certificados'],
         'ADMIN', 'SECRETARIA' => todasPermissoesSistema(),
         default => ['dashboard'],
@@ -300,9 +300,11 @@ function podeAcessarLegado($modulo) {
             $modulosPermitidos = [
                 'dashboard',
                 'analise_planos',
+                'embarcacoes',
                 'doc_nar',
                 'doc_lp',
-                'doc_lc'
+                'doc_lc',
+                'configuracoes_normam202'
             ];
             return in_array($modulo, $modulosPermitidos, true);
 

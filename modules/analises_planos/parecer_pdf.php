@@ -226,8 +226,10 @@ if (!empty($exigencias)) {
     }
 }
 
+$isConclusivoAprovado = ($p['finalidade'] === 'CONCLUSIVO' || $p['resultado'] === 'APROVADO');
+
 $globalItemNum = 1;
-if (!empty($exigenciasPorCategoria)) {
+if (!$isConclusivoAprovado && !empty($exigenciasPorCategoria)) {
     foreach ($exigenciasPorCategoria as $catNome => $itensCat) {
         $html .= '
         <table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse; width:100%; border-color:#0D4941; margin-bottom:8px;">
@@ -266,28 +268,34 @@ if (!empty($exigenciasPorCategoria)) {
       <b>* Legenda da Condição A/S:</b> Exigência de caráter grave (Ação/Assunto Suspensivo) que <u>suspende e impede a emissão de licenças e certificados da embarcação</u> até o seu cumprimento e saneamento integral. Exigências comuns não suspendem a emissão da licença operacional da embarcação.
     </div>';
 } else {
-    // Relatório Conclusivo Sem Exigências
+    // Relatório Conclusivo Sem Exigências (Padrão Oficial DPC / Capitania dos Portos)
     $html .= '
     <table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse; width:100%; border-color:#0D4941; margin-bottom:8px;">
+      <tr style="background-color:#EAF0EB; color:#0D4941; font-weight:bold; font-size:8.5pt;">
+        <th colspan="5" style="text-align:center;">GERAL</th>
+      </tr>
       <tr style="background-color:#F1F5F3; color:#0D4941; font-weight:bold; font-size:7.8pt; text-align:center;">
         <th width="7%">ITEM</th>
         <th width="11%">CONDIÇÃO</th>
-        <th width="45%" style="text-align:left;">DESCRIÇÃO</th>
+        <th width="45%" style="text-align:left;">EXIGÊNCIA TÉCNICA</th>
         <th width="22%" style="text-align:left;">REFERÊNCIA</th>
-        <th width="15%">VENCIMENTO</th>
+        <th width="15%">PROVIDÊNCIA</th>
       </tr>
       <tr nobr="true" style="font-size:8pt;">
         <td width="7%" style="text-align:center; font-weight:bold;">01</td>
-        <td width="11%" style="text-align:center; color:#059669; font-weight:bold;">Regular</td>
-        <td width="45%" style="color:#059669; font-weight:bold;">Sem Exigências Pendentes</td>
-        <td width="22%" style="text-align:center;">-</td>
-        <td width="15%" style="text-align:center;">-</td>
+        <td width="11%" style="text-align:center; color:#059669; font-weight:bold;">Comum</td>
+        <td width="45%" style="color:#059669; font-weight:bold;">Sem exigências</td>
+        <td width="22%" style="text-align:left;">NORMAM-202/DPC</td>
+        <td width="15%" style="text-align:center;">Ver OBS. 1 a 6</td>
       </tr>
     </table>';
 }
 
 // Seção 3: Observações Padronizadas da DPC/Analista
-$observacoes = analisePlanosObservacoesPadrao($p);
+$snapshotJson = !empty($p['snapshot_json']) ? json_decode($p['snapshot_json'], true) : [];
+$observacoes = !empty($snapshotJson['observacoes']) && is_array($snapshotJson['observacoes']) 
+    ? $snapshotJson['observacoes'] 
+    : analisePlanosObservacoesPadrao($p);
 $html .= '
 <table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse; width:100%; border-color:#0D4941; margin-bottom:10px;">
   <tr style="background-color:#0D4941; color:#ffffff; font-weight:bold; font-size:9pt;">

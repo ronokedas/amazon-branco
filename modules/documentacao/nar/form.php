@@ -70,7 +70,7 @@ if (!$editando) {
 }
 
 // Lista de Embarcações ativas para o select
-$embarcacoes = $pdo->query("SELECT id, nome, registro, numero_inscricao, tipo, comprimento_total, boca_moldada, pontal_moldado FROM embarcacoes WHERE ativo = 1 ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+$embarcacoes = $pdo->query("SELECT id, nome, registro, numero_inscricao, tipo, comprimento_total, boca_moldada, pontal_moldado, comprimento_casco, COALESCE(comprimento_regra, comprimento_casco) AS comprimento_regra, comprimento_lpp, calado_leve_av, calado_leve_ar, calado_leve_med, calado_carregado_av, calado_carregado_ar, calado_carregado_med, deslocamento_leve, deslocamento_carregado, porte_bruto FROM embarcacoes WHERE ativo = 1 ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Lista de Responsáveis por Assinatura
 $responsaveis = $pdo->query("SELECT id, nome_completo, cargo_titulo, registro_profissional FROM responsaveis_assinatura WHERE ativo = 1 ORDER BY nome_completo ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -196,8 +196,19 @@ require_once __DIR__ . '/../../../includes/header.php';
                                         <?= $emb['id'] === $embIdAtual ? 'selected' : '' ?>
                                         data-nome="<?= h($emb['nome']) ?>"
                                         data-ct="<?= h($emb['comprimento_total']) ?>"
+                                        data-l="<?= h($emb['comprimento_regra'] ?: $emb['comprimento_casco']) ?>"
+                                        data-lpp="<?= h($emb['comprimento_lpp']) ?>"
                                         data-b="<?= h($emb['boca_moldada']) ?>"
                                         data-p="<?= h($emb['pontal_moldado']) ?>"
+                                        data-calado-leve-av="<?= h($emb['calado_leve_av']) ?>"
+                                        data-calado-leve-ar="<?= h($emb['calado_leve_ar']) ?>"
+                                        data-calado-leve-med="<?= h($emb['calado_leve_med']) ?>"
+                                        data-calado-carr-av="<?= h($emb['calado_carregado_av']) ?>"
+                                        data-calado-carr-ar="<?= h($emb['calado_carregado_ar']) ?>"
+                                        data-calado-carr-med="<?= h($emb['calado_carregado_med']) ?>"
+                                        data-desloc-leve="<?= h($emb['deslocamento_leve']) ?>"
+                                        data-desloc-carr="<?= h($emb['deslocamento_carregado']) ?>"
+                                        data-porte-bruto="<?= h($emb['porte_bruto']) ?>"
                                         data-tipo="<?= h($emb['tipo']) ?>">
                                     <?= h($emb['nome']) ?> (<?= h($emb['tipo'] ?: 'Naval') ?> - <?= h($emb['numero_inscricao'] ?: $emb['registro'] ?: 'Sem reg.') ?>)
                                 </option>
@@ -490,9 +501,14 @@ require_once __DIR__ . '/../../../includes/header.php';
                 <div class="card h-100">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <strong>a.2) Volumes Acima do Convés Superior (Casarias)</strong>
-                        <button type="button" class="btn btn-xs btn-outline-primary" onclick="adicionarLinhaVolume('tabelaVolumesAcima', 'volumes_acima')">
-                            <i class="fa-solid fa-plus"></i> Casaria
-                        </button>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="zerarCasariasBalsa()" title="Zerar volumes de casarias para balsa de carga sem superestrutura">
+                                <i class="fa-solid fa-ban"></i> Balsa (Sem Casaria)
+                            </button>
+                            <button type="button" class="btn btn-xs btn-outline-primary" onclick="adicionarLinhaVolume('tabelaVolumesAcima', 'volumes_acima')">
+                                <i class="fa-solid fa-plus"></i> Casaria
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body p-2">
                         <table class="table table-sm table-borderless mb-2" id="tabelaVolumesAcima">
@@ -639,6 +655,24 @@ function carregarDadosEmbarcacao(embId) {
     if (opt.dataset.b) document.getElementById('b').value = opt.dataset.b;
     if (opt.dataset.p) document.getElementById('p').value = opt.dataset.p;
     if (opt.dataset.tipo) document.getElementById('tipo_embarcacao').value = opt.dataset.tipo;
+    if (opt.dataset.l) {
+        document.getElementById('l').value = opt.dataset.l;
+        const lVal = parseFloat(opt.dataset.l) || 0;
+        const enqSel = document.getElementById('enquadramento_comprimento');
+        if (enqSel) {
+            enqSel.value = (lVal >= 24.0) ? 'L_MAIOR_IGUAL_24' : 'L_MENOR_24';
+        }
+    }
+    if (opt.dataset.lpp) document.querySelector('input[name="comprimento_lpp"]').value = opt.dataset.lpp;
+    if (opt.dataset.caladoLeveAv) document.querySelector('input[name="calado_leve_av"]').value = opt.dataset.caladoLeveAv;
+    if (opt.dataset.caladoLeveAr) document.querySelector('input[name="calado_leve_ar"]').value = opt.dataset.caladoLeveAr;
+    if (opt.dataset.caladoLeveMed) document.getElementById('calado_leve_medio').value = opt.dataset.caladoLeveMed;
+    if (opt.dataset.caladoCarrAv) document.querySelector('input[name="calado_carregado_av"]').value = opt.dataset.caladoCarrAv;
+    if (opt.dataset.caladoCarrAr) document.querySelector('input[name="calado_carregado_ar"]').value = opt.dataset.caladoCarrAr;
+    if (opt.dataset.caladoCarrMed) document.getElementById('calado_carregado_medio').value = opt.dataset.caladoCarrMed;
+    if (opt.dataset.deslocLeve) document.querySelector('input[name="deslocamento_leve"]').value = opt.dataset.deslocLeve;
+    if (opt.dataset.deslocCarr) document.querySelector('input[name="deslocamento_carregado"]').value = opt.dataset.deslocCarr;
+    if (opt.dataset.porteBruto) document.querySelector('input[name="porte_bruto"]').value = opt.dataset.porteBruto;
 
     recalcularArqueacao();
 }
@@ -667,6 +701,13 @@ function somarVolumesAbaixo() {
 }
 
 // Somar volumes da tabela acima
+function zerarCasariasBalsa() {
+    document.querySelectorAll('.input-vol-acima').forEach(inp => {
+        inp.value = '0.00';
+    });
+    somarVolumesAcima();
+}
+
 function somarVolumesAcima() {
     let tot = 0;
     document.querySelectorAll('.input-vol-acima').forEach(input => {
