@@ -688,16 +688,17 @@ try {
         $assinarAgora = !empty($_POST['assinar_agora']);
         $statusInicial = $assinarAgora ? 'PUBLICADO' : 'AGUARDANDO_ASSINATURA_ANALISTA';
         $ip = obterIpCliente();
+        $agoraBrasilia = date('Y-m-d H:i:s');
 
         $pdo->prepare("INSERT INTO analise_planos_pareceres(
             id,numero,analise_id,versao,finalidade,submissao_id,relatorio_anterior_id,
             norma_versao_id,resultado,resumo,conclusao,snapshot_json,status,
-            responsavel_assinatura_id,criado_por,assinado_analista_em,assinatura_analista_ip,
+            responsavel_assinatura_id,criado_por,criado_em,assinado_analista_em,assinatura_analista_ip,
             publicado_em,validado_em,validado_por
         ) VALUES (
             :id,:numero,:analise,:versao,:finalidade,:submissao,:anterior,
             :norma,:resultado,:resumo,:conclusao,:snapshot,:status,
-            :responsavel,:usuario,:assinado_em,:ip,:publicado_em,:validado_em,:validado_por
+            :responsavel,:usuario,:criado_em,:assinado_em,:ip,:publicado_em,:validado_em,:validado_por
         )")->execute([
             ':id' => $parecerId,
             ':numero' => $numero,
@@ -714,10 +715,11 @@ try {
             ':status' => $statusInicial,
             ':responsavel' => $responsavel['id'],
             ':usuario' => $usuario,
-            ':assinado_em' => $assinarAgora ? date('Y-m-d H:i:s') : null,
+            ':criado_em' => $agoraBrasilia,
+            ':assinado_em' => $assinarAgora ? $agoraBrasilia : null,
             ':ip' => $assinarAgora ? $ip : null,
-            ':publicado_em' => $assinarAgora ? date('Y-m-d H:i:s') : null,
-            ':validado_em' => $assinarAgora ? date('Y-m-d H:i:s') : null,
+            ':publicado_em' => $assinarAgora ? $agoraBrasilia : null,
+            ':validado_em' => $assinarAgora ? $agoraBrasilia : null,
             ':validado_por' => $assinarAgora ? $usuario : null,
         ]);
 

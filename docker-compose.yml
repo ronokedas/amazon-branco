@@ -109,6 +109,7 @@ services:
       - --innodb-log-buffer-size=16M
       - --table-open-cache=400
       - --table-definition-cache=400
+      - --default-time-zone=-03:00
     volumes:
       - db_data:/var/lib/mysql
       # O db.sql e restaurado pelo pacote criptografado antes da primeira subida.

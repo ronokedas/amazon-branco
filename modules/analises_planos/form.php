@@ -1383,7 +1383,12 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                                 <?php else: ?>
                                     <span class="badge badge-secondary" style="font-size:0.75rem;"><?= h($p['status']) ?></span>
                                 <?php endif; ?>
-                                · <?= formatarDataCompleta($p['criado_em']) ?> por <?= h($p['criador_nome']) ?>
+                                <?php 
+                                $dtExibicaoRap = ($p['status'] === 'PUBLICADO' && !empty($p['publicado_em']))
+                                    ? $p['publicado_em']
+                                    : (!empty($p['assinado_analista_em']) ? $p['assinado_analista_em'] : $p['criado_em']);
+                                ?>
+                                · <?= formatarDataCompleta($dtExibicaoRap) ?> por <?= h($p['criador_nome']) ?>
                             </span>
                             <?php if ($p['devolvido_motivo']): ?>
                                 <small class="text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Devolvido: <?= h($p['devolvido_motivo']) ?></small>
