@@ -140,7 +140,12 @@ if (!$editando && !empty($analise_id)) {
         $preenchimento['proprietario_cpf_cnpj'] = (string)($analise_dados['cli_cpf_cnpj'] ?? '');
         $preenchimento['proprietario_endereco'] = (string)($analise_dados['cli_endereco'] ?? '');
         $preenchimento['estaleiro_nome']     = (string)($analise_dados['estaleiro'] ?? '');
-        $preenchimento['tipo_licenca']       = in_array($tipo_processo_an, ['LC','LA','LR','LCEC'], true) ? $tipo_processo_an : 'LC';
+        $tipo_solicitado = strtoupper(trim((string)($_GET['tipo_licenca'] ?? '')));
+        if (!empty($tipo_solicitado) && in_array($tipo_solicitado, ['LC','LA','LR','LCEC'], true)) {
+            $preenchimento['tipo_licenca'] = $tipo_solicitado;
+        } else {
+            $preenchimento['tipo_licenca'] = in_array($tipo_processo_an, ['LC','LA','LR','LCEC'], true) ? $tipo_processo_an : 'LC';
+        }
 
         // Checar se há parecer conclusivo aprovado
         $stmtPar = $pdo->prepare("SELECT numero, resultado, finalidade FROM analise_planos_pareceres WHERE analise_id = :id AND status = 'PUBLICADO' ORDER BY versao DESC LIMIT 1");

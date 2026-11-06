@@ -632,14 +632,14 @@ function analiseAcaoCriarLicenca(PDO $pdo, array $analise, array $responsavel, ?
     if (!$relatorioConclusivo) {
         throw new RuntimeException('A licença exige ao menos um relatório técnico (RAP) publicado no processo.');
     }
-    $existente = $pdo->prepare('SELECT id FROM certificados_lc WHERE analise_id=:id LIMIT 1 FOR UPDATE');
-    $existente->execute([':id' => $analise['id']]);
-    $idExistente = $existente->fetchColumn();
-    if ($idExistente) return (string)$idExistente;
-
     $tipo = ($tipoLicencaEscolhida && in_array($tipoLicencaEscolhida, ['LC', 'LA', 'LR', 'LCEC'], true)) 
         ? $tipoLicencaEscolhida 
         : (string)($analise['tipo_processo'] ?: 'LC');
+
+    $existente = $pdo->prepare('SELECT id FROM certificados_lc WHERE analise_id=:id AND tipo_licenca=:tipo LIMIT 1 FOR UPDATE');
+    $existente->execute([':id' => $analise['id'], ':tipo' => $tipo]);
+    $idExistente = $existente->fetchColumn();
+    if ($idExistente) return (string)$idExistente;
     $tipoSequencial = $tipo === 'LCEC' ? 'EC' : $tipo;
     $numero = gerarNumeroDocumento($tipoSequencial, $tipo === 'LCEC' ? 'AM-EC' : 'AM-' . $tipo);
     $id = gerarUUID();

@@ -178,7 +178,7 @@ $q=$pdo->prepare('SELECT * FROM analise_planos_itens WHERE analise_id=:id ORDER 
 $q=$pdo->prepare('SELECT * FROM analise_planos_exigencias WHERE analise_id=:id ORDER BY ordem,id');$q->execute([':id'=>$id]);$exigencias=$q->fetchAll(PDO::FETCH_ASSOC);
 $q=$pdo->prepare('SELECT p.*,u.nome criador_nome FROM analise_planos_pareceres p LEFT JOIN usuarios u ON u.id=p.criado_por WHERE p.analise_id=:id ORDER BY p.versao DESC');$q->execute([':id'=>$id]);$pareceres=$q->fetchAll(PDO::FETCH_ASSOC);
 $q=$pdo->prepare('SELECT h.*,u.nome usuario_nome FROM analise_planos_historico h LEFT JOIN usuarios u ON u.id=h.usuario_id WHERE h.analise_id=:id ORDER BY h.criado_em DESC LIMIT 60');$q->execute([':id'=>$id]);$historico=$q->fetchAll(PDO::FETCH_ASSOC);
-$q=$pdo->prepare('SELECT id,numero_lc,tipo_licenca,status,assinado FROM certificados_lc WHERE analise_id=:id LIMIT 1');$q->execute([':id'=>$id]);$licenca=$q->fetch(PDO::FETCH_ASSOC);
+$q=$pdo->prepare('SELECT id,numero_lc,tipo_licenca,status,assinado,criado_em FROM certificados_lc WHERE analise_id=:id AND ativo=1 ORDER BY criado_em DESC');$q->execute([':id'=>$id]);$licencas=$q->fetchAll(PDO::FETCH_ASSOC);$licenca=!empty($licencas)?$licencas[0]:null;
 $qNar=$pdo->prepare('SELECT id,numero,status,assinado FROM certificados_nar WHERE analise_id=:id AND ativo=1 ORDER BY criado_em DESC LIMIT 1');$qNar->execute([':id'=>$id]);$narProc=$qNar->fetch(PDO::FETCH_ASSOC);
 
 $temParecerConclusivoAprovado = false;
@@ -337,13 +337,16 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                 </div>
             </div>
             <div class="analise-hero-actions">
-                <?php if ($licenca): ?>
-                    <a class="btn btn-success" href="<?= APP_URL ?>documentacao/lc/form?id=<?= urlencode($licenca['id']) ?>" title="Licença Oficial Emitida">
-                        <i class="fa-solid fa-certificate"></i> Licença: <?= h($licenca['numero_lc']) ?>
-                    </a>
-                <?php elseif ($podeEmitirLicenca): ?>
+                <?php if (!empty($licencas)): ?>
+                    <?php foreach ($licencas as $lic): ?>
+                        <a class="btn btn-success" href="<?= APP_URL ?>documentacao/lc/form?id=<?= urlencode($lic['id']) ?>" title="Licença Oficial Emitida (<?= h($lic['tipo_licenca']) ?>)">
+                            <i class="fa-solid fa-certificate"></i> <?= h($lic['tipo_licenca']) ?>: <?= h($lic['numero_lc']) ?>
+                        </a>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                <?php if ($podeEmitirLicenca): ?>
                     <button type="button" class="btn btn-warning" onclick="trocarAbaAnalise('pareceres', true); document.getElementById('secaoLicencaTecnica')?.scrollIntoView({behavior:'smooth', block:'start'});" title="Emitir Licença Oficial">
-                        <i class="fa-solid fa-certificate"></i> Emitir Licença (<?= h($a['tipo_processo']) ?>)
+                        <i class="fa-solid fa-certificate"></i> <?= empty($licencas) ? ('Emitir Licença (' . h($a['tipo_processo']) . ')') : '+ Nova Licença' ?>
                     </button>
                 <?php endif; ?>
                 <?php if ($narProc): ?>
@@ -1436,51 +1439,64 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                     </div>
                 </div>
 
-                <?php if ($licenca): ?>
-                    <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                        <div>
-                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                                <span class="badge badge-success" style="font-size:0.85rem; padding:5px 10px;">
-                                    <i class="fa-solid fa-certificate"></i> <?= h($licenca['tipo_licenca']) ?>
-                                </span>
-                                <strong style="font-size:1.1rem; color:#14532d;"><?= h($licenca['numero_lc']) ?></strong>
-                                <span class="badge badge-outline" style="font-size:0.75rem; border:1px solid #16a34a; color:#16a34a; background:#fff;">
-                                    <?= h(strtoupper($licenca['status'])) ?>
-                                </span>
+                <?php if (!empty($licencas)): ?>
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+                        <?php foreach ($licencas as $lic): ?>
+                            <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                        <span class="badge badge-success" style="font-size:0.85rem; padding:4px 9px;">
+                                            <i class="fa-solid fa-certificate"></i> <?= h($lic['tipo_licenca']) ?>
+                                        </span>
+                                        <strong style="font-size:1.1rem; color:#14532d;"><?= h($lic['numero_lc']) ?></strong>
+                                        <span class="badge badge-outline" style="font-size:0.75rem; border:1px solid #16a34a; color:#16a34a; background:#fff;">
+                                            <?= h(strtoupper($lic['status'])) ?>
+                                        </span>
+                                        <?php if (!empty($lic['assinado'])): ?>
+                                            <span class="badge badge-primary" style="font-size:0.75rem;"><i class="fa-solid fa-signature"></i> ASSINADO DIGITALMENTE</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <small class="text-muted" style="display:block;">
+                                        Licença <?= h($lic['tipo_licenca']) ?> gerada e vinculada à Análise <?= h($a['numero']) ?>. Em conformidade com o Anexo 3-A da NORMAM-202.
+                                    </small>
+                                </div>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <a href="<?= APP_URL ?>documentacao/lc/form?id=<?= urlencode($lic['id']) ?>" class="btn btn-outline-success btn-sm">
+                                        <i class="fa-solid fa-pen-to-square"></i> Ver / Editar Licença
+                                    </a>
+                                    <a href="<?= APP_URL ?>documentacao/lc/pdf?id=<?= urlencode($lic['id']) ?>" target="_blank" class="btn btn-success btn-sm">
+                                        <i class="fa-solid fa-file-pdf"></i> Baixar PDF Oficial
+                                    </a>
+                                </div>
                             </div>
-                            <small class="text-muted" style="display:block;">
-                                Licença gerada e vinculada à Análise <?= h($a['numero']) ?>. Em conformidade com o Anexo 3-A da NORMAM-202.
-                            </small>
-                        </div>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <a href="<?= APP_URL ?>documentacao/lc/form?id=<?= urlencode($licenca['id']) ?>" class="btn btn-outline-success btn-sm">
-                                <i class="fa-solid fa-pen-to-square"></i> Ver / Editar Licença
-                            </a>
-                            <a href="<?= APP_URL ?>documentacao/lc/pdf?id=<?= urlencode($licenca['id']) ?>" target="_blank" class="btn btn-success btn-sm">
-                                <i class="fa-solid fa-file-pdf"></i> Baixar PDF Oficial
-                            </a>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
-                <?php elseif ($podeEmitirLicenca): ?>
-                    <div style="background:#f8fafc; border:1px solid #cbd5e1; border-left:4px solid #10b981; border-radius:8px; padding:18px;">
+                <?php endif; ?>
+
+                <?php if ($podeEmitirLicenca): ?>
+                    <div style="background:#f8fafc; border:1px solid #cbd5e1; border-left:4px solid #10b981; border-radius:8px; padding:18px; margin-bottom:12px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
                             <div style="max-width:680px;">
                                 <h5 style="margin:0 0 6px 0; color:#0f172a; font-size:1rem; font-weight:700;">
-                                    <?php if ($exigenciasPendentesTotal === 0): ?>
+                                    <?php if (!empty($licencas)): ?>
+                                        <i class="fa-solid fa-plus-circle text-success"></i> Emitir Outra Licença Técnica Naval (NORMAM-202)
+                                    <?php elseif ($exigenciasPendentesTotal === 0): ?>
                                         <i class="fa-solid fa-circle-check text-success"></i> Relatório Aprovado & Zero Exigências Pendentes
                                     <?php else: ?>
                                         <i class="fa-solid fa-circle-check text-success"></i> Relatório RAP Emitido & Zero Condições Suspensivas (A/S)
                                     <?php endif; ?>
                                 </h5>
                                 <p style="margin:0 0 8px 0; font-size:0.875rem; color:#475569;">
-                                    <?php if ($exigenciasPendentesTotal === 0): ?>
-                                        Todos os critérios da NORMAM-202 foram atendidos com êxito. O analista responsável está habilitado para gerar e assinar a respectiva licença técnica oficial (<strong><?= h($a['tipo_processo']) ?></strong>).
+                                    <?php if (!empty($licencas)): ?>
+                                        Você pode gerar licenças adicionais ou de outras modalidades (ex.: LA, LR, LCEC) vinculadas a este mesmo processo técnico. Selecione o tipo desejado abaixo:
+                                    <?php elseif ($exigenciasPendentesTotal === 0): ?>
+                                        Todos os critérios da NORMAM-202 foram atendidos com êxito. O analista responsável está habilitado para gerar e assinar a respectiva licença técnica oficial.
                                     <?php else: ?>
-                                        Há <strong><?= $exigenciasPendentesTotal ?> exigência(s) comum(ns) pendente(s)</strong>, porém nenhuma possui condição suspensiva (A/S). A licença técnica oficial (<strong><?= h($a['tipo_processo']) ?></strong>) está liberada para emissão sob acompanhamento técnico naval.
+                                        Há <strong><?= $exigenciasPendentesTotal ?> exigência(s) comum(ns) pendente(s)</strong>, porém nenhuma possui condição suspensiva (A/S). A emissão está liberada sob acompanhamento técnico naval.
                                     <?php endif; ?>
                                 </p>
                                 <small class="text-muted" style="display:block;">
-                                    <i class="fa-solid fa-info-circle"></i> Modalidade automática sugerida: 
+                                    <i class="fa-solid fa-info-circle"></i> Modalidade automática sugerida para o processo: 
                                     <strong>
                                         <?php
                                         $labelModalidade = match($a['tipo_processo']) {
@@ -1500,7 +1516,7 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                                     <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                                     <input type="hidden" name="action" value="emitir_licenca">
                                     <input type="hidden" name="analise_id" value="<?= h($id) ?>">
-                                    <select name="tipo_licenca" class="form-control form-control-sm" style="width:auto; font-weight:700; min-width:210px; border-color:#10b981;">
+                                    <select name="tipo_licenca" id="selectTipoLicencaModalidade" class="form-control form-control-sm" style="width:auto; font-weight:700; min-width:210px; border-color:#10b981;" onchange="var el = document.getElementById('btnAbrirFormDetalhado'); if(el) el.href='<?= APP_URL ?>documentacao/lc/form?analise_id=<?= urlencode($id) ?>&tipo_licenca=' + encodeURIComponent(this.value);">
                                         <option value="LC" <?= ($a['tipo_processo'] === 'LC') ? 'selected' : '' ?>>LC — Licença de Construção</option>
                                         <option value="LA" <?= ($a['tipo_processo'] === 'LA') ? 'selected' : '' ?>>LA — Licença de Alteração</option>
                                         <option value="LR" <?= ($a['tipo_processo'] === 'LR') ? 'selected' : '' ?>>LR — Licença de Reclassificação</option>
@@ -1510,7 +1526,7 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                                         <i class="fa-solid fa-certificate"></i> Emitir Licença
                                     </button>
                                 </form>
-                                <a href="<?= APP_URL ?>documentacao/lc/form?analise_id=<?= urlencode($id) ?>" class="btn btn-outline-primary" style="font-weight:600;">
+                                <a id="btnAbrirFormDetalhado" href="<?= APP_URL ?>documentacao/lc/form?analise_id=<?= urlencode($id) ?>&tipo_licenca=<?= urlencode($a['tipo_processo'] ?: 'LC') ?>" class="btn btn-outline-primary" style="font-weight:600;">
                                     <i class="fa-solid fa-sliders"></i> Abrir Formulário Detalhado
                                 </a>
                             </div>

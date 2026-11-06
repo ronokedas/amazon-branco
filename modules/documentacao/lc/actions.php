@@ -107,8 +107,11 @@ if ($action === 'salvar') {
         $origemDocumento = $stmtOrigem->fetch(PDO::FETCH_ASSOC);
         $analise_id = $origemDocumento['analise_id'] ?? $analise_id;
         if ($analise_id && $tipo_licenca !== $origemDocumento['tipo_licenca']) {
-            setMensagem('error', 'O tipo da licença vinculada à análise não pode ser alterado.');
-            redirecionar(APP_URL . 'documentacao/lc/form?id=' . urlencode($id));
+            $tipo_seq = ($tipo_licenca === 'LCEC') ? 'EC' : $tipo_licenca;
+            $prefixoNovo = ($tipo_licenca === 'LCEC') ? 'AM-EC' : 'AM-' . $tipo_licenca;
+            $novoNumero = gerarNumeroDocumento($tipo_seq, $prefixoNovo);
+            $pdo->prepare("UPDATE certificados_lc SET tipo_licenca=:tipo, numero_lc=:num WHERE id=:id")
+                ->execute([':tipo' => $tipo_licenca, ':num' => $novoNumero, ':id' => $id]);
         }
     }
     if ($analise_id) {
