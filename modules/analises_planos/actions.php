@@ -199,8 +199,8 @@ try {
         $pdo->prepare("UPDATE analises_planos SET status='EM_ANALISE',iniciado_em=COALESCE(iniciado_em, NOW()) WHERE id=:id")->execute([':id'=>$analiseId]);
         analisePlanosHistorico($pdo,$analiseId,'ANALISE_INICIADA',$analise['status'],'EM_ANALISE','Analista iniciou os trabalhos técnicos de conferência de planos e documentos.');
         $pdo->commit();
-        setMensagem('success','Análise técnica iniciada com sucesso. Você já pode classificar os arquivos e avaliar a matriz normativa.');
-        redirecionar($retorno($analiseId, 'enquadramento'));
+        setMensagem('success','Análise técnica iniciada com sucesso! Etapa 3 liberada: confira os apontamentos e insira as exigências técnicas da NORMAM-202.');
+        redirecionar($retorno($analiseId, 'exigencias'));
     }
 
     if ($acao === 'salvar') {

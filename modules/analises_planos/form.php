@@ -296,9 +296,18 @@ $isPrazoHoje = !empty($prazoItem) && substr($prazoItem, 0, 10) === date('Y-m-d')
 
 $analisePodeIniciar = $podeTecnico && ($a['status'] === 'AGENDADA' || empty($a['iniciado_em']));
 
-$abaAtiva = trim($_GET['aba'] ?? 'exigencias');
-if (!in_array($abaAtiva, ['exigencias', 'arquivos', 'pareceres', 'enquadramento', 'vistoria_tramite'], true)) {
-    $abaAtiva = 'exigencias';
+$abaAtiva = trim($_GET['aba'] ?? '');
+if (empty($abaAtiva)) {
+    if (!empty($a['status']) && ($a['status'] === 'AGENDADA' || empty($a['iniciado_em']))) {
+        $abaAtiva = 'enquadramento';
+    } elseif ($exigenciasPendentesTotal > 0) {
+        $abaAtiva = 'exigencias';
+    } else {
+        $abaAtiva = 'enquadramento';
+    }
+}
+if (!in_array($abaAtiva, ['enquadramento', 'arquivos', 'exigencias', 'pareceres', 'vistoria_tramite'], true)) {
+    $abaAtiva = 'enquadramento';
 }
 
 $categoriasNormam = analisePlanosCategoriasNormam();
@@ -389,30 +398,30 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
             </div>
         </div>
 
-        <!-- Faixa de Indicadores e Métricas do Processo -->
+        <!-- Faixa de Indicadores e Métricas do Processo (Atalhos por Etapa Operacional) -->
         <div class="analise-kpi-strip">
-            <article class="kpi-box">
-                <div class="kpi-box__icon is-status"><i class="fa-solid fa-signal"></i></div>
+            <article class="kpi-box" onclick="trocarAbaAnalise('enquadramento')" style="cursor:pointer;" title="Etapa 1: Clique para ver o Enquadramento Naval e Dados Técnicos">
+                <div class="kpi-box__icon is-status"><i class="fa-solid fa-ship"></i></div>
                 <div class="kpi-box__content">
-                    <small>Situação Operacional</small>
-                    <strong><?= h($statusLabels[$a['status']] ?? $a['status']) ?></strong>
-                    <span><?= !empty($prazoItem) ? date('d/m/Y', strtotime($prazoItem)) : 'Prazo a definir' ?></span>
+                    <small><i class="fa-solid fa-circle-dot text-primary"></i> 1. Enquadramento</small>
+                    <strong>Classe <?= h($a['classe_certificacao'] ?: 'EC1') ?> · <?= h($a['enquadramento'] ?: 'NORMAM-202') ?></strong>
+                    <span>Processo: <strong><?= h($a['tipo_processo'] ?: 'LC') ?></strong> · <?= h($statusLabels[$a['status']] ?? $a['status']) ?></span>
                 </div>
             </article>
 
-            <article class="kpi-box" onclick="trocarAbaAnalise('arquivos')" style="cursor:pointer">
+            <article class="kpi-box" onclick="trocarAbaAnalise('arquivos')" style="cursor:pointer;" title="Etapa 2: Clique para conferir as Pranchas e Documentos Recebidos do Armador">
                 <div class="kpi-box__icon is-files"><i class="fa-solid fa-folder-open"></i></div>
                 <div class="kpi-box__content">
-                    <small>Pranchas & Arquivos</small>
+                    <small><i class="fa-solid fa-circle-dot text-info"></i> 2. Pranchas & Doc.</small>
                     <strong><?= (int)$totalArquivos ?> arquivo(s)</strong>
-                    <span><?= (int)$totalArquivosPortal > 0 ? (int)$totalArquivosPortal . ' recebido(s) do armador' : 'Nenhuma prancha externa' ?></span>
+                    <span><?= (int)$totalArquivosPortal > 0 ? ('<strong style="color:#0284c7;">' . (int)$totalArquivosPortal . ' recebido(s) do armador</strong>') : 'Pranchas internas' ?></span>
                 </div>
             </article>
 
-            <article class="kpi-box" onclick="trocarAbaAnalise('exigencias')" style="cursor:pointer">
+            <article class="kpi-box" onclick="trocarAbaAnalise('exigencias')" style="cursor:pointer;" title="Etapa 3: Clique para gerenciar as Exigências NORMAM">
                 <div class="kpi-box__icon is-exigencias"><i class="fa-solid fa-triangle-exclamation"></i></div>
                 <div class="kpi-box__content">
-                    <small>Exigências NORMAM</small>
+                    <small><i class="fa-solid fa-circle-dot text-warning"></i> 3. Exigências NORMAM</small>
                     <strong id="kpiExigenciasPendentes"><?= (int)$exigenciasPendentes ?> pendente(s)</strong>
                     <span id="kpiExigenciasCumpridas">
                         <?= (int)$exigenciasCumpridas ?> de <?= (int)$totalExigencias ?> cumprida(s)
@@ -425,12 +434,12 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                 </div>
             </article>
 
-            <article class="kpi-box" onclick="trocarAbaAnalise('pareceres', true); document.getElementById('historicoPareceresSection')?.scrollIntoView({behavior:'smooth', block:'start'});" style="cursor:pointer" title="Ver relatórios técnicos RAP e histórico">
+            <article class="kpi-box" onclick="trocarAbaAnalise('pareceres', true); document.getElementById('historicoPareceresSection')?.scrollIntoView({behavior:'smooth', block:'start'});" style="cursor:pointer;" title="Etapa 4: Clique para ver os Relatórios RAP e Licenças Técnicas">
                 <div class="kpi-box__icon is-reports"><i class="fa-solid fa-file-signature"></i></div>
                 <div class="kpi-box__content">
-                    <small>Relatórios Técnicos RAP</small>
+                    <small><i class="fa-solid fa-circle-dot text-success"></i> 4. RAP & Licença</small>
                     <strong><?= (int)$totalPareceres ?> parecer(es)</strong>
-                    <span><?= $ultimoParecer ? 'Último: ' . h($ultimoParecer['numero']) : 'Nenhum emitido' ?></span>
+                    <span><?= !empty($licencas) ? count($licencas) . ' licença(s) emitida(s)' : ($ultimoParecer ? 'Último: ' . h($ultimoParecer['numero']) : 'Aguardando RAP') ?></span>
                 </div>
             </article>
         </div>
@@ -457,11 +466,31 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
         </div>
     <?php endif; ?>
 
-    <!-- Barra de Abas Especializadas do Analista (AGENTS.md) -->
+    <!-- Barra de Abas Especializadas do Analista (Fluxo Operacional por Etapas NORMAM-202) -->
     <nav class="analise-tabs-bar" role="tablist">
-        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'exigencias' ? 'active' : '' ?>" onclick="trocarAbaAnalise('exigencias')" title="Exigências Técnicas Vigentes (NORMAM-202) & Banco NORMAM">
+        <!-- ETAPA 1: Enquadramento Naval -->
+        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'enquadramento' ? 'active' : '' ?>" onclick="trocarAbaAnalise('enquadramento')" title="Etapa 1: Enquadramento & Características Técnicas Navais (NORMAM-202)">
+            <span class="tab-step-badge">1</span>
+            <i class="fa-solid fa-ship"></i>
+            <span class="tab-title">Enquadramento Naval</span>
+        </button>
+
+        <!-- ETAPA 2: Pranchas e Documentos Recebidos do Armador -->
+        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'arquivos' ? 'active' : '' ?>" onclick="trocarAbaAnalise('arquivos')" title="Etapa 2: Pranchas Técnicas e Documentos Recebidos do Armador">
+            <span class="tab-step-badge">2</span>
+            <i class="fa-solid fa-folder-open"></i>
+            <span class="tab-title">Pranchas & Doc. Armador</span>
+            <span class="badge bg-secondary"><?= $totalArquivos ?></span>
+            <?php if ($totalArquivosPortal > 0): ?>
+                <span class="badge bg-info text-dark" title="<?= $totalArquivosPortal ?> recebido(s) do armador"><i class="fa-solid fa-arrow-down"></i> <?= $totalArquivosPortal ?></span>
+            <?php endif; ?>
+        </button>
+
+        <!-- ETAPA 3: Iniciar Análise & Exigências NORMAM -->
+        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'exigencias' ? 'active' : '' ?>" onclick="trocarAbaAnalise('exigencias')" title="Etapa 3: Exigências Técnicas Vigentes (NORMAM-202) & Banco NORMAM">
+            <span class="tab-step-badge">3</span>
             <i class="fa-solid fa-triangle-exclamation"></i>
-            <span class="tab-title">Exigências & NORMAM</span>
+            <span class="tab-title">Exigências Técnicas</span>
             <span id="badgeAbaExigencias" class="badge <?= $exigenciasASPendentes > 0 ? 'bg-danger text-white' : ($exigenciasPendentes > 0 ? 'bg-warning text-dark' : 'bg-success') ?>">
                 <?php if ($exigenciasASPendentes > 0): ?>
                     <i class="fa-solid fa-ban"></i> <?= $exigenciasASPendentes ?> A/S
@@ -473,24 +502,20 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
             </span>
         </button>
 
-        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'arquivos' ? 'active' : '' ?>" onclick="trocarAbaAnalise('arquivos')" title="Pranchas Técnicas & Arquivos do Projeto Naval">
-            <i class="fa-solid fa-folder-open"></i>
-            <span class="tab-title">Pranchas & Arquivos</span>
-            <span class="badge bg-secondary"><?= $totalArquivos ?></span>
-        </button>
-
-        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'pareceres' ? 'active' : '' ?>" onclick="trocarAbaAnalise('pareceres')" title="Relatórios Técnicos de Análise de Planos (RAP) & Licença">
+        <!-- ETAPA 4: Relatórios RAP & Licença -->
+        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'pareceres' ? 'active' : '' ?>" onclick="trocarAbaAnalise('pareceres')" title="Etapa 4: Relatórios Técnicos RAP (Anexo 7-B) & Emissão de Licença Oficial">
+            <span class="tab-step-badge">4</span>
             <i class="fa-solid fa-file-signature"></i>
             <span class="tab-title">Relatórios RAP & Licença</span>
             <span class="badge bg-secondary"><?= $totalPareceres ?></span>
+            <?php if (!empty($licencas)): ?>
+                <span class="badge bg-success" title="<?= count($licencas) ?> licença(s) emitida(s)"><i class="fa-solid fa-certificate"></i> <?= count($licencas) ?></span>
+            <?php endif; ?>
         </button>
 
-        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'enquadramento' ? 'active' : '' ?>" onclick="trocarAbaAnalise('enquadramento')" title="Enquadramento & Características Navais (NORMAM-202)">
-            <i class="fa-solid fa-ship"></i>
-            <span class="tab-title">Enquadramento Naval</span>
-        </button>
-
-        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'vistoria_tramite' ? 'active' : '' ?>" onclick="trocarAbaAnalise('vistoria_tramite')" title="Vistoria Técnica de Campo & Trâmite Oficial na Capitania">
+        <!-- ETAPA 5: Vistoria de Campo & Trâmite Oficial -->
+        <button type="button" class="analise-tab-btn <?= $abaAtiva === 'vistoria_tramite' ? 'active' : '' ?>" onclick="trocarAbaAnalise('vistoria_tramite')" title="Etapa 5: Vistoria Técnica de Campo & Trâmite Oficial na Capitania">
+            <span class="tab-step-badge">5</span>
             <i class="fa-solid fa-anchor"></i>
             <span class="tab-title">Vistoria & Trâmite</span>
             <?php if (!empty($vistoriasVinculadas)): ?>
@@ -747,11 +772,42 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                 <input type="hidden" name="exigencia_id" id="excluir_exigencia_id" value="">
                 <input type="hidden" name="aba" class="input-aba-ativa" value="<?= h($abaAtiva) ?>">
             </form>
+            <!-- Navegação entre Etapas -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; padding-top:16px; border-top:1px solid #e2e8f0; flex-wrap:wrap; gap:12px;">
+                <button type="button" class="btn btn-outline-secondary" onclick="trocarAbaAnalise('arquivos', true)">
+                    <i class="fa-solid fa-arrow-left"></i> Voltar à Etapa 2: Pranchas & Doc. Armador
+                </button>
+                <button type="button" class="btn btn-primary" onclick="trocarAbaAnalise('pareceres', true)" style="font-weight:600;">
+                    Avançar para Etapa 4: Gerar Relatório RAP & Licença <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
         </section>
     </div>
 
-    <!-- ABA 2: PRANCHAS & ARQUIVOS DO PROJETO -->
+    <!-- ABA 2: PRANCHAS & ARQUIVOS DO PROJETO (ETAPA 2) -->
     <div id="pane-arquivos" class="analise-tab-pane <?= $abaAtiva === 'arquivos' ? 'active' : '' ?>">
+        <?php if ($analisePodeIniciar): ?>
+            <!-- Card de Transição Operacional da Etapa 2 para Etapa 3 -->
+            <div style="background:#f0fdf4; border:1px solid #86efac; border-left:5px solid #16a34a; border-radius:10px; padding:18px 22px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; box-shadow:0 2px 6px rgba(22,163,74,0.12);">
+                <div>
+                    <h4 style="margin:0 0 6px 0; color:#14532d; font-weight:700; font-size:1.05rem;">
+                        <i class="fa-solid fa-compass-drafting text-success"></i> Pranchas e Documentos Prontos para Iniciar a Análise?
+                    </h4>
+                    <p style="margin:0; font-size:0.875rem; color:#166534; max-width:640px;">
+                        Após verificar os documentos e plantas técnicas recebidas do armador, clique no botão ao lado para iniciar oficialmente os trabalhos e liberar o apontamento de exigências na <strong>Etapa 3</strong>.
+                    </p>
+                </div>
+                <form method="post" action="<?= APP_URL ?>analises-planos/actions" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
+                    <input type="hidden" name="action" value="iniciar">
+                    <input type="hidden" name="analise_id" value="<?= h($id) ?>">
+                    <button class="btn btn-success btn-lg" style="font-weight:700; padding:12px 22px; box-shadow:0 4px 14px rgba(22, 163, 74, 0.35);">
+                        <i class="fas fa-play"></i> Iniciar Análise Técnica Agora <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        <?php endif; ?>
+
         <!-- Arquivos Recebidos do Armador via Portal do Cliente -->
         <section class="analise-card" style="border-left: 4px solid #0284c7;">
             <div class="analise-card__head-flex">
@@ -1058,6 +1114,27 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                         </div>
                     </div>
                 <?php endforeach; ?>
+            </div>
+
+            <!-- Navegação entre Etapas -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; padding-top:16px; border-top:1px solid #e2e8f0; flex-wrap:wrap; gap:12px;">
+                <button type="button" class="btn btn-outline-secondary" onclick="trocarAbaAnalise('enquadramento', true)">
+                    <i class="fa-solid fa-arrow-left"></i> Voltar à Etapa 1: Enquadramento Naval
+                </button>
+                <?php if ($analisePodeIniciar): ?>
+                    <form method="post" action="<?= APP_URL ?>analises-planos/actions" style="margin:0;">
+                        <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
+                        <input type="hidden" name="action" value="iniciar">
+                        <input type="hidden" name="analise_id" value="<?= h($id) ?>">
+                        <button class="btn btn-success" style="font-weight:700;">
+                            <i class="fas fa-play"></i> Iniciar Análise & Abrir Exigências <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </form>
+                <?php else: ?>
+                    <button type="button" class="btn btn-success" onclick="trocarAbaAnalise('exigencias', true)" style="font-weight:600;">
+                        Avançar para Etapa 3: Exigências Técnicas NORMAM <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                <?php endif; ?>
             </div>
         </section>
     </div>
@@ -1596,6 +1673,16 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                     </div>
                 </div>
             </div>
+
+            <!-- Navegação entre Etapas -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; padding-top:16px; border-top:1px solid #e2e8f0; flex-wrap:wrap; gap:12px;">
+                <button type="button" class="btn btn-outline-secondary" onclick="trocarAbaAnalise('exigencias', true)">
+                    <i class="fa-solid fa-arrow-left"></i> Voltar à Etapa 3: Exigências Técnicas
+                </button>
+                <button type="button" class="btn btn-outline-primary" onclick="trocarAbaAnalise('vistoria_tramite', true)">
+                    Avançar para Etapa 5: Vistoria & Trâmite Oficial <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
         </section>
     </div>
 
@@ -1723,11 +1810,18 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                     <textarea name="observacoes" rows="3" <?= $tecnicoEditavel ? '' : 'disabled' ?> class="form-control" placeholder="Informações de projeto, particularidades da bacia hidrográfica..."><?= h($a['observacoes']) ?></textarea>
                 </div>
 
-                <?php if ($tecnicoEditavel): ?>
-                    <div class="form-actions">
-                        <button class="btn btn-primary"><i class="fas fa-save"></i> Salvar Enquadramento e Características</button>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid #e2e8f0; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <?php if ($tecnicoEditavel): ?>
+                            <button class="btn btn-primary"><i class="fas fa-save"></i> Salvar Enquadramento e Características</button>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
+                    <div>
+                        <button type="button" class="btn btn-success" onclick="trocarAbaAnalise('arquivos', true)" style="font-weight:600;">
+                            Avançar para Etapa 2: Conferir Pranchas & Documentos <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
             </form>
         </section>
     </div>
@@ -2227,20 +2321,21 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
 .analise-tab-btn {
     border: 1px solid #e2e8f0;
     background: #f8fafc;
-    padding: 10px 8px;
+    padding: 8px 10px;
     border-radius: 8px;
-    font-size: 0.84rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: #475569;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 7px;
     cursor: pointer;
     text-align: center;
     transition: all 0.18s ease;
-    min-height: 44px;
+    min-height: 46px;
     user-select: none;
+    position: relative;
 }
 .analise-tab-btn:hover {
     color: #0d4a40;
@@ -2251,7 +2346,25 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
     background: #0d4a40 !important;
     color: #ffffff !important;
     border-color: #0d4a40 !important;
-    box-shadow: 0 2px 6px rgba(13, 74, 64, 0.25);
+    box-shadow: 0 3px 8px rgba(13, 74, 64, 0.28);
+}
+.analise-tab-btn .tab-step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 0.74rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    transition: all 0.18s ease;
+}
+.analise-tab-btn.active .tab-step-badge {
+    background: #14b8a6;
+    color: #ffffff;
 }
 .analise-tab-btn i {
     font-size: 0.95rem;
@@ -2259,8 +2372,6 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
 }
 .analise-tab-btn .tab-title {
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 .analise-tab-btn .badge {
     font-size: 0.72rem;
