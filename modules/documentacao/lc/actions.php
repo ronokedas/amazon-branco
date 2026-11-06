@@ -244,6 +244,7 @@ if ($action === 'salvar') {
             $stmt->execute([
                 ':embarcacao_id' => $embarcacao_id,
                 ':cliente_id' => $cliente_id,
+                ':analise_id' => $analise_id_post,
                 ':tipo_licenca' => $tipo_licenca,
                 ':nome_embarcacao' => $nome_embarcacao,
                 ':tipo_embarcacao' => $tipo_embarcacao,
@@ -286,15 +287,44 @@ if ($action === 'salvar') {
             $numero = $pdo->prepare("SELECT numero_lc FROM certificados_lc WHERE id = :id");
             $numero->execute([':id' => $id]);
             $numero_lc = $numero->fetch()['numero_lc'];
+
+            $numero_lc_informado = trim((string)($_POST['numero_lc'] ?? ''));
+            if ($numero_lc_informado !== '' && $numero_lc_informado !== $numero_lc) {
+                $stmtChkV = $pdo->prepare("SELECT id FROM certificados_lc WHERE numero_lc = :num AND id <> :id AND ativo = 1 LIMIT 1");
+                $stmtChkV->execute([':num' => $numero_lc_informado, ':id' => $id]);
+                if (!$stmtChkV->fetch()) {
+                    $pdo->prepare("UPDATE certificados_lc SET numero_lc = :num WHERE id = :id")->execute([':num' => $numero_lc_informado, ':id' => $id]);
+                    $numero_lc = $numero_lc_informado;
+                }
+            }
+
+            $analise_id_post = !empty($_POST['analise_id']) ? trim($_POST['analise_id']) : null;
+            if ($analise_id_post) {
+                $pdo->prepare("UPDATE certificados_lc SET analise_id = :aid WHERE id = :id")->execute([':aid' => $analise_id_post, ':id' => $id]);
+            }
         } else {
             $tipo_seq = ($tipo_licenca === 'LCEC') ? 'EC' : $tipo_licenca;
             $prefixo = 'AM-' . $tipo_seq;
-            $numero_lc = gerarNumeroDocumento($tipo_seq, $prefixo);
+            $numero_lc_informado = trim((string)($_POST['numero_lc'] ?? ''));
+
+            if ($numero_lc_informado !== '') {
+                $stmtChkV = $pdo->prepare("SELECT id FROM certificados_lc WHERE numero_lc = :num AND ativo = 1 LIMIT 1");
+                $stmtChkV->execute([':num' => $numero_lc_informado]);
+                if ($stmtChkV->fetch()) {
+                    $numero_lc = gerarNumeroDocumento($tipo_seq, $prefixo);
+                } else {
+                    $numero_lc = $numero_lc_informado;
+                }
+            } else {
+                $numero_lc = gerarNumeroDocumento($tipo_seq, $prefixo);
+            }
+
+            $analise_id_post = !empty($_POST['analise_id']) ? trim($_POST['analise_id']) : null;
             $token = bin2hex(random_bytes(32));
             $id = gerarUUID();
 
             $sql = "INSERT INTO certificados_lc (
-                        id, numero_lc, token_assinatura, embarcacao_id, cliente_id,
+                        id, numero_lc, token_assinatura, embarcacao_id, cliente_id, analise_id,
                         tipo_licenca, nome_embarcacao, tipo_embarcacao, numero_casco,
                         material_casco, sociedade_classificadora,
                         comprimento_total, comprimento_pp, boca_moldada, pontal_moldado, calado_maximo,
@@ -306,7 +336,7 @@ if ($action === 'salvar') {
                         assinante_nome, assinante_titulo, assinante_registro,
                         status, criado_por, vistoria_id, despachante_id,
                         observacoes, dados_json) VALUES (
-                        :id, :numero_lc, :token_assinatura, :embarcacao_id, :cliente_id,
+                        :id, :numero_lc, :token_assinatura, :embarcacao_id, :cliente_id, :analise_id,
                         :tipo_licenca, :nome_embarcacao, :tipo_embarcacao, :numero_casco,
                         :material_casco, :sociedade_classificadora,
                         :comprimento_total, :comprimento_pp, :boca_moldada, :pontal_moldado, :calado_maximo,

@@ -840,6 +840,42 @@ function gerarNumeroDocumento($tipo, $prefixo, $ano = null) {
     }
 }
 
+/**
+ * Consulta e projeta o próximo número sequencial oficial da Licença Naval sem incrementar
+ *
+ * @param PDO|null $pdo
+ * @param string $tipoLicenca 'LC', 'LA', 'LR' ou 'LCEC'
+ * @return string Ex: 'AM-LC-33/26'
+ */
+function obterProximoNumeroLicencaPreview($pdo = null, string $tipoLicenca = 'LC'): string {
+    if (!$pdo) {
+        global $pdo;
+    }
+    $ano2 = date('y');
+    $ano4 = (int)date('Y');
+    $tipoSeq = ($tipoLicenca === 'LCEC') ? 'EC' : $tipoLicenca;
+    $prefixo = 'AM-' . $tipoSeq;
+
+    $stmtSeq = $pdo->prepare('SELECT ultimo_numero FROM sequenciais_documentos WHERE tipo_documento = :tipo AND ano = :ano');
+    $stmtSeq->execute([':tipo' => $tipoSeq, ':ano' => $ano4]);
+    $seqRow = $stmtSeq->fetch(PDO::FETCH_ASSOC);
+    $seq1 = $seqRow ? (int)$seqRow['ultimo_numero'] : 0;
+
+    $stmtMax = $pdo->prepare('SELECT numero_lc FROM certificados_lc WHERE tipo_licenca = :tipo AND ativo = 1');
+    $stmtMax->execute([':tipo' => $tipoLicenca]);
+    $maxNum = 0;
+    while ($row = $stmtMax->fetch(PDO::FETCH_ASSOC)) {
+        if (preg_match('/-(\d+)\/\d+$/', (string)$row['numero_lc'], $matches)) {
+            $numVal = (int)$matches[1];
+            if ($numVal > $maxNum) {
+                $maxNum = $numVal;
+            }
+        }
+    }
+    $proximo = max($seq1, $maxNum) + 1;
+    return "{$prefixo}-{$proximo}/{$ano2}";
+}
+
 // Paginação simples
 function paginar($tabela, $por_pagina, $pagina_atual) {
     global $pdo;

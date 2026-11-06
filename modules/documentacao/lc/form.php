@@ -30,23 +30,51 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
     }
 }
 
-// Gerar próximo número
-$proximo_numero = '';
-$proximo_numero_ec = '';
-$proximo_numero_la = '';
-$proximo_numero_lr = '';
-if (!$editando) {
-    $ano = date('y');
-    $ano4 = date('Y');
-    $stmt_num = $pdo->prepare("SELECT COUNT(*) as total FROM certificados_lc WHERE YEAR(criado_em) = :ano");
-    $stmt_num->execute([':ano' => $ano4]);
-    $total = $stmt_num->fetch()['total'];
-    $seq = $total + 1;
-    $proximo_numero = "AM-LC-{$seq}/{$ano}";
-    $proximo_numero_ec = "AM-EC-{$seq}/{$ano}";
-    $proximo_numero_la = "AM-LA-{$seq}/{$ano}";
-    $proximo_numero_lr = "AM-LR-{$seq}/{$ano}";
+// Gerar próximo número sequencial real para cada modalidade técnica
+if (!function_exists('obterProximoNumeroLicencaPreview')) {
+    function obterProximoNumeroLicencaPreview(PDO $pdo, string $tipoLicenca): string {
+        $ano2 = date('y');
+        $ano4 = (int)date('Y');
+        $tipoSeq = ($tipoLicenca === 'LCEC') ? 'EC' : $tipoLicenca;
+        $prefixo = 'AM-' . $tipoSeq;
+        
+        $stmtSeq = $pdo->prepare('SELECT ultimo_numero FROM sequenciais_documentos WHERE tipo_documento = :tipo AND ano = :ano');
+        $stmtSeq->execute([':tipo' => $tipoSeq, ':ano' => $ano4]);
+        $seqRow = $stmtSeq->fetch(PDO::FETCH_ASSOC);
+        $seq1 = $seqRow ? (int)$seqRow['ultimo_numero'] : 0;
+        
+        $stmtMax = $pdo->prepare('SELECT numero_lc FROM certificados_lc WHERE tipo_licenca = :tipo AND ativo = 1');
+        $stmtMax->execute([':tipo' => $tipoLicenca]);
+        $maxNum = 0;
+        while ($row = $stmtMax->fetch(PDO::FETCH_ASSOC)) {
+            if (preg_match('/-(\d+)\/\d+$/', $row['numero_lc'], $matches)) {
+                $numVal = (int)$matches[1];
+                if ($numVal > $maxNum) $maxNum = $numVal;
+            }
+        }
+        $proximo = max($seq1, $maxNum) + 1;
+        return "{$prefixo}-{$proximo}/{$ano2}";
+    }
 }
+
+$proximo_numero = obterProximoNumeroLicencaPreview($pdo, 'LC');
+$proximo_numero_ec = obterProximoNumeroLicencaPreview($pdo, 'LCEC');
+$proximo_numero_la = obterProximoNumeroLicencaPreview($pdo, 'LA');
+$proximo_numero_lr = obterProximoNumeroLicencaPreview($pdo, 'LR');
+
+// Carregar lista de licenças existentes para pesquisa/seleção rápida
+$stmtTodasLicencas = $pdo->query("SELECT id, numero_lc, tipo_licenca, nome_embarcacao, status, criado_em FROM certificados_lc WHERE ativo = 1 ORDER BY criado_em DESC LIMIT 150");
+$todasLicencas = $stmtTodasLicencas->fetchAll(PDO::FETCH_ASSOC);
+
+// Carregar processos técnicos de análise (RAPs) para preenchimento guiado opcional
+$stmtTodosProcessos = $pdo->query("
+    SELECT ap.id, ap.numero, ap.tipo_processo, ap.status, e.id as emb_id, e.nome as emb_nome
+    FROM analises_planos ap
+    JOIN embarcacoes e ON e.id = ap.embarcacao_id
+    WHERE ap.ativo = 1
+    ORDER BY ap.criado_em DESC LIMIT 80
+");
+$todosProcessos = $stmtTodosProcessos->fetchAll(PDO::FETCH_ASSOC);
 
 // Embarcações
 $stmt_emb = $pdo->prepare("SELECT * FROM embarcacoes WHERE ativo = 1 ORDER BY nome");
@@ -259,6 +287,35 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
         <a href="<?php echo APP_URL; ?>documentacao/lc" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
     </div>
 
+    <!-- Barra de Pesquisa e Seleção de Licença Cadastrada -->
+    <div class="card mb-3" style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0284c7; border-radius: 8px;">
+        <div class="card-body" style="padding: 14px 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div style="flex:1; min-width:320px;">
+                    <label for="buscar_licenca_select" style="font-weight:700; color:#0f172a; margin-bottom:4px; display:block;">
+                        <i class="fa-solid fa-magnifying-glass text-primary"></i> Pesquisar e Selecionar Licença Cadastrada:
+                    </label>
+                    <select id="buscar_licenca_select" class="form-control" onchange="if(this.value) window.location.href='<?= APP_URL ?>documentacao/lc/form?id=' + encodeURIComponent(this.value);" style="font-weight:600;">
+                        <option value="">-- Selecione pelo Nº da Licença, Embarcação ou Tipo para carregar --</option>
+                        <?php foreach ($todasLicencas as $tl): ?>
+                            <option value="<?= h($tl['id']) ?>" <?= ($editando && $licenca['id'] === $tl['id']) ? 'selected' : '' ?>>
+                                <?= h($tl['numero_lc']) ?> — <?= h($tl['nome_embarcacao'] ?: 'Sem nome') ?> (<?= h($tl['tipo_licenca']) ?> · <?= h(strtoupper($tl['status'])) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted"><i class="fa-solid fa-circle-info"></i> Selecione qualquer licença já emitida no sistema para abrir e visualizar ou editar os dados.</small>
+                </div>
+                <?php if ($editando): ?>
+                    <div>
+                        <a href="<?= APP_URL ?>documentacao/lc/form" class="btn btn-outline-primary btn-sm" style="font-weight:600;">
+                            <i class="fa-solid fa-plus"></i> + Nova Licença em Branco
+                        </a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
     <?php if ($bloqueio_exigencias): ?>
         <div class="alert alert-danger mb-3" style="border-radius: 8px; font-weight: 500;">
             <i class="fas fa-ban"></i> <strong>Emissão Bloqueada por Condição A/S:</strong>
@@ -316,11 +373,33 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     elseif ($current === 'LR') $numero_inicial = $proximo_numero_lr;
                     ?>
                     <div class="form-group">
-                        <label>Número da Licença</label>
-                        <input type="text" class="form-control" id="numero_lc_display" 
-                               value="<?php echo $editando ? h($licenca['numero_lc']) : h($numero_inicial); ?>" readonly 
-                               style="background: var(--cor-sidebar); font-weight: bold;">
-                        <small class="text-muted">LC (AM-LC), LA (AM-LA), LR (AM-LR) ou LCEC (AM-EC)</small>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <label for="numero_lc" style="font-weight:700; margin:0;">
+                                <i class="fa-solid fa-hashtag text-primary"></i> Número da Licença *
+                            </label>
+                            <div style="display:flex; gap:6px;">
+                                <button type="button" class="btn btn-xs btn-outline-secondary" onclick="restaurarSequencialAutomatico()" title="Recalcular e preencher com o próximo sequencial automático da modalidade">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Sequencial Automático
+                                </button>
+                            </div>
+                        </div>
+                        <input type="text" name="numero_lc" id="numero_lc" class="form-control" required
+                               value="<?php echo $editando ? h($licenca['numero_lc']) : h($numero_inicial); ?>" 
+                               list="lista_sugestoes_licenca"
+                               placeholder="Ex: AM-LC-33/26"
+                               style="font-weight: 700; font-size:1.05rem; color:#0f172a;">
+                        <datalist id="lista_sugestoes_licenca">
+                            <option value="<?php echo h($proximo_numero); ?>">Próximo LC Automático</option>
+                            <option value="<?php echo h($proximo_numero_la); ?>">Próximo LA Automático</option>
+                            <option value="<?php echo h($proximo_numero_lr); ?>">Próximo LR Automático</option>
+                            <option value="<?php echo h($proximo_numero_ec); ?>">Próximo LCEC Automático</option>
+                            <?php foreach ($todasLicencas as $tl): ?>
+                                <option value="<?php echo h($tl['numero_lc']); ?>"><?php echo h($tl['nome_embarcacao']); ?> (<?php echo h($tl['tipo_licenca']); ?> - <?php echo h(strtoupper($tl['status'])); ?>)</option>
+                            <?php endforeach; ?>
+                        </datalist>
+                        <small class="text-muted">
+                            <i class="fa-solid fa-info-circle"></i> O número é sugerido automaticamente pelo sequencial da modalidade (LC, LA, LR, LCEC). Você pode pesquisar, selecionar na lista ou digitar um número manual se necessário.
+                        </small>
                     </div>
                     <div class="form-group">
                         <label for="tipo_licenca">Tipo de Licença *</label>
@@ -379,9 +458,22 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
             <div class="card-header"><h3><i class="fas fa-ship"></i> Dados da Embarcação</h3></div>
             <div class="card-body">
                 <?php if (!$editando): ?>
-                <div class="form-group">
-                    <label for="embarcacao_id"><i class="fas fa-search"></i> Selecionar Embarcação do Cadastro</label>
-                    <select id="embarcacao_id" name="embarcacao_id" class="form-control" onchange="carregarDadosEmbarcacao(this.value)" required>
+                <div class="grid-2 mb-3">
+                    <div class="form-group">
+                        <label for="selecionar_analise_id"><i class="fa-solid fa-folder-open text-primary"></i> Pesquisar e Vincular Processo de Análise / RAP (Opcional)</label>
+                        <select id="selecionar_analise_id" class="form-control" onchange="if(this.value) window.location.href='<?= APP_URL ?>documentacao/lc/form?analise_id=' + encodeURIComponent(this.value);">
+                            <option value="">-- Preenchimento avulso (Sem processo vinculado) --</option>
+                            <?php foreach ($todosProcessos as $proc): ?>
+                                <option value="<?= h($proc['id']) ?>" <?= (!empty($analise_id) && $analise_id === $proc['id']) ? 'selected' : '' ?>>
+                                    <?= h($proc['numero']) ?> — Embarcação: <?= h($proc['emb_nome']) ?> (<?= h($proc['tipo_processo']) ?> · <?= h($proc['status']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">Ao selecionar um processo técnico, todos os dados técnicos e o RAP são carregados automaticamente.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="embarcacao_id"><i class="fas fa-search"></i> Selecionar Embarcação do Cadastro</label>
+                        <select id="embarcacao_id" name="embarcacao_id" class="form-control" onchange="carregarDadosEmbarcacao(this.value)" required>
                         <option value="">-- Selecione --</option>
                         <?php foreach ($embarcacoes as $emb): ?>
                             <option value="<?php echo h($emb['id']); ?>"
@@ -404,6 +496,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                             </option>
                         <?php endforeach; ?>
                     </select>
+                    </div>
                 </div>
                 <hr>
                 <?php endif; ?>
@@ -768,11 +861,28 @@ const modelosOriginaisNormam = <?php echo json_encode($modelosOriginaisNormam, J
 const csrfTokenApp = <?php echo json_encode(gerarCSRF()); ?>;
 let abaModeloAtual = 'LC';
 
+const mapaProximosNumeros = {
+    'LC': <?php echo json_encode($proximo_numero); ?>,
+    'LA': <?php echo json_encode($proximo_numero_la); ?>,
+    'LR': <?php echo json_encode($proximo_numero_lr); ?>,
+    'LCEC': <?php echo json_encode($proximo_numero_ec); ?>
+};
+
+function restaurarSequencialAutomatico() {
+    const select = document.getElementById('tipo_licenca');
+    const input = document.getElementById('numero_lc') || document.getElementById('numero_lc_display');
+    if (!select || !input) return;
+    const tipo = select.value;
+    if (mapaProximosNumeros[tipo]) {
+        input.value = mapaProximosNumeros[tipo];
+    }
+}
+
 function atualizarNumero() {
     const select = document.getElementById('tipo_licenca');
     if (!select) return;
     const tipo = select.value;
-    const input = document.getElementById('numero_lc_display');
+    const input = document.getElementById('numero_lc') || document.getElementById('numero_lc_display');
     const termGroup = document.getElementById('lc_term_group');
     if (termGroup) {
         termGroup.style.display = tipo === 'LCEC' ? '' : 'none';
@@ -783,11 +893,8 @@ function atualizarNumero() {
     atualizarBadgeOrigem(tipo);
 
     <?php if (!$editando): ?>
-    if (input) {
-        if (tipo === 'LCEC') input.value = <?php echo json_encode($proximo_numero_ec); ?>;
-        else if (tipo === 'LA') input.value = <?php echo json_encode($proximo_numero_la); ?>;
-        else if (tipo === 'LR') input.value = <?php echo json_encode($proximo_numero_lr); ?>;
-        else input.value = <?php echo json_encode($proximo_numero); ?>;
+    if (input && mapaProximosNumeros[tipo]) {
+        input.value = mapaProximosNumeros[tipo];
     }
     <?php endif; ?>
 }
