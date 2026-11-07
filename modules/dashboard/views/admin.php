@@ -953,44 +953,44 @@ $usuarioNome = $_SESSION['usuario_nome'] ?? 'Administrador';
 </div>
 
 <!-- Modal Autodidático: Anexar Pranchas e Documentos do Armador pela Secretaria -->
-<div id="modalAnexoSecretaria" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; overflow-y:auto; padding:20px 10px;">
-    <div style="max-width: 620px; margin: 30px auto; background: var(--bg-surface, #0b2923); border: 1px solid rgba(86, 224, 173, 0.35); border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); overflow:hidden;">
-        <div style="padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.02);">
+<div id="modalAnexoSecretaria" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.65); z-index:99999; overflow-y:auto; padding:20px 10px;">
+    <div style="max-width: 620px; margin: 30px auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.35); overflow:hidden; color:#1e293b;">
+        <div style="padding: 18px 24px; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background: #f8fafc;">
             <div>
-                <h3 style="margin:0; font-size:1.15rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:8px;">
+                <h3 style="margin:0; font-size:1.15rem; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:8px;">
                     <i class="fa-solid fa-cloud-arrow-up text-primary"></i> Anexar Pranchas do Armador
                 </h3>
-                <small class="text-muted" style="display:block; margin-top:3px; font-size:0.8rem;">
+                <small class="text-muted" style="display:block; margin-top:3px; font-size:0.8rem; color:#64748b;">
                     Os arquivos serão enviados diretamente para a mesa técnica do Analista Naval (Pranchas Recebidas do Armador).
                 </small>
             </div>
-            <button type="button" onclick="fecharModalAnexoSecretaria()" style="background:transparent; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer;" title="Fechar">&times;</button>
+            <button type="button" onclick="fecharModalAnexoSecretaria()" style="background:transparent; border:none; color:#64748b; font-size:1.4rem; cursor:pointer;" title="Fechar">&times;</button>
         </div>
         
-        <form method="post" action="<?= APP_URL ?>analises-planos/actions" enctype="multipart/form-data" style="padding: 24px;" onsubmit="return validarEnvioAnexoSecretaria(this);">
+        <form method="post" action="<?= APP_URL ?>analises-planos/actions" enctype="multipart/form-data" style="padding: 24px; background:#fff;" onsubmit="return validarEnvioAnexoSecretaria(this);">
             <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
             <input type="hidden" name="action" value="adicionar_submissao">
             <input type="hidden" name="analise_id" id="modal_analise_id" value="">
             <input type="hidden" name="retorno_dashboard" value="1">
 
             <!-- Card de identificação da embarcação e processo -->
-            <div style="background: rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.35); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                 <div>
-                    <span style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700; letter-spacing:0.5px;">Embarcação em Análise</span>
-                    <strong id="modal_embarcacao_nome" style="display:block; font-size:1.1rem; color:#fff;">--</strong>
+                    <span style="font-size:0.75rem; text-transform:uppercase; color:#166534; font-weight:700; letter-spacing:0.5px;">Embarcação em Análise</span>
+                    <strong id="modal_embarcacao_nome" style="display:block; font-size:1.1rem; color:#14532d;">--</strong>
                 </div>
                 <div style="text-align:right;">
                     <span id="modal_processo_numero" class="badge bg-secondary" style="font-size:0.8rem;">--</span>
-                    <small id="modal_analista_nome" style="display:block; font-size:0.78rem; color:#94a3b8; margin-top:2px;">Analista: --</small>
+                    <small id="modal_analista_nome" style="display:block; font-size:0.78rem; color:#15803d; margin-top:2px; font-weight:600;">Analista: --</small>
                 </div>
             </div>
 
             <!-- Categoria NORMAM -->
             <div class="form-group mb-3">
-                <label for="modal_categoria" style="font-size:0.85rem; font-weight:600; color:#e2e8f0; margin-bottom:6px; display:block;">
+                <label for="modal_categoria" style="font-size:0.88rem; font-weight:600; color:#1e293b; margin-bottom:6px; display:block;">
                     Categoria da Prancha / Documento *
                 </label>
-                <select name="categoria" id="modal_categoria" required class="form-control" style="width:100%; height:42px; border-radius:8px; background:#071a17; border:1px solid #1e3a34; color:#fff; padding:6px 12px;">
+                <select name="categoria" id="modal_categoria" required class="form-control" style="width:100%; height:42px; border-radius:8px; background:#ffffff; border:1px solid #cbd5e1; color:#0f172a; padding:6px 12px; font-size:0.9rem;">
                     <option value="Memorial Descritivo">Memorial Descritivo (NORMAM-202)</option>
                     <option value="Plano de Arranjo Geral">Plano de Arranjo Geral / Segurança / Luzes</option>
                     <option value="ART / CREA">ART / Termo de Responsabilidade Técnica</option>
@@ -1000,7 +1000,7 @@ $usuarioNome = $_SESSION['usuario_nome'] ?? 'Administrador';
                     <option value="Cálculos de Arqueação e Borda Livre">Notas de Arqueação / Borda Livre</option>
                     <option value="Documentos Gerais do Armador" selected>Documentos Gerais / Projeto Naval</option>
                 </select>
-                <small class="text-muted" style="display:block; margin-top:4px; font-size:0.76rem;">
+                <small class="text-muted" style="display:block; margin-top:4px; font-size:0.76rem; color:#64748b;">
                     Selecione a disciplina naval correspondente ao arquivo que está sendo entregue pelo cliente.
                 </small>
             </div>
@@ -1008,35 +1008,35 @@ $usuarioNome = $_SESSION['usuario_nome'] ?? 'Administrador';
             <!-- Data de Recebimento e Descrição -->
             <div style="display:grid; grid-template-columns: 1fr 2fr; gap:12px; margin-bottom:16px;">
                 <div class="form-group">
-                    <label for="modal_recebido_em" style="font-size:0.85rem; font-weight:600; color:#e2e8f0; margin-bottom:6px; display:block;">
+                    <label for="modal_recebido_em" style="font-size:0.88rem; font-weight:600; color:#1e293b; margin-bottom:6px; display:block;">
                         Data Recebimento *
                     </label>
-                    <input type="date" name="recebido_em" id="modal_recebido_em" value="<?= date('Y-m-d') ?>" required class="form-control" style="width:100%; height:42px; border-radius:8px; background:#071a17; border:1px solid #1e3a34; color:#fff; padding:6px 12px;">
+                    <input type="date" name="recebido_em" id="modal_recebido_em" value="<?= date('Y-m-d') ?>" required class="form-control" style="width:100%; height:42px; border-radius:8px; background:#ffffff; border:1px solid #cbd5e1; color:#0f172a; padding:6px 12px; font-size:0.9rem;">
                 </div>
                 <div class="form-group">
-                    <label for="modal_descricao" style="font-size:0.85rem; font-weight:600; color:#e2e8f0; margin-bottom:6px; display:block;">
+                    <label for="modal_descricao" style="font-size:0.88rem; font-weight:600; color:#1e293b; margin-bottom:6px; display:block;">
                         Origem / Observações (Opcional)
                     </label>
-                    <input type="text" name="descricao" id="modal_descricao" placeholder="Ex: Entregue via WhatsApp pelo armador" maxlength="255" class="form-control" style="width:100%; height:42px; border-radius:8px; background:#071a17; border:1px solid #1e3a34; color:#fff; padding:6px 12px;">
+                    <input type="text" name="descricao" id="modal_descricao" placeholder="Ex: Entregue via WhatsApp pelo armador" maxlength="255" class="form-control" style="width:100%; height:42px; border-radius:8px; background:#ffffff; border:1px solid #cbd5e1; color:#0f172a; padding:6px 12px; font-size:0.9rem;">
                 </div>
             </div>
 
             <!-- Upload de Arquivos (PDF / DWG) -->
             <div class="form-group mb-4">
-                <label style="font-size:0.85rem; font-weight:600; color:#e2e8f0; margin-bottom:6px; display:block;">
+                <label style="font-size:0.88rem; font-weight:600; color:#1e293b; margin-bottom:6px; display:block;">
                     Selecionar Arquivos (PDF, DWG, DXF, DOCX, ZIP, Imagens) *
                 </label>
-                <div id="modal_dropzone" style="border: 2px dashed #0284c7; border-radius: 10px; padding: 22px; text-align: center; background: rgba(2, 132, 199, 0.05); cursor: pointer; transition: background 0.2s;" onclick="document.getElementById('modal_input_arquivos').click()">
-                    <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.2rem; color: #38bdf8; margin-bottom: 8px;"></i>
-                    <p style="margin: 0; font-size: 0.9rem; color: #fff; font-weight: 600;">Clique para escolher ou arraste as pranchas aqui</p>
-                    <small style="color: #94a3b8; font-size: 0.76rem;">Suporta arquivos de até 100MB (PDF, DWG, DXF, ZIP, etc.)</small>
+                <div id="modal_dropzone" style="border: 2px dashed #0284c7; border-radius: 10px; padding: 22px; text-align: center; background: #f0f9ff; cursor: pointer; transition: background 0.2s;" onclick="document.getElementById('modal_input_arquivos').click()">
+                    <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.2rem; color: #0284c7; margin-bottom: 8px;"></i>
+                    <p style="margin: 0; font-size: 0.95rem; color: #0f172a; font-weight: 600;">Clique para escolher ou arraste as pranchas aqui</p>
+                    <small style="color: #64748b; font-size: 0.78rem;">Suporta arquivos de até 100MB (PDF, DWG, DXF, ZIP, etc.)</small>
                     <input type="file" name="arquivos[]" id="modal_input_arquivos" multiple style="display:none;" onchange="aoSelecionarArquivosSecretaria(this)">
                 </div>
-                <div id="modal_lista_arquivos" style="margin-top:10px; font-size:0.82rem; color:#38bdf8; display:none;"></div>
+                <div id="modal_lista_arquivos" style="margin-top:10px; font-size:0.82rem; color:#0284c7; display:none;"></div>
             </div>
 
             <!-- Ações -->
-            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px; border-top:1px solid rgba(255,255,255,0.08); padding-top:18px;">
+            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px; border-top:1px solid #e2e8f0; padding-top:18px;">
                 <button type="button" class="btn btn-secondary" onclick="fecharModalAnexoSecretaria()">Cancelar</button>
                 <button type="submit" id="btn_submit_anexo_secretaria" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px;">
                     <i class="fa-solid fa-paper-plane"></i> Enviar Pranchas para o Analista
