@@ -279,7 +279,7 @@ try {
 }
 
 // Métricas e dados calculados para o painel de topo
-$submissoesPortal = array_filter($submissoes, fn($s) => ($s['origem'] ?? '') === 'PORTAL');
+$submissoesPortal = array_filter($submissoes, fn($s) => in_array($s['origem'] ?? '', ['PORTAL', 'SECRETARIA'], true));
 $totalArquivos = array_reduce($submissoes, fn($acc, $s) => $acc + count($s['arquivos'] ?? []), 0);
 $totalArquivosPortal = array_reduce($submissoesPortal, fn($acc, $s) => $acc + count($s['arquivos'] ?? []), 0);
 $totalExigencias = count($exigencias);
@@ -833,11 +833,11 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                             <div class="revisao-card__head">
                                 <div>
                                     <strong style="color:#0369a1; font-size:0.95rem;">
-                                        <i class="fa-solid fa-box-archive"></i> Revisão <?= (int)$subP['revisao'] ?> · Portal do Armador
+                                        <i class="fa-solid fa-box-archive"></i> Revisão <?= (int)$subP['revisao'] ?> · <?= ($subP['origem'] ?? '') === 'SECRETARIA' ? 'Recebido do Armador (via Secretaria)' : 'Portal do Armador' ?>
                                     </strong>
                                     <span style="font-size:0.84rem; color:#64748b; margin-left:8px;">
                                         <i class="fa-solid fa-calendar-day"></i> <?= formatarData($subP['recebido_em']) ?>
-                                        · <i class="fa-solid fa-user"></i> <?= h($subP['portal_nome'] ?: 'Armador / Cliente') ?>
+                                        · <i class="fa-solid fa-user"></i> <?= h(($subP['origem'] ?? '') === 'SECRETARIA' ? ($subP['usuario_nome'] ?: 'Secretaria') : ($subP['portal_nome'] ?: 'Armador / Cliente')) ?>
                                     </span>
                                 </div>
                                 <?php if (!empty($subP['descricao'])): ?>
@@ -898,7 +898,7 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
             <?php else: ?>
                 <div class="empty-box-card">
                     <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <p class="mb-0">Nenhum arquivo submetido pelo armador pelo Portal do Cliente até o momento.</p>
+                    <p class="mb-0">Nenhum arquivo submetido pelo armador pelo Portal do Cliente ou anexado pela Secretaria até o momento.</p>
                 </div>
             <?php endif; ?>
         </section>

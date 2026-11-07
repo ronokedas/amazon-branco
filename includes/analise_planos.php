@@ -70,7 +70,7 @@ function analisePlanosUsuarioPodeVisualizar(array $analise): bool
 {
     $cargo = function_exists('getCargo') ? getCargo() : ($_SESSION['usuario_cargo'] ?? null);
     $usuario = (string)($_SESSION['usuario_id'] ?? '');
-    if ($cargo === 'ADMIN') return true;
+    if (in_array($cargo, ['ADMIN', 'SECRETARIA'], true)) return true;
     if ($cargo === 'VENDEDOR') return $usuario !== '' && hash_equals($usuario, (string)($analise['vendedor_origem_id'] ?? ''));
     if ($cargo === 'ANALISTA') return $usuario !== '' && hash_equals($usuario, (string)($analise['analista_id'] ?? ''));
 

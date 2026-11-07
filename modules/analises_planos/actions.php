@@ -234,17 +234,34 @@ try {
     }
 
     if ($acao === 'adicionar_submissao') {
-        analiseAcaoExigirTecnico($analise);
+        if (!in_array($cargo, ['ADMIN', 'SECRETARIA'], true) && !($cargo === 'ANALISTA' && $analise['analista_id'] === $usuario)) {
+            throw new RuntimeException('Você não possui autorização para anexar documentos a esta análise técnica.');
+        }
+        if (analisePlanosEhLegadoForaEscopo($analise)) {
+            throw new RuntimeException('Processo NORMAM-201 legado: conteúdo preservado somente para consulta.');
+        }
         if(!in_array($analise['status'],['AGENDADA','EM_ANALISE','AGUARDANDO_DOCUMENTOS'],true))throw new RuntimeException('O processo não aceita revisão neste estado.');
         $arquivos=$_FILES['arquivos']??null;if(!$arquivos||!is_array($arquivos['name']??null))throw new RuntimeException('Selecione pelo menos um arquivo.');
         $preparados=[];foreach($arquivos['name'] as $i=>$nome){if(($arquivos['error'][$i]??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE)continue;$arq=['name'=>$nome,'type'=>$arquivos['type'][$i]??'','tmp_name'=>$arquivos['tmp_name'][$i]??'','error'=>$arquivos['error'][$i]??UPLOAD_ERR_NO_FILE,'size'=>$arquivos['size'][$i]??0];$preparados[]=[$arq,analisePlanosValidarUpload($arq)];}
         if(!$preparados)throw new RuntimeException('Selecione pelo menos um arquivo válido.');
         $pdo->beginTransaction();$q=$pdo->prepare('SELECT COALESCE(MAX(revisao),0)+1 FROM analise_planos_submissoes WHERE analise_id=:id FOR UPDATE');$q->execute([':id'=>$analiseId]);$rev=(int)$q->fetchColumn();$subId=gerarUUID();
-        $pdo->prepare("INSERT INTO analise_planos_submissoes(id,analise_id,revisao,descricao,recebido_em,origem,criado_por)VALUES(:id,:analise,:rev,:descricao,:data,'ANALISTA',:usuario)")->execute([':id'=>$subId,':analise'=>$analiseId,':rev'=>$rev,':descricao'=>trim($_POST['descricao']??'')?:null,':data'=>($_POST['recebido_em']??'')?:date('Y-m-d'),':usuario'=>$usuario]);
+        $origemSubmissao = ($cargo === 'SECRETARIA') ? 'SECRETARIA' : 'ANALISTA';
+        $pdo->prepare("INSERT INTO analise_planos_submissoes(id,analise_id,revisao,descricao,recebido_em,origem,criado_por)VALUES(:id,:analise,:rev,:descricao,:data,:origem,:usuario)")
+            ->execute([':id'=>$subId,':analise'=>$analiseId,':rev'=>$rev,':descricao'=>trim($_POST['descricao']??'')?:null,':data'=>($_POST['recebido_em']??'')?:date('Y-m-d'),':origem'=>$origemSubmissao,':usuario'=>$usuario]);
         $ins=$pdo->prepare("INSERT INTO analise_planos_arquivos(id,submissao_id,categoria,nome_original,extensao,mime_type,tamanho_bytes,sha256,chave_arquivo,criado_por)VALUES(:id,:sub,:categoria,:nome,:ext,:mime,:tam,:hash,:chave,:usuario)");
         foreach($preparados as [$arquivo,$meta]){$chave=analisePlanosGuardarUpload($arquivo,$analiseId,$meta);$ins->execute([':id'=>gerarUUID(),':sub'=>$subId,':categoria'=>trim($_POST['categoria']??'Outros'),':nome'=>$meta['nome'],':ext'=>$meta['extensao'],':mime'=>$meta['mime'],':tam'=>$meta['tamanho'],':hash'=>$meta['sha256'],':chave'=>$chave,':usuario'=>$usuario]);}
-        $pdo->prepare("UPDATE analises_planos SET status='EM_ANALISE' WHERE id=:id")->execute([':id'=>$analiseId]);analisePlanosHistorico($pdo,$analiseId,'REVISAO_RECEBIDA',$analise['status'],'EM_ANALISE','Revisão '.$rev.' com '.count($preparados).' arquivo(s).');$pdo->commit();
-        setMensagem('success','Revisão armazenada sem sobrescrever os documentos anteriores.');redirecionar($retorno($analiseId, 'arquivos'));
+        $novoStatus = ($analise['status'] === 'AGUARDANDO_DOCUMENTOS') ? 'EM_ANALISE' : $analise['status'];
+        $pdo->prepare("UPDATE analises_planos SET status=:status WHERE id=:id")->execute([':status'=>$novoStatus, ':id'=>$analiseId]);
+        analisePlanosHistorico($pdo,$analiseId,'REVISAO_RECEBIDA',$analise['status'],$novoStatus,'Revisão '.$rev.' ('.count($preparados).' arquivos) recebida via '.$origemSubmissao.'.');
+        if ($origemSubmissao === 'SECRETARIA' && !empty($analise['analista_id'])) {
+            analisePlanosNotificar($pdo, $analise['analista_id'], 'DOCUMENTOS_ARMADOR_RECEBIDOS', 'Novas pranchas do armador anexadas', "A Secretaria anexou novos documentos/pranchas recebidos do armador para a análise {$analise['numero']}.", $analiseId, 'analises-planos/form?id=' . urlencode($analiseId) . '&aba=arquivos');
+        }
+        $pdo->commit();
+        if (!empty($_POST['retorno_dashboard'])) {
+            setMensagem('success', 'Pranchas e documentos do armador anexados com sucesso para a análise!');
+            redirecionar(APP_URL . 'dashboard');
+        }
+        setMensagem('success','Revisão armazenada com sucesso no bloco de documentos do armador.');redirecionar($retorno($analiseId, 'arquivos'));
     }
 
     if ($acao === 'classificar_arquivo') {

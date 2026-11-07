@@ -13,7 +13,8 @@ $totalAssinadas = (int)($acoes['assinadas'] ?? 0);
 $totalAprovacoes = (int)($acoes['aprovacao'] ?? 0);
 $totalRetornos = (int)($acoes['retornos_as'] ?? 0);
 $totalCustodia = (int)($resumo['dossies_custodia'] ?? 0);
-$totalPendencias = $totalAssinadas + $totalAprovacoes + $totalRetornos;
+$totalDocumentosPendentes = (int)($acoes['documentos_pendentes'] ?? 0);
+$totalPendencias = $totalAssinadas + $totalAprovacoes + $totalRetornos + $totalDocumentosPendentes;
 
 $usuarioNome = $_SESSION['usuario_nome'] ?? 'Administrador';
 ?>
@@ -654,6 +655,34 @@ $usuarioNome = $_SESSION['usuario_nome'] ?? 'Administrador';
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
+
+            <!-- Coluna 4: Pranchas e Documentos Pendentes -->
+            <div class="dash-decision-col" id="documentos-pendentes">
+                <div class="dash-decision-col__header">
+                    <span class="dash-decision-col__title">
+                        <i class="fa-solid fa-cloud-arrow-up text-primary"></i> Pranchas Pendentes
+                    </span>
+                    <span class="badge" style="background: rgba(255,255,255,0.08);"><?= $totalDocumentosPendentes ?></span>
+                </div>
+                <?php if (empty($dashboard['fluxo_documentos_pendentes'])): ?>
+                    <div class="dash-decision-empty">
+                        <i class="fa-solid fa-circle-check text-success"></i> Todas as embarcações com pranchas anexadas.
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($dashboard['fluxo_documentos_pendentes'] as $docP): ?>
+                        <div class="dash-decision-item" style="border-left: 3px solid #0284c7; cursor:pointer;" onclick="abrirModalAnexoSecretaria('<?= h($docP['id']) ?>', '<?= h(addslashes($docP['embarcacao'])) ?>', '<?= h(addslashes($docP['numero'])) ?>', '<?= h(addslashes($docP['analista_nome'] ?? 'Analista Técnico')) ?>')" title="Clique para anexar pranchas e documentos do armador">
+                            <div class="dash-decision-item__vessel"><?= h($docP['embarcacao']) ?></div>
+                            <div class="dash-decision-item__meta">
+                                <span><?= h($docP['numero']) ?></span> · 
+                                <strong style="color: #38bdf8;">
+                                    <?= h($docP['analista_nome'] ? 'Analista: ' . $docP['analista_nome'] : 'Sem analista') ?>
+                                </strong>
+                            </div>
+                            <div class="dash-decision-item__cta" style="color:#38bdf8;">Anexar pranchas <i class="fa-solid fa-paperclip"></i></div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
         </div>
     </section>
 
@@ -766,16 +795,35 @@ $usuarioNome = $_SESSION['usuario_nome'] ?? 'Administrador';
                                 Nenhuma análise em aberto.
                             </div>
                         <?php else: ?>
-                            <?php foreach ($dashboard['analises_recentes'] as $an): ?>
-                                <a href="<?= APP_URL ?>analises-planos/form?id=<?= urlencode($an['id']) ?>" class="dash-subitem">
-                                    <div>
-                                        <strong style="display: block;"><?= h($an['embarcacao']) ?></strong>
-                                        <small style="color: var(--cor-texto-secundario);"><?= h($an['numero']) ?> · <?= h(mb_strimwidth($an['objeto'], 0, 24, '…')) ?></small>
+                            <?php foreach ($dashboard['analises_recentes'] as $an): 
+                                $armadorFiles = (int)($an['arquivos_armador'] ?? 0);
+                            ?>
+                                <div class="dash-subitem" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                                    <a href="<?= APP_URL ?>analises-planos/form?id=<?= urlencode($an['id']) ?>" style="flex:1; text-decoration:none; color:inherit; display:flex; flex-direction:column; min-width:0;">
+                                        <div style="display:flex; align-items:center; gap:6px;">
+                                            <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?= h($an['embarcacao']) ?></strong>
+                                            <?php if ($armadorFiles === 0): ?>
+                                                <span class="badge" style="background:rgba(239, 68, 68, 0.2); color:#f87171; font-size:0.68rem; padding:2px 6px;" title="Nenhuma prancha recebida do armador">Sem Pranchas</span>
+                                            <?php else: ?>
+                                                <span class="badge" style="background:rgba(2, 132, 199, 0.2); color:#38bdf8; font-size:0.68rem; padding:2px 6px;" title="<?= $armadorFiles ?> documento(s) recebido(s) do armador"><i class="fa-solid fa-file-check"></i> <?= $armadorFiles ?> doc(s)</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <small style="color: var(--cor-texto-secundario); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                            <?= h($an['numero']) ?> · <?= h($an['servico_nome'] ?: mb_strimwidth($an['objeto'], 0, 24, '…')) ?>
+                                            <?php if (!empty($an['analista_nome'])): ?>
+                                                · <span style="color:#94a3b8;"><i class="fa-solid fa-user-gear"></i> <?= h($an['analista_nome']) ?></span>
+                                            <?php endif; ?>
+                                        </small>
+                                    </a>
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.68rem; padding:4px 6px;">
+                                            <?= h($an['status']) ?>
+                                        </span>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" style="font-size:0.75rem; padding:4px 8px; border-radius:6px; white-space:nowrap;" onclick="abrirModalAnexoSecretaria('<?= h($an['id']) ?>', '<?= h(addslashes($an['embarcacao'])) ?>', '<?= h(addslashes($an['numero'])) ?>', '<?= h(addslashes($an['analista_nome'] ?? 'Analista Técnico')) ?>')" title="Anexar pranchas e documentos do armador">
+                                            <i class="fa-solid fa-paperclip"></i> Anexar
+                                        </button>
                                     </div>
-                                    <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.7rem;">
-                                        <?= h($an['status']) ?>
-                                    </span>
-                                </a>
+                                </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </div>
@@ -903,3 +951,159 @@ $usuarioNome = $_SESSION['usuario_nome'] ?? 'Administrador';
         </div>
     </div>
 </div>
+
+<!-- Modal Autodidático: Anexar Pranchas e Documentos do Armador pela Secretaria -->
+<div id="modalAnexoSecretaria" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; overflow-y:auto; padding:20px 10px;">
+    <div style="max-width: 620px; margin: 30px auto; background: var(--bg-surface, #0b2923); border: 1px solid rgba(86, 224, 173, 0.35); border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); overflow:hidden;">
+        <div style="padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.02);">
+            <div>
+                <h3 style="margin:0; font-size:1.15rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-cloud-arrow-up text-primary"></i> Anexar Pranchas do Armador
+                </h3>
+                <small class="text-muted" style="display:block; margin-top:3px; font-size:0.8rem;">
+                    Os arquivos serão enviados diretamente para a mesa técnica do Analista Naval (Pranchas Recebidas do Armador).
+                </small>
+            </div>
+            <button type="button" onclick="fecharModalAnexoSecretaria()" style="background:transparent; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer;" title="Fechar">&times;</button>
+        </div>
+        
+        <form method="post" action="<?= APP_URL ?>analises-planos/actions" enctype="multipart/form-data" style="padding: 24px;" onsubmit="return validarEnvioAnexoSecretaria(this);">
+            <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
+            <input type="hidden" name="action" value="adicionar_submissao">
+            <input type="hidden" name="analise_id" id="modal_analise_id" value="">
+            <input type="hidden" name="retorno_dashboard" value="1">
+
+            <!-- Card de identificação da embarcação e processo -->
+            <div style="background: rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.35); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div>
+                    <span style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700; letter-spacing:0.5px;">Embarcação em Análise</span>
+                    <strong id="modal_embarcacao_nome" style="display:block; font-size:1.1rem; color:#fff;">--</strong>
+                </div>
+                <div style="text-align:right;">
+                    <span id="modal_processo_numero" class="badge bg-secondary" style="font-size:0.8rem;">--</span>
+                    <small id="modal_analista_nome" style="display:block; font-size:0.78rem; color:#94a3b8; margin-top:2px;">Analista: --</small>
+                </div>
+            </div>
+
+            <!-- Categoria NORMAM -->
+            <div class="form-group mb-3">
+                <label for="modal_categoria" style="font-size:0.85rem; font-weight:600; color:#e2e8f0; margin-bottom:6px; display:block;">
+                    Categoria da Prancha / Documento *
+                </label>
+                <select name="categoria" id="modal_categoria" required class="form-control" style="width:100%; height:42px; border-radius:8px; background:#071a17; border:1px solid #1e3a34; color:#fff; padding:6px 12px;">
+                    <option value="Memorial Descritivo">Memorial Descritivo (NORMAM-202)</option>
+                    <option value="Plano de Arranjo Geral">Plano de Arranjo Geral / Segurança / Luzes</option>
+                    <option value="ART / CREA">ART / Termo de Responsabilidade Técnica</option>
+                    <option value="Plano de Linhas e Curvas">Plano de Linhas e Curvas Hidrostáticas</option>
+                    <option value="Estudo de Estabilidade">Estudo de Estabilidade / Folheto de Trim</option>
+                    <option value="Seção Mestra / Estrutural">Plano de Seção Mestra e Perfil Estrutural</option>
+                    <option value="Cálculos de Arqueação e Borda Livre">Notas de Arqueação / Borda Livre</option>
+                    <option value="Documentos Gerais do Armador" selected>Documentos Gerais / Projeto Naval</option>
+                </select>
+                <small class="text-muted" style="display:block; margin-top:4px; font-size:0.76rem;">
+                    Selecione a disciplina naval correspondente ao arquivo que está sendo entregue pelo cliente.
+                </small>
+            </div>
+
+            <!-- Data de Recebimento e Descrição -->
+            <div style="display:grid; grid-template-columns: 1fr 2fr; gap:12px; margin-bottom:16px;">
+                <div class="form-group">
+                    <label for="modal_recebido_em" style="font-size:0.85rem; font-weight:600; color:#e2e8f0; margin-bottom:6px; display:block;">
+                        Data Recebimento *
+                    </label>
+                    <input type="date" name="recebido_em" id="modal_recebido_em" value="<?= date('Y-m-d') ?>" required class="form-control" style="width:100%; height:42px; border-radius:8px; background:#071a17; border:1px solid #1e3a34; color:#fff; padding:6px 12px;">
+                </div>
+                <div class="form-group">
+                    <label for="modal_descricao" style="font-size:0.85rem; font-weight:600; color:#e2e8f0; margin-bottom:6px; display:block;">
+                        Origem / Observações (Opcional)
+                    </label>
+                    <input type="text" name="descricao" id="modal_descricao" placeholder="Ex: Entregue via WhatsApp pelo armador" maxlength="255" class="form-control" style="width:100%; height:42px; border-radius:8px; background:#071a17; border:1px solid #1e3a34; color:#fff; padding:6px 12px;">
+                </div>
+            </div>
+
+            <!-- Upload de Arquivos (PDF / DWG) -->
+            <div class="form-group mb-4">
+                <label style="font-size:0.85rem; font-weight:600; color:#e2e8f0; margin-bottom:6px; display:block;">
+                    Selecionar Arquivos (PDF, DWG, DXF, DOCX, ZIP, Imagens) *
+                </label>
+                <div id="modal_dropzone" style="border: 2px dashed #0284c7; border-radius: 10px; padding: 22px; text-align: center; background: rgba(2, 132, 199, 0.05); cursor: pointer; transition: background 0.2s;" onclick="document.getElementById('modal_input_arquivos').click()">
+                    <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.2rem; color: #38bdf8; margin-bottom: 8px;"></i>
+                    <p style="margin: 0; font-size: 0.9rem; color: #fff; font-weight: 600;">Clique para escolher ou arraste as pranchas aqui</p>
+                    <small style="color: #94a3b8; font-size: 0.76rem;">Suporta arquivos de até 100MB (PDF, DWG, DXF, ZIP, etc.)</small>
+                    <input type="file" name="arquivos[]" id="modal_input_arquivos" multiple style="display:none;" onchange="aoSelecionarArquivosSecretaria(this)">
+                </div>
+                <div id="modal_lista_arquivos" style="margin-top:10px; font-size:0.82rem; color:#38bdf8; display:none;"></div>
+            </div>
+
+            <!-- Ações -->
+            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px; border-top:1px solid rgba(255,255,255,0.08); padding-top:18px;">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalAnexoSecretaria()">Cancelar</button>
+                <button type="submit" id="btn_submit_anexo_secretaria" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-paper-plane"></i> Enviar Pranchas para o Analista
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function abrirModalAnexoSecretaria(analiseId, embarcacaoNome, processoNumero, analistaNome) {
+    var modal = document.getElementById('modalAnexoSecretaria');
+    if (!modal) return;
+    document.getElementById('modal_analise_id').value = analiseId;
+    document.getElementById('modal_embarcacao_nome').textContent = embarcacaoNome || 'Embarcação';
+    document.getElementById('modal_processo_numero').textContent = processoNumero || '';
+    document.getElementById('modal_analista_nome').textContent = 'Analista: ' + (analistaNome || 'A definir');
+    document.getElementById('modal_lista_arquivos').style.display = 'none';
+    document.getElementById('modal_lista_arquivos').innerHTML = '';
+    document.getElementById('modal_input_arquivos').value = '';
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function fecharModalAnexoSecretaria() {
+    var modal = document.getElementById('modalAnexoSecretaria');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function aoSelecionarArquivosSecretaria(input) {
+    var lista = document.getElementById('modal_lista_arquivos');
+    if (!input.files || input.files.length === 0) {
+        lista.style.display = 'none';
+        lista.innerHTML = '';
+        return;
+    }
+    var html = '<div style="background: rgba(2, 132, 199, 0.15); padding: 8px 12px; border-radius: 6px; border:1px solid rgba(2, 132, 199, 0.3);">';
+    html += '<strong style="color:#fff;"><i class="fa-solid fa-paperclip"></i> ' + input.files.length + ' arquivo(s) pronto(s) para envio:</strong><ul style="margin:4px 0 0; padding-left:18px; color:#e2e8f0;">';
+    for (var i = 0; i < input.files.length; i++) {
+        var f = input.files[i];
+        var sizeKb = (f.size / 1024).toFixed(1);
+        html += '<li>' + f.name + ' (' + sizeKb + ' KB)</li>';
+    }
+    html += '</ul></div>';
+    lista.innerHTML = html;
+    lista.style.display = 'block';
+}
+
+function validarEnvioAnexoSecretaria(form) {
+    var input = document.getElementById('modal_input_arquivos');
+    if (!input.files || input.files.length === 0) {
+        alert('Por favor, selecione ao menos uma prancha ou documento PDF/DWG para enviar.');
+        return false;
+    }
+    var btn = document.getElementById('btn_submit_anexo_secretaria');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando arquivos...';
+    return true;
+}
+
+// Fechar com ESC ou clicando fora
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') fecharModalAnexoSecretaria();
+});
+document.addEventListener('click', function(e) {
+    var modal = document.getElementById('modalAnexoSecretaria');
+    if (modal && e.target === modal) fecharModalAnexoSecretaria();
+});
+</script>
