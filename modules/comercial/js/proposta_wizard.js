@@ -178,6 +178,14 @@ function carregarPasso2(forcar = false) {
             }
 
             embarcacoesCarregadas = data.embarcacoes;
+
+            // Inicializar pacote padrão por propulsão (NORMAM) para novas propostas
+            if (typeof MODO_EDICAO === 'undefined' || !MODO_EDICAO) {
+                embarcacoesCarregadas.forEach(emb => {
+                    inicializarPacotePadraoEmbarcacao(emb);
+                });
+            }
+
             const primeiraComServico = data.embarcacoes.find(emb => {
                 return Object.keys(servicosSelecionadosPorEmbarcacao[emb.id] || {}).length > 0;
             });
@@ -388,6 +396,197 @@ function filtrarEmbarcacoesPasso2(termo) {
     });
 }
 
+// ============ PACOTES PADRÃO POR PROPULSÃO (NORMAM) ============
+const CODIGOS_PACOTE_ORDENADOS = [
+    'VISTORIA_INICIAL_SECO',
+    'VISTORIA_INICIAL_FLUTUANDO',
+    'VISTORIA_INICIAL_BORDA_LIVRE',
+    'VISTORIA_INICIAL_ARQUEACAO',
+    'ANALISE_PLANOS_EC1'
+];
+
+function obterChavePacoteEmbarcacao(emb) {
+    if (!emb) return 'propulsada';
+    if (emb.pacote_manual) return emb.pacote_manual;
+    // 0 = Sem propulsão (Balsa / Flutuante)
+    if (emb.possui_propulsao === 0 || emb.possui_propulsao === '0') {
+        return 'balsa';
+    }
+    // 1 = Com propulsão (Propulsada)
+    if (emb.possui_propulsao === 1 || emb.possui_propulsao === '1') {
+        return 'propulsada';
+    }
+    // Fallback para embarcações sem flag preenchida
+    const texto = ((emb.tipo_embarcacao || '') + ' ' + (emb.nome || '')).toUpperCase();
+    if (texto.includes('BALSA') || texto.includes('CHATA') || texto.includes('FLUTUANTE') || texto.includes('PONTON')) {
+        return 'balsa';
+    }
+    return 'propulsada';
+}
+
+function encontrarServicoPorCodigo(codigo) {
+    if (!Array.isArray(ALL_SERVICOS)) return null;
+    let s = ALL_SERVICOS.find(item => item.codigo_operacional === codigo);
+    if (s) return s;
+    const fallbackNomes = {
+        'VISTORIA_INICIAL_SECO': ['seco'],
+        'VISTORIA_INICIAL_FLUTUANDO': ['flutuando'],
+        'VISTORIA_INICIAL_BORDA_LIVRE': ['borda livre'],
+        'VISTORIA_INICIAL_ARQUEACAO': ['arqueação', 'arqueacao'],
+        'ANALISE_PLANOS_EC1': ['análise de planos ec1', 'analise de planos ec1', 'análise de planos', 'analise de planos']
+    };
+    const termos = fallbackNomes[codigo] || [];
+    for (const termo of termos) {
+        s = ALL_SERVICOS.find(item => item.nome && item.nome.toLowerCase().includes(termo));
+        if (s) return s;
+    }
+    return null;
+}
+
+function inicializarPacotePadraoEmbarcacao(emb, forcar = false) {
+    if (!emb) return;
+    if (typeof MODO_EDICAO !== 'undefined' && MODO_EDICAO && !forcar) return;
+    if (!forcar && servicosSelecionadosPorEmbarcacao[emb.id] && Object.keys(servicosSelecionadosPorEmbarcacao[emb.id]).length > 0) {
+        return;
+    }
+
+    const pacoteKey = obterChavePacoteEmbarcacao(emb);
+    const pacote = (typeof PACOTES_COMERCIAIS !== 'undefined' && PACOTES_COMERCIAIS) ? PACOTES_COMERCIAIS[pacoteKey] : null;
+    if (!pacote || !pacote.servicos) return;
+
+    if (!servicosSelecionadosPorEmbarcacao[emb.id]) {
+        servicosSelecionadosPorEmbarcacao[emb.id] = {};
+    }
+
+    CODIGOS_PACOTE_ORDENADOS.forEach(cod => {
+        const conf = pacote.servicos[cod];
+        const s = encontrarServicoPorCodigo(cod);
+        if (s && conf) {
+            servicosSelecionadosPorEmbarcacao[emb.id][s.id] = {
+                qtd: 1,
+                preco: conf.preco,
+                is_pacote: true
+            };
+        }
+    });
+}
+
+function marcarTodosPacote(embId, pacoteKey) {
+    const emb = embarcacoesCarregadas.find(e => e.id === embId);
+    if (!emb) return;
+    emb.pacote_manual = pacoteKey;
+    const pacote = (typeof PACOTES_COMERCIAIS !== 'undefined' && PACOTES_COMERCIAIS) ? PACOTES_COMERCIAIS[pacoteKey] : null;
+    if (!pacote || !pacote.servicos) return;
+
+    if (!servicosSelecionadosPorEmbarcacao[embId]) {
+        servicosSelecionadosPorEmbarcacao[embId] = {};
+    }
+
+    CODIGOS_PACOTE_ORDENADOS.forEach(cod => {
+        const conf = pacote.servicos[cod];
+        const s = encontrarServicoPorCodigo(cod);
+        if (s && conf) {
+            servicosSelecionadosPorEmbarcacao[embId][s.id] = {
+                qtd: 1,
+                preco: conf.preco,
+                is_pacote: true
+            };
+        }
+    });
+
+    renderizarServicosEmbarcacaoAtual();
+    atualizarCardEmbarcacaoSeletor(embId);
+    atualizarTotais();
+}
+
+function desmarcarTodosPacote(embId, pacoteKey) {
+    const emb = embarcacoesCarregadas.find(e => e.id === embId);
+    if (!emb) return;
+    const pacote = (typeof PACOTES_COMERCIAIS !== 'undefined' && PACOTES_COMERCIAIS) ? PACOTES_COMERCIAIS[pacoteKey] : null;
+    if (!pacote || !pacote.servicos) return;
+
+    if (servicosSelecionadosPorEmbarcacao[embId]) {
+        CODIGOS_PACOTE_ORDENADOS.forEach(cod => {
+            const s = encontrarServicoPorCodigo(cod);
+            if (s && servicosSelecionadosPorEmbarcacao[embId][s.id]) {
+                delete servicosSelecionadosPorEmbarcacao[embId][s.id];
+            }
+        });
+        if (Object.keys(servicosSelecionadosPorEmbarcacao[embId]).length === 0) {
+            delete servicosSelecionadosPorEmbarcacao[embId];
+        }
+    }
+
+    renderizarServicosEmbarcacaoAtual();
+    atualizarCardEmbarcacaoSeletor(embId);
+    atualizarTotais();
+}
+
+function alternarPacoteEmbarcacao(embId, novoPacoteKey) {
+    marcarTodosPacote(embId, novoPacoteKey);
+}
+
+function renderLinhaServico(emb, s, isPacote = false, precoSugerido = null) {
+    const estado = servicosSelecionadosPorEmbarcacao[emb.id]?.[s.id] || null;
+    const checked = !!estado;
+    const qtd = estado?.qtd || 1;
+
+    let precoUnitario;
+    if (checked && Number.isFinite(Number(estado?.preco))) {
+        precoUnitario = Number(estado.preco);
+    } else if (Number.isFinite(Number(precoSugerido))) {
+        precoUnitario = Number(precoSugerido);
+    } else {
+        precoUnitario = parseFloat(s.preco_padrao) || 0;
+    }
+
+    const subtotal = checked ? precoUnitario * qtd : 0;
+
+    let badgeServico = '';
+    if (isPacote) {
+        badgeServico = `<span class="badge" style="background: rgba(46,204,113,0.18); color: var(--cor-destaque); font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-weight: 600;"><i class="fas fa-check"></i> Pacote NORMAM</span>`;
+    } else if (s.codigo_operacional === 'ACOMPANHAMENTO_TECNICO') {
+        badgeServico = `<span class="badge" style="background: rgba(52,152,219,0.15); color: #2980b9; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-weight: 600;"><i class="fas fa-tag"></i> Acompanhamento R$ 500</span>`;
+    }
+
+    return `
+        <tr class="servico-linha" style="border-bottom: 1px solid var(--cor-borda); ${checked ? 'background: rgba(46,204,113,0.06);' : ''}">
+            <td style="padding: 10px 12px; text-align: center;">
+                <input type="checkbox" class="check-servico"
+                       data-emb-id="${escAttr(emb.id)}"
+                       data-serv-id="${escAttr(s.id)}"
+                       data-preco-sugerido="${precoUnitario}"
+                       onchange="servicoToggled(this)"
+                       style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--cor-destaque);"
+                       ${checked ? 'checked' : ''}>
+            </td>
+            <td style="padding: 10px 12px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-weight: 600; color: var(--cor-texto); font-size: 0.95rem;">${esc(s.nome)}</span>
+                    ${badgeServico}
+                </div>
+                ${s.descricao ? '<small class="text-muted" style="display: block; margin-top: 2px; font-size: 0.8rem;">' + esc(s.descricao.length > 80 ? s.descricao.substring(0, 80) + '...' : s.descricao) + '</small>' : ''}
+            </td>
+            <td style="padding: 10px 12px; text-align: center;">
+                <input type="number" value="${qtd}" min="1" max="99"
+                       data-emb-id="${escAttr(emb.id)}"
+                       data-serv-id="${escAttr(s.id)}"
+                       data-preco-sugerido="${precoUnitario}"
+                       class="qtd-servico" onchange="servicoQtdChanged(this)" onfocus="this.select()"
+                       style="width: 55px; padding: 4px 6px; background: var(--cor-fundo); border: 1px solid var(--cor-borda); border-radius: 6px; color: var(--cor-texto); text-align: center; font-size: 0.85rem;"
+                       ${checked ? '' : 'disabled'}>
+            </td>
+            <td style="padding: 10px 12px; text-align: right;">
+                <span class="preco-unitario" style="font-weight: 600; color: var(--cor-texto);">${formatarMoeda(precoUnitario)}</span>
+            </td>
+            <td style="padding: 10px 12px; text-align: right;">
+                <span id="sub_${escAttr(emb.id)}_${escAttr(s.id)}" data-preco="${precoUnitario}" style="font-weight: 700; color: var(--cor-destaque); font-size: 0.95rem;">
+                    ${formatarMoeda(subtotal)}
+                </span>
+            </td>
+        </tr>`;
+}
+
 function renderizarServicosEmbarcacaoAtual() {
     const area = document.getElementById('servicosEmbarcacaoAtual');
     if (!area) return;
@@ -408,72 +607,154 @@ function renderizarServicosEmbarcacaoAtual() {
         return;
     }
 
+    const pacoteKey = obterChavePacoteEmbarcacao(emb);
+    const pacote = (typeof PACOTES_COMERCIAIS !== 'undefined' && PACOTES_COMERCIAIS) ? PACOTES_COMERCIAIS[pacoteKey] : null;
+
+    // Separar serviços entre o Pacote Padrão (5 itens) e Demais Serviços do Catálogo (avulsos)
+    const servicosPacote = [];
+    const idsNoPacote = new Set();
+
+    CODIGOS_PACOTE_ORDENADOS.forEach(cod => {
+        const s = encontrarServicoPorCodigo(cod);
+        if (s && !idsNoPacote.has(s.id)) {
+            servicosPacote.push({ ...s, codigo_pacote: cod });
+            idsNoPacote.add(s.id);
+        }
+    });
+
+    const servicosAvulsos = ALL_SERVICOS.filter(s => !idsNoPacote.has(s.id));
+
     let html = `
-        <div class="card embarcacao-bloco" data-emb-id="${escAttr(emb.id)}" style="margin-bottom: 20px;">
-            <div class="card-header" style="display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-list-check" style="color: var(--cor-destaque);"></i>
-                <h3 style="flex: 1; color: var(--cor-texto); font-size: 1rem; margin: 0;">Serviços para ${esc(emb.nome)} ${emb.registro ? '<small class="text-muted">(' + esc(emb.registro) + ')</small>' : ''}</h3>
+        <!-- CARD 1: PACOTE PADRÃO NORMAM -->
+        <div class="card mb-3" style="border: 2px solid rgba(46,204,113,0.35); border-radius: 12px; overflow: hidden; margin-bottom: 22px; box-shadow: 0 4px 14px rgba(0,0,0,0.04);">
+            <div class="card-header" style="background: linear-gradient(135deg, rgba(46,204,113,0.14) 0%, rgba(30,126,52,0.06) 100%); padding: 14px 18px; border-bottom: 1px solid rgba(46,204,113,0.25); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--cor-destaque); color: #fff; font-size: 1.1rem; box-shadow: 0 2px 6px rgba(46,204,113,0.35);">
+                        <i class="fas ${pacoteKey === 'balsa' ? 'fa-boxes-stacked' : 'fa-ship'}"></i>
+                    </span>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--cor-texto);">
+                                ${pacote ? esc(pacote.nome) : 'Pacote Padrão NORMAM'}
+                            </h4>
+                            <span class="badge" style="background: ${pacoteKey === 'balsa' ? 'rgba(52,152,219,0.18)' : 'rgba(230,126,34,0.18)'}; color: ${pacoteKey === 'balsa' ? '#2980b9' : '#d35400'}; border: 1px solid ${pacoteKey === 'balsa' ? 'rgba(52,152,219,0.35)' : 'rgba(230,126,34,0.35)'}; padding: 3px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">
+                                <i class="fas ${pacoteKey === 'balsa' ? 'fa-anchor' : 'fa-bolt'}"></i> ${pacoteKey === 'balsa' ? 'Sem Propulsão' : 'Com Propulsão'}
+                            </span>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.8rem; display: block; margin-top: 2px;">
+                            Pacote pré-configurado conforme as vistorias estatutárias e análise de planos da NORMAM-202 &middot; Valor tabelado: <strong style="color: var(--cor-destaque);">${pacote ? formatarMoeda(pacote.total) : ''}</strong>
+                        </small>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <div class="btn-group btn-group-sm" role="group" style="display: inline-flex; border: 1px solid var(--cor-borda); border-radius: 6px; overflow: hidden; background: var(--cor-fundo);">
+                        <button type="button" class="btn btn-sm ${pacoteKey === 'balsa' ? 'btn-success text-white font-weight-bold' : 'btn-outline-secondary'}" 
+                                onclick="alternarPacoteEmbarcacao('${escAttr(emb.id)}', 'balsa')" 
+                                title="Aplicar valores do pacote Balsa (R$ 7.525,00)" style="font-size: 0.78rem; padding: 4px 10px; border: none;">
+                            <i class="fas fa-boxes-stacked"></i> Balsa (R$ 7.525)
+                        </button>
+                        <button type="button" class="btn btn-sm ${pacoteKey === 'propulsada' ? 'btn-success text-white font-weight-bold' : 'btn-outline-secondary'}" 
+                                onclick="alternarPacoteEmbarcacao('${escAttr(emb.id)}', 'propulsada')" 
+                                title="Aplicar valores do pacote Propulsada (R$ 8.200,00)" style="font-size: 0.78rem; padding: 4px 10px; border: none;">
+                            <i class="fas fa-bolt"></i> Propulsada (R$ 8.200)
+                        </button>
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="marcarTodosPacote('${escAttr(emb.id)}', '${pacoteKey}')" style="font-size: 0.78rem; padding: 4px 10px; border-radius: 6px;" title="Marcar todos os 5 serviços deste pacote">
+                        <i class="fas fa-check-double"></i> Marcar Todos
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="desmarcarTodosPacote('${escAttr(emb.id)}', '${pacoteKey}')" style="font-size: 0.78rem; padding: 4px 10px; border-radius: 6px;" title="Desmarcar os 5 serviços deste pacote">
+                        <i class="fas fa-times"></i> Desmarcar
+                    </button>
+                </div>
             </div>
-            <div class="card-body emb-body">
+
+            <div class="card-body" style="padding: 0;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
-                        <tr style="border-bottom: 1px solid var(--cor-borda);">
-                            <th style="text-align: left; padding: 8px 12px; color: var(--cor-texto-secundario); font-size: 0.8rem; width: 40px;"></th>
-                            <th style="text-align: left; padding: 8px 12px; color: var(--cor-texto-secundario); font-size: 0.8rem;">Serviço</th>
-                            <th style="text-align: center; padding: 8px 12px; color: var(--cor-texto-secundario); font-size: 0.8rem; width: 70px;">Qtd</th>
-                            <th style="text-align: right; padding: 8px 12px; color: var(--cor-texto-secundario); font-size: 0.8rem; width: 110px;">Preço Unit.</th>
-                            <th style="text-align: right; padding: 8px 12px; color: var(--cor-texto-secundario); font-size: 0.8rem; width: 110px;">Subtotal</th>
+                        <tr style="border-bottom: 1px solid var(--cor-borda); background: rgba(0,0,0,0.02);">
+                            <th style="text-align: center; padding: 10px 12px; width: 44px;"></th>
+                            <th style="text-align: left; padding: 10px 12px; font-size: 0.8rem; color: var(--cor-texto-secundario); font-weight: 600;">Serviço do Pacote</th>
+                            <th style="text-align: center; padding: 10px 12px; font-size: 0.8rem; color: var(--cor-texto-secundario); font-weight: 600; width: 80px;">Qtd</th>
+                            <th style="text-align: right; padding: 10px 12px; font-size: 0.8rem; color: var(--cor-texto-secundario); font-weight: 600; width: 140px;">Preço Pacote</th>
+                            <th style="text-align: right; padding: 10px 12px; font-size: 0.8rem; color: var(--cor-texto-secundario); font-weight: 600; width: 140px;">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>`;
 
-    ALL_SERVICOS.forEach(s => {
-        const estado = servicosSelecionadosPorEmbarcacao[emb.id]?.[s.id] || null;
-        const checked = !!estado;
-        const qtd = estado?.qtd || 1;
-        const preco = checked && Number.isFinite(Number(estado?.preco))
-            ? Number(estado.preco)
-            : (parseFloat(s.preco_padrao) || 0);
-        const subtotal = checked ? preco * qtd : 0;
-        html += `
-            <tr class="servico-linha" style="border-bottom: 1px solid var(--cor-borda); ${checked ? 'background: rgba(46,204,113,0.05);' : ''}">
-                <td style="padding: 8px 12px; text-align: center;">
-                    <input type="checkbox" class="check-servico" data-emb-id="${escAttr(emb.id)}" data-serv-id="${escAttr(s.id)}"
-                           onchange="servicoToggled(this)" style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--cor-destaque);" ${checked ? 'checked' : ''}>
-                </td>
-                <td style="padding: 8px 12px;">
-                    <span style="font-weight: 500;">${esc(s.nome)}</span>
-                    ${s.descricao ? '<br><small class="text-muted">' + esc(s.descricao.length > 60 ? s.descricao.substring(0, 60) + '...' : s.descricao) + '</small>' : ''}
-                </td>
-                <td style="padding: 8px 12px; text-align: center;">
-                    <input type="number" value="${qtd}" min="1" max="99" data-emb-id="${escAttr(emb.id)}" data-serv-id="${escAttr(s.id)}"
-                           class="qtd-servico" onchange="servicoQtdChanged(this)" onfocus="this.select()"
-                           style="width: 55px; padding: 4px 6px; background: var(--cor-fundo); border: 1px solid var(--cor-borda); border-radius: 6px; color: var(--cor-texto); text-align: center; font-size: 0.85rem;" ${checked ? '' : 'disabled'}>
-                </td>
-                <td style="padding: 8px 12px; text-align: right;">
-                    <span style="font-weight: 500;">${formatarMoeda(preco)}</span>
-                </td>
-                <td style="padding: 8px 12px; text-align: right;">
-                    <span id="sub_${escAttr(emb.id)}_${escAttr(s.id)}" data-preco="${preco}" style="font-weight: 600; color: var(--cor-destaque);">${formatarMoeda(subtotal)}</span>
-                </td>
-            </tr>`;
+    servicosPacote.forEach(s => {
+        const cod = s.codigo_pacote || s.codigo_operacional;
+        const precoSugerido = pacote?.servicos?.[cod]?.preco || (parseFloat(s.preco_padrao) || 0);
+        html += renderLinhaServico(emb, s, true, precoSugerido);
     });
 
-    html += '</tbody></table></div></div>';
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CARD 2: DEMAIS SERVIÇOS DO CATÁLOGO (AVULSOS E COMPLEMENTARES) -->
+        <div class="card mb-3" style="border: 1px solid var(--cor-borda); border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+            <div class="card-header" style="background: var(--cor-fundo); padding: 14px 18px; border-bottom: 1px solid var(--cor-borda); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: rgba(100,100,100,0.12); color: var(--cor-texto); font-size: 1rem;">
+                        <i class="fas fa-cubes"></i>
+                    </span>
+                    <div>
+                        <h4 style="margin: 0; font-size: 1rem; font-weight: 600; color: var(--cor-texto);">
+                            Demais Serviços do Catálogo (Avulsos e Complementares)
+                        </h4>
+                        <small class="text-muted" style="font-size: 0.8rem;">
+                            Serviços opcionais/complementares da tabela comercial (Acompanhamento Técnico R$ 500, Ultrassom, Vistorias Periódicas, etc.).
+                        </small>
+                    </div>
+                </div>
+                <span class="badge" style="background: rgba(120,120,120,0.12); color: var(--cor-texto-secundario); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;">
+                    ${servicosAvulsos.length} serviços disponíveis
+                </span>
+            </div>
+
+            <div class="card-body" style="padding: 0;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--cor-borda); background: rgba(0,0,0,0.02);">
+                            <th style="text-align: center; padding: 10px 12px; width: 44px;"></th>
+                            <th style="text-align: left; padding: 10px 12px; font-size: 0.8rem; color: var(--cor-texto-secundario); font-weight: 600;">Serviço Complementar</th>
+                            <th style="text-align: center; padding: 10px 12px; font-size: 0.8rem; color: var(--cor-texto-secundario); font-weight: 600; width: 80px;">Qtd</th>
+                            <th style="text-align: right; padding: 10px 12px; font-size: 0.8rem; color: var(--cor-texto-secundario); font-weight: 600; width: 140px;">Preço Catálogo</th>
+                            <th style="text-align: right; padding: 10px 12px; font-size: 0.8rem; color: var(--cor-texto-secundario); font-weight: 600; width: 140px;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+    servicosAvulsos.forEach(s => {
+        const precoSugerido = parseFloat(s.preco_padrao) || 0;
+        html += renderLinhaServico(emb, s, false, precoSugerido);
+    });
+
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+
     area.innerHTML = html;
 }
 
 function servicoToggled(checkbox) {
     const embId = checkbox.dataset.embId;
     const servId = checkbox.dataset.servId;
+    const precoSugerido = checkbox.dataset.precoSugerido ? parseFloat(checkbox.dataset.precoSugerido) : null;
     const linha = checkbox.closest('tr');
     const qtdInput = linha.querySelector('.qtd-servico');
 
     if (checkbox.checked) {
-        linha.style.background = 'rgba(46,204,113,0.05)';
+        linha.style.background = 'rgba(46,204,113,0.06)';
         qtdInput.disabled = false;
         qtdInput.value = 1;
-        salvarServicoSelecionado(embId, servId, qtdInput.value);
+        salvarServicoSelecionado(embId, servId, qtdInput.value, precoSugerido);
     } else {
         linha.style.background = '';
         qtdInput.disabled = true;
@@ -489,27 +770,36 @@ function servicoToggled(checkbox) {
 function servicoQtdChanged(input) {
     const embId = input.dataset.embId;
     const servId = input.dataset.servId;
+    const precoSugerido = input.dataset.precoSugerido ? parseFloat(input.dataset.precoSugerido) : null;
     const linha = input.closest('tr');
     const checkbox = linha.querySelector('.check-servico');
     if (checkbox.checked) {
-        salvarServicoSelecionado(embId, servId, input.value);
+        salvarServicoSelecionado(embId, servId, input.value, precoSugerido);
     }
     atualizarSubtotalServico(embId, servId);
     atualizarCardEmbarcacaoSeletor(embId);
     atualizarTotais();
 }
 
-function salvarServicoSelecionado(embId, servId, qtdValor) {
+function salvarServicoSelecionado(embId, servId, qtdValor, precoCustomizado = null) {
     if (!servicosSelecionadosPorEmbarcacao[embId]) {
         servicosSelecionadosPorEmbarcacao[embId] = {};
     }
     const estadoAtual = servicosSelecionadosPorEmbarcacao[embId][servId] || {};
     const servicoCatalogo = ALL_SERVICOS.find(s => String(s.id) === String(servId));
+
+    let precoFinal;
+    if (precoCustomizado !== null && Number.isFinite(Number(precoCustomizado))) {
+        precoFinal = Number(precoCustomizado);
+    } else if (Number.isFinite(Number(estadoAtual.preco))) {
+        precoFinal = Number(estadoAtual.preco);
+    } else {
+        precoFinal = parseFloat(servicoCatalogo?.preco_padrao) || 0;
+    }
+
     servicosSelecionadosPorEmbarcacao[embId][servId] = {
         qtd: Math.max(1, parseInt(qtdValor) || 1),
-        preco: Number.isFinite(Number(estadoAtual.preco))
-            ? Number(estadoAtual.preco)
-            : (parseFloat(servicoCatalogo?.preco_padrao) || 0)
+        preco: precoFinal
     };
     atualizarEstadoAvancoServicos();
 }
@@ -555,7 +845,10 @@ function atualizarSubtotalServico(embId, servId) {
         return;
     }
 
-    const preco = parseFloat(subEl.dataset.preco) || 0;
+    const estado = servicosSelecionadosPorEmbarcacao[embId]?.[servId];
+    const preco = (estado && Number.isFinite(Number(estado.preco)))
+        ? Number(estado.preco)
+        : (parseFloat(subEl.dataset.preco) || 0);
     const qtd = Math.max(1, parseInt(qtdInput.value) || 1);
     qtdInput.value = qtd;
     const subtotal = preco * qtd;

@@ -60,7 +60,7 @@ if ($action === 'embarcacoes_cliente') {
         $clausulaWhere = '(' . implode(' OR ', $clausulasOr) . ')';
 
         $stmt = $pdo->prepare("
-            SELECT DISTINCT e.id, e.nome, COALESCE(e.numero_inscricao, e.registro, '') as registro
+            SELECT DISTINCT e.id, e.nome, COALESCE(e.numero_inscricao, e.registro, '') as registro, e.possui_propulsao
             FROM embarcacoes e
             LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND (ce.status = 'ATIVO' OR ce.status IS NULL OR ce.desvinculado_em IS NULL)
             WHERE {$clausulaWhere}
@@ -392,7 +392,10 @@ if ($action !== '') {
                     if (!$servDb) continue;
 
                     $qtd    = max(1, (int)($sv['quantidade'] ?? 1));
-                    $preco  = (float)$servDb['preco_padrao'];
+                    $precoEnviado = isset($sv['preco']) ? normalizarDecimalProposta($sv['preco']) : null;
+                    $preco  = ($precoEnviado !== null && $precoEnviado > 0)
+                        ? $precoEnviado
+                        : (float)$servDb['preco_padrao'];
                     $sub    = round($preco * $qtd, 2);
                     $subtotal_geral += $sub;
 
@@ -651,9 +654,10 @@ if ($action !== '') {
                     }
 
                     $quantidade = max(1, min(99, (int)($servicoData['quantidade'] ?? 1)));
+                    $precoEnviado = isset($servicoData['preco']) ? normalizarDecimalProposta($servicoData['preco']) : null;
                     $preco = array_key_exists($chave, $precosAntigos)
                         ? $precosAntigos[$chave]
-                        : round((float)$servico['preco_padrao'], 2);
+                        : (($precoEnviado !== null && $precoEnviado > 0) ? $precoEnviado : round((float)$servico['preco_padrao'], 2));
                     $subtotalGeral += round($preco * $quantidade, 2);
                     $embarcacoesIds[$embarcacaoId] = true;
                     $servicosInserir[] = [

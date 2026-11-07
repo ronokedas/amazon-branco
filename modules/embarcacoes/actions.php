@@ -125,6 +125,12 @@ switch ($action) {
             $errosCampos['nome'] = 'O nome deve ter pelo menos 2 caracteres.';
         }
 
+        if ($possui_propulsao === null || !in_array($possui_propulsao, [0, 1], true)) {
+            $msgProp = 'O campo "Possui Propulsão?" é obrigatório. Selecione SIM ou NÃO.';
+            $erros[] = $msgProp;
+            $errosCampos['possui_propulsao'] = $msgProp;
+        }
+
         if (!empty($ano) && ($ano < 1900 || $ano > 2099)) {
             $erros[] = 'O ano deve estar entre 1900 e 2099.';
             $errosCampos['ano'] = 'O ano deve estar entre 1900 e 2099.';

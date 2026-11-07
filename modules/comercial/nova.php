@@ -141,7 +141,7 @@ if (!empty($clientes)) {
 try {
     if ($modoEdicao) {
         $stmtServicos = $pdo->prepare("
-            SELECT DISTINCT s.id, s.nome, s.descricao, s.preco_padrao
+            SELECT DISTINCT s.id, s.nome, s.descricao, s.codigo_operacional, s.preco_padrao
             FROM servicos s
             LEFT JOIN propostas_servicos ps ON ps.servico_id = s.id AND ps.proposta_id = :proposta
             WHERE s.ativo = 1 OR ps.id IS NOT NULL
@@ -149,12 +149,40 @@ try {
         ");
         $stmtServicos->execute([':proposta' => $propostaEdicao['id']]);
     } else {
-        $stmtServicos = $pdo->query("SELECT id, nome, descricao, preco_padrao FROM servicos WHERE ativo = 1 ORDER BY nome ASC");
+        $stmtServicos = $pdo->query("SELECT id, nome, descricao, codigo_operacional, preco_padrao FROM servicos WHERE ativo = 1 ORDER BY nome ASC");
     }
     $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $servicos = [];
 }
+
+// Configuração dos Pacotes Padrão Comerciais NORMAM (Balsa vs Propulsada)
+$pacotesComerciais = [
+    'balsa' => [
+        'nome' => 'Pacote Padrão NORMAM — Balsa (Sem Propulsão)',
+        'propulsao' => 0,
+        'total' => 7525.00,
+        'servicos' => [
+            'VISTORIA_INICIAL_SECO' => ['preco' => 1000.00, 'label' => 'Vistoria Inicial a Seco'],
+            'VISTORIA_INICIAL_FLUTUANDO' => ['preco' => 1875.00, 'label' => 'Vistoria Inicial Flutuando'],
+            'VISTORIA_INICIAL_BORDA_LIVRE' => ['preco' => 1150.00, 'label' => 'Vistoria Inicial de Borda Livre'],
+            'VISTORIA_INICIAL_ARQUEACAO' => ['preco' => 1150.00, 'label' => 'Vistoria Inicial de Arqueação'],
+            'ANALISE_PLANOS_EC1' => ['preco' => 2350.00, 'label' => 'Análise Técnica de Planos (NORMAM-202)'],
+        ]
+    ],
+    'propulsada' => [
+        'nome' => 'Pacote Padrão NORMAM — Embarcação Propulsada',
+        'propulsao' => 1,
+        'total' => 8200.00,
+        'servicos' => [
+            'VISTORIA_INICIAL_SECO' => ['preco' => 1100.00, 'label' => 'Vistoria Inicial a Seco'],
+            'VISTORIA_INICIAL_FLUTUANDO' => ['preco' => 1950.00, 'label' => 'Vistoria Inicial Flutuando'],
+            'VISTORIA_INICIAL_BORDA_LIVRE' => ['preco' => 1300.00, 'label' => 'Vistoria Inicial de Borda Livre'],
+            'VISTORIA_INICIAL_ARQUEACAO' => ['preco' => 1250.00, 'label' => 'Vistoria Inicial de Arqueação'],
+            'ANALISE_PLANOS_EC1' => ['preco' => 2600.00, 'label' => 'Análise Técnica de Planos (NORMAM-202)'],
+        ]
+    ]
+];
 
 $titulo_page = ($modoEdicao ? 'Editar Proposta' : 'Nova Proposta') . ' - ERP Sistema';
 require_once __DIR__ . '/../../includes/header.php';
@@ -186,6 +214,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 const APP_URL = <?php echo json_encode(APP_URL); ?>;
 const ESCRITORIO_DISPONIVEL = <?php echo $escritorioPropostaDisponivel ? 'true' : 'false'; ?>;
 const ALL_SERVICOS = <?php echo json_encode($servicos, JSON_UNESCAPED_UNICODE); ?>;
+const PACOTES_COMERCIAIS = <?php echo json_encode($pacotesComerciais, JSON_UNESCAPED_UNICODE); ?>;
 const MODO_EDICAO = <?php echo $modoEdicao ? 'true' : 'false'; ?>;
 const PROPOSTA_ID_EDICAO = <?php echo json_encode($modoEdicao ? (string)$propostaEdicao['id'] : ''); ?>;
 const SERVICOS_EDICAO_INICIAIS = <?php echo json_encode($servicosEdicaoIniciais, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;

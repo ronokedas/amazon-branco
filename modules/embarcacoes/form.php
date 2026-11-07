@@ -424,14 +424,19 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                     <div class="grid-2">
                         <div class="form-group">
                             <label for="possui_propulsao" style="font-weight:bold; color:var(--cor-destaque);">
-                                <i class="fas fa-cogs"></i> Possui Propulsão?
+                                <i class="fas fa-cogs"></i> Possui Propulsão? <span style="color:var(--cor-perigo, #dc2626); font-weight:bold;">*</span>
                             </label>
-                            <select id="possui_propulsao" name="possui_propulsao">
-                                <option value="">-- Selecione (opcional) --</option>
-                                <option value="1" <?php echo (isset($embarcacao['possui_propulsao']) && $embarcacao['possui_propulsao'] == 1) ? 'selected' : ''; ?>>SIM (Com propulsão)</option>
-                                <option value="0" <?php echo (isset($embarcacao['possui_propulsao']) && $embarcacao['possui_propulsao'] == 0) ? 'selected' : ''; ?>>NÃO (Sem propulsão)</option>
+                            <?php 
+                            $propVal = (isset($embarcacao['possui_propulsao']) && $embarcacao['possui_propulsao'] !== null && $embarcacao['possui_propulsao'] !== '') 
+                                ? (int)$embarcacao['possui_propulsao'] 
+                                : null;
+                            ?>
+                            <select id="possui_propulsao" name="possui_propulsao" required>
+                                <option value="">-- Selecione se possui propulsão * --</option>
+                                <option value="1" <?php echo ($propVal === 1) ? 'selected' : ''; ?>>SIM (Com propulsão)</option>
+                                <option value="0" <?php echo ($propVal === 0) ? 'selected' : ''; ?>>NÃO (Sem propulsão - Balsa/Flutuante)</option>
                             </select>
-                            <small class="text-muted">Usado para cálculo da validade do certificado (5 anos s/ prop., 10 anos c/ prop.)</small>
+                            <small class="text-muted">Campo obrigatório. Define validade de certificados e aplicação de pacotes comerciais (Balsa R$ 7.525 vs Propulsada R$ 8.200).</small>
                         </div>
                         <div class="form-group">
                             <label for="fabricante_motor"><i class="fas fa-industry"></i> Fabricante do Motor</label>
