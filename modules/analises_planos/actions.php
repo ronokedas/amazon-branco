@@ -192,8 +192,8 @@ try {
 
     if ($acao === 'iniciar') {
         analiseAcaoExigirTecnico($analise);
-        if ($analise['status'] !== 'AGENDADA' && !empty($analise['iniciado_em'])) {
-            throw new RuntimeException('Esta análise técnica já foi iniciada.');
+        if ($analise['status'] !== 'AGENDADA') {
+            throw new RuntimeException('Esta análise técnica já foi iniciada ou não está agendada.');
         }
         $pdo->beginTransaction();
         $pdo->prepare("UPDATE analises_planos SET status='EM_ANALISE',iniciado_em=COALESCE(iniciado_em, NOW()) WHERE id=:id")->execute([':id'=>$analiseId]);

@@ -294,11 +294,11 @@ $prazoItem = $a['prazo_agendado_em'] ?? '';
 $isPrazoVencido = !empty($prazoItem) && substr($prazoItem, 0, 10) < date('Y-m-d');
 $isPrazoHoje = !empty($prazoItem) && substr($prazoItem, 0, 10) === date('Y-m-d');
 
-$analisePodeIniciar = $podeTecnico && ($a['status'] === 'AGENDADA' || empty($a['iniciado_em']));
+$analisePodeIniciar = $podeTecnico && ($a['status'] === 'AGENDADA');
 
 $abaAtiva = trim($_GET['aba'] ?? '');
 if (empty($abaAtiva)) {
-    if (!empty($a['status']) && ($a['status'] === 'AGENDADA' || empty($a['iniciado_em']))) {
+    if (!empty($a['status']) && $a['status'] === 'AGENDADA') {
         $abaAtiva = 'enquadramento';
     } elseif ($exigenciasPendentesTotal > 0) {
         $abaAtiva = 'exigencias';
@@ -497,7 +497,7 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                 <?php elseif ($exigenciasPendentes > 0): ?>
                     <?= $exigenciasPendentes ?> pendentes
                 <?php else: ?>
-                    <i class="fa-solid fa-check"></i> Conforme
+                    <i class="fa-solid fa-check"></i> 0
                 <?php endif; ?>
             </span>
         </button>
@@ -507,7 +507,7 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
             <span class="tab-step-badge">4</span>
             <i class="fa-solid fa-file-signature"></i>
             <span class="tab-title">Relatórios RAP & Licença</span>
-            <span class="badge bg-secondary"><?= $totalPareceres ?></span>
+            <span class="badge bg-secondary"><?= $totalPareceres ?> RAP</span>
             <?php if (!empty($licencas)): ?>
                 <span class="badge bg-success" title="<?= count($licencas) ?> licença(s) emitida(s)"><i class="fa-solid fa-certificate"></i> <?= count($licencas) ?></span>
             <?php endif; ?>
@@ -2041,6 +2041,16 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
                 <?php endforeach; ?>
             </div>
         </section>
+
+        <!-- Navegação entre Etapas -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid #e2e8f0; flex-wrap:wrap; gap:12px;">
+            <button type="button" class="btn btn-outline-secondary" onclick="trocarAbaAnalise('pareceres', true)">
+                <i class="fa-solid fa-arrow-left"></i> Voltar à Etapa 4: Relatórios RAP & Licença
+            </button>
+            <a href="<?= APP_URL ?>analises-planos" class="btn btn-outline-primary">
+                <i class="fa-solid fa-list-check"></i> Concluir e Voltar à Fila de Análises
+            </a>
+        </div>
     </div>
 </div>
 
@@ -2301,41 +2311,43 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
     padding: 10px 18px !important;
 }
 
-/* Barra de Abas Especializadas - Grid de 5 colunas perfeitamente distribuídas sem scroll horizontal */
+/* Barra de Abas Especializadas - Layout Flexível, Fluido e Anti-Sobreposição */
 .analise-tabs-bar {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     background: #ffffff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #cbd5e1;
     border-radius: 12px;
-    padding: 6px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-}
-@media (max-width: 1180px) {
-    .analise-tabs-bar {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 6px;
-    }
+    padding: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    margin-bottom: 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
 .analise-tab-btn {
+    flex: 1 1 180px;
+    min-width: 165px;
+    max-width: 100%;
     border: 1px solid #e2e8f0;
     background: #f8fafc;
-    padding: 8px 10px;
+    padding: 9px 12px;
     border-radius: 8px;
     font-size: 0.85rem;
     font-weight: 600;
     color: #475569;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 7px;
+    gap: 8px;
     cursor: pointer;
     text-align: center;
     transition: all 0.18s ease;
-    min-height: 46px;
+    min-height: 44px;
     user-select: none;
-    position: relative;
+    box-sizing: border-box;
+    position: static !important;
+    overflow: hidden;
 }
 .analise-tab-btn:hover {
     color: #0d4a40;
@@ -2346,7 +2358,7 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
     background: #0d4a40 !important;
     color: #ffffff !important;
     border-color: #0d4a40 !important;
-    box-shadow: 0 3px 8px rgba(13, 74, 64, 0.28);
+    box-shadow: 0 2px 6px rgba(13, 74, 64, 0.25);
 }
 .analise-tab-btn .tab-step-badge {
     display: inline-flex;
@@ -2372,6 +2384,12 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
 }
 .analise-tab-btn .tab-title {
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.85rem;
+}
+.analise-tab-btn.active .tab-title {
+    color: #ffffff;
 }
 .analise-tab-btn .badge {
     font-size: 0.72rem;
@@ -2379,6 +2397,11 @@ $formValores = $msg['valores'] ?? ($_SESSION['mensagem']['valores'] ?? []);
     border-radius: 6px;
     flex-shrink: 0;
     box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+}
+.analise-tab-btn.active .badge.bg-secondary {
+    background: rgba(255, 255, 255, 0.22) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 /* Panes */
