@@ -17,6 +17,8 @@ $totalDocumentosPendentes = (int)($acoes['documentos_pendentes'] ?? 0);
 $totalPendencias = $totalAssinadas + $totalAprovacoes + $totalRetornos + $totalDocumentosPendentes;
 
 $usuarioNome = $_SESSION['usuario_nome'] ?? 'Administrador';
+$usuarioCargo = function_exists('getCargo') ? getCargo() : ($_SESSION['usuario_cargo'] ?? null);
+$isSecretaria = in_array($usuarioCargo, ['SECRETARIA', 'ATENDIMENTO'], true);
 ?>
 
 <style>
@@ -485,9 +487,15 @@ $usuarioNome = $_SESSION['usuario_nome'] ?? 'Administrador';
             <a href="<?= APP_URL ?>comercial/nova" class="btn btn-primary">
                 <i class="fa-solid fa-file-circle-plus"></i> Gerar Proposta
             </a>
-            <a href="<?= APP_URL ?>analises-planos/form" class="btn btn-secondary">
-                <i class="fa-solid fa-drafting-compass"></i> Nova Análise
-            </a>
+            <?php if ($isSecretaria): ?>
+                <a href="<?= APP_URL ?>agendamentos/form" class="btn btn-secondary" title="Cadastrar novo agendamento de vistoria ou análise">
+                    <i class="fa-solid fa-calendar-plus"></i> Novo Agendamento
+                </a>
+            <?php else: ?>
+                <a href="<?= APP_URL ?>analises-planos/form" class="btn btn-secondary">
+                    <i class="fa-solid fa-drafting-compass"></i> Nova Análise
+                </a>
+            <?php endif; ?>
             <a href="<?= APP_URL ?>protocolos/form" class="btn btn-secondary">
                 <i class="fa-solid fa-folder-plus"></i> Novo Dossiê
             </a>
