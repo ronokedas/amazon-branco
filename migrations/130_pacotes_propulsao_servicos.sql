@@ -28,3 +28,4 @@ SELECT 'a1d99333-6ebc-11f1-86ce-7e17ff5f90bf', 'Acompanhamento Técnico', 'Acomp
 WHERE NOT EXISTS (
     SELECT 1 FROM servicos WHERE codigo_operacional = 'ACOMPANHAMENTO_TECNICO' OR nome = 'Acompanhamento Técnico'
 );
+

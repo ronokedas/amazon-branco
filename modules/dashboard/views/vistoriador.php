@@ -27,7 +27,7 @@ function extrairTiposVistoria(?string $tiposRaw): array
 {
     if (empty($tiposRaw)) return ['Vistoria Técnica'];
     $lista = array_filter(array_map('trim', explode(',', $tiposRaw)));
-    return !empty($lista) ? $lista : ['Vistoria Técnica'];
+    return !empty($lista) ? array_values(array_unique($lista)) : ['Vistoria Técnica'];
 }
 
 function obterStatusHistoricoInfo(string $status): array

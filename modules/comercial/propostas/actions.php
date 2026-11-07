@@ -223,10 +223,10 @@ function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por
 
     $stmtEmb = $pdo->prepare("
         SELECT pe.embarcacao_id,
-               GROUP_CONCAT(CASE WHEN COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN s.nome END SEPARATOR ', ') AS servicos_vistoria_nomes,
-               GROUP_CONCAT(CASE WHEN COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN s.nome END SEPARATOR ', ') AS servicos_analise_nomes,
-               SUM(CASE WHEN COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN 1 ELSE 0 END) AS servicos_vistoria,
-               SUM(CASE WHEN COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN 1 ELSE 0 END) AS servicos_analise
+               GROUP_CONCAT(DISTINCT CASE WHEN COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN s.nome END ORDER BY s.nome SEPARATOR ', ') AS servicos_vistoria_nomes,
+               GROUP_CONCAT(DISTINCT CASE WHEN COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN s.nome END ORDER BY s.nome SEPARATOR ', ') AS servicos_analise_nomes,
+               COUNT(DISTINCT CASE WHEN COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN s.id END) AS servicos_vistoria,
+               COUNT(DISTINCT CASE WHEN COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2') THEN s.id END) AS servicos_analise
         FROM propostas_embarcacoes pe
         LEFT JOIN propostas_servicos ps ON ps.proposta_id = pe.proposta_id AND ps.embarcacao_id = pe.embarcacao_id
         LEFT JOIN servicos s ON ps.servico_id = s.id

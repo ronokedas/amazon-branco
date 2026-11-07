@@ -81,7 +81,7 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
             } catch (Throwable $e) {}
         }
         $escapedIds = "'" . implode("','", array_map('addslashes', $vistoriadorIds)) . "'";
-        $wVist = " (a.vistoriador_id IN ({$escapedIds}) OR a.vistoriador_id IS NULL) ";
+        $wVist = " a.vistoriador_id IN ({$escapedIds}) ";
         $wHist = " (a.vistoriador_id IN ({$escapedIds}) OR v.criado_por IN ({$escapedIds})) ";
         $params = [];
 
