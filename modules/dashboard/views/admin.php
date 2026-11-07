@@ -1032,7 +1032,7 @@ $usuarioNome = $_SESSION['usuario_nome'] ?? 'Administrador';
                     <small style="color: #64748b; font-size: 0.78rem;">Suporta arquivos de até 100MB (PDF, DWG, DXF, ZIP, etc.)</small>
                     <input type="file" name="arquivos[]" id="modal_input_arquivos" multiple style="display:none;" onchange="aoSelecionarArquivosSecretaria(this)">
                 </div>
-                <div id="modal_lista_arquivos" style="margin-top:10px; font-size:0.82rem; color:#0284c7; display:none;"></div>
+                <div id="modal_lista_arquivos" style="display:none;"></div>
             </div>
 
             <!-- Ações -->
@@ -1067,6 +1067,83 @@ function fecharModalAnexoSecretaria() {
     document.body.style.overflow = '';
 }
 
+function formatarTamanhoArquivo(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
+
+function obterIconeArquivoSecretaria(nome) {
+    var ext = (nome && nome.indexOf('.') !== -1) ? nome.split('.').pop().toLowerCase() : '';
+    switch (ext) {
+        case 'pdf':
+            return {
+                icon: 'fa-solid fa-file-pdf',
+                color: '#dc2626',
+                bg: '#fef2f2',
+                border: '#fecaca',
+                label: 'PDF'
+            };
+        case 'dwg':
+        case 'dxf':
+            return {
+                icon: 'fa-solid fa-compass-drafting',
+                color: '#0284c7',
+                bg: '#f0f9ff',
+                border: '#bae6fd',
+                label: ext.toUpperCase()
+            };
+        case 'doc':
+        case 'docx':
+            return {
+                icon: 'fa-solid fa-file-word',
+                color: '#2563eb',
+                bg: '#eff6ff',
+                border: '#bfdbfe',
+                label: 'WORD'
+            };
+        case 'xls':
+        case 'xlsx':
+        case 'csv':
+            return {
+                icon: 'fa-solid fa-file-excel',
+                color: '#16a34a',
+                bg: '#f0fdf4',
+                border: '#bbf7d0',
+                label: 'EXCEL'
+            };
+        case 'zip':
+        case 'rar':
+        case '7z':
+            return {
+                icon: 'fa-solid fa-file-zipper',
+                color: '#d97706',
+                bg: '#fffbeb',
+                border: '#fde68a',
+                label: 'COMPACTADO'
+            };
+        case 'png':
+        case 'jpg':
+        case 'jpeg':
+            return {
+                icon: 'fa-solid fa-file-image',
+                color: '#7c3aed',
+                bg: '#f5f3ff',
+                border: '#ddd6fe',
+                label: 'IMAGEM'
+            };
+        default:
+            return {
+                icon: 'fa-solid fa-file-lines',
+                color: '#475569',
+                bg: '#f8fafc',
+                border: '#e2e8f0',
+                label: (ext ? ext.toUpperCase() : 'DOC')
+            };
+    }
+}
+
 function aoSelecionarArquivosSecretaria(input) {
     var lista = document.getElementById('modal_lista_arquivos');
     if (!input.files || input.files.length === 0) {
@@ -1074,16 +1151,82 @@ function aoSelecionarArquivosSecretaria(input) {
         lista.innerHTML = '';
         return;
     }
-    var html = '<div style="background: rgba(2, 132, 199, 0.15); padding: 8px 12px; border-radius: 6px; border:1px solid rgba(2, 132, 199, 0.3);">';
-    html += '<strong style="color:#fff;"><i class="fa-solid fa-paperclip"></i> ' + input.files.length + ' arquivo(s) pronto(s) para envio:</strong><ul style="margin:4px 0 0; padding-left:18px; color:#e2e8f0;">';
+
+    var totalBytes = 0;
+    for (var i = 0; i < input.files.length; i++) {
+        totalBytes += input.files[i].size;
+    }
+
+    var html = '<div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px; margin-top:12px;">';
+    
+    // Cabeçalho da listagem em alto contraste
+    html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;">';
+    html += '  <div style="font-size:0.86rem; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:6px;">';
+    html += '    <i class="fa-solid fa-circle-check" style="color:#10b981;"></i>';
+    html += '    <span>' + input.files.length + ' arquivo' + (input.files.length > 1 ? 's prontos' : ' pronto') + ' para envio</span>';
+    html += '  </div>';
+    html += '  <span style="font-size:0.75rem; font-weight:600; color:#475569; background:#e2e8f0; padding:2px 8px; border-radius:12px;">';
+    html += '    Total: ' + formatarTamanhoArquivo(totalBytes);
+    html += '  </span>';
+    html += '</div>';
+
+    // Lista visual de arquivos
+    html += '<div style="max-height:220px; overflow-y:auto; padding-right:4px; display:flex; flex-direction:column; gap:8px;">';
+
     for (var i = 0; i < input.files.length; i++) {
         var f = input.files[i];
-        var sizeKb = (f.size / 1024).toFixed(1);
-        html += '<li>' + f.name + ' (' + sizeKb + ' KB)</li>';
+        var info = obterIconeArquivoSecretaria(f.name);
+        var sizeText = formatarTamanhoArquivo(f.size);
+        var nomeLimpo = f.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        html += '<div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px; box-shadow:0 1px 2px rgba(0,0,0,0.03);">';
+        
+        // Esquerda: Ícone grande colorido + Detalhes do arquivo em texto escuro
+        html += '  <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">';
+        html += '    <div style="width:36px; height:36px; border-radius:8px; background:' + info.bg + '; border:1px solid ' + info.border + '; display:flex; align-items:center; justify-content:center; flex-shrink:0;">';
+        html += '      <i class="' + info.icon + '" style="font-size:1.25rem; color:' + info.color + ';"></i>';
+        html += '    </div>';
+        html += '    <div style="min-width:0; flex:1;">';
+        html += '      <div style="font-size:0.86rem; font-weight:600; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + nomeLimpo + '">';
+        html +=          nomeLimpo;
+        html += '      </div>';
+        html += '      <div style="font-size:0.74rem; color:#64748b; display:flex; align-items:center; gap:6px; margin-top:2px;">';
+        html += '        <span style="background:' + info.bg + '; color:' + info.color + '; font-weight:700; font-size:0.68rem; padding:1px 5px; border-radius:4px; border:1px solid ' + info.border + ';">' + info.label + '</span>';
+        html += '        <span>' + sizeText + '</span>';
+        html += '      </div>';
+        html += '    </div>';
+        html += '  </div>';
+
+        // Direita: Botão de remoção individual
+        html += '  <button type="button" onclick="removerArquivoSecretaria(' + i + ')" title="Remover este arquivo" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; color:#94a3b8; cursor:pointer; flex-shrink:0; transition:all 0.15s;" onmouseover="this.style.color=\'#ef4444\'; this.style.borderColor=\'#fca5a5\'; this.style.background=\'#fef2f2\';" onmouseout="this.style.color=\'#94a3b8\'; this.style.borderColor=\'#e2e8f0\'; this.style.background=\'#f8fafc\';">';
+        html += '    <i class="fa-solid fa-xmark"></i>';
+        html += '  </button>';
+
+        html += '</div>';
     }
-    html += '</ul></div>';
+
+    html += '</div></div>';
+
     lista.innerHTML = html;
     lista.style.display = 'block';
+}
+
+function removerArquivoSecretaria(index) {
+    var input = document.getElementById('modal_input_arquivos');
+    if (!input || !input.files) return;
+
+    try {
+        var dt = new DataTransfer();
+        for (var i = 0; i < input.files.length; i++) {
+            if (i !== index) {
+                dt.items.add(input.files[i]);
+            }
+        }
+        input.files = dt.files;
+    } catch (e) {
+        console.warn('DataTransfer não suportado', e);
+    }
+    aoSelecionarArquivosSecretaria(input);
 }
 
 function validarEnvioAnexoSecretaria(form) {
@@ -1106,4 +1249,37 @@ document.addEventListener('click', function(e) {
     var modal = document.getElementById('modalAnexoSecretaria');
     if (modal && e.target === modal) fecharModalAnexoSecretaria();
 });
+
+// Drag & Drop na Dropzone de Pranchas
+(function() {
+    var dropzone = document.getElementById('modal_dropzone');
+    if (!dropzone) return;
+    ['dragenter', 'dragover'].forEach(function(evt) {
+        dropzone.addEventListener(evt, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.style.background = '#e0f2fe';
+            dropzone.style.borderColor = '#0369a1';
+        }, false);
+    });
+    ['dragleave'].forEach(function(evt) {
+        dropzone.addEventListener(evt, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.style.background = '#f0f9ff';
+            dropzone.style.borderColor = '#0284c7';
+        }, false);
+    });
+    dropzone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.style.background = '#f0f9ff';
+        dropzone.style.borderColor = '#0284c7';
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            var input = document.getElementById('modal_input_arquivos');
+            input.files = e.dataTransfer.files;
+            aoSelecionarArquivosSecretaria(input);
+        }
+    }, false);
+})();
 </script>
