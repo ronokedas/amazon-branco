@@ -60,7 +60,7 @@ if ($action === 'embarcacoes_cliente') {
         $clausulaWhere = '(' . implode(' OR ', $clausulasOr) . ')';
 
         $stmt = $pdo->prepare("
-            SELECT DISTINCT e.id, e.nome, COALESCE(e.numero_inscricao, e.registro, '') as registro, e.possui_propulsao
+            SELECT DISTINCT e.id, e.nome, e.tipo_embarcacao, COALESCE(e.numero_inscricao, e.registro, '') as registro, e.possui_propulsao
             FROM embarcacoes e
             LEFT JOIN clientes_embarcacoes ce ON ce.embarcacao_id = e.id AND (ce.status = 'ATIVO' OR ce.status IS NULL OR ce.desvinculado_em IS NULL)
             WHERE {$clausulaWhere}
