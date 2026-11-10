@@ -60,9 +60,7 @@ if ($filtro_status !== 'todos') {
 }
 
 if (!empty($filtro_busca)) {
-    $where[] = '(c.nome LIKE :busca OR p.numero LIKE :busca2)';
-    $params[':busca']  = '%' . $filtro_busca . '%';
-    $params[':busca2'] = '%' . $filtro_busca . '%';
+    propostasAplicarFiltroBusca($where, $params, $filtro_busca);
 }
 
 if (!empty($filtro_data_ini)) {
@@ -127,28 +125,9 @@ try {
     $propostas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Buscar embarcações de cada proposta
-    $embarcacoesPorProposta = [];
-    if (!empty($propostas)) {
-        $ids = array_column($propostas, 'id');
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $stmtEmb = $pdo->prepare("
-            SELECT pe.proposta_id, e.nome, e.registro
-            FROM propostas_embarcacoes pe
-            INNER JOIN embarcacoes e ON e.id = pe.embarcacao_id
-            WHERE pe.proposta_id IN ({$placeholders})
-            ORDER BY e.nome ASC
-        ");
-        $stmtEmb->execute(array_values($ids));
-        $vinculos = $stmtEmb->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($vinculos as $v) {
-            $pid = $v['proposta_id'];
-            if (!isset($embarcacoesPorProposta[$pid])) {
-                $embarcacoesPorProposta[$pid] = [];
-            }
-            $embarcacoesPorProposta[$pid][] = $v['nome'] . (!empty($v['registro']) ? ' (' . $v['registro'] . ')' : '');
-        }
-    }
+    $embarcacoesPorProposta = !empty($propostas)
+        ? propostasBuscarEmbarcacoesMapa($pdo, array_column($propostas, 'id'))
+        : [];
 } catch (Exception $e) {
     error_log('Erro ao listar propostas: ' . $e->getMessage());
     $propostas = [];
@@ -434,39 +413,9 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
         </div>
 
         <!-- Filtros -->
-        <div class="filtros" style="margin: 15px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
-            <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 200px;">
-                <label><i class="fas fa-search"></i> Buscar</label>
-                <input type="text" id="buscaProposta" placeholder="Nome do cliente ou número da proposta..."
-                       value="<?php echo h($filtro_busca); ?>"
-                       onkeydown="if(event.key==='Enter')filtrarPropostas()">
-            </div>
-            <div class="form-group" style="margin-bottom: 0; min-width: 150px;">
-                <label><i class="fas fa-filter"></i> Status</label>
-                <select id="filtroStatus" onchange="filtrarPropostas()">
-                    <option value="todos" <?php echo $filtro_status === 'todos' ? 'selected' : ''; ?>>Todos</option>
-                    <?php foreach ($statusConfig as $val => $cfg): ?>
-                        <option value="<?php echo $val; ?>" <?php echo $filtro_status === $val ? 'selected' : ''; ?>>
-                            <?php echo $cfg['label']; ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="form-group" style="margin-bottom: 0; min-width: 130px;">
-                <label><i class="fas fa-calendar"></i> Data Início</label>
-                <input type="date" id="filtroDataIni" value="<?php echo h($filtro_data_ini); ?>" onchange="filtrarPropostas()">
-            </div>
-            <div class="form-group" style="margin-bottom: 0; min-width: 130px;">
-                <label><i class="fas fa-calendar"></i> Data Fim</label>
-                <input type="date" id="filtroDataFim" value="<?php echo h($filtro_data_fim); ?>" onchange="filtrarPropostas()">
-            </div>
-            <div class="form-group" style="margin-bottom: 0; min-width: 90px; display: flex; align-items: flex-end;">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="limparFiltros()" style="width: 100%;">
-                    <i class="fas fa-times"></i> Limpar
-                </button>
-            </div>
-        </div>
+        <?php propostasRenderFiltrosBar($statusConfig, $filtro_busca, $filtro_status, $filtro_data_ini, $filtro_data_fim); ?>
 
+        <div id="propostasListaContainer">
         <?php if (empty($propostas)): ?>
             <div class="tabela-vazia">
                 <i class="fas fa-file-invoice"></i>
@@ -713,6 +662,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                 </nav>
             <?php endif; ?>
         </div>
+        </div><!-- /propostasListaContainer -->
     </div>
     <?php endif; ?>
 
@@ -747,28 +697,6 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
 }
 </style>
 
-<script>
-function filtrarPropostas() {
-    const status   = document.getElementById('filtroStatus').value;
-    const busca    = document.getElementById('buscaProposta').value.trim();
-    const dataIni  = document.getElementById('filtroDataIni').value;
-    const dataFim  = document.getElementById('filtroDataFim').value;
-    const porPagina = '<?php echo (int)$porPagina; ?>';
-
-    let url = '<?php echo APP_URL; ?>comercial/propostas?';
-    const params = [];
-    if (status !== 'todos') params.push('status=' + encodeURIComponent(status));
-    if (busca !== '')       params.push('busca=' + encodeURIComponent(busca));
-    if (dataIni !== '')     params.push('data_ini=' + encodeURIComponent(dataIni));
-    if (dataFim !== '')     params.push('data_fim=' + encodeURIComponent(dataFim));
-    if (porPagina !== '15') params.push('por_pagina=' + encodeURIComponent(porPagina));
-
-    window.location.href = url + params.join('&');
-}
-
-function limparFiltros() {
-    window.location.href = '<?php echo APP_URL; ?>comercial/propostas';
-}
-</script>
+<?php propostasRenderScriptFiltroAjax(APP_URL . 'comercial/propostas', $porPagina); ?>
 
 <?php require_once __DIR__ . '/../../../includes/footer.php'; ?>

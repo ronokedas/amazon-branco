@@ -2426,4 +2426,5 @@ function gerarObservacoesPadraoLicenca(array $dados, string $tipo = 'LC', ?strin
 // Sistema de Gestão da Qualidade (ISO 9001:2015 & NORMAM)
 require_once __DIR__ . '/sgq.php';
 require_once __DIR__ . '/embarcacoes_motores.php';
+require_once __DIR__ . '/propostas_filtros.php';
 
