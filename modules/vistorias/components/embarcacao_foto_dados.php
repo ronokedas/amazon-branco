@@ -121,7 +121,18 @@
                             </div>
                             <div class="vessel-spec-item">
                                 <span class="vessel-spec-label">Propulsão Naval</span>
-                                <span class="vessel-spec-val"><?= !empty($ag['possui_propulsao']) ? 'Com Propulsão' : 'Sem Propulsão' ?></span>
+                                <?php
+                                $infoMotoresCampo = '';
+                                if (!empty($ag['possui_propulsao']) && !empty($ag['embarcacao_id']) && isset($pdo) && function_exists('embarcacaoBuscarMotores')) {
+                                    $motoresCampo = embarcacaoBuscarMotores($pdo, (string)$ag['embarcacao_id'], $ag);
+                                    if (!empty($motoresCampo)) {
+                                        $resumoCampo = embarcacaoFormatarMotoresResumo($motoresCampo);
+                                        $qtdM = count($motoresCampo);
+                                        $infoMotoresCampo = $qtdM . ($qtdM === 1 ? ' motor' : ' motores') . ($resumoCampo['potencia_total'] !== '' ? ' · ' . $resumoCampo['potencia_total'] : '');
+                                    }
+                                }
+                                ?>
+                                <span class="vessel-spec-val"><?= !empty($ag['possui_propulsao']) ? 'Com Propulsão' : 'Sem Propulsão' ?><?php if ($infoMotoresCampo !== ''): ?><small style="display:block; font-weight:500; font-size:0.76rem; opacity:0.8;"><?= h($infoMotoresCampo) ?></small><?php endif; ?></span>
                             </div>
                             <div class="vessel-spec-item">
                                 <span class="vessel-spec-label">Lotação Passageiros</span>

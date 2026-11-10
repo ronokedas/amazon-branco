@@ -138,7 +138,11 @@ function embarcacaoValidarProntidaoComercial(PDO $pdo, string $embarcacaoId): ar
     if (!isset($emb['possui_propulsao']) || $emb['possui_propulsao'] === null) {
         $pendencias[] = 'Declaração de propulsão (Possui Propulsão? Sim/Não) pendente';
     } elseif ((int)$emb['possui_propulsao'] === 1) {
-        if (empty($emb['fabricante_motor']) && empty($emb['modelo_motor']) && empty($emb['potencia_kw'])) {
+        $temMotorLegado = !empty($emb['fabricante_motor']) || !empty($emb['modelo_motor']) || !empty($emb['potencia_kw']);
+        $temMotorLista = !$temMotorLegado && function_exists('embarcacaoBuscarMotores')
+            ? !empty(embarcacaoBuscarMotores($pdo, $embarcacaoId, $emb))
+            : false;
+        if (!$temMotorLegado && !$temMotorLista) {
             $pendencias[] = 'Dados do motor (fabricante, modelo ou potência) obrigatórios para embarcação propulsada';
         }
     }

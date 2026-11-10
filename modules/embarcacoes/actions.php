@@ -49,6 +49,15 @@ switch ($action) {
         $modelo_motor = trim($_POST['modelo_motor'] ?? '');
         $numero_motor = trim($_POST['numero_motor'] ?? '');
         $potencia_kw = trim($_POST['potencia_kw'] ?? '');
+        $motoresNormalizados = embarcacaoNormalizarListaMotores(
+            $_POST['motores'] ?? null,
+            [
+                'fabricante_motor' => $fabricante_motor,
+                'modelo_motor' => $modelo_motor,
+                'numero_motor' => $numero_motor,
+                'potencia_kw' => $potencia_kw,
+            ]
+        );
         $material_casco = trim($_POST['material_casco'] ?? '');
         $tipo_navegacao = trim($_POST['tipo_navegacao'] ?? '');
         $area_navegacao = trim($_POST['area_navegacao'] ?? '');
@@ -165,8 +174,21 @@ switch ($action) {
             }
         }
 
-        // Se sem propulsão (0), limpa os campos de motor
+        // Se sem propulsão (0), limpa os campos de motor; caso contrário sincroniza Motor 1 e potência total
         if ($possui_propulsao === 0) {
+            $motoresNormalizados = [];
+            $fabricante_motor = '';
+            $modelo_motor = '';
+            $numero_motor = '';
+            $potencia_kw = '';
+        } elseif (!empty($motoresNormalizados)) {
+            $primeiroMotor = $motoresNormalizados[0];
+            $fabricante_motor = $primeiroMotor['fabricante'];
+            $modelo_motor = $primeiroMotor['modelo'];
+            $numero_motor = $primeiroMotor['numero'];
+            $resumoMotores = embarcacaoFormatarMotoresResumo($motoresNormalizados);
+            $potencia_kw = $resumoMotores['potencia_total'] !== '' ? $resumoMotores['potencia_total'] : $primeiroMotor['potencia_kw'];
+        } else {
             $fabricante_motor = '';
             $modelo_motor = '';
             $numero_motor = '';
@@ -377,6 +399,9 @@ switch ($action) {
                     sgqRegistrarAuditoriaCadastral($pdo, 'EMBARCACAO', $id, 'ALTERACAO', $dadosAntigos, $dados, $_POST['motivo_alteracao'] ?? 'Edição de cadastro técnico da embarcação');
                 }
 
+                // Persistir motores propulsores vinculados
+                embarcacaoSalvarMotores($pdo, $id, $possui_propulsao, $motoresNormalizados);
+
                 // Sincronizar vínculo na tabela clientes_embarcacoes sem desvincular as demais embarcações do cliente
                 require_once __DIR__ . '/../../includes/cliente_vinculos.php';
                 vincularEmbarcacaoAoCliente($pdo, $id, !empty($proprietario_id) ? $proprietario_id : null, $_SESSION['usuario_id'] ?? null);
@@ -399,6 +424,9 @@ switch ($action) {
                 if (function_exists('sgqRegistrarAuditoriaCadastral')) {
                     sgqRegistrarAuditoriaCadastral($pdo, 'EMBARCACAO', $novoId, 'CRIACAO', null, $dados, 'Cadastro inicial da embarcação');
                 }
+
+                // Persistir motores propulsores vinculados
+                embarcacaoSalvarMotores($pdo, $novoId, $possui_propulsao, $motoresNormalizados);
 
                 // Sincronizar vínculo na tabela clientes_embarcacoes sem desvincular as demais embarcações do cliente
                 require_once __DIR__ . '/../../includes/cliente_vinculos.php';

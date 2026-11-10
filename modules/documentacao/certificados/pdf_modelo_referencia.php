@@ -56,10 +56,10 @@ $pdfRef->SetDrawColor(0, 0, 0);
 $pdfRef->SetTextColor(0, 0, 0);
 $pdfRef->SetLineWidth(0.45);
 
-$cellRef = static function ($x, $y, $w, $h, $texto = '', $border = 1, $align = 'C', $style = '', $size = 9) use ($pdfRef, $txt): void {
+$cellRef = static function ($x, $y, $w, $h, $texto = '', $border = 1, $align = 'C', $style = '', $size = 9, $fitcell = false) use ($pdfRef, $txt): void {
     $pdfRef->SetFont('helvetica', $style, $size);
     $pdfRef->SetXY($x, $y);
-    $pdfRef->MultiCell($w, $h, $txt($texto), $border, $align, false, 0, '', '', true, 0, false, true, $h, 'M');
+    $pdfRef->MultiCell($w, $h, $txt($texto), $border, $align, false, 0, '', '', true, 0, false, true, $h, 'M', $fitcell);
 };
 $contem = static function ($origemTexto, array $termos): bool {
     $origemTexto = mb_strtolower((string)$origemTexto, 'UTF-8');
@@ -131,8 +131,11 @@ $cellRef($x + 138, $y + 8, 51, 28, 'Longo Curso' . ($contem($areaNav, ['longo cu
 $y = 150;
 $cellRef($x, $y, 138, 8, 'Fabricante, Modelo e Número do Motor', 1, 'C', '', 9);
 $cellRef($x + 138, $y, 51, 8, "Potência Propulsiva\nTotal (kW)", 1, 'C', '', 8);
-$cellRef($x, $y + 8, 138, 13, $motorPdf, 1, 'C', 'B', 8);
-$cellRef($x + 138, $y + 8, 51, 13, $potenciaPdf, 1, 'C', 'B', 9);
+$linhasMotorPdf = substr_count($motorPdf, "\n") + 1;
+$tamanhoMotorPdf = ($linhasMotorPdf >= 4 || mb_strlen($motorPdf, 'UTF-8') > 170) ? 6.5 : (($linhasMotorPdf >= 3 || mb_strlen($motorPdf, 'UTF-8') > 105) ? 7.0 : ($linhasMotorPdf === 2 ? 7.5 : 8));
+$tamanhoPotenciaPdf = mb_strlen($potenciaPdf, 'UTF-8') > 20 ? 7.5 : 9;
+$cellRef($x, $y + 8, 138, 13, $motorPdf, 1, 'C', 'B', $tamanhoMotorPdf, true);
+$cellRef($x + 138, $y + 8, 51, 13, $potenciaPdf, 1, 'C', 'B', $tamanhoPotenciaPdf, true);
 
 $y = 175;
 $cellRef($x, $y, 87, 9, 'Material do Casco', 1, 'C', '', 9);

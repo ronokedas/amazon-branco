@@ -59,6 +59,26 @@ if (!empty($valoresPreservados)) {
     }
 }
 
+// Carregar lista de motores propulsores (com fallback transparente para campos legados ou erros de validação)
+$motoresEmbarcacao = [];
+if (!empty($valoresPreservados['motores']) && is_array($valoresPreservados['motores'])) {
+    $motoresEmbarcacao = embarcacaoNormalizarListaMotores($valoresPreservados['motores'], $embarcacao);
+} elseif ($isEdicao && !empty($embarcacao['id'])) {
+    $motoresEmbarcacao = embarcacaoBuscarMotores($pdo, (string)$embarcacao['id'], $embarcacao);
+} elseif (!empty($embarcacao)) {
+    $motoresEmbarcacao = embarcacaoNormalizarListaMotores(null, $embarcacao);
+}
+if (empty($motoresEmbarcacao)) {
+    $motoresEmbarcacao = [[
+        'ordem' => 1,
+        'posicao' => '',
+        'fabricante' => '',
+        'modelo' => '',
+        'numero' => '',
+        'potencia_kw' => '',
+    ]];
+}
+
 // Buscar clientes (proprietarios e armadores) ativos para vinculo direto
 $clientesProprietarios = [];
 try {
@@ -228,6 +248,144 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
     align-items: end;
 }
 .test-data-controls .form-group { margin: 0; }
+.motores-panel {
+    border: 1px solid var(--cor-borda, #d8e2de);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin: 6px 0 20px;
+    background: rgba(9, 155, 112, 0.03);
+    transition: opacity 0.2s ease;
+}
+.motores-panel.is-disabled {
+    opacity: 0.72;
+    background: rgba(148, 163, 184, 0.06);
+}
+.motores-panel__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+.motores-panel__title {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--cor-texto, #0f172a);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.motores-panel__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.motores-total-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: rgba(9, 155, 112, 0.12);
+    color: var(--cor-destaque);
+    border: 1px solid rgba(9, 155, 112, 0.24);
+}
+.motor-card {
+    background: var(--cor-superficie, #ffffff);
+    border: 1px solid var(--cor-borda, #cbd5e1);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+.motor-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--cor-borda, #e2e8f0);
+}
+.motor-card__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    background: var(--cor-destaque);
+    color: #ffffff;
+}
+.motor-posicao-chips {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.motor-chip {
+    border: 1px solid var(--cor-borda, #cbd5e1);
+    background: var(--cor-fundo, #f8fafc);
+    color: var(--cor-texto-secundario, #475569);
+    border-radius: 999px;
+    padding: 3px 9px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.motor-chip:hover,
+.motor-chip.is-active {
+    border-color: var(--cor-destaque);
+    background: rgba(9, 155, 112, 0.12);
+    color: var(--cor-destaque);
+}
+.btn-remover-motor {
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #dc2626;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+}
+.btn-remover-motor:hover {
+    background: #fee2e2;
+    border-color: #f87171;
+}
+.motores-resumo-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--cor-borda, #cbd5e1);
+}
+.aviso-sem-propulsao {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: rgba(100, 116, 139, 0.08);
+    border: 1px solid rgba(100, 116, 139, 0.22);
+    color: var(--cor-texto-secundario, #475569);
+    font-size: 0.86rem;
+}
 @media (max-width: 767px) {
     .tabs-nav {
         display: grid;
@@ -436,41 +594,172 @@ $marcas_linha_carga = ['T', 'V', 'I', 'IAN', 'AD', 'ADT'];
                                 <option value="1" <?php echo ($propVal === 1) ? 'selected' : ''; ?>>SIM (Com propulsão)</option>
                                 <option value="0" <?php echo ($propVal === 0) ? 'selected' : ''; ?>>NÃO (Sem propulsão - Balsa/Flutuante)</option>
                             </select>
-                            <small class="text-muted">Campo obrigatório. Define validade de certificados e aplicação de pacotes comerciais (Balsa R$ 7.525 vs Propulsada R$ 8.200).</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="fabricante_motor"><i class="fas fa-industry"></i> Fabricante do Motor</label>
-                            <input type="text" id="fabricante_motor" name="fabricante_motor" maxlength="300" autocomplete="off" value="<?php echo h($embarcacao['fabricante_motor'] ?? ''); ?>">
-                        </div>
-                    </div>
-
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label for="modelo_motor"><i class="fas fa-cog"></i> Modelo do Motor</label>
-                            <input type="text" id="modelo_motor" name="modelo_motor" maxlength="150" autocomplete="off" value="<?php echo h($embarcacao['modelo_motor'] ?? ''); ?>">
-                        </div>
-                        <div class="form-group">
-                            <label for="numero_motor"><i class="fas fa-hashtag"></i> Número do Motor</label>
-                            <input type="text" id="numero_motor" name="numero_motor" maxlength="100" autocomplete="new-password" aria-autocomplete="none" autocapitalize="characters" spellcheck="false" data-lpignore="true" data-1p-ignore value="<?php echo h($embarcacao['numero_motor'] ?? ''); ?>">
-                        </div>
-                    </div>
-
-                    <small class="text-muted" id="ajuda_propulsao" style="display:block; margin: -4px 0 14px;">
-                        Para embarcações com propulsão, fabricante, modelo, número do motor e potência são obrigatórios e alimentam o CSN.
-                    </small>
-
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label for="potencia_kw"><i class="fas fa-bolt"></i> Potência (kW / HP)</label>
-                            <input type="text" id="potencia_kw" name="potencia_kw" maxlength="50" autocomplete="off" inputmode="decimal" placeholder="Ex.: 450 kW" value="<?php echo h($embarcacao['potencia_kw'] ?? ''); ?>">
+                            <small class="text-muted">Campo obrigatório. Define validade de certificados (NORMAM-201/202) e aplicação de pacotes comerciais (Balsa R$ 7.525 vs Propulsada R$ 8.200).</small>
                         </div>
                         <div class="form-group">
                             <label for="material_casco"><i class="fas fa-layer-group"></i> Material do Casco</label>
                             <select id="material_casco" name="material_casco">
                                 <?php echo renderSelectOptions($materiais_casco, $embarcacao['material_casco'] ?? ''); ?>
                             </select>
+                            <small class="text-muted">Material predominante da estrutura do casco da embarcação.</small>
                         </div>
                     </div>
+
+                    <?php
+                    $posicoesChips = ['Principal', 'Boreste (BE)', 'Bombordo (BB)', 'Central'];
+                    $renderMotorCard = static function ($idx, array $motorDados, bool $isTemplate = false) use ($posicoesChips): void {
+                        $idxStr = (string)$idx;
+                        $ordemVisual = $isTemplate ? '1' : (string)((int)$idx + 1);
+                        $idPrefix = ($idxStr === '0' && !$isTemplate) ? '' : '_' . $idxStr;
+                        $idFab = 'fabricante_motor' . $idPrefix;
+                        $idMod = 'modelo_motor' . $idPrefix;
+                        $idNum = 'numero_motor' . $idPrefix;
+                        $idPot = 'potencia_kw' . $idPrefix;
+                        $idPos = 'posicao_motor' . $idPrefix;
+                        $posAtual = trim((string)($motorDados['posicao'] ?? ''));
+                    ?>
+                        <div class="motor-card" data-motor-index="<?php echo h($idxStr); ?>">
+                            <div class="motor-card__header">
+                                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                    <span class="motor-card__badge">
+                                        <i class="fas fa-cog"></i> Motor <span class="motor-ordem"><?php echo h($ordemVisual); ?></span>
+                                    </span>
+                                    <div class="motor-posicao-chips" title="Atalhos rápidos de posição do motor a bordo">
+                                        <?php foreach ($posicoesChips as $chip): ?>
+                                            <button type="button"
+                                                    class="motor-chip<?php echo ($posAtual === $chip) ? ' is-active' : ''; ?>"
+                                                    onclick="preencherPosicaoMotor(this, '<?php echo h($chip); ?>')">
+                                                <?php echo h($chip); ?>
+                                            </button>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                                <button type="button"
+                                        class="btn-remover-motor"
+                                        onclick="removerMotorEmbarcacao(this)"
+                                        title="Remover este motor da embarcação">
+                                    <i class="fas fa-trash-alt"></i> Remover
+                                </button>
+                            </div>
+
+                            <div class="grid-3">
+                                <div class="form-group">
+                                    <label for="<?php echo h($idFab); ?>"><i class="fas fa-industry"></i> Fabricante do Motor</label>
+                                    <input type="text"
+                                           id="<?php echo h($idFab); ?>"
+                                           class="motor-input-fabricante"
+                                           name="motores[<?php echo h($idxStr); ?>][fabricante]"
+                                           maxlength="300"
+                                           autocomplete="off"
+                                           placeholder="Ex.: Caterpillar, Scania, Cummins"
+                                           value="<?php echo h($motorDados['fabricante'] ?? ''); ?>">
+                                    <small class="text-muted">Marca fabricante do motor (alimenta o CSN).</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="<?php echo h($idMod); ?>"><i class="fas fa-cog"></i> Modelo do Motor</label>
+                                    <input type="text"
+                                           id="<?php echo h($idMod); ?>"
+                                           class="motor-input-modelo"
+                                           name="motores[<?php echo h($idxStr); ?>][modelo]"
+                                           maxlength="150"
+                                           autocomplete="off"
+                                           placeholder="Ex.: C18 ACERT, DS11"
+                                           value="<?php echo h($motorDados['modelo'] ?? ''); ?>">
+                                    <small class="text-muted">Modelo técnico de fábrica do equipamento.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="<?php echo h($idPos); ?>"><i class="fas fa-arrows-alt-h"></i> Posição / Bordo (Opcional)</label>
+                                    <input type="text"
+                                           id="<?php echo h($idPos); ?>"
+                                           class="motor-input-posicao"
+                                           name="motores[<?php echo h($idxStr); ?>][posicao]"
+                                           maxlength="60"
+                                           autocomplete="off"
+                                           placeholder="Ex.: Boreste (BE), Bombordo (BB)"
+                                           oninput="atualizarResumoMotores(); sincronizarChipsPosicao(this);"
+                                           value="<?php echo h($posAtual); ?>">
+                                    <small class="text-muted">Diferencia os motores em embarcações multimotoras.</small>
+                                </div>
+                            </div>
+
+                            <div class="grid-2" style="margin-bottom:0;">
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label for="<?php echo h($idNum); ?>"><i class="fas fa-hashtag"></i> Número do Motor</label>
+                                    <input type="text"
+                                           id="<?php echo h($idNum); ?>"
+                                           class="motor-input-numero"
+                                           name="motores[<?php echo h($idxStr); ?>][numero]"
+                                           maxlength="100"
+                                           autocomplete="new-password"
+                                           aria-autocomplete="none"
+                                           autocapitalize="characters"
+                                           spellcheck="false"
+                                           data-lpignore="true"
+                                           data-1p-ignore
+                                           placeholder="Ex.: SC-998877"
+                                           value="<?php echo h($motorDados['numero'] ?? ''); ?>">
+                                    <small class="text-muted">Número de série gravado na plaqueta/bloco.</small>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label for="<?php echo h($idPot); ?>"><i class="fas fa-bolt"></i> Potência (kW / HP)</label>
+                                    <input type="text"
+                                           id="<?php echo h($idPot); ?>"
+                                           class="motor-input-potencia"
+                                           name="motores[<?php echo h($idxStr); ?>][potencia_kw]"
+                                           maxlength="50"
+                                           autocomplete="off"
+                                           inputmode="decimal"
+                                           placeholder="Ex.: 450 kW"
+                                           oninput="atualizarResumoMotores()"
+                                           value="<?php echo h($motorDados['potencia_kw'] ?? ''); ?>">
+                                    <small class="text-muted">Potência individual deste motor (somada no total do CSN).</small>
+                                </div>
+                            </div>
+                        </div>
+                    <?php
+                    };
+                    ?>
+
+                    <section id="secao_motores_embarcacao" class="motores-panel">
+                        <div class="motores-panel__header">
+                            <div>
+                                <h4 class="motores-panel__title">
+                                    <i class="fas fa-cogs" style="color:var(--cor-destaque);"></i> Motores Propulsores (MCP)
+                                </h4>
+                                <small class="text-muted" id="ajuda_propulsao" style="display:block;">
+                                    Para embarcações com propulsão, cadastre todos os motores instalados; a potência total será consolidada automaticamente no CSN.
+                                </small>
+                            </div>
+                            <div class="motores-panel__actions">
+                                <span id="badge_resumo_motores" class="motores-total-pill">1 motor</span>
+                                <button type="button" id="btn_adicionar_motor_topo" class="btn btn-primary btn-sm" onclick="adicionarMotorEmbarcacao()">
+                                    <i class="fas fa-plus"></i> Adicionar Motor
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="aviso_sem_propulsao" class="aviso-sem-propulsao" style="display:none;">
+                            <i class="fas fa-ship" style="font-size:1.1rem; color:#64748b;"></i>
+                            <span><strong>Embarcação sem propulsão (Balsa / Chata / Flutuante):</strong> os dados de motor não se aplicam e serão apresentados como "Embarcação sem Propulsão" no CSN.</span>
+                        </div>
+
+                        <div id="lista_motores_container">
+                            <?php foreach ($motoresEmbarcacao as $idxMotor => $motorDados): ?>
+                                <?php $renderMotorCard($idxMotor, $motorDados, false); ?>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div id="rodape_motores_acao" class="motores-resumo-footer">
+                            <small id="resumo_potencia_total_texto" style="font-weight:600; color:var(--cor-texto-secundario);"></small>
+                            <button type="button" id="btn_adicionar_motor_rodape" class="btn btn-secondary btn-sm" onclick="adicionarMotorEmbarcacao()">
+                                <i class="fas fa-plus-circle"></i> Adicionar Outro Motor
+                            </button>
+                        </div>
+
+                        <template id="template_motor_card">
+                            <?php $renderMotorCard('__IDX__', ['posicao' => '', 'fabricante' => '', 'modelo' => '', 'numero' => '', 'potencia_kw' => ''], true); ?>
+                        </template>
+                    </section>
 
                     <div class="grid-2">
                         <div class="form-group">
@@ -974,39 +1263,224 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+function sincronizarChipsPosicao(input) {
+    const card = input ? input.closest('.motor-card') : null;
+    if (!card) return;
+    const valorAtual = (input.value || '').trim();
+    card.querySelectorAll('.motor-chip').forEach(chip => {
+        chip.classList.toggle('is-active', chip.textContent.trim() === valorAtual);
+    });
+}
+
+function preencherPosicaoMotor(btn, valor) {
+    const card = btn ? btn.closest('.motor-card') : null;
+    if (!card) return;
+    const input = card.querySelector('.motor-input-posicao');
+    if (!input || input.disabled) return;
+    input.value = valor;
+    sincronizarChipsPosicao(input);
+    atualizarResumoMotores();
+}
+
+function reorganizarIndicesMotores() {
+    const container = document.getElementById('lista_motores_container');
+    if (!container) return;
+    const cards = Array.from(container.querySelectorAll('.motor-card'));
+    const total = cards.length;
+    const mapaCampos = [
+        ['motor-input-fabricante', 'fabricante', 'fabricante_motor'],
+        ['motor-input-modelo', 'modelo', 'modelo_motor'],
+        ['motor-input-posicao', 'posicao', 'posicao_motor'],
+        ['motor-input-numero', 'numero', 'numero_motor'],
+        ['motor-input-potencia', 'potencia_kw', 'potencia_kw'],
+    ];
+
+    cards.forEach((card, idx) => {
+        card.setAttribute('data-motor-index', String(idx));
+        const ordemEl = card.querySelector('.motor-ordem');
+        if (ordemEl) ordemEl.textContent = String(idx + 1);
+
+        mapaCampos.forEach(([cls, campoNome, baseId]) => {
+            const input = card.querySelector('.' + cls);
+            if (!input) return;
+            input.name = `motores[${idx}][${campoNome}]`;
+            const novoId = idx === 0 ? baseId : `${baseId}_${idx}`;
+            input.id = novoId;
+            const grp = input.closest('.form-group');
+            const lbl = grp ? grp.querySelector('label') : null;
+            if (lbl) lbl.setAttribute('for', novoId);
+        });
+
+        const btnRem = card.querySelector('.btn-remover-motor');
+        if (btnRem) {
+            btnRem.style.display = total > 1 ? 'inline-flex' : 'none';
+        }
+    });
+}
+
+function calcularPotenciaTotalMotoresJS(potencias) {
+    const validas = potencias.map(p => (p || '').trim()).filter(Boolean);
+    if (validas.length === 0) return '';
+    if (validas.length === 1) return validas[0];
+
+    const fmtNum = v => {
+        if (Math.abs(v - Math.round(v)) < 0.0001) return String(Math.round(v));
+        return v.toFixed(2).replace(/\.?0+$/, '');
+    };
+
+    let somaKw = 0;
+    let todosTemKw = true;
+    let teveUnidadeKw = false;
+
+    let somaAlt = 0;
+    let todosTemAlt = true;
+    let unidadeAlt = null;
+
+    validas.forEach(p => {
+        const mKw = p.match(/(\d+(?:[.,]\d+)?)\s*kW\b/i);
+        const mBare = !mKw && /^\d+(?:[.,]\d+)?$/.test(p);
+        if (mKw) {
+            somaKw += parseFloat(mKw[1].replace(',', '.'));
+            teveUnidadeKw = true;
+        } else if (mBare) {
+            somaKw += parseFloat(p.replace(',', '.'));
+        } else {
+            todosTemKw = false;
+        }
+
+        const mAlt = p.match(/(\d+(?:[.,]\d+)?)\s*(HP|CV)\b/i);
+        if (mAlt) {
+            const u = mAlt[2].toUpperCase();
+            if (unidadeAlt === null) unidadeAlt = u;
+            else if (unidadeAlt !== u) todosTemAlt = false;
+            somaAlt += parseFloat(mAlt[1].replace(',', '.'));
+        } else {
+            todosTemAlt = false;
+        }
+    });
+
+    if (todosTemKw) {
+        const kwTexto = fmtNum(somaKw) + (teveUnidadeKw ? ' kW' : '');
+        if (todosTemAlt && unidadeAlt) {
+            return kwTexto + ' / ' + fmtNum(somaAlt) + ' ' + unidadeAlt;
+        }
+        return kwTexto;
+    }
+    if (todosTemAlt && unidadeAlt) {
+        return fmtNum(somaAlt) + ' ' + unidadeAlt;
+    }
+    return validas.join(' + ');
+}
+
+function atualizarResumoMotores() {
+    const container = document.getElementById('lista_motores_container');
+    const badge = document.getElementById('badge_resumo_motores');
+    const footerTexto = document.getElementById('resumo_potencia_total_texto');
+    const possuiPropulsao = document.getElementById('possui_propulsao');
+    if (!container) return;
+
+    const semPropulsao = possuiPropulsao && possuiPropulsao.value === '0';
+    const cards = Array.from(container.querySelectorAll('.motor-card'));
+    const qtd = cards.length;
+
+    if (semPropulsao) {
+        if (badge) badge.textContent = 'Sem propulsão';
+        if (footerTexto) footerTexto.textContent = '';
+        return;
+    }
+
+    const potencias = cards.map(c => (c.querySelector('.motor-input-potencia')?.value || '').trim());
+    const totalPotencia = calcularPotenciaTotalMotoresJS(potencias);
+    const rotuloQtd = qtd === 1 ? '1 motor' : `${qtd} motores`;
+
+    if (badge) {
+        badge.textContent = totalPotencia ? `${rotuloQtd} · Total: ${totalPotencia}` : rotuloQtd;
+    }
+    if (footerTexto) {
+        footerTexto.textContent = totalPotencia
+            ? `Potência Propulsiva Total estimada para o CSN: ${totalPotencia} (${rotuloQtd})`
+            : `Total configurado: ${rotuloQtd} (preencha a potência individual para cálculo automático do CSN)`;
+    }
+}
+
+function adicionarMotorEmbarcacao() {
+    const possuiPropulsao = document.getElementById('possui_propulsao');
+    if (possuiPropulsao && possuiPropulsao.value === '0') {
+        if (typeof mostrarMensagem === 'function') {
+            mostrarMensagem('warning', 'Altere "Possui Propulsão?" para SIM antes de incluir motores.');
+        }
+        possuiPropulsao.focus();
+        return;
+    }
+
+    const container = document.getElementById('lista_motores_container');
+    const tpl = document.getElementById('template_motor_card');
+    if (!container || !tpl) return;
+
+    const nextIdx = container.querySelectorAll('.motor-card').length;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = tpl.innerHTML.replace(/__IDX__/g, String(nextIdx)).trim();
+    const novoCard = wrapper.firstElementChild;
+    if (!novoCard) return;
+
+    container.appendChild(novoCard);
+    reorganizarIndicesMotores();
+    atualizarCamposPropulsao();
+
+    const primeiroCampo = novoCard.querySelector('.motor-input-fabricante');
+    if (primeiroCampo) {
+        setTimeout(() => {
+            primeiroCampo.focus({ preventScroll: true });
+            novoCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 40);
+    }
+}
+
+function removerMotorEmbarcacao(btn) {
+    const container = document.getElementById('lista_motores_container');
+    if (!container) return;
+    const cards = container.querySelectorAll('.motor-card');
+    if (cards.length <= 1) return;
+
+    const card = btn.closest('.motor-card');
+    if (card) {
+        card.remove();
+        reorganizarIndicesMotores();
+        atualizarResumoMotores();
+    }
+}
+
 function atualizarCamposPropulsao() {
     const possuiPropulsao = document.getElementById('possui_propulsao');
-    const campos = ['fabricante_motor', 'modelo_motor', 'numero_motor', 'potencia_kw']
-        .map(id => document.getElementById(id))
-        .filter(Boolean);
-    if (!possuiPropulsao) return;
+    const secao = document.getElementById('secao_motores_embarcacao');
+    const container = document.getElementById('lista_motores_container');
+    const avisoSem = document.getElementById('aviso_sem_propulsao');
+    const rodape = document.getElementById('rodape_motores_acao');
+    const btnTopo = document.getElementById('btn_adicionar_motor_topo');
+    const btnRodape = document.getElementById('btn_adicionar_motor_rodape');
+    if (!possuiPropulsao || !container) return;
 
     const comPropulsao = possuiPropulsao.value === '1';
     const semPropulsao = possuiPropulsao.value === '0';
 
-    campos.forEach(campo => {
+    if (secao) secao.classList.toggle('is-disabled', semPropulsao);
+    if (avisoSem) avisoSem.style.display = semPropulsao ? 'flex' : 'none';
+    if (container) container.style.display = semPropulsao ? 'none' : 'block';
+    if (rodape) rodape.style.display = semPropulsao ? 'none' : 'flex';
+    if (btnTopo) {
+        btnTopo.disabled = semPropulsao;
+        btnTopo.style.display = semPropulsao ? 'none' : 'inline-flex';
+    }
+    if (btnRodape) btnRodape.disabled = semPropulsao;
+
+    container.querySelectorAll('input').forEach(campo => {
         campo.required = false;
         campo.disabled = semPropulsao;
         campo.toggleAttribute('disabled', semPropulsao);
         campo.readOnly = false;
         campo.setAttribute('aria-disabled', semPropulsao ? 'true' : 'false');
 
-        const grupo = campo.closest('.form-group');
-        if (grupo) {
-            grupo.style.opacity = semPropulsao ? '0.55' : '1';
-            grupo.style.pointerEvents = semPropulsao ? 'none' : 'auto';
-
-            const label = grupo.querySelector('label');
-            if (label) {
-                const star = label.querySelector('.motor-star');
-                if (star) {
-                    star.remove();
-                }
-            }
-        }
-
         if (semPropulsao) {
-            campo.value = '';
             campo.classList.remove('field-invalid');
             campo.style.borderColor = '';
             if (campo.nextElementSibling && (campo.nextElementSibling.classList.contains('mensagem-erro') || campo.nextElementSibling.classList.contains('field-error'))) {
@@ -1020,9 +1494,12 @@ function atualizarCamposPropulsao() {
         ajuda.textContent = semPropulsao
             ? 'Embarcação sem propulsão: os dados do motor não se aplicam e serão apresentados assim no CSN.'
             : (comPropulsao
-                ? 'Para embarcações com propulsão, fabricante, modelo, número do motor e potência são obrigatórios e alimentam o CSN.'
-                : 'Selecione se a embarcação possui propulsão. Caso possua, os dados do motor serão obrigatórios.');
+                ? 'Para embarcações com propulsão, cadastre todos os motores instalados (1 ou mais). Fabricante, modelo, número e potência alimentam o CSN.'
+                : 'Selecione se a embarcação possui propulsão. Caso possua, cadastre os motores abaixo.');
     }
+
+    reorganizarIndicesMotores();
+    atualizarResumoMotores();
 }
 
 function agendarAtualizacaoCamposPropulsao() {
@@ -1252,8 +1729,18 @@ function preencherFormularioComDadosTeste() {
         numero_casco: `CASCO-${sufixo}`,
     };
 
+    // Remover motores extras para reaplicar o perfil com segurança
+    const containerMotores = document.getElementById('lista_motores_container');
+    if (containerMotores) {
+        const cardsMotores = containerMotores.querySelectorAll('.motor-card');
+        cardsMotores.forEach((card, idx) => {
+            if (idx > 0) card.remove();
+        });
+        reorganizarIndicesMotores();
+    }
+
     Object.entries(dados).forEach(([nome, valor]) => {
-        const campo = form.elements.namedItem(nome);
+        const campo = form.elements.namedItem(nome) || document.getElementById(nome);
         if (!campo) return;
         campo.disabled = false;
         campo.value = valor;

@@ -46,6 +46,16 @@ if (!function_exists('buscarDadosVistoriaCertificado')) {
             $dados['relatorio_numero'] = relatorioNumerosReferenciaCertificado($pdo, $vistoria_id);
             $dados['relatorio_status'] = $liberacao['status'] ?? $dados['relatorio_status'];
             $dados['mensagem_definitivo'] = $liberacao['mensagem_definitivo'] ?? '';
+
+            if (!empty($dados['embarcacao_id']) && function_exists('embarcacaoBuscarMotores')) {
+                $motoresEmb = embarcacaoBuscarMotores($pdo, (string)$dados['embarcacao_id'], $dados);
+                $resumoMotores = embarcacaoFormatarMotoresResumo($motoresEmb);
+                $dados['motores'] = $motoresEmb;
+                $dados['motores_resumo_texto'] = $resumoMotores['texto'];
+                $dados['potencia_total_kw'] = $resumoMotores['potencia_total'] !== ''
+                    ? $resumoMotores['potencia_total']
+                    : trim((string)($dados['potencia_kw'] ?? ''));
+            }
         }
 
         return $dados ?: null;
@@ -476,13 +486,24 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
     if ($modelo === 'CSN') {
         $possuiPropulsao = (int)($dados['possui_propulsao'] ?? $dadosEmb['possui_propulsao'] ?? 0);
         if ($possuiPropulsao === 1) {
-            $fabricanteMotor = trim((string)($dados['fabricante_motor'] ?? $dadosEmb['fabricante_motor'] ?? ''));
-            $modeloMotor = trim((string)($dados['modelo_motor'] ?? $dadosEmb['modelo_motor'] ?? ''));
-            $numeroMotor = trim((string)($dados['numero_motor'] ?? $dadosEmb['numero_motor'] ?? ''));
-            $potenciaKw = trim((string)($dados['potencia_kw'] ?? $dadosEmb['potencia_kw'] ?? ''));
+            if (function_exists('embarcacaoValidarMotoresCompletosParaCSN') && empty($dados['fabricante_motor'])) {
+                $dadosValidacao = array_merge($dadosEmb ?: [], ['possui_propulsao' => $possuiPropulsao]);
+                if (!empty($dados['potencia_kw'])) {
+                    $dadosValidacao['potencia_kw'] = $dados['potencia_kw'];
+                }
+                $erroMotorCsn = embarcacaoValidarMotoresCompletosParaCSN($dadosValidacao, $dadosEmb['motores'] ?? []);
+                if ($erroMotorCsn !== null) {
+                    throw new RuntimeException($erroMotorCsn);
+                }
+            } else {
+                $fabricanteMotor = trim((string)($dados['fabricante_motor'] ?? $dadosEmb['fabricante_motor'] ?? ''));
+                $modeloMotor = trim((string)($dados['modelo_motor'] ?? $dadosEmb['modelo_motor'] ?? ''));
+                $numeroMotor = trim((string)($dados['numero_motor'] ?? $dadosEmb['numero_motor'] ?? ''));
+                $potenciaKw = trim((string)($dados['potencia_kw'] ?? $dadosEmb['potencia_kw'] ?? ''));
 
-            if ($fabricanteMotor === '' || $modeloMotor === '' || $numeroMotor === '' || $potenciaKw === '') {
-                throw new RuntimeException('A embarcação possui propulsão. Preencha fabricante, modelo, número do motor e potência antes de gerar o CSN.');
+                if ($fabricanteMotor === '' || $modeloMotor === '' || $numeroMotor === '' || $potenciaKw === '') {
+                    throw new RuntimeException('A embarcação possui propulsão. Preencha fabricante, modelo, número do motor e potência antes de gerar o CSN.');
+                }
             }
         }
     }
@@ -606,14 +627,25 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                 }
 
                 $motorTexto = '';
+                $potenciaCsnTexto = '';
                 if ((int)($dados['possui_propulsao'] ?? $dadosEmb['possui_propulsao'] ?? 0) === 1) {
                     $motorTexto = trim((string)($dados['fabricante_motor'] ?? ''));
                     if ($motorTexto === '' || $motorTexto === ($dadosEmb['fabricante_motor'] ?? '')) {
-                        $motorTexto = implode(' - ', array_filter([
-                            trim((string)($dadosEmb['fabricante_motor'] ?? $dados['fabricante_motor'] ?? '')),
-                            trim((string)($dadosEmb['modelo_motor'] ?? $dados['modelo_motor'] ?? '')),
-                            trim((string)($dadosEmb['numero_motor'] ?? $dados['numero_motor'] ?? '')),
-                        ], static fn($val) => $val !== ''));
+                        $motoresEmb = $dadosEmb['motores'] ?? [];
+                        if (!empty($motoresEmb) && function_exists('embarcacaoFormatarMotoresResumo')) {
+                            $resumoMotores = embarcacaoFormatarMotoresResumo($motoresEmb);
+                            $motorTexto = $resumoMotores['texto'];
+                            $potenciaCsnTexto = $resumoMotores['potencia_total'];
+                        } else {
+                            $motorTexto = implode(' - ', array_filter([
+                                trim((string)($dadosEmb['fabricante_motor'] ?? $dados['fabricante_motor'] ?? '')),
+                                trim((string)($dadosEmb['modelo_motor'] ?? $dados['modelo_motor'] ?? '')),
+                                trim((string)($dadosEmb['numero_motor'] ?? $dados['numero_motor'] ?? '')),
+                            ], static fn($val) => $val !== ''));
+                        }
+                    }
+                    if ($potenciaCsnTexto === '') {
+                        $potenciaCsnTexto = trim((string)($dados['potencia_kw'] ?? $dadosEmb['potencia_total_kw'] ?? $dadosEmb['potencia_kw'] ?? ''));
                     }
                 }
 
@@ -674,7 +706,7 @@ function emitirCertificadoUnificado(PDO $pdo, string $modeloModelo, array $dados
                     ':tipo_navegacao' => $tipoNavegacaoCSN,
                     ':area_navegacao' => $areaNavegacaoCSN,
                     ':fabricante_motor' => $motorTexto,
-                    ':potencia_kw' => trim((string)($dados['potencia_kw'] ?? $dadosEmb['potencia_kw'] ?? '')),
+                    ':potencia_kw' => $potenciaCsnTexto !== '' ? $potenciaCsnTexto : trim((string)($dados['potencia_kw'] ?? $dadosEmb['potencia_kw'] ?? '')),
                     ':material_casco' => trim((string)($dados['material_casco'] ?? $dadosEmb['material_casco'] ?? '')),
                     ':autorizado_carga' => (int)($dados['autorizado_carga'] ?? $dadosEmb['autorizado_carga'] ?? 0),
                     ':qtd_passageiros' => $qtdPassageiros,

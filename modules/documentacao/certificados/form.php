@@ -360,8 +360,7 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                 <div class="grid-2">
                     <div class="form-group">
                         <label for="fabricante_motor">Fabricante, Modelo e Número do Motor</label>
-                        <input type="text" name="fabricante_motor" id="fabricante_motor" class="form-control"
-                               value="<?php echo $editando ? h($certificado['fabricante_motor']) : ''; ?>">
+                        <textarea name="fabricante_motor" id="fabricante_motor" class="form-control" rows="2"><?php echo $editando ? h($certificado['fabricante_motor']) : ''; ?></textarea>
                     </div>
                     <div class="form-group">
                         <label for="potencia_kw">Potência Propulsiva Total (kW)</label>

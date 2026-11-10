@@ -81,6 +81,16 @@ function buscarDadosVistoriaCertificado(PDO $pdo, string $vistoria_id): ?array
         $dados['relatorio_numero'] = relatorioNumerosReferenciaCertificado($pdo, $vistoria_id);
         $dados['relatorio_status'] = $liberacao['status'] ?? $dados['relatorio_status'];
         $dados['mensagem_definitivo'] = $liberacao['mensagem_definitivo'] ?? '';
+
+        if (!empty($dados['embarcacao_id']) && function_exists('embarcacaoBuscarMotores')) {
+            $motoresEmb = embarcacaoBuscarMotores($pdo, (string)$dados['embarcacao_id'], $dados);
+            $resumoMotores = embarcacaoFormatarMotoresResumo($motoresEmb);
+            $dados['motores'] = $motoresEmb;
+            $dados['motores_resumo_texto'] = $resumoMotores['texto'];
+            $dados['potencia_total_kw'] = $resumoMotores['potencia_total'] !== ''
+                ? $resumoMotores['potencia_total']
+                : trim((string)($dados['potencia_kw'] ?? ''));
+        }
     }
 
     return $dados ?: null;
@@ -185,13 +195,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $erro = 'Não é possível emitir certificado. O relatório selecionado não está aprovado.';
         } elseif ($dados_emb['possui_propulsao'] === null) {
             $erro = 'Atualize o cadastro da embarcação e informe se ela possui propulsão antes de gerar o CSN.';
-        } elseif ((int)$dados_emb['possui_propulsao'] === 1 && (
-            trim((string)($dados_emb['fabricante_motor'] ?? '')) === ''
-            || trim((string)($dados_emb['modelo_motor'] ?? '')) === ''
-            || trim((string)($dados_emb['numero_motor'] ?? '')) === ''
-            || trim((string)($dados_emb['potencia_kw'] ?? '')) === ''
-        )) {
-            $erro = 'A embarcação possui propulsão. Preencha fabricante, modelo, número do motor e potência antes de gerar o CSN.';
+        } elseif ((int)$dados_emb['possui_propulsao'] === 1 && ($erroMotorCsn = (function_exists('embarcacaoValidarMotoresCompletosParaCSN') ? embarcacaoValidarMotoresCompletosParaCSN($dados_emb, $dados_emb['motores'] ?? []) : ((trim((string)($dados_emb['fabricante_motor'] ?? '')) === '' || trim((string)($dados_emb['modelo_motor'] ?? '')) === '' || trim((string)($dados_emb['numero_motor'] ?? '')) === '' || trim((string)($dados_emb['potencia_kw'] ?? '')) === '') ? 'A embarcação possui propulsão. Preencha fabricante, modelo, número do motor e potência antes de gerar o CSN.' : null))) !== null) {
+            $erro = $erroMotorCsn;
         } elseif ($tipo === 'Definitivo' && $dados_emb['relatorio_status'] === 'APROVADA_COM_EXIGENCIAS') {
             $erro = (string)($dados_emb['mensagem_definitivo'] ?? '')
                 ?: 'O relatório vigente ainda possui exigências comuns pendentes. Conclua a verificação antes de emitir o Certificado Definitivo.';
