@@ -134,6 +134,7 @@ $tipo_labels = [
     'alerta_vencimento'  => ['label' => 'Alerta Vencimento',  'icon' => 'fa-exclamation-triangle'],
     'portal_acesso'      => ['label' => 'Portal - Acesso',    'icon' => 'fa-user-shield'],
     'portal_recuperacao_senha' => ['label' => 'Portal - Senha', 'icon' => 'fa-key'],
+    'teste'              => ['label' => 'Teste SMTP',        'icon' => 'fa-vial'],
 ];
 
 $status_labels = [
@@ -148,8 +149,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
 <div class="conteudo-principal">
     <div class="tabela-container">
-        <div class="tabela-header">
-            <h3><i class="fas fa-envelope"></i> Histórico de E-mails</h3>
+        <div class="tabela-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <h3 style="margin: 0;"><i class="fas fa-envelope"></i> Histórico de E-mails</h3>
+            <a href="<?php echo APP_URL; ?>configuracoes/email" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fas fa-cog"></i> Configurar Servidor SMTP
+            </a>
         </div>
 
         <!-- Mensagem de reenvio -->

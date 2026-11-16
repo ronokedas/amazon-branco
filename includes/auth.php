@@ -75,6 +75,7 @@ function todasPermissoesSistema(): array {
         'sgq',
         'usuarios',
         'configuracoes',
+        'configuracoes_email',
         'configuracoes_normam202',
         'configuracoes_basicas',
         'configuracoes_financeiro',

@@ -63,10 +63,10 @@ define('MINIO_BUCKET', getenv('MINIO_BUCKET') ?: 'erp-storage');
 define('MINIO_CAMPO_BUCKET', getenv('MINIO_CAMPO_BUCKET') ?: 'erp-campo-private');
 
 // Credenciais SMTP para envio de e-mails (PHPMailer)
-define('MAIL_HOST', getenv('MAIL_HOST') ?: 'smtp.gmail.com');
-define('MAIL_PORT', getenv('MAIL_PORT') ?: 587);
-define('MAIL_USERNAME', getenv('MAIL_USERNAME') ?: '');
-define('MAIL_PASSWORD', getenv('MAIL_PASSWORD') ?: '');
+define('MAIL_HOST', getenv('MAIL_HOST') ?: 'smtp-relay.brevo.com');
+define('MAIL_PORT', (int)(getenv('MAIL_PORT') ?: 587));
+define('MAIL_USERNAME', getenv('MAIL_USERNAME') ?: 'b157d8001@smtp-brevo.com');
+define('MAIL_PASSWORD', getenv('MAIL_PASSWORD') ?: 'xsmtpsib-782cfe3f1e6ae55475b72b76140451807a16d512c4cfbf6b24266f56f308fe79-bOlCBIQS6gnPNSaO');
 define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME') ?: APP_NAME);
 define('MAIL_ENCRYPTION', getenv('MAIL_ENCRYPTION') ?: 'tls');
 define('MAIL_VERIFY_PEER', filter_var(getenv('MAIL_VERIFY_PEER') ?: '0', FILTER_VALIDATE_BOOL));

@@ -159,6 +159,19 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
         </a>
 
+        <!-- Configuração de E-mail / Servidor SMTP -->
+        <a href="<?php echo APP_URL; ?>configuracoes/email" class="card-link" style="text-decoration: none; color: inherit; display: block;">
+            <div class="card" style="height: 100%; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 20px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='';">
+                <div class="card-body" style="text-align: center; padding: 40px 20px;">
+                    <i class="fas fa-envelope-open-text" style="font-size: 3rem; color: #0d9b70; margin-bottom: 15px;"></i>
+                    <h3 style="margin-bottom: 10px; color: var(--cor-texto);">Configuração de E-mail</h3>
+                    <p style="color: var(--cor-texto-secundario); font-size: 0.95rem;">
+                        Servidor SMTP (Brevo, Gmail, cPanel), credenciais, remetente e teste de disparo em tempo real.
+                    </p>
+                </div>
+            </div>
+        </a>
+
         <!-- Responsáveis pela Assinatura -->
         <a href="<?php echo APP_URL; ?>responsaveis_assinatura" class="card-link" style="text-decoration: none; color: inherit; display: block;">
             <div class="card" style="height: 100%; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 20px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='';">
