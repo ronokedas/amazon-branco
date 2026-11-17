@@ -103,7 +103,7 @@ if ($pagina > $totalPaginas) $pagina = $totalPaginas;
 $logs = [];
 try {
     $sqlLogs = "SELECT l.id, l.usuario_id, l.acao, l.descricao, l.ip, l.criado_em,
-                       u.nome AS usuario_nome, u.cargo AS usuario_cargo, u.foto_url AS usuario_foto
+                       u.nome AS usuario_nome, u.cargo AS usuario_cargo
                 FROM logs_atividade l
                 LEFT JOIN usuarios u ON u.id = l.usuario_id
                 WHERE {$whereSql}
