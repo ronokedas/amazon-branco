@@ -52,6 +52,7 @@ function todasPermissoesSistema(): array {
         'protocolos_documentais',
         'certificados',
         'vencimentos_certificados',
+        'documentos_vencidos',
         'documentacao',
         'doc_csn',
         'doc_cnbl',
@@ -107,9 +108,9 @@ function exigirAcessoOuSub(string $moduloPai, string $subModulo, string $destino
 /** Módulos iniciais mínimos e essenciais para cada cargo naval. O administrador pode personalizar depois. */
 function permissoesPadraoCargo(string $cargo): array {
     return match ($cargo) {
-        'VISTORIADOR' => ['dashboard', 'vistorias', 'agendamentos', 'clientes', 'embarcacoes', 'documentacao', 'doc_csn', 'doc_cnbl', 'doc_cnarq', 'doc_nar', 'doc_lp', 'doc_lc', 'doc_cht', 'configuracoes_normam202', 'vencimentos_certificados'],
-        'ANALISTA' => ['dashboard', 'analise_planos', 'embarcacoes', 'doc_nar', 'doc_lp', 'doc_lc', 'configuracoes_normam202'],
-        'VENDEDOR' => ['dashboard', 'comercial', 'servicos', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails', 'vencimentos_certificados'],
+        'VISTORIADOR' => ['dashboard', 'vistorias', 'agendamentos', 'clientes', 'embarcacoes', 'documentacao', 'doc_csn', 'doc_cnbl', 'doc_cnarq', 'doc_nar', 'doc_lp', 'doc_lc', 'doc_cht', 'configuracoes_normam202', 'vencimentos_certificados', 'documentos_vencidos'],
+        'ANALISTA' => ['dashboard', 'analise_planos', 'embarcacoes', 'doc_nar', 'doc_lp', 'doc_lc', 'configuracoes_normam202', 'documentos_vencidos'],
+        'VENDEDOR' => ['dashboard', 'comercial', 'servicos', 'clientes', 'embarcacoes', 'armadores', 'proprietarios', 'despachantes', 'agendamentos', 'emails', 'vencimentos_certificados', 'documentos_vencidos'],
         'ADMIN', 'SECRETARIA' => todasPermissoesSistema(),
         default => ['dashboard'],
     };

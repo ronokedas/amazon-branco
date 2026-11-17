@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviso de Documento Vencido - Amazon Naval</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
+        .container { max-width: 620px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 3px 10px rgba(0,0,0,0.08); border: 1px solid #e1e8ed; }
+        .header { background: #1a1a2e; padding: 30px 20px; text-align: center; }
+        .header h1 { color: #e53e3e; margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+        .header p { color: #d1d5db; margin: 8px 0 0; font-size: 13px; }
+        .body { padding: 30px 25px; color: #2d3748; }
+        .body h2 { color: #1a1a2e; font-size: 19px; margin-top: 0; }
+        .body p { line-height: 1.6; margin: 0 0 14px; font-size: 14px; }
+        .alerta-box { background: #fff5f5; border: 1px solid #feb2b2; border-left: 5px solid #e53e3e; padding: 16px; margin: 20px 0; border-radius: 6px; }
+        .alerta-box h4 { margin: 0 0 6px; color: #c53030; font-size: 15px; font-weight: 700; }
+        .alerta-box p { margin: 0; color: #9b2c2c; font-size: 13px; line-height: 1.5; }
+        .info-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 18px; margin: 20px 0; }
+        .info-row { display: table; width: 100%; padding: 7px 0; border-bottom: 1px dashed #e2e8f0; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { display: table-cell; width: 40%; font-weight: 600; color: #4a5568; font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .info-val { display: table-cell; width: 60%; color: #1a202c; font-size: 14px; font-weight: 500; }
+        .badge-vencido { display: inline-block; background: #e53e3e; color: #ffffff; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+        .footer { background: #f8fafc; padding: 22px 20px; text-align: center; color: #718096; font-size: 12px; border-top: 1px solid #e2e8f0; }
+        .footer p { margin: 4px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Aviso de Documento Vencido</h1>
+            <p>Amazon Naval Certificadora — Regularidade e Segurança da Navegação</p>
+        </div>
+        <div class="body">
+            <h2>Prezado(a) {{NOME_DESTINATARIO}} ({{PAPEL_DESTINATARIO}}),</h2>
+            <p>Identificamos em nossos registros que o documento naval detalhado abaixo encontra-se <strong>VENCIDO</strong>, necessitando de regularização imediata perante a Capitania dos Portos e órgãos reguladores.</p>
+
+            <div class="alerta-box">
+                <h4>Status Crítico: Documento Expirado há {{DIAS_VENCIDO}} dia(s)</h4>
+                <p>Data de validade expirada: <strong>{{DATA_VALIDADE}}</strong>. A operação da embarcação com documentação vencida constitui infração às normas da Autoridade Marítima (NORMAM/RLESTA).</p>
+            </div>
+
+            <div class="info-card">
+                <div class="info-row">
+                    <span class="info-label">Tipo de Documento:</span>
+                    <span class="info-val"><strong>{{TIPO_DOCUMENTO}}</strong> ({{DOCUMENTO_NOME}})</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Número do Documento:</span>
+                    <span class="info-val">{{NUMERO_DOCUMENTO}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Embarcação:</span>
+                    <span class="info-val"><strong>{{EMBARCACAO_NOME}}</strong></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Inscrição / Registro:</span>
+                    <span class="info-val">{{NUMERO_INSCRICAO}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Referência Regulamentar:</span>
+                    <span class="info-val">{{REFERENCIA_NORMAM}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Data de Vencimento:</span>
+                    <span class="info-val">{{DATA_VALIDADE}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Situação Atual:</span>
+                    <span class="info-val"><span class="badge-vencido">Vencido há {{DIAS_VENCIDO}} dia(s)</span></span>
+                </div>
+            </div>
+
+            <p>Para solicitar a renovação, agendar nova vistoria técnica ou emitir a proposta comercial correspondente, entre em contato imediatamente com nossos especialistas.</p>
+
+            <p style="margin-top: 25px;">Canais diretos de atendimento:<br>
+            E-mail: <strong>{{EMAIL_CONTATO}}</strong><br>
+            Telefone / WhatsApp: <strong>{{TELEFONE_CONTATO}}</strong></p>
+
+            <p style="margin-top: 20px;">Atenciosamente,<br><strong>Departamento Técnico & Comercial — Amazon Naval</strong></p>
+        </div>
+        <div class="footer">
+            <p><strong>Amazon Naval Ltda.</strong></p>
+            <p>E-mail: {{EMAIL_CONTATO}} | Telefone: {{TELEFONE_CONTATO}}</p>
+            <p>Notificação automática enviada aos responsáveis e contatos operacionais cadastrados.</p>
+        </div>
+    </div>
+</body>
+</html>

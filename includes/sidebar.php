@@ -98,7 +98,7 @@ if (!function_exists('isActive')) {
         <!-- 2. OPERAÇÃO NAVAL (Ciclo cronológico de vistorias e emissão) -->
         <?php 
         $temModelosEstatutarios = podeAcessar('documentacao') || podeAcessar('doc_csn') || podeAcessar('doc_cnbl') || podeAcessar('doc_cnarq') || podeAcessar('doc_nar') || podeAcessar('doc_lp') || podeAcessar('doc_lc') || podeAcessar('doc_cht');
-        $temOperacaoNaval = podeAcessar('agendamentos') || podeAcessar('vistorias') || podeAcessar('relatorios_aprovacao') || podeAcessar('certificados') || podeAcessar('vencimentos_certificados') || $temModelosEstatutarios;
+        $temOperacaoNaval = podeAcessar('agendamentos') || podeAcessar('vistorias') || podeAcessar('relatorios_aprovacao') || podeAcessar('certificados') || podeAcessar('vencimentos_certificados') || podeAcessar('documentos_vencidos') || $temModelosEstatutarios;
         ?>
         <?php if ($temOperacaoNaval): ?>
             <div class="nav-group-label">OPERAÇÃO NAVAL</div>
@@ -130,6 +130,16 @@ if (!function_exists('isActive')) {
                 <a href="<?= APP_URL ?>certificados/vencimentos" class="nav-item<?= isActive('certificados/vencimentos',$pagina_atual) ?>" data-label="Vencimentos Navais">
                     <i class="fa-solid fa-clock-rotate-left"></i>
                     <span class="nav-text">Vencimentos Navais</span>
+                </a>
+            <?php endif; ?>
+            <?php if (podeAcessar('documentos_vencidos')): ?>
+                <?php $totalBadgeDocsVenc = function_exists('obterTotalDocumentosVencidos') ? obterTotalDocumentosVencidos($pdo) : 0; ?>
+                <a href="<?= APP_URL ?>documentos-vencidos" class="nav-item<?= (strpos($pagina_atual,'documentos-vencidos')===0) ? ' active' : '' ?>" data-label="Documentos Vencidos">
+                    <i class="fa-solid fa-triangle-exclamation" style="color: #f87171;"></i>
+                    <span class="nav-text">Documentos Vencidos</span>
+                    <?php if ($totalBadgeDocsVenc > 0): ?>
+                        <span class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.68rem; padding: 0.22rem 0.5rem; font-weight: 700;"><?= $totalBadgeDocsVenc ?></span>
+                    <?php endif; ?>
                 </a>
             <?php endif; ?>
             <?php if ($temModelosEstatutarios): ?>

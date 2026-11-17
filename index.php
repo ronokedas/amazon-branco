@@ -185,6 +185,8 @@ $rotas = [
     'documentacao/baixa_exigencias'     => 'modules/documentacao/baixa_exigencias.php',
     'certificados'                  => 'modules/certificados/index.php',
     'certificados/vencimentos'      => 'modules/certificados/vencimentos.php',
+    'documentos-vencidos'           => 'modules/documentos_vencidos/index.php',
+    'documentos-vencidos/actions'   => 'modules/documentos_vencidos/actions.php',
     'certificados/wizard'           => 'modules/certificados/wizard.php',
     'certificados/wizard_step2'     => 'modules/certificados/wizard_step2.php',
     'servicos'                      => 'modules/servicos/index.php',
@@ -320,6 +322,8 @@ if (strpos($path, 'api/campo/v1') === 0) {
         'vistorias/relatorio-pdf' => 'vistorias',
         'certificados' => 'certificados',
         'certificados/vencimentos' => 'vencimentos_certificados',
+        'documentos-vencidos' => 'documentos_vencidos',
+        'documentos-vencidos/actions' => 'documentos_vencidos',
         'sgq/manual' => 'sgq', 'sgq/apresentacao' => 'sgq', 'sgq/indicadores' => 'sgq',
         'sgq/nao-conformidades' => 'sgq', 'sgq/nao-conformidades/actions' => 'sgq',
         'sgq/auditoria' => 'sgq', 'sgq/riscos' => 'sgq', 'sgq/riscos/actions' => 'sgq',
@@ -339,6 +343,7 @@ if (strpos($path, 'api/campo/v1') === 0) {
     if (strpos($path, 'certificados/') === 0) {
         $permissao_rota = ($path === 'certificados/vencimentos') ? 'vencimentos_certificados' : 'certificados';
     }
+    if (strpos($path, 'documentos-vencidos') === 0) $permissao_rota = 'documentos_vencidos';
     if (strpos($path, 'sgq') === 0) $permissao_rota = 'sgq';
     // Analista técnico pode visualizar relatório de vistoria vinculado a processos de análise
     if (in_array($path, ['vistorias/relatorio_pdf', 'vistorias/relatorio_pdf.php', 'vistorias/relatorio-pdf'], true) && podeAcessar('analise_planos')) {

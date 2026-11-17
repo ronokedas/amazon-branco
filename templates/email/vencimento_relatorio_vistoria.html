@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerta de Vencimento de Relatório de Vistoria - Amazon Naval</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
+        .container { max-width: 620px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 3px 10px rgba(0,0,0,0.08); border: 1px solid #e1e8ed; }
+        .header { background: #1a1a2e; padding: 30px 20px; text-align: center; }
+        .header h1 { color: #2ECC71; margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+        .header p { color: #d1d5db; margin: 8px 0 0; font-size: 13px; }
+        .body { padding: 30px 25px; color: #2d3748; }
+        .body h2 { color: #1a1a2e; font-size: 19px; margin-top: 0; }
+        .body p { line-height: 1.6; margin: 0 0 14px; font-size: 14px; }
+        .alerta-box { background: #fff8e6; border: 1px solid #ffd591; border-left: 5px solid #fa8c16; padding: 16px; margin: 20px 0; border-radius: 6px; }
+        .alerta-box h4 { margin: 0 0 6px; color: #d46b08; font-size: 15px; font-weight: 700; }
+        .alerta-box p { margin: 0; color: #873800; font-size: 13px; line-height: 1.5; }
+        .info-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 18px; margin: 20px 0; }
+        .info-row { display: table; width: 100%; padding: 7px 0; border-bottom: 1px dashed #e2e8f0; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { display: table-cell; width: 40%; font-weight: 600; color: #4a5568; font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .info-val { display: table-cell; width: 60%; color: #1a202c; font-size: 14px; font-weight: 500; }
+        .badge-dias { display: inline-block; background: #e02424; color: #ffffff; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+        .footer { background: #f8fafc; padding: 22px 20px; text-align: center; color: #718096; font-size: 12px; border-top: 1px solid #e2e8f0; }
+        .footer p { margin: 4px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Amazon Naval Certificadora</h1>
+            <p>Controle Operacional e Segurança da Navegação</p>
+        </div>
+        <div class="body">
+            <h2>Prezado(a) {{NOME_DESTINATARIO}} ({{PAPEL_DESTINATARIO}}),</h2>
+            <p>Comunicamos que o <strong>Relatório de Vistoria Naval</strong> da embarcação abaixo atingiu a faixa crítica de prazo para cumprimento de exigências e encerramento de pendências técnicas junto à Autoridade Marítima.</p>
+
+            <div class="alerta-box">
+                <h4>Atenção: Vencimento em {{DIAS_RESTANTES}} dias!</h4>
+                <p>Data limite regulamentar: <strong>{{DATA_VENCIMENTO}}</strong>. Após esta data, o prazo concedido na vistoria expirará, podendo demandar nova vistoria técnica completa.</p>
+            </div>
+
+            <div class="info-card">
+                <div class="info-row">
+                    <span class="info-label">Embarcação:</span>
+                    <span class="info-val"><strong>{{EMBARCACAO_NOME}}</strong></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Inscrição / Porto:</span>
+                    <span class="info-val">{{NUMERO_INSCRICAO}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Relatório de Vistoria:</span>
+                    <span class="info-val">{{NUMERO_VISTORIA}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Vistoriador Naval:</span>
+                    <span class="info-val">{{VISTORIADOR_NOME}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Data da Vistoria:</span>
+                    <span class="info-val">{{DATA_VISTORIA}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Prazo de Exigências:</span>
+                    <span class="info-val">{{PRAZO_DIAS}} dias</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status do Prazo:</span>
+                    <span class="info-val"><span class="badge-dias">Resta(m) {{DIAS_RESTANTES}} dia(s)</span></span>
+                </div>
+            </div>
+
+            <p>Recomendamos o envio imediato das evidências e fotos de saneamento das exigências ao vistoriador responsável ou o agendamento da vistoria de verificação para emissão do certificado definitivo.</p>
+
+            <p style="margin-top: 25px;">Para esclarecimentos técnicos ou suporte, contate nossa equipe pelo e-mail <strong>{{EMAIL_CONTATO}}</strong> ou telefone <strong>{{TELEFONE_CONTATO}}</strong>.</p>
+
+            <p style="margin-top: 20px;">Atenciosamente,<br><strong>Departamento Técnico e Operacional — Amazon Naval</strong></p>
+        </div>
+        <div class="footer">
+            <p><strong>Amazon Naval Ltda.</strong></p>
+            <p>E-mail: {{EMAIL_CONTATO}} | Telefone: {{TELEFONE_CONTATO}}</p>
+            <p>Notificação automática enviada aos contatos cadastrados da embarcação.</p>
+        </div>
+    </div>
+</body>
+</html>

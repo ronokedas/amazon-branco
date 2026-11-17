@@ -2427,4 +2427,35 @@ function gerarObservacoesPadraoLicenca(array $dados, string $tipo = 'LC', ?strin
 require_once __DIR__ . '/sgq.php';
 require_once __DIR__ . '/embarcacoes_motores.php';
 require_once __DIR__ . '/propostas_filtros.php';
+require_once __DIR__ . '/clientes_emails.php';
+
+/**
+ * Retorna o total consolidado de documentos vencidos no sistema
+ * (Certificados estatutários, licenças, relatórios de vistoria e propostas expiradas).
+ */
+function obterTotalDocumentosVencidos(PDO $pdo): int {
+    static $total = null;
+    if ($total !== null) {
+        return $total;
+    }
+    try {
+        $stmt = $pdo->query("
+            SELECT 
+                (SELECT COUNT(*) FROM certificados_csn WHERE ativo=1 AND status<>'cancelado' AND data_validade IS NOT NULL AND data_validade < CURDATE()) +
+                (SELECT COUNT(*) FROM certificados_cnbl WHERE ativo=1 AND status<>'cancelado' AND data_validade IS NOT NULL AND data_validade < CURDATE()) +
+                (SELECT COUNT(*) FROM certificados_cnarq WHERE ativo=1 AND status<>'cancelado' AND data_validade IS NOT NULL AND data_validade < CURDATE()) +
+                (SELECT COUNT(*) FROM certificados_cht WHERE ativo=1 AND status<>'cancelado' AND data_validade IS NOT NULL AND data_validade < CURDATE()) +
+                (SELECT COUNT(*) FROM certificados_lc WHERE ativo=1 AND status<>'cancelado' AND data_validade IS NOT NULL AND data_validade < CURDATE()) +
+                (SELECT COUNT(*) FROM certificados_lp WHERE ativo=1 AND status<>'cancelado' AND validade_data IS NOT NULL AND validade_data < CURDATE()) +
+                (SELECT COUNT(*) FROM vistorias WHERE status NOT IN ('CANCELADA', 'REPROVADA') AND prazo_exigencias_dias > 0 AND DATE_ADD(data_vistoria, INTERVAL prazo_exigencias_dias DAY) < CURDATE()) +
+                (SELECT COUNT(*) FROM propostas WHERE status IN ('rascunho', 'enviada') AND data_validade IS NOT NULL AND data_validade < CURDATE())
+            AS total
+        ");
+        $total = (int)($stmt->fetchColumn() ?: 0);
+    } catch (Exception $e) {
+        $total = 0;
+    }
+    return $total;
+}
+
 

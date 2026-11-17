@@ -147,6 +147,12 @@ switch ($action) {
                 salvarTiposEmbarcacaoDespachante($pdo, $cliente_id, is_array($tipos_embarcacao) ? $tipos_embarcacao : []);
             }
 
+            // Salvar e-mails adicionais (Despachante, Locatário, Projetista, etc.)
+            $emails_adicionais = $_POST['emails_adicionais'] ?? [];
+            if (is_array($emails_adicionais)) {
+                salvarEmailsCliente($pdo, $cliente_id, $emails_adicionais);
+            }
+
             // Auditoria cadastral do SGQ
             if (function_exists('sgqRegistrarAuditoriaCadastral')) {
                 sgqRegistrarAuditoriaCadastral($pdo, 'CLIENTE', $cliente_id, 'CRIACAO', null, [
@@ -272,6 +278,12 @@ switch ($action) {
 
             // Sincronizar tipos de embarcação atendidos
             salvarTiposEmbarcacaoDespachante($pdo, $id, $perfil === 'despachante' ? (is_array($tipos_embarcacao) ? $tipos_embarcacao : []) : []);
+
+            // Sincronizar e-mails adicionais (Despachante, Locatário, Projetista, etc.)
+            $emails_adicionais = $_POST['emails_adicionais'] ?? [];
+            if (is_array($emails_adicionais)) {
+                salvarEmailsCliente($pdo, $id, $emails_adicionais);
+            }
 
             // Sincronizar login no Portal do Cliente caso email tenha mudado
             sincronizarLoginPortalCliente($pdo, $id);

@@ -40,6 +40,8 @@ $cliente = [
     'tipos_embarcacao_ids' => [],
 ];
 
+$emailsAdicionais = [];
+
 // Se editando, carregar dados do banco
 if ($editando) {
     try {
@@ -65,6 +67,9 @@ if ($editando) {
             $stmtTipos = $pdo->prepare("SELECT tipo_embarcacao_id FROM clientes_tipos_embarcacao WHERE cliente_id = :cliente_id");
             $stmtTipos->execute([':cliente_id' => $id]);
             $cliente['tipos_embarcacao_ids'] = array_column($stmtTipos->fetchAll(PDO::FETCH_ASSOC), 'tipo_embarcacao_id');
+
+            // Carregar e-mails adicionais cadastrados
+            $emailsAdicionais = obterEmailsCliente($pdo, $id);
         } else {
             setMensagem('error', 'Registro não encontrado ou inativo.');
             redirecionar(APP_URL . 'clientes');
@@ -194,6 +199,67 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                value="<?php echo h($cliente['endereco']); ?>"
                                placeholder="Logradouro, número, bairro, cidade/UF">
                         <small class="text-muted">Endereço constante nos certificados navais.</small>
+                    </div>
+                </div>
+
+                <!-- E-MAILS ADICIONAIS / DESTINATÁRIOS DE ALERTAS -->
+                <div style="margin-top: 18px; padding: 18px; background: rgba(13,155,112,0.03); border: 1px dashed #0d9b70; border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong style="color: var(--cor-texto); font-size: 0.98rem; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-users-rectangle" style="color: #0d9b70;"></i> E-mails Adicionais &amp; Destinatários de Notificações
+                            </strong>
+                            <small class="text-muted" style="display: block; margin-top: 2px;">
+                                Adicione e-mails de despachantes, locatários, projetistas ou encarregados para que também recebam os alertas de vencimento da frota e relatórios de vistoria.
+                            </small>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="adicionarLinhaEmail()" style="display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-plus"></i> Adicionar Outro E-mail
+                        </button>
+                    </div>
+
+                    <div id="containerEmailsAdicionais" style="display: flex; flex-direction: column; gap: 10px;">
+                        <?php if (empty($emailsAdicionais)): ?>
+                            <div id="emptyEmailsMsg" class="text-muted" style="font-size: 0.88rem; font-style: italic; padding: 8px 0;">
+                                Nenhum e-mail adicional cadastrado. Clique no botão acima para incluir despachantes, locatários ou projetistas.
+                            </div>
+                        <?php else: ?>
+                            <?php foreach ($emailsAdicionais as $idx => $em): ?>
+                                <div class="linha-email-adicional" style="display: grid; grid-template-columns: minmax(200px, 1.4fr) minmax(160px, 1fr) minmax(140px, 1fr) auto auto; gap: 12px; align-items: end; background: var(--cor-card, #fff); border: 1px solid var(--cor-borda); border-radius: 6px; padding: 12px;">
+                                    <input type="hidden" name="emails_adicionais[<?= $idx ?>][id]" value="<?= h($em['id']) ?>">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; display: block;">E-mail *</label>
+                                        <input type="email" name="emails_adicionais[<?= $idx ?>][email]" class="form-control" required value="<?= h($em['email']) ?>" placeholder="exemplo@empresa.com">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; display: block;">Papel / Destinatário *</label>
+                                        <select name="emails_adicionais[<?= $idx ?>][papel]" class="form-control">
+                                            <option value="DESPACHANTE" <?= $em['papel'] === 'DESPACHANTE' ? 'selected' : '' ?>>Despachante Marítimo</option>
+                                            <option value="LOCATARIO" <?= $em['papel'] === 'LOCATARIO' ? 'selected' : '' ?>>Locatário / Afretador</option>
+                                            <option value="PROJETISTA" <?= $em['papel'] === 'PROJETISTA' ? 'selected' : '' ?>>Projetista / Eng. Naval</option>
+                                            <option value="FINANCEIRO" <?= $em['papel'] === 'FINANCEIRO' ? 'selected' : '' ?>>Financeiro / Cobrança</option>
+                                            <option value="OPERACIONAL" <?= $em['papel'] === 'OPERACIONAL' ? 'selected' : '' ?>>Comandante / Operacional</option>
+                                            <option value="OUTRO" <?= $em['papel'] === 'OUTRO' ? 'selected' : '' ?>>Outro Contato</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; display: block;">Nome do Contato</label>
+                                        <input type="text" name="emails_adicionais[<?= $idx ?>][nome_contato]" class="form-control" value="<?= h($em['nome_contato'] ?? '') ?>" placeholder="Ex: Marcos Despachante">
+                                    </div>
+                                    <div style="padding-bottom: 8px;">
+                                        <label style="display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.82rem; cursor: pointer; white-space: nowrap; font-weight: 600;">
+                                            <input type="checkbox" name="emails_adicionais[<?= $idx ?>][recebe_alertas]" value="1" <?= !empty($em['recebe_alertas']) ? 'checked' : '' ?> style="width: 16px; height: 16px;">
+                                            <span>Receber Alertas</span>
+                                        </label>
+                                    </div>
+                                    <div style="padding-bottom: 4px;">
+                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerLinhaEmail(this)" title="Remover e-mail" style="padding: 6px 10px;">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -509,6 +575,77 @@ document.addEventListener('click', function(e) {
         document.getElementById('resBuscaEmbarcacao').style.display = 'none';
     }
 });
+
+let contadorEmailsAdicionais = <?php echo count($emailsAdicionais); ?>;
+
+function adicionarLinhaEmail(dados = {}) {
+    const container = document.getElementById('containerEmailsAdicionais');
+    const emptyMsg = document.getElementById('emptyEmailsMsg');
+    if (emptyMsg) {
+        emptyMsg.style.display = 'none';
+    }
+
+    const idx = 'novo_' + (++contadorEmailsAdicionais) + '_' + Date.now();
+    const emailVal = dados.email || '';
+    const papelVal = dados.papel || 'DESPACHANTE';
+    const nomeVal = dados.nome_contato || '';
+    const alertasVal = dados.recebe_alertas !== undefined ? (dados.recebe_alertas ? 'checked' : '') : 'checked';
+
+    const div = document.createElement('div');
+    div.className = 'linha-email-adicional';
+    div.style.cssText = 'display: grid; grid-template-columns: minmax(200px, 1.4fr) minmax(160px, 1fr) minmax(140px, 1fr) auto auto; gap: 12px; align-items: end; background: var(--cor-card, #fff); border: 1px solid var(--cor-borda); border-radius: 6px; padding: 12px; margin-bottom: 6px;';
+    div.innerHTML = `
+        <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; display: block;">E-mail *</label>
+            <input type="email" name="emails_adicionais[\${idx}][email]" class="form-control" required value="\${escapeHtml(emailVal)}" placeholder="exemplo@empresa.com">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; display: block;">Papel / Destinatário *</label>
+            <select name="emails_adicionais[\${idx}][papel]" class="form-control">
+                <option value="DESPACHANTE" \${papelVal === 'DESPACHANTE' ? 'selected' : ''}>Despachante Marítimo</option>
+                <option value="LOCATARIO" \${papelVal === 'LOCATARIO' ? 'selected' : ''}>Locatário / Afretador</option>
+                <option value="PROJETISTA" \${papelVal === 'PROJETISTA' ? 'selected' : ''}>Projetista / Eng. Naval</option>
+                <option value="FINANCEIRO" \${papelVal === 'FINANCEIRO' ? 'selected' : ''}>Financeiro / Cobrança</option>
+                <option value="OPERACIONAL" \${papelVal === 'OPERACIONAL' ? 'selected' : ''}>Comandante / Operacional</option>
+                <option value="OUTRO" \${papelVal === 'OUTRO' ? 'selected' : ''}>Outro Contato</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; display: block;">Nome do Contato</label>
+            <input type="text" name="emails_adicionais[\${idx}][nome_contato]" class="form-control" value="\${escapeHtml(nomeVal)}" placeholder="Ex: Marcos Despachante">
+        </div>
+        <div style="padding-bottom: 8px;">
+            <label style="display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.82rem; cursor: pointer; white-space: nowrap; font-weight: 600;">
+                <input type="checkbox" name="emails_adicionais[\${idx}][recebe_alertas]" value="1" \${alertasVal} style="width: 16px; height: 16px;">
+                <span>Receber Alertas</span>
+            </label>
+        </div>
+        <div style="padding-bottom: 4px;">
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerLinhaEmail(this)" title="Remover e-mail" style="padding: 6px 10px;">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    `;
+
+    container.appendChild(div);
+    const inputEmail = div.querySelector('input[type="email"]');
+    if (inputEmail) {
+        inputEmail.focus();
+    }
+}
+
+function removerLinhaEmail(btn) {
+    const linha = btn.closest('.linha-email-adicional');
+    if (linha) {
+        linha.remove();
+    }
+    const container = document.getElementById('containerEmailsAdicionais');
+    const linhas = container.querySelectorAll('.linha-email-adicional');
+    const emptyMsg = document.getElementById('emptyEmailsMsg');
+    if (linhas.length === 0 && emptyMsg) {
+        emptyMsg.style.display = 'block';
+    }
+}
 
 function escapeHtml(text) {
     if (!text) return '';
