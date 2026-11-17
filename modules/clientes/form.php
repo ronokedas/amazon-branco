@@ -213,7 +213,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 Adicione e-mails de despachantes, locatários, projetistas ou encarregados para que também recebam os alertas de vencimento da frota e relatórios de vistoria.
                             </small>
                         </div>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="adicionarLinhaEmail()" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <button type="button" id="btnAdicionarEmail" class="btn btn-secondary btn-sm" onclick="adicionarLinhaEmail()" style="display: inline-flex; align-items: center; gap: 6px;">
                             <i class="fas fa-plus"></i> Adicionar Outro E-mail
                         </button>
                     </div>
