@@ -597,26 +597,26 @@ function adicionarLinhaEmail(dados = {}) {
     div.innerHTML = `
         <div class="form-group" style="margin-bottom: 0;">
             <label style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; display: block;">E-mail *</label>
-            <input type="email" name="emails_adicionais[\${idx}][email]" class="form-control" required value="\${escapeHtml(emailVal)}" placeholder="exemplo@empresa.com">
+            <input type="email" name="emails_adicionais[${idx}][email]" class="form-control" required value="${escapeHtml(emailVal)}" placeholder="exemplo@empresa.com">
         </div>
         <div class="form-group" style="margin-bottom: 0;">
             <label style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; display: block;">Papel / Destinatário *</label>
-            <select name="emails_adicionais[\${idx}][papel]" class="form-control">
-                <option value="DESPACHANTE" \${papelVal === 'DESPACHANTE' ? 'selected' : ''}>Despachante Marítimo</option>
-                <option value="LOCATARIO" \${papelVal === 'LOCATARIO' ? 'selected' : ''}>Locatário / Afretador</option>
-                <option value="PROJETISTA" \${papelVal === 'PROJETISTA' ? 'selected' : ''}>Projetista / Eng. Naval</option>
-                <option value="FINANCEIRO" \${papelVal === 'FINANCEIRO' ? 'selected' : ''}>Financeiro / Cobrança</option>
-                <option value="OPERACIONAL" \${papelVal === 'OPERACIONAL' ? 'selected' : ''}>Comandante / Operacional</option>
-                <option value="OUTRO" \${papelVal === 'OUTRO' ? 'selected' : ''}>Outro Contato</option>
+            <select name="emails_adicionais[${idx}][papel]" class="form-control">
+                <option value="DESPACHANTE" ${papelVal === 'DESPACHANTE' ? 'selected' : ''}>Despachante Marítimo</option>
+                <option value="LOCATARIO" ${papelVal === 'LOCATARIO' ? 'selected' : ''}>Locatário / Afretador</option>
+                <option value="PROJETISTA" ${papelVal === 'PROJETISTA' ? 'selected' : ''}>Projetista / Eng. Naval</option>
+                <option value="FINANCEIRO" ${papelVal === 'FINANCEIRO' ? 'selected' : ''}>Financeiro / Cobrança</option>
+                <option value="OPERACIONAL" ${papelVal === 'OPERACIONAL' ? 'selected' : ''}>Comandante / Operacional</option>
+                <option value="OUTRO" ${papelVal === 'OUTRO' ? 'selected' : ''}>Outro Contato</option>
             </select>
         </div>
         <div class="form-group" style="margin-bottom: 0;">
             <label style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; display: block;">Nome do Contato</label>
-            <input type="text" name="emails_adicionais[\${idx}][nome_contato]" class="form-control" value="\${escapeHtml(nomeVal)}" placeholder="Ex: Marcos Despachante">
+            <input type="text" name="emails_adicionais[${idx}][nome_contato]" class="form-control" value="${escapeHtml(nomeVal)}" placeholder="Ex: Marcos Despachante">
         </div>
         <div style="padding-bottom: 8px;">
             <label style="display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.82rem; cursor: pointer; white-space: nowrap; font-weight: 600;">
-                <input type="checkbox" name="emails_adicionais[\${idx}][recebe_alertas]" value="1" \${alertasVal} style="width: 16px; height: 16px;">
+                <input type="checkbox" name="emails_adicionais[${idx}][recebe_alertas]" value="1" ${alertasVal} style="width: 16px; height: 16px;">
                 <span>Receber Alertas</span>
             </label>
         </div>

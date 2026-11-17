@@ -375,6 +375,18 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 .docvenc-container {
     padding: 24px 30px;
 }
+.kpis-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+@media (max-width: 992px) {
+    .kpis-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 576px) {
+    .kpis-grid { grid-template-columns: 1fr; }
+}
 .kpi-card {
     background: #ffffff;
     border-radius: 12px;
@@ -530,49 +542,41 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     </div>
 
     <!-- Cards de Indicadores (KPIs) -->
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-sm-6 col-lg-3">
-            <div class="kpi-card">
-                <div class="kpi-icon danger">
-                    <i class="fa-solid fa-file-circle-xmark"></i>
-                </div>
-                <div>
-                    <div class="kpi-val"><?= (int)$contadores['total_geral'] ?></div>
-                    <div class="kpi-label">Total de Documentos Vencidos</div>
-                </div>
+    <div class="kpis-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon danger">
+                <i class="fa-solid fa-file-circle-xmark"></i>
+            </div>
+            <div>
+                <div class="kpi-val"><?= (int)$contadores['total_geral'] ?></div>
+                <div class="kpi-label">Total de Documentos Vencidos</div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-lg-3">
-            <div class="kpi-card">
-                <div class="kpi-icon warning">
-                    <i class="fa-solid fa-award"></i>
-                </div>
-                <div>
-                    <div class="kpi-val"><?= (int)$contadores['total_estatutarios'] ?></div>
-                    <div class="kpi-label">Certificados Estatutários (CSN/CNBL/CNARQ)</div>
-                </div>
+        <div class="kpi-card">
+            <div class="kpi-icon warning">
+                <i class="fa-solid fa-award"></i>
+            </div>
+            <div>
+                <div class="kpi-val"><?= (int)$contadores['total_estatutarios'] ?></div>
+                <div class="kpi-label">Certificados Estatutários (CSN/CNBL/CNARQ)</div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-lg-3">
-            <div class="kpi-card">
-                <div class="kpi-icon info">
-                    <i class="fa-solid fa-clipboard-check"></i>
-                </div>
-                <div>
-                    <div class="kpi-val"><?= (int)($contadores['total_vistorias'] + $contadores['total_licencas']) ?></div>
-                    <div class="kpi-label">Vistorias & Licenças Vencidas</div>
-                </div>
+        <div class="kpi-card">
+            <div class="kpi-icon info">
+                <i class="fa-solid fa-clipboard-check"></i>
+            </div>
+            <div>
+                <div class="kpi-val"><?= (int)($contadores['total_vistorias'] + $contadores['total_licencas']) ?></div>
+                <div class="kpi-label">Vistorias & Licenças Vencidas</div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-lg-3">
-            <div class="kpi-card">
-                <div class="kpi-icon success">
-                    <i class="fa-solid fa-paper-plane"></i>
-                </div>
-                <div>
-                    <div class="kpi-val"><?= $totalAlertados7d ?></div>
-                    <div class="kpi-label">Alertas Disparados (Últimos 7 dias)</div>
-                </div>
+        <div class="kpi-card">
+            <div class="kpi-icon success">
+                <i class="fa-solid fa-paper-plane"></i>
+            </div>
+            <div>
+                <div class="kpi-val"><?= $totalAlertados7d ?></div>
+                <div class="kpi-label">Alertas Disparados (Últimos 7 dias)</div>
             </div>
         </div>
     </div>
