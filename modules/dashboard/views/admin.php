@@ -510,57 +510,57 @@ $isSecretaria = in_array($usuarioCargo, ['SECRETARIA', 'ATENDIMENTO'], true);
     if (!empty($relatoriosProntos)): 
     ?>
     <!-- BANNER DE DESTAQUE: RELATÓRIOS PRONTOS PARA EMISSÃO DE CERTIFICADOS -->
-    <section class="dash-hero-certificados" id="secaoRelatoriosProntos" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 78, 59, 0.22) 100%); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 14px; padding: 20px 24px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); margin-bottom: 24px;">
+    <section class="dash-hero-certificados" id="secaoRelatoriosProntos" style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 20px 24px; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.08); margin-bottom: 24px;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <div style="width:42px; height:42px; border-radius:10px; background:rgba(16, 185, 129, 0.2); border:1px solid rgba(16, 185, 129, 0.4); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                    <i class="fa-solid fa-certificate" style="font-size:1.35rem; color:#10b981;"></i>
+            <div style="display:flex; align-items:center; gap:14px;">
+                <div style="width:44px; height:44px; border-radius:10px; background:#d1fae5; border:1px solid #6ee7b7; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="fa-solid fa-certificate" style="font-size:1.45rem; color:#059669;"></i>
                 </div>
                 <div>
-                    <h2 style="margin:0; font-size:1.15rem; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:8px;">
+                    <h2 style="margin:0; font-size:1.18rem; font-weight:800; color:#064e3b; display:flex; align-items:center; gap:8px;">
                         <span>Relatórios Vistoriados e Assinados Prontos para Certificação</span>
-                        <span class="badge bg-success" style="font-size:0.75rem; font-weight:700; padding:4px 8px; border-radius:999px;">
-                            <?= count($relatoriosProntos) ?> <?= count($relatoriosProntos) === 1 ? 'relatório' : 'relatórios' ?>
+                        <span style="background:#059669; color:#ffffff; font-size:0.75rem; font-weight:800; padding:3px 9px; border-radius:999px; letter-spacing:0.04em;">
+                            <?= count($relatoriosProntos) ?> <?= count($relatoriosProntos) === 1 ? 'RELATÓRIO' : 'RELATÓRIOS' ?>
                         </span>
                     </h2>
-                    <small class="text-muted" style="display:block; margin-top:2px; font-size:0.84rem; color:#94a3b8;">
+                    <p style="margin:2px 0 0 0; font-size:0.86rem; color:#047857; font-weight:500;">
                         O vistoriador concluiu e assinou a vistoria com fé pública. A Secretaria ou Admin pode emitir o certificado estatutário imediatamente.
-                    </small>
+                    </p>
                 </div>
             </div>
-            <a href="<?= APP_URL ?>certificados" class="btn btn-sm btn-outline-secondary" style="font-size:0.82rem;">
+            <a href="<?= APP_URL ?>certificados" class="btn btn-sm" style="background:#ffffff; border:1px solid #a7f3d0; color:#065f46; font-size:0.82rem; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
                 <i class="fa-solid fa-award"></i> Central de Certificados
             </a>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px;">
             <?php foreach ($relatoriosProntos as $rp): ?>
-                <div class="card-relatorio-pronto" id="card-alerta-<?= h($rp['id']) ?>" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 14px 16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px; transition: transform .15s, border-color .15s;">
+                <div class="card-relatorio-pronto" id="card-alerta-<?= h($rp['id']) ?>" style="background: #ffffff; border: 1.5px solid #bbf7d0; border-radius: 10px; padding: 16px 18px; display:flex; flex-direction:column; justify-content:space-between; gap:12px; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.08); transition: transform .15s, box-shadow .15s;">
                     <div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
                             <div>
-                                <strong style="font-size:0.98rem; color:#ffffff; display:flex; align-items:center; gap:6px;">
-                                    <i class="fa-solid fa-ship" style="color:#56e0ad; font-size:0.85rem;"></i>
+                                <strong style="font-size:1.02rem; color:#0f172a; display:flex; align-items:center; gap:6px; font-weight:800;">
+                                    <i class="fa-solid fa-ship" style="color:#059669; font-size:0.9rem;"></i>
                                     <?= h($rp['embarcacao_nome']) ?>
                                 </strong>
-                                <span style="font-size:0.78rem; color:#94a3b8; display:block; margin-top:2px;">
-                                    Reg: <?= h($rp['embarcacao_registro'] ?: 'S/N') ?> · Relatório: <strong style="color:#10b981;"><?= h($rp['numero']) ?></strong>
+                                <span style="font-size:0.8rem; color:#475569; display:block; margin-top:3px;">
+                                    Reg: <strong><?= h($rp['embarcacao_registro'] ?: 'S/N') ?></strong> · Relatório: <strong style="color:#059669;"><?= h($rp['numero']) ?></strong>
                                 </span>
                             </div>
-                            <button type="button" onclick="dispensarAlertaCertificado(this, '<?= h($rp['id']) ?>')" style="background:transparent; border:none; color:#64748b; font-size:1.1rem; cursor:pointer; padding:0 4px; line-height:1;" title="Dispensar este alerta para você">&times;</button>
+                            <button type="button" onclick="dispensarAlertaCertificado(this, '<?= h($rp['id']) ?>')" style="background:transparent; border:none; color:#94a3b8; font-size:1.25rem; cursor:pointer; padding:0 4px; line-height:1;" title="Dispensar este alerta para você">&times;</button>
                         </div>
-                        <div style="font-size:0.78rem; color:#cbd5e1; margin-top:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                            <span><i class="fa-solid fa-user-check text-muted"></i> <?= h($rp['vistoriador_nome'] ?: 'Vistoriador') ?></span>
+                        <div style="font-size:0.79rem; color:#334155; margin-top:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span><i class="fa-solid fa-user-check" style="color:#059669;"></i> <?= h($rp['vistoriador_nome'] ?: 'Vistoriador') ?></span>
                             <span><i class="fa-solid fa-calendar text-muted"></i> <?= !empty($rp['assinatura_em']) ? date('d/m/Y H:i', strtotime($rp['assinatura_em'])) : date('d/m/Y', strtotime($rp['data_vistoria'])) ?></span>
-                            <span class="badge" style="background:rgba(16, 185, 129, 0.2); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3); font-size:0.7rem;">Assinado</span>
+                            <span style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.7rem; font-weight:700; padding:2px 7px; border-radius:4px;">Assinado</span>
                         </div>
                     </div>
 
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); flex-wrap:wrap;">
-                        <a href="<?= APP_URL ?>documentacao/novo_certificado?vistoria_id=<?= urlencode($rp['id']) ?>&agendamento_id=<?= urlencode((string)$rp['agendamento_id']) ?>" class="btn btn-sm btn-success" style="flex:1; min-width:140px; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:12px; border-top:1px solid #f1f5f9; flex-wrap:wrap;">
+                        <a href="<?= APP_URL ?>documentacao/novo_certificado?vistoria_id=<?= urlencode($rp['id']) ?>&agendamento_id=<?= urlencode((string)$rp['agendamento_id']) ?>" class="btn btn-sm btn-success" style="flex:1; min-width:140px; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; background:#059669; border-color:#059669; box-shadow:0 2px 6px rgba(5, 150, 105, 0.25);">
                             <i class="fa-solid fa-certificate"></i> Gerar Certificado
                         </a>
-                        <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode((string)$rp['agendamento_id']) ?>&vistoria_id=<?= urlencode($rp['id']) ?>" class="btn btn-sm btn-secondary" style="display:inline-flex; align-items:center; gap:4px;" title="Ver detalhes do relatório">
+                        <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode((string)$rp['agendamento_id']) ?>&vistoria_id=<?= urlencode($rp['id']) ?>" class="btn btn-sm btn-outline-secondary" style="display:inline-flex; align-items:center; gap:4px; font-weight:600;" title="Ver detalhes do relatório">
                             <i class="fa-solid fa-eye"></i> Relatório
                         </a>
                         <button type="button" onclick="dispensarAlertaCertificado(this, '<?= h($rp['id']) ?>')" class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem; padding:5px 8px;" title="Dispensar alerta">
