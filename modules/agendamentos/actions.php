@@ -116,24 +116,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {
 
 
 
-            // Serviços de VISTORIA da embarcação (DISTINCT)
-
+            // Serviços de VISTORIA de campo da embarcação (DISTINCT)
             $stmtSrvEmb = $pdo->prepare("
-
                 SELECT DISTINCT s.nome 
-
                 FROM propostas_servicos ps
-
                 INNER JOIN servicos s ON ps.servico_id = s.id
-
                 WHERE ps.proposta_id = :id
-
                   AND (ps.embarcacao_id = :emb_id OR ps.embarcacao_id IS NULL)
-
+                  AND (s.executor_cargo IN ('VISTORIADOR', 'AMBOS') OR s.executor_cargo IS NULL)
                   AND COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
-
+                  AND LOWER(s.nome) NOT LIKE '%análise de planos%'
+                  AND LOWER(s.nome) NOT LIKE '%analise de planos%'
                 ORDER BY s.nome ASC
-
             ");
 
             $stmtSrvEmb->execute([':id' => $proposta_id, ':emb_id' => $embId]);
@@ -143,23 +137,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {
 
 
             // Serviços de ANÁLISE DE PLANOS da embarcação (DISTINCT)
-
             $stmtAnaEmb = $pdo->prepare("
-
                 SELECT DISTINCT s.nome 
-
                 FROM propostas_servicos ps
-
                 INNER JOIN servicos s ON ps.servico_id = s.id
-
                 WHERE ps.proposta_id = :id
-
                   AND (ps.embarcacao_id = :emb_id OR ps.embarcacao_id IS NULL)
-
-                  AND COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
-
+                  AND (s.executor_cargo = 'ANALISTA' 
+                       OR COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
+                       OR LOWER(s.nome) LIKE '%análise de planos%'
+                       OR LOWER(s.nome) LIKE '%analise de planos%')
                 ORDER BY s.nome ASC
-
             ");
 
             $stmtAnaEmb->execute([':id' => $proposta_id, ':emb_id' => $embId]);
@@ -232,7 +220,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {
 
 
 
-            $tipoTextoEmb = !empty($servicosEmb) ? implode(', ', $servicosEmb) : (!empty($servicosAnaliseEmb) ? implode(', ', $servicosAnaliseEmb) : 'Vistoria Geral');
+            $tipoTextoEmb = !empty($servicosEmb) ? implode(', ', $servicosEmb) : '';
 
 
 
@@ -249,11 +237,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {
                 'possui_propulsao'  => $emb['possui_propulsao'] ?? '',
 
                 'tem_vistoria'      => !empty($servicosEmb),
-
                 'tem_analise'       => !empty($servicosAnaliseEmb),
-
+                'somente_analise'   => empty($servicosEmb) && !empty($servicosAnaliseEmb),
+                'somente_vistoria'  => !empty($servicosEmb) && empty($servicosAnaliseEmb),
                 'servicos_vistoria' => $servicosEmb,
-
                 'servicos_analise'  => $servicosAnaliseEmb,
 
                 'tipo_vistoria'     => $tipoTextoEmb,
@@ -365,6 +352,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'buscar_proposta') {
             'tem_vistoria'      => $temVistoriaGeral,
 
             'tem_analise'       => $temAnaliseGeral,
+
+            'somente_analise'   => (!$temVistoriaGeral && $temAnaliseGeral),
+
+            'somente_vistoria'  => ($temVistoriaGeral && !$temAnaliseGeral),
 
             'servicos_vistoria' => $totalServicosVistoriaGeral,
 
@@ -528,33 +519,8 @@ function obterTipoVistoriaDaProposta(PDO $pdo, ?string $proposta_id, ?string $em
 
 
 
-    // Se só houver serviços de análise de planos
-
-    $stmtAna = $pdo->prepare("
-
-        SELECT DISTINCT s.nome
-
-        FROM propostas_servicos ps
-
-        INNER JOIN servicos s ON ps.servico_id = s.id
-
-        WHERE ps.proposta_id = :id
-
-          {$whereEmb}
-
-          AND COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
-
-        ORDER BY s.nome ASC
-
-    ");
-
-    $stmtAna->execute($params);
-
-    $servicosAna = array_column($stmtAna->fetchAll(PDO::FETCH_ASSOC), 'nome');
-
-
-
-    return !empty($servicosAna) ? implode(', ', $servicosAna) : '';
+    // Se não houver serviços de vistoria de campo, retornar vazio (Análise de Planos não é vistoria de campo)
+    return '';
 
 }
 
@@ -816,6 +782,24 @@ switch ($action) {
 
 
 
+            // Trava de integridade profissional naval: Vistoriador vs Analista
+            if (!empty($proposta_id) && $relatorio_origem_id === '') {
+                $stCheckExec = $pdo->prepare("SELECT 
+                    SUM(CASE WHEN (s.executor_cargo IN ('VISTORIADOR', 'AMBOS') OR s.executor_cargo IS NULL) AND LOWER(s.nome) NOT LIKE '%análise%' AND LOWER(s.nome) NOT LIKE '%analise%' THEN 1 ELSE 0 END) as qtd_vist,
+                    SUM(CASE WHEN s.executor_cargo = 'ANALISTA' OR LOWER(s.nome) LIKE '%análise%' OR LOWER(s.nome) LIKE '%analise%' THEN 1 ELSE 0 END) as qtd_ana
+                FROM propostas_servicos ps
+                JOIN servicos s ON s.id = ps.servico_id
+                WHERE ps.proposta_id = :pid");
+                $stCheckExec->execute([':pid' => $proposta_id]);
+                $checkRow = $stCheckExec->fetch(PDO::FETCH_ASSOC);
+                $qtdVistProp = (int)($checkRow['qtd_vist'] ?? 0);
+                $qtdAnaProp = (int)($checkRow['qtd_ana'] ?? 0);
+
+                if ($qtdVistProp === 0 && $qtdAnaProp > 0 && !empty($vistoriador_id)) {
+                    throw new RuntimeException('Esta proposta contempla exclusivamente serviços de Análise de Planos (Engenharia Naval). O agendamento deve ser realizado para o Analista Naval no módulo de Análise de Planos.');
+                }
+            }
+
             if (!empty($proposta_id) && $relatorio_origem_id === '') {
 
                 $tipoVistoriaProposta = obterTipoVistoriaDaProposta($pdo, $proposta_id, $embarcacao_id);

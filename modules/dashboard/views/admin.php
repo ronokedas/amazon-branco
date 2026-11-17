@@ -719,14 +719,29 @@ $isSecretaria = in_array($usuarioCargo, ['SECRETARIA', 'ATENDIMENTO'], true);
                     </div>
                 <?php else: ?>
                     <?php foreach ($dashboard['fluxo_assinadas'] as $prop): 
-                        $urlAgendar = $prop['agendamento_id'] ? APP_URL.'agendamentos/form?id='.urlencode($prop['agendamento_id']) : APP_URL.'agendamentos/form?proposta_id='.urlencode($prop['proposta_id']);
+                        $qtdVist = (int)($prop['qtd_vistoria'] ?? 0);
+                        $qtdAna = (int)($prop['qtd_analise'] ?? 0);
+                        $isApenasAnalise = ($qtdVist === 0 && $qtdAna > 0);
+                        
+                        if ($isApenasAnalise) {
+                            $urlAgendar = APP_URL . 'analises-planos/form?proposta_id=' . urlencode($prop['proposta_id']);
+                            $txtCta = 'Agendar Análise';
+                            $corBorda = '#0284c7';
+                        } else {
+                            $urlAgendar = $prop['agendamento_id'] ? APP_URL.'agendamentos/form?id='.urlencode($prop['agendamento_id']) : APP_URL.'agendamentos/form?proposta_id='.urlencode($prop['proposta_id']);
+                            $txtCta = 'Agendar Vistoria';
+                            $corBorda = '#10b981';
+                        }
                     ?>
-                        <a href="<?= h($urlAgendar) ?>" class="dash-decision-item" style="border-left: 3px solid #10b981;">
+                        <a href="<?= h($urlAgendar) ?>" class="dash-decision-item" style="border-left: 3px solid <?= $corBorda ?>;">
                             <div class="dash-decision-item__vessel"><?= h($prop['numero'] ?: 'Proposta assinada') ?></div>
                             <div class="dash-decision-item__meta">
                                 <span><?= h($prop['cliente']) ?></span> · <span><?= h($prop['embarcacao']) ?></span>
+                                <?php if ($isApenasAnalise): ?>
+                                    · <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size:0.7rem; padding:2px 6px; border-radius:4px;">Análise de Planos</span>
+                                <?php endif; ?>
                             </div>
-                            <div class="dash-decision-item__cta">Agendar vistoria <i class="fa-solid fa-arrow-right"></i></div>
+                            <div class="dash-decision-item__cta" style="color:<?= $corBorda ?>;"><?= $txtCta ?> <i class="fa-solid fa-arrow-right"></i></div>
                         </a>
                     <?php endforeach; ?>
                 <?php endif; ?>

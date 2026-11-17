@@ -426,9 +426,41 @@ $fluxoProposta = $fluxoPropostaSolicitado && $editando && !empty($agendamento['p
 
 $horaSelecionada = !empty($agendamento['hora_vistoria']) ? substr($agendamento['hora_vistoria'], 0, 5) : '';
 
-$inicialTemAnalise = !empty($agendamento['analista_id']) || stripos((string)$agendamento['tipo_vistoria'], 'Análise de Planos') !== false || stripos((string)$agendamento['tipo_vistoria'], 'Analise de Planos') !== false;
+$inicialTemAnalise = !empty($agendamento['analista_id']);
+$inicialTemVistoria = empty($agendamento['proposta_id']);
+$inicialSomenteAnalise = false;
+$inicialSomenteVistoria = false;
 
-$inicialTemVistoria = empty($agendamento['proposta_id']) || !empty($agendamento['vistoriador_id']) || stripos((string)$agendamento['tipo_vistoria'], 'Vistoria') !== false || !$inicialTemAnalise;
+if (!empty($agendamento['proposta_id'])) {
+    try {
+        $stmtCheckServ = $pdo->prepare("
+            SELECT 
+                SUM(CASE WHEN (s.executor_cargo IN ('VISTORIADOR', 'AMBOS') OR s.executor_cargo IS NULL)
+                              AND COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
+                              AND LOWER(s.nome) NOT LIKE '%análise de planos%'
+                              AND LOWER(s.nome) NOT LIKE '%analise de planos%' THEN 1 ELSE 0 END) as qtd_vistoria,
+                SUM(CASE WHEN s.executor_cargo = 'ANALISTA' 
+                              OR COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
+                              OR LOWER(s.nome) LIKE '%análise de planos%'
+                              OR LOWER(s.nome) LIKE '%analise de planos%' THEN 1 ELSE 0 END) as qtd_analise
+            FROM propostas_servicos ps
+            JOIN servicos s ON s.id = ps.servico_id
+            WHERE ps.proposta_id = :prop_id
+        ");
+        $stmtCheckServ->execute([':prop_id' => $agendamento['proposta_id']]);
+        $rowServ = $stmtCheckServ->fetch(PDO::FETCH_ASSOC);
+        if ($rowServ) {
+            $qtdVist = (int)($rowServ['qtd_vistoria'] ?? 0);
+            $qtdAna = (int)($rowServ['qtd_analise'] ?? 0);
+            $inicialTemVistoria = ($qtdVist > 0 || ($qtdVist === 0 && $qtdAna === 0));
+            $inicialTemAnalise = ($qtdAna > 0);
+            $inicialSomenteAnalise = (!$inicialTemVistoria && $inicialTemAnalise);
+            $inicialSomenteVistoria = ($inicialTemVistoria && !$inicialTemAnalise);
+        }
+    } catch (Throwable $e) {
+        $inicialTemVistoria = true;
+    }
+}
 
 
 
@@ -1206,11 +1238,29 @@ $inicialTemVistoria = empty($agendamento['proposta_id']) || !empty($agendamento[
 
                     </div>
 
-
+                    <!-- ALERTA AUTODIDÁTICO: PROPOSTA EXCLUSIVA DE ANÁLISE DE PLANOS -->
+                    <div id="alertaExclusivoAnalise" style="<?php echo ($inicialSomenteAnalise ?? false) ? '' : 'display:none;'; ?> border: 1px solid #93c5fd; background: #eff6ff; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: flex-start; gap: 12px;">
+                            <i class="fas fa-drafting-compass" style="font-size: 1.5rem; color: #2563eb; margin-top: 2px;"></i>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; color: #1e40af; font-size: 1rem; margin-bottom: 4px;">
+                                    Proposta Exclusiva de Análise Técnica de Planos (Gabinete / Engenharia Naval)
+                                </div>
+                                <p style="color: #1e3a8a; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">
+                                    Os serviços contratados nesta proposta se referem exclusivamente à <strong>aprovação e análise técnica de projetos e estabilidade</strong> (NORMAM-201/202). Não há previsão contratual de vistoria presencial em campo com vistoriador naval, nem emissão direta de certificados estatutários (CSN/CNBL/CNARQ) por esta via.
+                                </p>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <a id="btnIrAnalisePlanos" href="<?php echo APP_URL; ?>analises-planos/form?proposta_id=<?php echo urlencode($agendamento['proposta_id']); ?>" class="btn btn-sm btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+                                        <i class="fas fa-folder-open"></i> Abrir Trâmite de Análise de Planos &rarr;
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- BLOCO 1: VISTORIA DE CAMPO -->
 
-                    <div id="blocoVistoriaCampo" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px; background: #fafafa;">
+                    <div id="blocoVistoriaCampo" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px; background: #fafafa; <?php echo ($inicialSomenteAnalise ?? false) ? 'display:none;' : ''; ?>">
 
                         <div style="font-weight: 600; color: #1e293b; margin-bottom: 12px; font-size: 0.95rem;">
 
@@ -1534,13 +1584,21 @@ function atualizarEstadoServicosTravados(travado) {
 
 
 
-function ajustarVisibilidadeBlocos(temVistoria, temAnalise) {
+function ajustarVisibilidadeBlocos(temVistoria, temAnalise, somenteAnalise) {
 
     const blocoVist = document.getElementById('blocoVistoriaCampo');
 
     const blocoAna = document.getElementById('blocoAnalisePlanos');
 
     const alertaMistos = document.getElementById('alertaServicosMistos');
+
+    const alertaExclusivoAnalise = document.getElementById('alertaExclusivoAnalise');
+
+    const btnIrAnalisePlanos = document.getElementById('btnIrAnalisePlanos');
+
+    const propSelect = document.getElementById('proposta_id');
+
+    const propostaIdAtual = propSelect ? propSelect.value : '';
 
     const vistoriadorInput = document.getElementById('vistoriador_id');
 
@@ -1558,7 +1616,14 @@ function ajustarVisibilidadeBlocos(temVistoria, temAnalise) {
 
     const labelPrazoObrigatorio = document.getElementById('labelPrazoObrigatorio');
 
+    const isExclusivoAnalise = (typeof somenteAnalise !== 'undefined') ? Boolean(somenteAnalise) : (!temVistoria && temAnalise);
 
+    if (alertaExclusivoAnalise) {
+        alertaExclusivoAnalise.style.display = isExclusivoAnalise ? 'block' : 'none';
+        if (btnIrAnalisePlanos && propostaIdAtual) {
+            btnIrAnalisePlanos.href = '<?php echo APP_URL; ?>analises-planos/form?proposta_id=' + encodeURIComponent(propostaIdAtual);
+        }
+    }
 
     if (alertaMistos) alertaMistos.style.display = (temVistoria && temAnalise) ? 'block' : 'none';
 
@@ -1592,7 +1657,22 @@ function ajustarVisibilidadeBlocos(temVistoria, temAnalise) {
 
 
 
-    if (temVistoria) {
+    if (isExclusivoAnalise) {
+
+        if (blocoVist) blocoVist.style.display = 'none';
+
+        if (vistoriadorInput && vistoriadorInput.tagName.toLowerCase() === 'select') {
+            vistoriadorInput.required = false;
+            vistoriadorInput.value = '';
+        }
+
+        if (dataVistoriaInput) dataVistoriaInput.required = false;
+
+        if (labelVistObrigatorio) labelVistObrigatorio.style.display = 'none';
+
+        if (labelDataObrigatorio) labelDataObrigatorio.style.display = 'none';
+
+    } else if (temVistoria) {
 
         if (blocoVist) blocoVist.style.display = 'block';
 
@@ -1603,18 +1683,6 @@ function ajustarVisibilidadeBlocos(temVistoria, temAnalise) {
         if (labelVistObrigatorio) labelVistObrigatorio.style.display = 'inline';
 
         if (labelDataObrigatorio) labelDataObrigatorio.style.display = 'inline';
-
-    } else if (temAnalise) {
-
-        if (blocoVist) blocoVist.style.display = 'none';
-
-        if (vistoriadorInput && vistoriadorInput.tagName.toLowerCase() === 'select') vistoriadorInput.required = false;
-
-        if (dataVistoriaInput) dataVistoriaInput.required = false;
-
-        if (labelVistObrigatorio) labelVistObrigatorio.style.display = 'none';
-
-        if (labelDataObrigatorio) labelDataObrigatorio.style.display = 'none';
 
     } else {
 
@@ -2340,7 +2408,7 @@ function carregarDadosProposta(propostaId) {
 
                     }
 
-                    ajustarVisibilidadeBlocos(data.tem_vistoria, data.tem_analise);
+                    ajustarVisibilidadeBlocos(data.tem_vistoria, data.tem_analise, data.somente_analise);
 
                     if (campoVistoria && data.tipo_vistoria) {
 
@@ -2636,7 +2704,7 @@ transformarHoraEmSelecao();
 
 atualizarEstadoServicosTravados(servicosIniciamTravados);
 
-ajustarVisibilidadeBlocos(<?php echo $inicialTemVistoria ? 'true' : 'false'; ?>, <?php echo $inicialTemAnalise ? 'true' : 'false'; ?>);
+ajustarVisibilidadeBlocos(<?php echo $inicialTemVistoria ? 'true' : 'false'; ?>, <?php echo $inicialTemAnalise ? 'true' : 'false'; ?>, <?php echo $inicialSomenteAnalise ? 'true' : 'false'; ?>);
 
 
 

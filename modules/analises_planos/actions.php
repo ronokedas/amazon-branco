@@ -36,6 +36,7 @@ try {
     if ($acao === 'criar_analise') {
         $embarcacaoId = trim($_POST['embarcacao_id'] ?? '');
         $solicitanteId = trim($_POST['solicitante_id'] ?? '');
+        $propostaId = trim($_POST['proposta_id'] ?? '') ?: null;
         $tipoProcesso = trim($_POST['tipo_processo'] ?? 'LC');
         $enquadramento = trim($_POST['enquadramento'] ?? 'NORMAM-202');
         $classeCertificacao = trim($_POST['classe_certificacao'] ?? 'EC1');
@@ -52,6 +53,32 @@ try {
         if ($embarcacaoId === '') {
             throw new RuntimeException('Selecione a embarcação para a análise.');
         }
+
+        if ($propostaId !== null) {
+            $stmtCheckProp = $pdo->prepare("
+                SELECT 
+                    SUM(CASE WHEN (s.executor_cargo = 'ANALISTA' 
+                                  OR COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
+                                  OR LOWER(s.nome) LIKE '%análise de planos%'
+                                  OR LOWER(s.nome) LIKE '%analise de planos%') THEN 1 ELSE 0 END) as qtd_analise,
+                    SUM(CASE WHEN (s.executor_cargo IN ('VISTORIADOR', 'AMBOS') OR s.executor_cargo IS NULL)
+                                  AND COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
+                                  AND LOWER(s.nome) NOT LIKE '%análise de planos%'
+                                  AND LOWER(s.nome) NOT LIKE '%analise de planos%' THEN 1 ELSE 0 END) as qtd_vistoria
+                FROM propostas_servicos ps
+                JOIN servicos s ON s.id = ps.servico_id
+                WHERE ps.proposta_id = :id
+            ");
+            $stmtCheckProp->execute([':id' => $propostaId]);
+            $rowCheck = $stmtCheckProp->fetch(PDO::FETCH_ASSOC);
+            $qtdAna = (int)($rowCheck['qtd_analise'] ?? 0);
+            $qtdVist = (int)($rowCheck['qtd_vistoria'] ?? 0);
+
+            if ($qtdAna === 0 && $qtdVist > 0) {
+                throw new RuntimeException('Esta proposta contempla exclusivamente serviços de vistoria em campo. Não é permitido criar processo de análise de planos.');
+            }
+        }
+
         if ($objeto === '') {
             $objeto = 'Análise de planos ' . $tipoProcesso . ' (' . $classeCertificacao . ')';
         }
@@ -78,12 +105,12 @@ try {
         $usuarioAtual = (string)($_SESSION['usuario_id'] ?? '');
 
         $stmtInsert = $pdo->prepare("INSERT INTO analises_planos (
-            id, numero, embarcacao_id, solicitante_id, tipo_processo, enquadramento,
+            id, numero, proposta_id, embarcacao_id, solicitante_id, tipo_processo, enquadramento,
             classe_certificacao, objeto, estaleiro, numero_casco,
             responsavel_projeto_nome, responsavel_projeto_registro, art_numero,
             analista_id, status, prazo_agendado_em, observacoes, criado_por
         ) VALUES (
-            :id, :numero, :embarcacao, :solicitante, :tipo, :norma,
+            :id, :numero, :proposta_id, :embarcacao, :solicitante, :tipo, :norma,
             :classe, :objeto, :estaleiro, :casco,
             :resp_nome, :resp_reg, :art,
             :analista, :status, :prazo, :obs, :criado_por
@@ -91,6 +118,7 @@ try {
         $stmtInsert->execute([
             ':id' => $novoId,
             ':numero' => $numero,
+            ':proposta_id' => $propostaId,
             ':embarcacao' => $embarcacaoId,
             ':solicitante' => $solicitanteId ?: null,
             ':tipo' => $tipoProcesso,

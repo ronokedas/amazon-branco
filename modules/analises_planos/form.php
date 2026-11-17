@@ -7,6 +7,69 @@ analisePlanosExigirAcesso();
 
 $id = trim($_GET['id'] ?? '');
 if ($id === '') {
+    $propostaIdGet = trim((string)($_GET['proposta_id'] ?? ''));
+    $propostaVinculada = null;
+    $propostaBloqueadaVistoriaExclusiva = false;
+    $embarcacaoSugeridaId = '';
+    $clienteSugeridoId = '';
+    $classeSugerida = 'EC1';
+
+    if ($propostaIdGet !== '') {
+        $stmtProp = $pdo->prepare("
+            SELECT p.id, p.numero, p.cliente_id, p.responsavel_fechamento_nome, c.nome as cliente_nome
+            FROM propostas p
+            JOIN clientes c ON c.id = p.cliente_id
+            WHERE p.id = :id
+        ");
+        $stmtProp->execute([':id' => $propostaIdGet]);
+        $propostaVinculada = $stmtProp->fetch(PDO::FETCH_ASSOC);
+
+        if ($propostaVinculada) {
+            $clienteSugeridoId = $propostaVinculada['cliente_id'];
+
+            $stmtEmbProp = $pdo->prepare("
+                SELECT embarcacao_id FROM propostas_embarcacoes WHERE proposta_id = :id LIMIT 1
+            ");
+            $stmtEmbProp->execute([':id' => $propostaIdGet]);
+            $embarcacaoSugeridaId = (string)($stmtEmbProp->fetchColumn() ?: '');
+
+            $stmtServCheck = $pdo->prepare("
+                SELECT 
+                    SUM(CASE WHEN (s.executor_cargo = 'ANALISTA' 
+                                  OR COALESCE(s.codigo_operacional,'') IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
+                                  OR LOWER(s.nome) LIKE '%análise de planos%'
+                                  OR LOWER(s.nome) LIKE '%analise de planos%') THEN 1 ELSE 0 END) as qtd_analise,
+                    SUM(CASE WHEN (s.executor_cargo IN ('VISTORIADOR', 'AMBOS') OR s.executor_cargo IS NULL)
+                                  AND COALESCE(s.codigo_operacional,'') NOT IN ('ANALISE_PLANOS_EC1','ANALISE_PLANOS_EC2')
+                                  AND LOWER(s.nome) NOT LIKE '%análise de planos%'
+                                  AND LOWER(s.nome) NOT LIKE '%analise de planos%' THEN 1 ELSE 0 END) as qtd_vistoria
+                FROM propostas_servicos ps
+                JOIN servicos s ON s.id = ps.servico_id
+                WHERE ps.proposta_id = :id
+            ");
+            $stmtServCheck->execute([':id' => $propostaIdGet]);
+            $rowSrv = $stmtServCheck->fetch(PDO::FETCH_ASSOC);
+            $qtdAna = (int)($rowSrv['qtd_analise'] ?? 0);
+            $qtdVist = (int)($rowSrv['qtd_vistoria'] ?? 0);
+
+            if ($qtdAna === 0 && $qtdVist > 0) {
+                $propostaBloqueadaVistoriaExclusiva = true;
+            }
+
+            // Detectar se há serviço EC2
+            $stmtEc2 = $pdo->prepare("
+                SELECT 1 FROM propostas_servicos ps
+                JOIN servicos s ON s.id = ps.servico_id
+                WHERE ps.proposta_id = :id AND (LOWER(s.nome) LIKE '%ec2%' OR s.codigo_operacional = 'ANALISE_PLANOS_EC2')
+                LIMIT 1
+            ");
+            $stmtEc2->execute([':id' => $propostaIdGet]);
+            if ($stmtEc2->fetchColumn()) {
+                $classeSugerida = 'EC2';
+            }
+        }
+    }
+
     $embarcacoes = $pdo->query("SELECT id, nome, registro, numero_inscricao, cliente_id, proprietario_id, tipo FROM embarcacoes WHERE ativo=1 ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
     $clientes = $pdo->query("SELECT id, nome, cpf_cnpj FROM clientes WHERE status='ATIVO' ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
     $analistas = $pdo->query("SELECT DISTINCT u.id,u.nome FROM usuarios u LEFT JOIN usuario_perfis p ON p.usuario_id=u.id WHERE u.ativo=1 AND u.excluido_em IS NULL AND (u.cargo='ANALISTA' OR p.perfil='ANALISTA') ORDER BY u.nome ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -25,9 +88,33 @@ if ($id === '') {
                 <a class="btn btn-secondary btn-sm" href="<?= APP_URL ?>analises-planos"><i class="fas fa-arrow-left"></i> Voltar</a>
             </div>
 
-            <form method="post" action="<?= APP_URL ?>analises-planos/actions" class="form-padrao" style="padding:20px 0">
+            <?php if ($propostaBloqueadaVistoriaExclusiva): ?>
+                <div class="alert alert-warning" style="margin: 20px 0; border-left: 4px solid #f59e0b; padding: 16px;">
+                    <h5 style="margin-top: 0; color: #b45309;"><i class="fas fa-exclamation-triangle"></i> Proposta sem Serviços de Análise de Planos</h5>
+                    <p style="margin-bottom: 12px; color: #92400e;">
+                        A proposta <strong><?= h($propostaVinculada['numero']) ?></strong> (<?= h($propostaVinculada['cliente_nome']) ?>) contempla exclusivamente serviços de <strong>vistoria naval em campo</strong>. Ela não possui serviços de análise de projetos e planos técnicos de engenharia contratados.
+                    </p>
+                    <a href="<?= APP_URL ?>agendamentos/form?proposta_id=<?= urlencode($propostaIdGet) ?>" class="btn btn-primary btn-sm">
+                        <i class="fas fa-calendar-check"></i> Ir para Agendamento de Vistoria de Campo &rarr;
+                    </a>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($propostaVinculada && !$propostaBloqueadaVistoriaExclusiva): ?>
+                <div class="alert alert-info" style="margin: 15px 0; border-left: 4px solid #3b82f6; padding: 14px; background: #eff6ff;">
+                    <div style="font-weight: 600; color: #1e40af; margin-bottom: 4px;">
+                        <i class="fas fa-file-invoice"></i> Proposta Vinculada: <?= h($propostaVinculada['numero']) ?> — <?= h($propostaVinculada['cliente_nome']) ?>
+                    </div>
+                    <small style="color: #1e3a8a;">Processo iniciado a partir de serviço contratado de engenharia naval/análise de planos.</small>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="<?= APP_URL ?>analises-planos/actions" class="form-padrao" style="padding:20px 0" <?= $propostaBloqueadaVistoriaExclusiva ? 'onsubmit="return false;" style="opacity:0.6;pointer-events:none;"' : '' ?>>
                 <input type="hidden" name="csrf_token" value="<?= gerarCSRF() ?>">
                 <input type="hidden" name="action" value="criar_analise">
+                <?php if ($propostaVinculada): ?>
+                    <input type="hidden" name="proposta_id" value="<?= h($propostaVinculada['id']) ?>">
+                <?php endif; ?>
 
                 <div class="form-row">
                     <div class="form-group col-6">
@@ -35,7 +122,8 @@ if ($id === '') {
                         <select id="embarcacao_id" name="embarcacao_id" required onchange="aoMudarEmbarcacao(this)">
                             <option value="">-- Selecione a embarcação --</option>
                             <?php foreach ($embarcacoes as $emb): ?>
-                                <option value="<?= h($emb['id']) ?>" data-cliente="<?= h($emb['cliente_id'] ?: $emb['proprietario_id']) ?>">
+                                <?php $selEmb = ($embarcacaoSugeridaId === $emb['id']) ? 'selected' : ''; ?>
+                                <option value="<?= h($emb['id']) ?>" data-cliente="<?= h($emb['cliente_id'] ?: $emb['proprietario_id']) ?>" <?= $selEmb ?>>
                                     <?= h($emb['nome']) ?> <?= !empty($emb['registro']) ? ' - ' . h($emb['registro']) : '' ?> (<?= h($emb['tipo'] ?: 'Naval') ?>)
                                 </option>
                             <?php endforeach; ?>
@@ -47,7 +135,8 @@ if ($id === '') {
                         <select id="solicitante_id" name="solicitante_id" required>
                             <option value="">-- Selecione o cliente/solicitante --</option>
                             <?php foreach ($clientes as $cli): ?>
-                                <option value="<?= h($cli['id']) ?>"><?= h($cli['nome']) ?> (<?= h($cli['cpf_cnpj']) ?>)</option>
+                                <?php $selCli = ($clienteSugeridoId === $cli['id']) ? 'selected' : ''; ?>
+                                <option value="<?= h($cli['id']) ?>" <?= $selCli ?>><?= h($cli['nome']) ?> (<?= h($cli['cpf_cnpj']) ?>)</option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -74,8 +163,8 @@ if ($id === '') {
                     <div class="form-group col-4">
                         <label for="classe_certificacao">Classe de Certificação *</label>
                         <select id="classe_certificacao" name="classe_certificacao" required>
-                            <option value="EC1">EC1 - Maior Porte / Complexidade Completa</option>
-                            <option value="EC2">EC2 - Porte Intermediário / Simplificado</option>
+                            <option value="EC1" <?= $classeSugerida === 'EC1' ? 'selected' : '' ?>>EC1 - Maior Porte / Complexidade Completa</option>
+                            <option value="EC2" <?= $classeSugerida === 'EC2' ? 'selected' : '' ?>>EC2 - Porte Intermediário / Simplificado</option>
                         </select>
                     </div>
                 </div>

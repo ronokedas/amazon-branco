@@ -382,6 +382,19 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
         WHERE {$wHist}
           AND v.status IN ('APROVADA', 'APROVADA_COM_EXIGENCIAS')
           AND v.assinatura_status = 'ASSINADO'
+          AND (
+              EXISTS (
+                  SELECT 1 FROM propostas_servicos ps
+                  JOIN servicos s ON s.id = ps.servico_id
+                  WHERE ps.proposta_id = a.proposta_id
+                    AND s.certificado_modelo IN ('CSN', 'CNBL', 'CNARQ', 'LP', 'LC')
+              )
+              OR EXISTS (
+                  SELECT 1 FROM servicos s_avulso
+                  WHERE s_avulso.nome = a.tipo_vistoria
+                    AND s_avulso.certificado_modelo IN ('CSN', 'CNBL', 'CNARQ', 'LP', 'LC')
+              )
+          )
           AND NOT EXISTS (
               SELECT 1 FROM alertas_dispensados ad
               WHERE ad.usuario_id = :uid_alerta
@@ -685,7 +698,29 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
         WHERE ap.status NOT IN ('CONCLUIDA','REPROVADA','CANCELADA') 
         AND NOT EXISTS (SELECT 1 FROM analise_planos_submissoes s JOIN analise_planos_arquivos ar ON ar.submissao_id = s.id WHERE s.analise_id = ap.id AND s.origem IN ('PORTAL', 'SECRETARIA'))
         ORDER BY ap.created_at ASC LIMIT 4");
-    $base['fluxo_assinadas'] = dashRows($pdo,"SELECT p.id proposta_id,p.numero,p.assinatura_em,c.nome cliente,a.id agendamento_id,a.data_vistoria,a.vistoriador_id,COALESCE(e.nome,(SELECT GROUP_CONCAT(DISTINCT ep.nome ORDER BY ep.nome SEPARATOR ', ') FROM propostas_embarcacoes pe JOIN embarcacoes ep ON ep.id=pe.embarcacao_id WHERE pe.proposta_id=p.id),'Embarcação da proposta') embarcacao FROM propostas p JOIN clientes c ON c.id=p.cliente_id LEFT JOIN agendamentos a ON a.id=(SELECT a2.id FROM agendamentos a2 WHERE a2.proposta_id=p.id AND a2.status<>'cancelado' ORDER BY a2.created_at DESC LIMIT 1) LEFT JOIN embarcacoes e ON e.id=a.embarcacao_id WHERE p.assinado=1 AND NOT EXISTS (SELECT 1 FROM agendamentos ac WHERE ac.proposta_id=p.id AND ac.status<>'cancelado' AND ac.data_vistoria IS NOT NULL AND ac.vistoriador_id IS NOT NULL) ORDER BY COALESCE(p.assinatura_em,p.updated_at,p.created_at) ASC LIMIT 4");
+    $base['fluxo_assinadas'] = dashRows($pdo,"SELECT 
+        p.id proposta_id, p.numero, p.assinatura_em, c.nome cliente,
+        a.id agendamento_id, a.data_vistoria, a.vistoriador_id,
+        COALESCE(e.nome,(SELECT GROUP_CONCAT(DISTINCT ep.nome ORDER BY ep.nome SEPARATOR ', ') FROM propostas_embarcacoes pe JOIN embarcacoes ep ON ep.id=pe.embarcacao_id WHERE pe.proposta_id=p.id),'Embarcação da proposta') embarcacao,
+        (SELECT COUNT(*) FROM propostas_servicos ps JOIN servicos s ON s.id = ps.servico_id WHERE ps.proposta_id = p.id AND (s.executor_cargo IN ('VISTORIADOR', 'AMBOS') OR s.executor_cargo IS NULL)) AS qtd_vistoria,
+        (SELECT COUNT(*) FROM propostas_servicos ps JOIN servicos s ON s.id = ps.servico_id WHERE ps.proposta_id = p.id AND s.executor_cargo = 'ANALISTA') AS qtd_analise,
+        (SELECT ap.id FROM analises_planos ap WHERE ap.proposta_id = p.id AND ap.status NOT IN ('CANCELADA', 'REPROVADA') LIMIT 1) AS analise_id
+    FROM propostas p 
+    JOIN clientes c ON c.id=p.cliente_id 
+    LEFT JOIN agendamentos a ON a.id=(SELECT a2.id FROM agendamentos a2 WHERE a2.proposta_id=p.id AND a2.status<>'cancelado' ORDER BY a2.created_at DESC LIMIT 1) 
+    LEFT JOIN embarcacoes e ON e.id=a.embarcacao_id 
+    WHERE p.assinado=1 
+      AND (
+          -- Se tem vistoria, checa se agendamento com vistoriador foi concluido
+          ((SELECT COUNT(*) FROM propostas_servicos ps JOIN servicos s ON s.id = ps.servico_id WHERE ps.proposta_id = p.id AND (s.executor_cargo IN ('VISTORIADOR', 'AMBOS') OR s.executor_cargo IS NULL)) > 0
+           AND NOT EXISTS (SELECT 1 FROM agendamentos ac WHERE ac.proposta_id=p.id AND ac.status<>'cancelado' AND ac.data_vistoria IS NOT NULL AND ac.vistoriador_id IS NOT NULL))
+          OR
+          -- Se tem analise e nao tem vistoria, checa se analise foi criada
+          ((SELECT COUNT(*) FROM propostas_servicos ps JOIN servicos s ON s.id = ps.servico_id WHERE ps.proposta_id = p.id AND (s.executor_cargo IN ('VISTORIADOR', 'AMBOS') OR s.executor_cargo IS NULL)) = 0
+           AND (SELECT COUNT(*) FROM propostas_servicos ps JOIN servicos s ON s.id = ps.servico_id WHERE ps.proposta_id = p.id AND s.executor_cargo = 'ANALISTA') > 0
+           AND NOT EXISTS (SELECT 1 FROM analises_planos ap WHERE ap.proposta_id = p.id AND ap.status NOT IN ('CANCELADA', 'REPROVADA')))
+      )
+    ORDER BY COALESCE(p.assinatura_em,p.updated_at,p.created_at) ASC LIMIT 4");
     $base['fluxo_aprovacoes'] = dashRows($pdo,"SELECT v.id,v.numero,v.agendamento_id,v.atualizado_em,e.nome embarcacao,COALESCE(u.nome,'Sem vistoriador') vistoriador,TIMESTAMPDIFF(HOUR,v.atualizado_em,NOW()) horas,(SELECT COUNT(*) FROM vistoria_exigencias ve WHERE ve.vistoria_id=v.id AND ve.conforme='nao') nao_conformes,(SELECT COUNT(*) FROM vistoria_anexos va WHERE va.vistoria_id=v.id) fotos FROM vistorias v JOIN embarcacoes e ON e.id=v.embarcacao_id LEFT JOIN agendamentos a ON a.id=v.agendamento_id LEFT JOIN usuarios u ON u.id=a.vistoriador_id WHERE v.status='AGUARDANDO_APROVACAO' AND NOT EXISTS (SELECT 1 FROM vistorias vf WHERE vf.relatorio_anterior_id=v.id AND vf.status<>'CANCELADA') ORDER BY v.atualizado_em ASC LIMIT 4");
     $base['fluxo_retornos_as'] = dashRows($pdo,"SELECT vr.relatorio_origem_id,vr.tipo,v.numero,e.nome embarcacao,vr.criado_em FROM vistoria_retornos vr JOIN vistorias v ON v.id=vr.relatorio_origem_id JOIN embarcacoes e ON e.id=v.embarcacao_id WHERE vr.status='PENDENTE_AGENDAMENTO' ORDER BY CASE vr.tipo WHEN 'AS' THEN 0 ELSE 1 END,vr.criado_em LIMIT 4");
     $aprovadas=(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistorias WHERE status IN ('APROVADA','APROVADA_COM_EXIGENCIAS')"); $analisadas=(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistorias WHERE status IN ('APROVADA','APROVADA_COM_EXIGENCIAS','RETORNO_AS','REPROVADA')");
@@ -709,6 +744,19 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
     LEFT JOIN usuarios u ON u.id = COALESCE(a.vistoriador_id, v.criado_por)
     WHERE v.status IN ('APROVADA', 'APROVADA_COM_EXIGENCIAS')
       AND v.assinatura_status = 'ASSINADO'
+          AND (
+              EXISTS (
+                  SELECT 1 FROM propostas_servicos ps
+                  JOIN servicos s ON s.id = ps.servico_id
+                  WHERE ps.proposta_id = a.proposta_id
+                    AND s.certificado_modelo IN ('CSN', 'CNBL', 'CNARQ', 'LP', 'LC')
+              )
+              OR EXISTS (
+                  SELECT 1 FROM servicos s_avulso
+                  WHERE s_avulso.nome = a.tipo_vistoria
+                    AND s_avulso.certificado_modelo IN ('CSN', 'CNBL', 'CNARQ', 'LP', 'LC')
+              )
+          )
       AND NOT EXISTS (
           SELECT 1 FROM alertas_dispensados ad
           WHERE ad.usuario_id = :uid_alerta
