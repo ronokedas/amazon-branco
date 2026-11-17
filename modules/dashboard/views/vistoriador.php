@@ -30,8 +30,11 @@ function extrairTiposVistoria(?string $tiposRaw): array
     return !empty($lista) ? array_values(array_unique($lista)) : ['Vistoria Técnica'];
 }
 
-function obterStatusHistoricoInfo(string $status): array
+function obterStatusHistoricoInfo(string $status, string $assinaturaStatus = ''): array
 {
+    if (in_array($status, ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true) && $assinaturaStatus !== 'ASSINADO') {
+        return ['Aprovada · Aguardando Assinatura', 'is-waiting-signature', 'fa-file-signature'];
+    }
     return match ($status) {
         'APROVADA' => ['Aprovada', 'is-approved', 'fa-circle-check'],
         'APROVADA_COM_EXIGENCIAS' => ['Aprovada com Exigências', 'is-approved-warning', 'fa-clipboard-check'],
@@ -120,7 +123,7 @@ function obterStatusHistoricoInfo(string $status): array
 /* 2. Top KPIs Grid (Horizontal) */
 .dash-v-kpis {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 14px;
 }
 .dash-v-kpi {
@@ -153,6 +156,330 @@ function obterStatusHistoricoInfo(string $status): array
 .dash-v-kpi--next .dash-v-kpi__icon { background: #ccfbf1; color: #0f766e; }
 .dash-v-kpi--draft .dash-v-kpi__icon { background: #e0f2fe; color: #0284c7; }
 .dash-v-kpi--waiting .dash-v-kpi__icon { background: #ede9fe; color: #7c3aed; }
+.dash-v-kpi--signature .dash-v-kpi__icon { background: #ecfdf5; color: #059669; }
+.dash-v-kpi--signature.is-alert-signature {
+    border: 2px solid #10b981;
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.22);
+    animation: pulseSignature 2.5s infinite;
+}
+.dash-v-kpi--signature.is-alert-signature .dash-v-kpi__icon {
+    background: #10b981;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+.dash-v-kpi--signature.is-alert-signature .dash-v-kpi__value {
+    color: #065f46;
+}
+.dash-v-kpi--signature.is-alert-signature .dash-v-kpi__sub {
+    color: #047857;
+    font-weight: 700;
+}
+@keyframes pulseSignature {
+    0%, 100% { box-shadow: 0 4px 14px rgba(16, 185, 129, 0.22); border-color: #10b981; }
+    50% { box-shadow: 0 4px 22px rgba(16, 185, 129, 0.45); border-color: #059669; }
+}
+
+/* Hero Banner para Assinaturas Pendentes */
+.dash-v-signature-section {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    border: 2px solid #10b981;
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.18);
+    position: relative;
+    overflow: hidden;
+}
+.dash-v-signature-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background: #10b981;
+}
+.dash-v-signature-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #d1fae5;
+}
+.dash-v-signature-header__info {
+    flex: 1;
+    min-width: 280px;
+}
+.dash-v-signature-pill-pulse {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #dcfce7;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.dash-v-signature-pill-pulse .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulseDot 1.8s infinite;
+}
+@keyframes pulseDot {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+.dash-v-signature-header h2 {
+    margin: 0 0 6px 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: #064e3b;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.dash-v-signature-header p {
+    margin: 0;
+    font-size: 13.5px;
+    color: #166534;
+    line-height: 1.45;
+}
+.dash-v-btn--all-signatures {
+    background: #ffffff;
+    border: 1px solid #a7f3d0;
+    color: #065f46 !important;
+    font-size: 13px;
+    font-weight: 700;
+}
+.dash-v-btn--all-signatures:hover {
+    background: #ecfdf5;
+    border-color: #059669;
+    color: #047857 !important;
+}
+
+.dash-v-signature-warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-left: 4px solid #f59e0b;
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.dash-v-signature-warning__content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.dash-v-signature-warning__content > i {
+    font-size: 20px;
+    color: #d97706;
+}
+.dash-v-signature-warning__content strong {
+    font-size: 13px;
+    color: #92400e;
+    display: block;
+}
+.dash-v-signature-warning__content p {
+    margin: 2px 0 0 0;
+    font-size: 12px;
+    color: #b45309;
+}
+.dash-v-btn--warning-profile {
+    background: #d97706;
+    border-color: #d97706;
+    color: #ffffff !important;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 14px;
+}
+.dash-v-btn--warning-profile:hover {
+    background: #b45309;
+}
+
+.dash-v-signature-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.dash-v-sig-card {
+    background: #ffffff;
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.08);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.dash-v-sig-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.15);
+}
+.dash-v-sig-card__main {
+    flex: 1;
+    min-width: 280px;
+}
+.dash-v-sig-card__badge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+.dash-v-sig-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+.dash-v-sig-badge--report {
+    background: #f1f5f9;
+    color: #0f766e;
+    border: 1px solid #cbd5e1;
+    font-family: monospace;
+    font-size: 12px;
+}
+.dash-v-sig-badge--approved {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+.dash-v-sig-badge--warning {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+.dash-v-sig-badge--pending {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+    font-weight: 800;
+}
+.dash-v-sig-card__vessel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+.dash-v-sig-card__vessel-title i {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #10b981;
+    color: #ffffff;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+.dash-v-sig-card__vessel-title h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    color: #0f172a;
+}
+.dash-v-sig-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    color: #475569;
+}
+.dash-v-sig-card__meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.dash-v-sig-card__meta strong {
+    color: #1e293b;
+}
+.dash-v-sig-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.dash-v-btn--sign-now {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff !important;
+    border: none;
+    font-size: 13.5px;
+    font-weight: 800;
+    padding: 10px 18px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.dash-v-btn--sign-now:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.45);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+.dash-v-btn--view-pdf {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155 !important;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 9px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+.dash-v-btn--view-pdf:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a !important;
+}
+.dash-v-btn--outline-subtle {
+    background: #ffffff;
+    border: 1px solid #d1fae5;
+    color: #065f46 !important;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 9px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+.dash-v-btn--outline-subtle:hover {
+    background: #ecfdf5;
+    border-color: #10b981;
+}
 
 .dash-v-kpi__content {
     display: flex;
@@ -562,6 +889,7 @@ function obterStatusHistoricoInfo(string $status): array
 .history-status-badge.is-approved-warning { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
 .history-status-badge.is-rejected { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
 .history-status-badge.is-waiting { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.history-status-badge.is-waiting-signature { background: #ecfdf5; color: #065f46; border: 1px solid #10b981; font-weight: 800; }
 .history-status-badge.is-draft { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
 
 .empty-state-box {
@@ -573,7 +901,7 @@ function obterStatusHistoricoInfo(string $status): array
 .empty-state-box strong { display: block; font-size: 15px; color: #1e293b; margin-bottom: 4px; }
 
 /* Responsividade */
-@media (max-width: 1100px) {
+@media (max-width: 1280px) {
     .dash-v-kpis {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
@@ -665,7 +993,128 @@ function obterStatusHistoricoInfo(string $status): array
                 <small class="dash-v-kpi__sub">Em análise técnica</small>
             </div>
         </div>
+        <a href="#secaoAssinaturasPendentes" class="dash-v-kpi dash-v-kpi--signature <?= ($dashboard['kpis']['aguardando_assinatura'] ?? 0) > 0 ? 'is-alert-signature' : '' ?>" style="text-decoration: none; color: inherit;">
+            <div class="dash-v-kpi__icon"><i class="fa-solid fa-file-signature"></i></div>
+            <div class="dash-v-kpi__content">
+                <span class="dash-v-kpi__label">Aguardando Assinatura</span>
+                <strong class="dash-v-kpi__value"><?= (int)($dashboard['kpis']['aguardando_assinatura'] ?? 0) ?></strong>
+                <small class="dash-v-kpi__sub"><?= ($dashboard['kpis']['aguardando_assinatura'] ?? 0) > 0 ? 'Aprovado · Assinar' : 'Nenhuma pendente' ?></small>
+            </div>
+        </a>
     </section>
+
+    <!-- 2.5 Hero Banner: Relatórios Técnicos Aprovados Aguardando Assinatura -->
+    <?php
+    $assinaturasPendentes = $dashboard['aguardando_assinatura_lista'] ?? [];
+    $qtdAssinaturasPendentes = count($assinaturasPendentes);
+    $temAssinaturaConfigurada = !empty($dashboard['minha_assinatura_ativa']);
+    ?>
+    <?php if ($qtdAssinaturasPendentes > 0): ?>
+        <section id="secaoAssinaturasPendentes" class="dash-v-signature-section" aria-label="Relatórios Aprovados Aguardando Assinatura">
+            <div class="dash-v-signature-header">
+                <div class="dash-v-signature-header__info">
+                    <div class="dash-v-signature-pill-pulse">
+                        <span class="pulse-dot"></span>
+                        <i class="fa-solid fa-bell"></i>
+                        <span>AÇÃO OBRIGATÓRIA DA DIRETORIA</span>
+                    </div>
+                    <h2>
+                        <i class="fa-solid fa-file-signature" style="color: #059669;"></i>
+                        <?= $qtdAssinaturasPendentes === 1 ? '1 Relatório Técnico Aprovado Aguardando Sua Assinatura' : "{$qtdAssinaturasPendentes} Relatórios Técnicos Aprovados Aguardando Sua Assinatura" ?>
+                    </h2>
+                    <p>
+                        A diretoria técnica revisou e <strong>aprovou</strong> seu relatório de vistoria. Para concluir o trâmite formal e liberar a emissão dos certificados da embarcação, aplique sua assinatura digital/manuscrita com fé pública.
+                    </p>
+                </div>
+                <div class="dash-v-signature-header__action">
+                    <a href="<?= APP_URL ?>minhas-assinaturas" class="dash-v-btn dash-v-btn--all-signatures">
+                        <i class="fa-solid fa-signature"></i> Ver Minhas Assinaturas (<?= $qtdAssinaturasPendentes ?>)
+                    </a>
+                </div>
+            </div>
+
+            <?php if (!$temAssinaturaConfigurada): ?>
+                <div class="dash-v-signature-warning">
+                    <div class="dash-v-signature-warning__content">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div>
+                            <strong>Assinatura manuscrita ou registro profissional pendentes no seu perfil</strong>
+                            <p>Para assinar eletronicamente com validade jurídica perante a Marinha do Brasil (NORMAM), cadastre sua rubrica e número de registro.</p>
+                        </div>
+                    </div>
+                    <a href="<?= APP_URL ?>perfil#assinatura" class="dash-v-btn dash-v-btn--warning-profile">
+                        <i class="fa-solid fa-pen-nib"></i> Configurar Assinatura no Perfil
+                    </a>
+                </div>
+            <?php endif; ?>
+
+            <div class="dash-v-signature-cards">
+                <?php foreach ($assinaturasPendentes as $pend): ?>
+                    <?php
+                    $dataAprovFmt = !empty($pend['data_aprovacao']) ? date('d/m/Y \à\s H:i', strtotime($pend['data_aprovacao'])) : 'Recente';
+                    $dataVistFmt = !empty($pend['data_vistoria']) ? date('d/m/Y', strtotime($pend['data_vistoria'])) : '--/--/----';
+                    $urlPdf = APP_URL . 'vistorias/relatorio_pdf?id=' . urlencode($pend['id']);
+                    $urlVistoria = APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($pend['agendamento_id'] ?? '') . '&vistoria_id=' . urlencode($pend['id']);
+                    $isComExigencias = ($pend['status'] ?? '') === 'APROVADA_COM_EXIGENCIAS';
+                    ?>
+                    <div class="dash-v-sig-card">
+                        <div class="dash-v-sig-card__main">
+                            <div class="dash-v-sig-card__badge-row">
+                                <span class="dash-v-sig-badge dash-v-sig-badge--report">
+                                    <i class="fa-solid fa-file-lines"></i> Relatório <?= h($pend['numero'] ?: 'Sem número') ?>
+                                </span>
+                                <?php if ($isComExigencias): ?>
+                                    <span class="dash-v-sig-badge dash-v-sig-badge--warning">
+                                        <i class="fa-solid fa-clipboard-check"></i> Aprovado com Exigências
+                                    </span>
+                                <?php else: ?>
+                                    <span class="dash-v-sig-badge dash-v-sig-badge--approved">
+                                        <i class="fa-solid fa-circle-check"></i> Aprovado pela Diretoria
+                                    </span>
+                                <?php endif; ?>
+                                <span class="dash-v-sig-badge dash-v-sig-badge--pending">
+                                    <i class="fa-solid fa-hourglass-half"></i> Aguardando Sua Assinatura
+                                </span>
+                            </div>
+
+                            <div class="dash-v-sig-card__vessel-title">
+                                <i class="fa-solid fa-ship"></i>
+                                <h3><?= h($pend['embarcacao']) ?></h3>
+                            </div>
+
+                            <div class="dash-v-sig-card__meta">
+                                <span><i class="fa-solid fa-id-card"></i> Inscrição: <strong><?= h($pend['registro']) ?></strong></span>
+                                <span><i class="fa-solid fa-user"></i> Cliente: <strong><?= h($pend['cliente'] ?: 'Não informado') ?></strong></span>
+                                <span><i class="fa-regular fa-calendar-check"></i> Vistoria: <strong><?= h($dataVistFmt) ?></strong></span>
+                                <span><i class="fa-solid fa-user-check"></i> Aprovado por: <strong><?= h($pend['aprovador_nome']) ?></strong> (<?= h($dataAprovFmt) ?>)</span>
+                            </div>
+                        </div>
+
+                        <div class="dash-v-sig-card__actions">
+                            <button type="button" 
+                                    class="dash-v-btn dash-v-btn--sign-now js-assinar-dash"
+                                    data-id="<?= h($pend['id']) ?>"
+                                    data-numero="<?= h($pend['numero']) ?>"
+                                    data-embarcacao="<?= h($pend['embarcacao']) ?>"
+                                    data-tem-assinatura="<?= $temAssinaturaConfigurada ? '1' : '0' ?>"
+                                    title="Assinar este relatório imediatamente">
+                                <i class="fa-solid fa-pen-nib"></i>
+                                <span>Assinar Agora</span>
+                            </button>
+                            <a href="<?= h($urlPdf) ?>" target="_blank" class="dash-v-btn dash-v-btn--view-pdf" title="Visualizar prévia do relatório em PDF">
+                                <i class="fa-solid fa-file-pdf"></i>
+                                <span>Ver PDF</span>
+                            </a>
+                            <a href="<?= APP_URL ?>minhas-assinaturas" class="dash-v-btn dash-v-btn--outline-subtle" title="Abrir tela de Minhas Assinaturas">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                <span>Minhas Assinaturas</span>
+                            </a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
 
     <!-- 3. Card Hero: Vistoria em Foco / Próxima Ação Principal -->
     <?php if ($vistoriaFoco): ?>
@@ -853,8 +1302,10 @@ function obterStatusHistoricoInfo(string $status): array
                             $urlHist = APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($v['agendamento_id']) . '&vistoria_id=' . urlencode($v['id']);
                             $urlDetalhe = APP_URL . 'vistorias/detalhe?id=' . urlencode($v['id']);
                             $dataHist = !empty($v['data_vistoria']) ? date('d/m/Y', strtotime($v['data_vistoria'])) : 'Sem data';
-                            [$labelStatus, $classStatus, $iconStatus] = obterStatusHistoricoInfo((string)$v['status']);
+                            $assStatus = (string)($v['assinatura_status'] ?? '');
+                            [$labelStatus, $classStatus, $iconStatus] = obterStatusHistoricoInfo((string)$v['status'], $assStatus);
                             $tiposHist = extrairTiposVistoria($v['tipo_vistoria']);
+                            $pendenteAssinaturaHist = in_array($v['status'], ['APROVADA', 'APROVADA_COM_EXIGENCIAS'], true) && $assStatus !== 'ASSINADO';
                             ?>
                             <tr>
                                 <td>
@@ -883,9 +1334,15 @@ function obterStatusHistoricoInfo(string $status): array
                                     </span>
                                 </td>
                                 <td style="text-align: right;">
-                                    <a href="<?= h($urlHist) ?>" class="dash-v-btn dash-v-btn--outline" style="font-size: 11.5px; padding: 5px 10px;" title="Abrir Relatório Técnico">
-                                        <i class="fa-solid fa-pen-to-square"></i> Abrir
-                                    </a>
+                                    <?php if ($pendenteAssinaturaHist): ?>
+                                        <a href="<?= APP_URL ?>minhas-assinaturas" class="dash-v-btn" style="font-size: 11.5px; padding: 5px 12px; background: #10b981; color: #ffffff !important; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);" title="Assinar Relatório Aprovado">
+                                            <i class="fa-solid fa-pen-nib"></i> Assinar
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="<?= h($urlHist) ?>" class="dash-v-btn dash-v-btn--outline" style="font-size: 11.5px; padding: 5px 10px;" title="Abrir Relatório Técnico">
+                                            <i class="fa-solid fa-pen-to-square"></i> Abrir
+                                        </a>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -896,3 +1353,105 @@ function obterStatusHistoricoInfo(string $status): array
     </section>
 
 </div>
+
+<!-- Modal de Confirmação de Assinatura no Dashboard -->
+<div id="modalAssinaturaDash" style="display:none;position:fixed;inset:0;background:rgba(4,35,28,.65);z-index:10050;align-items:center;justify-content:center;padding:18px">
+    <div style="background:#fff;border-radius:14px;width:min(540px,100%);overflow:hidden;box-shadow:0 12px 36px rgba(0,0,0,0.25);">
+        <div style="padding:20px;background:#064e3b;color:#fff;display:flex;align-items:center;gap:10px;">
+            <i class="fa-solid fa-file-signature" style="font-size: 20px;"></i>
+            <strong style="font-size:16px;">Confirmar Assinatura do Relatório Técnico</strong>
+        </div>
+        <div style="padding:22px">
+            <p id="dashAssinaturaDocInfo" style="font-weight:700;color:#0f172a;margin-bottom:8px;font-size:15px;"></p>
+            <p id="dashAssinaturaDescricao" style="font-size:13.5px;color:#475569;margin-bottom:14px;line-height:1.5;">
+                Será aplicada a assinatura manuscrita cadastrada no seu perfil profissional. Sua localização geográfica, endereço IP, carimbo de data e hora serão registrados com fé pública e validade perante a NORMAM.
+            </p>
+            <div id="dashAssinaturaMsg" class="alert" style="display:none;margin-bottom:14px;"></div>
+        </div>
+        <div style="padding:15px 22px;background:#f8fafc;display:flex;justify-content:flex-end;gap:10px">
+            <button type="button" class="btn btn-secondary" id="dashCancelarAssinatura">Cancelar</button>
+            <button type="button" class="btn btn-success" id="dashConfirmarAssinatura" style="background:#059669;border-color:#059669;font-weight:700;">
+                <i class="fa-solid fa-location-dot"></i> Permitir localização e assinar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    let atualId = null;
+    const modal = document.getElementById('modalAssinaturaDash');
+    if (!modal) return;
+    const msg = document.getElementById('dashAssinaturaMsg');
+    const docInfo = document.getElementById('dashAssinaturaDocInfo');
+    const confirmar = document.getElementById('dashConfirmarAssinatura');
+    const cancelar = document.getElementById('dashCancelarAssinatura');
+
+    function mensagem(texto, isErro) {
+        msg.style.display = 'block';
+        msg.className = 'alert ' + (isErro ? 'alert-danger' : 'alert-info');
+        msg.textContent = texto;
+    }
+
+    document.querySelectorAll('.js-assinar-dash').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const temAssinatura = btn.dataset.temAssinatura === '1';
+            if (!temAssinatura) {
+                if (confirm('Sua assinatura manuscrita ou registro profissional ainda não estão configurados no perfil. Deseja acessar a página de perfil para cadastrá-los agora?')) {
+                    window.location.href = '<?= APP_URL ?>perfil#assinatura';
+                }
+                return;
+            }
+            atualId = btn.dataset.id;
+            msg.style.display = 'none';
+            docInfo.textContent = 'Relatório ' + (btn.dataset.numero || '') + ' — ' + (btn.dataset.embarcacao || '');
+            modal.style.display = 'flex';
+        });
+    });
+
+    if (cancelar) {
+        cancelar.onclick = () => {
+            modal.style.display = 'none';
+            atualId = null;
+        };
+    }
+
+    if (confirmar) {
+        confirmar.onclick = () => {
+            if (!atualId) return;
+            if (!navigator.geolocation) {
+                mensagem('Este navegador não oferece suporte à geolocalização.', true);
+                return;
+            }
+            confirmar.disabled = true;
+            mensagem('Obtendo localização geográfica para fé pública...', false);
+            navigator.geolocation.getCurrentPosition(pos => {
+                const fd = new FormData();
+                fd.append('csrf_token', <?= json_encode(gerarCSRF()) ?>);
+                fd.append('action', 'assinar');
+                fd.append('documento_tipo', 'RELATORIO');
+                fd.append('documento_id', atualId);
+                fd.append('latitude', pos.coords.latitude);
+                fd.append('longitude', pos.coords.longitude);
+                fd.append('geo_precisao_m', pos.coords.accuracy || '');
+                fetch(<?= json_encode(APP_URL . 'minhas-assinaturas/actions') ?>, {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'same-origin'
+                }).then(async r => {
+                    const d = await r.json().catch(() => ({success: false, message: 'Resposta inválida do servidor.'}));
+                    if (!r.ok || !d.success) throw new Error(d.message || 'Falha ao processar assinatura.');
+                    mensagem(d.message, false);
+                    setTimeout(() => location.reload(), 900);
+                }).catch(e => {
+                    mensagem(e.message, true);
+                    confirmar.disabled = false;
+                });
+            }, err => {
+                mensagem(err.code === 1 ? 'A localização é obrigatória pela NORMAM para assinar com fé pública.' : 'Não foi possível obter a localização geográfica.', true);
+                confirmar.disabled = false;
+            }, {enableHighAccuracy: true, timeout: 15000, maximumAge: 0});
+        };
+    }
+})();
+</script>
