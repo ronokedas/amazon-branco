@@ -46,17 +46,244 @@ function dashMetaDoMes(PDO $pdo, string $cargo, string $usuarioId): array
     return ['valor'=>$meta, 'realizado'=>$realizado, 'mensagem'=>$mensagem, 'escopo'=>$escopo];
 }
 
-function dashActivityUrl(array $log): ?string
+function dashActivityUrl(array $log, ?PDO $pdo = null): ?string
 {
     $acao = strtolower((string)($log['acao'] ?? ''));
     $descricao = (string)($log['descricao'] ?? '');
-    if (str_contains($acao, 'agendamento') && preg_match('/[0-9a-f]{8}-[0-9a-f-]{27}/i', $descricao, $m)) return APP_URL.'agendamentos/form?id='.urlencode($m[0]);
-    if (str_contains(strtolower($descricao), 'relatorio tecnico') && preg_match('/agendamento ID:\s*([0-9a-f-]{36})/i', $descricao, $m)) return APP_URL.'vistorias/relatorio?agendamento_id='.urlencode($m[1]);
-    if (preg_match('/Proposta\s+([A-Z0-9-]+\/\d+)/i', $descricao, $m)) return APP_URL.'comercial?busca='.urlencode($m[1]);
-    if (str_contains($acao, 'certificado')) return APP_URL.'certificados';
-    if (str_contains($acao, 'vistoria')) return APP_URL.'vistorias';
-    if (str_contains($acao, 'usuario')) return APP_URL.'usuarios';
+
+    // 1. Propostas
+    if (preg_match('/Proposta\s+([A-Z0-9-]+\/\d+)/i', $descricao, $m)) {
+        return APP_URL . 'comercial?busca=' . urlencode($m[1]);
+    }
+    if (str_contains($acao, 'proposta')) {
+        return APP_URL . 'comercial';
+    }
+
+    // 2. Relatórios e Vistorias
+    if (preg_match('/agendamento\s+ID:\s*([0-9a-f-]{36})/i', $descricao, $m)) {
+        return APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($m[1]);
+    }
+    if (preg_match('/Relatorio\s+ID\s+([0-9a-f-]{36})/i', $descricao, $m)) {
+        $vid = $m[1];
+        if ($pdo) {
+            try {
+                $st = $pdo->prepare("SELECT agendamento_id FROM vistorias WHERE id = :id LIMIT 1");
+                $st->execute([':id' => $vid]);
+                $agId = $st->fetchColumn();
+                if ($agId) {
+                    return APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode($agId) . '&vistoria_id=' . urlencode($vid);
+                }
+            } catch (Throwable $e) {}
+        }
+        return APP_URL . 'vistorias/relatorio?vistoria_id=' . urlencode($vid);
+    }
+    if (preg_match('/(AM-REL-V-[0-9]+\/[0-9]+)/i', $descricao, $m)) {
+        $num = $m[1];
+        if ($pdo) {
+            try {
+                $st = $pdo->prepare("SELECT id, agendamento_id FROM vistorias WHERE numero = :num LIMIT 1");
+                $st->execute([':num' => $num]);
+                $row = $st->fetch(PDO::FETCH_ASSOC);
+                if ($row) {
+                    return APP_URL . 'vistorias/relatorio?agendamento_id=' . urlencode((string)$row['agendamento_id']) . '&vistoria_id=' . urlencode((string)$row['id']);
+                }
+            } catch (Throwable $e) {}
+        }
+        return APP_URL . 'vistorias';
+    }
+
+    // 3. Agendamentos
+    if (str_contains($acao, 'agendamento')) {
+        if (preg_match('/[0-9a-f]{8}-[0-9a-f-]{27}/i', $descricao, $m)) {
+            return APP_URL . 'agendamentos/form?id=' . urlencode($m[0]);
+        }
+        return APP_URL . 'agendamentos';
+    }
+
+    // 4. Certificados
+    if (str_contains($acao, 'certificado') || str_contains($acao, 'documento_aprovado')) {
+        return APP_URL . 'certificados';
+    }
+
+    // 5. Clientes / Proprietários / Armadores
+    if (str_contains($acao, 'cliente') || str_contains($acao, 'proprietario') || str_contains($acao, 'armador') || str_contains($acao, 'despachante')) {
+        return APP_URL . 'clientes';
+    }
+
+    // 6. Embarcações
+    if (str_contains($acao, 'embarcacao')) {
+        return APP_URL . 'embarcacoes';
+    }
+
+    if (str_contains($acao, 'vistoria')) return APP_URL . 'vistorias';
+    if (str_contains($acao, 'usuario')) return APP_URL . 'usuarios';
+
     return null;
+}
+
+function formatarLogAtividadeDidatico(array $log, ?PDO $pdo = null): array
+{
+    $acao = (string)($log['acao'] ?? '');
+    $descricao = (string)($log['descricao'] ?? '');
+    $usuario = (string)($log['usuario'] ?? 'Sistema');
+    $criadoEm = (string)($log['criado_em'] ?? '');
+
+    $url = dashActivityUrl($log, $pdo);
+    $icone = 'fa-solid fa-circle-info';
+    $corIcone = '#64748b';
+    $titulo = $descricao;
+    $detalhe = '';
+
+    // Cache simples de relatório para enriquecer UUIDs crus
+    static $cacheRelatorios = [];
+    $obterDadosRelatorio = function(string $uuid) use ($pdo, &$cacheRelatorios): ?array {
+        if (isset($cacheRelatorios[$uuid])) return $cacheRelatorios[$uuid];
+        if (!$pdo) return null;
+        try {
+            $st = $pdo->prepare("SELECT v.numero, e.nome as embarcacao FROM vistorias v JOIN embarcacoes e ON e.id = v.embarcacao_id WHERE v.id = :id LIMIT 1");
+            $st->execute([':id' => $uuid]);
+            $res = $st->fetch(PDO::FETCH_ASSOC) ?: null;
+            $cacheRelatorios[$uuid] = $res;
+            return $res;
+        } catch (Throwable $e) {
+            return null;
+        }
+    };
+
+    // Assinaturas de relatórios técnicos
+    if (str_contains($acao, 'assinatura') || str_contains($descricao, 'responsavel tecnico')) {
+        $icone = 'fa-solid fa-file-signature';
+        $corIcone = '#10b981'; // esmeralda
+        if (preg_match('/Relatorio ID\s+([0-9a-f-]{36})/i', $descricao, $m)) {
+            $info = $obterDadosRelatorio($m[1]);
+            if ($info && !empty($info['numero'])) {
+                $titulo = "Assinatura do Relatório Técnico {$info['numero']}";
+                $detalhe = "Embarcação: {$info['embarcacao']} · Assinado com fé pública pelo vistoriador.";
+            } else {
+                $titulo = "Assinatura do Relatório Técnico concluída";
+                $detalhe = "Termo de responsabilidade técnica assinado digitalmente.";
+            }
+        } else {
+            $titulo = "Assinatura de documento registrada";
+            $detalhe = $descricao;
+        }
+    }
+    // Aprovação ou decisão administrativa
+    elseif (str_contains($acao, 'decisao_admin') || str_contains($descricao, 'definido como')) {
+        $icone = 'fa-solid fa-stamp';
+        $corIcone = '#0284c7'; // azul celeste
+        $statusMap = [
+            'APROVADA' => 'Aprovado sem exigências',
+            'APROVADA_COM_EXIGENCIAS' => 'Aprovado com Exigências',
+            'RETORNO_AS' => 'Retorno A/S solicitado',
+            'REPROVADA' => 'Reprovado',
+        ];
+        $statusTxt = 'Decisão da Diretoria registrada';
+        foreach ($statusMap as $k => $v) {
+            if (str_contains($descricao, $k)) {
+                $statusTxt = $v;
+                break;
+            }
+        }
+        if (preg_match('/Relatorio ID\s+([0-9a-f-]{36})/i', $descricao, $m)) {
+            $info = $obterDadosRelatorio($m[1]);
+            if ($info && !empty($info['numero'])) {
+                $titulo = "Relatório {$info['numero']} ({$info['embarcacao']})";
+                $detalhe = "Decisão executiva: {$statusTxt}.";
+            } else {
+                $titulo = "Relatório Técnico analisado pela Diretoria";
+                $detalhe = "Resultado: {$statusTxt}.";
+            }
+        } else {
+            $titulo = "Decisão administrativa registrada";
+            $detalhe = $statusTxt;
+        }
+    }
+    // Relatório técnico salvo / enviado
+    elseif (str_contains($acao, 'relatorio') || str_contains(strtolower($descricao), 'relatorio')) {
+        $icone = 'fa-solid fa-clipboard-check';
+        $corIcone = '#10b981';
+        if (preg_match('/(AM-REL-V-[0-9]+\/[0-9]+)/i', $descricao, $m)) {
+            $titulo = "Relatório Técnico {$m[1]} registrado";
+            if (str_contains($descricao, 'AGUARDANDO_APROVACAO')) {
+                $detalhe = "Enviado pelo vistoriador e aguardando aprovação da diretoria.";
+            } else {
+                $detalhe = "Dados técnicos e checklist atualizados.";
+            }
+        } else {
+            $titulo = "Relatório Técnico de Vistoria movimentado";
+            $detalhe = "Atualização de checklist ou dados de inspeção.";
+        }
+    }
+    // Propostas comerciais
+    elseif (str_contains($acao, 'proposta') || str_contains($descricao, 'Proposta AM-ORC')) {
+        $icone = 'fa-solid fa-file-invoice-dollar';
+        $corIcone = '#8b5cf6'; // roxo
+        if (preg_match('/Proposta\s+([A-Z0-9-]+\/\d+)/i', $descricao, $m)) {
+            $numProp = $m[1];
+            if (str_contains($descricao, 'criada')) {
+                $titulo = "Proposta {$numProp} criada";
+            } elseif (str_contains($descricao, 'editada') || str_contains($descricao, 'atualizado')) {
+                $titulo = "Proposta {$numProp} atualizada";
+            } elseif (str_contains($descricao, 'aprovada') || str_contains($descricao, 'autorizada')) {
+                $titulo = "Proposta {$numProp} autorizada";
+            } else {
+                $titulo = "Proposta Comercial {$numProp}";
+            }
+            // Extrair cliente se houver
+            if (preg_match("/cliente\s*'([^']+)'/i", $descricao, $cm)) {
+                $detalhe = "Cliente: {$cm[1]}";
+            } elseif (preg_match('/Total:\s*(R\$\s*[\d\.,]+)/i', $descricao, $vm)) {
+                $detalhe = "Valor final: {$vm[1]}";
+            } else {
+                $detalhe = "Movimentação na proposta comercial.";
+            }
+        } else {
+            $titulo = "Proposta comercial movimentada";
+            $detalhe = $descricao;
+        }
+    }
+    // Certificados estatutários
+    elseif (str_contains($acao, 'certificado') || str_contains($descricao, 'Certificado') || str_contains($descricao, 'Licença')) {
+        $icone = 'fa-solid fa-award';
+        $corIcone = '#f59e0b'; // âmbar / dourado
+        $titulo = "Certificado Estatutário Emitido";
+        if (preg_match('/(AM-[A-Z]+-[0-9]+\/[0-9]+)/i', $descricao, $m)) {
+            $titulo = "Certificado {$m[1]}";
+        }
+        $detalhe = preg_replace('/[0-9a-f]{8}-[0-9a-f-]{27}/i', '', $descricao);
+        $detalhe = trim(preg_replace('/\s+/', ' ', $detalhe));
+    }
+    // Clientes / Armadores
+    elseif (str_contains($acao, 'cliente') || str_contains($acao, 'proprietario') || str_contains($descricao, 'Cliente')) {
+        $icone = 'fa-solid fa-user-check';
+        $corIcone = '#06b6d4'; // ciano
+        $titulo = "Cadastro de Cliente / Armador";
+        if (preg_match("/'([^']+)'/i", $descricao, $m)) {
+            $detalhe = "Entidade: {$m[1]}";
+        } else {
+            $detalhe = $descricao;
+        }
+    }
+    // Agendamentos
+    elseif (str_contains($acao, 'agendamento')) {
+        $icone = 'fa-solid fa-calendar-check';
+        $corIcone = '#0d9488'; // teal
+        $titulo = "Agendamento de Vistoria";
+        $detalhe = "Inspeção operacional agendada ou atualizada na escala.";
+    }
+
+    return [
+        'titulo' => $titulo,
+        'detalhe' => $detalhe,
+        'url' => $url,
+        'icone' => $icone,
+        'cor_icone' => $corIcone,
+        'usuario' => $usuario,
+        'criado_em' => $criadoEm,
+        'acao_original' => $acao,
+        'descricao_original' => $descricao,
+    ];
 }
 
 function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
@@ -141,6 +368,43 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
         $base['agenda_hoje'] = array_values(array_filter($base['fila'], fn($a)=>($a['finalidade'] ?? 'VISTORIA') !== 'CUMPRIMENTO_EXIGENCIAS' && $a['data_vistoria']===date('Y-m-d')));
         $base['agenda_semana'] = dashRows($pdo,"SELECT a.id,a.data_vistoria,a.hora_vistoria,a.tipo_vistoria,e.nome embarcacao FROM agendamentos a JOIN embarcacoes e ON e.id=a.embarcacao_id LEFT JOIN vistorias v ON v.id=(SELECT v2.id FROM vistorias v2 WHERE v2.agendamento_id=a.id ORDER BY v2.criado_em DESC,v2.id DESC LIMIT 1) WHERE {$wVist} AND a.status IN ('pendente','confirmado','em_andamento') AND (v.id IS NULL OR v.status='PENDENTE') AND a.data_vistoria BETWEEN CURDATE() AND DATE_ADD(CURDATE(),INTERVAL 7 DAY) ORDER BY a.data_vistoria,a.hora_vistoria LIMIT 8",$params);
         $base['historico'] = dashRows($pdo,"SELECT v.id,v.numero,v.agendamento_id,v.data_vistoria,v.status,v.assinatura_status,v.finalidade,e.nome embarcacao,a.tipo_vistoria,EXISTS(SELECT 1 FROM vistorias vs WHERE vs.relatorio_anterior_id=v.id AND vs.status<>'CANCELADA') substituido FROM vistorias v JOIN agendamentos a ON a.id=v.agendamento_id JOIN embarcacoes e ON e.id=v.embarcacao_id WHERE {$wHist} ORDER BY COALESCE(v.atualizado_em,v.criado_em) DESC LIMIT 6",$params);
+        
+        $paramsAlerta = array_merge($params, [':uid_alerta' => $usuarioId]);
+        $base['relatorios_prontos_certificacao'] = dashRows($pdo, "SELECT
+            v.id, v.numero, v.agendamento_id, v.embarcacao_id, v.data_vistoria, v.atualizado_em,
+            e.nome AS embarcacao_nome, e.registro AS embarcacao_registro,
+            c.nome AS cliente_nome, u.nome AS vistoriador_nome, v.assinatura_em, v.status
+        FROM vistorias v
+        JOIN embarcacoes e ON e.id = v.embarcacao_id
+        LEFT JOIN agendamentos a ON a.id = v.agendamento_id
+        LEFT JOIN clientes c ON c.id = COALESCE(a.cliente_id, e.proprietario_id)
+        LEFT JOIN usuarios u ON u.id = COALESCE(a.vistoriador_id, v.criado_por)
+        WHERE {$wHist}
+          AND v.status IN ('APROVADA', 'APROVADA_COM_EXIGENCIAS')
+          AND v.assinatura_status = 'ASSINADO'
+          AND NOT EXISTS (
+              SELECT 1 FROM alertas_dispensados ad
+              WHERE ad.usuario_id = :uid_alerta
+                AND ad.alerta_tipo = 'RELATORIO_PRONTO_CERTIFICADO'
+                AND ad.referencia_id = v.id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM (
+                  SELECT vistoria_id, relatorio_numero FROM certificados_csn WHERE ativo = 1
+                  UNION ALL
+                  SELECT vistoria_id, relatorio_numero FROM certificados_cnbl WHERE ativo = 1
+                  UNION ALL
+                  SELECT vistoria_id, relatorio_numero FROM certificados_cnarq WHERE ativo = 1
+                  UNION ALL
+                  SELECT vistoria_id, NULL AS relatorio_numero FROM certificados_lp WHERE ativo = 1
+                  UNION ALL
+                  SELECT vistoria_id, relatorio_numero FROM certificados_lc WHERE ativo = 1
+              ) cert
+              WHERE cert.vistoria_id = v.id 
+                 OR (v.numero IS NOT NULL AND v.numero <> '' AND cert.relatorio_numero = v.numero)
+          )
+        ORDER BY COALESCE(v.assinatura_em, v.atualizado_em) DESC
+        LIMIT 4", $paramsAlerta);
         return $base;
     }
 
@@ -428,9 +692,46 @@ function dashboardLoadData(PDO $pdo, string $cargo, string $usuarioId): array
     $base['kpis']=['agenda_hoje'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM agendamentos WHERE data_vistoria=CURDATE() AND status<>'cancelado'"),'execucao'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM agendamentos WHERE status='em_andamento'"),'exigencias_vencidas'=>(int)dashScalar($pdo,"SELECT COUNT(*) FROM vistoria_exigencias WHERE status_item='pendente' AND vencimento<CURDATE()"),'aprovacao'=>$analisadas?round(($aprovadas/$analisadas)*100):0];
     $base['agenda']=dashRows($pdo,"SELECT a.id,a.hora_vistoria,a.tipo_vistoria,e.nome embarcacao,u.nome vistoriador FROM agendamentos a JOIN embarcacoes e ON e.id=a.embarcacao_id LEFT JOIN usuarios u ON u.id=a.vistoriador_id WHERE a.data_vistoria=CURDATE() AND a.status<>'cancelado' ORDER BY a.hora_vistoria LIMIT 6");
     $base['equipe']=dashRows($pdo,"SELECT u.id,u.nome,COUNT(DISTINCT CASE WHEN a.data_vistoria>=CURDATE() AND a.status IN ('pendente','confirmado','em_andamento') THEN a.id END) futuras,COUNT(DISTINCT CASE WHEN a.data_vistoria<CURDATE() AND a.status IN ('pendente','confirmado','em_andamento') THEN a.id END) atrasadas,COUNT(DISTINCT CASE WHEN v.status='AGUARDANDO_APROVACAO' THEN v.id END) relatorios FROM usuarios u LEFT JOIN agendamentos a ON a.vistoriador_id=u.id LEFT JOIN vistorias v ON v.agendamento_id=a.id WHERE u.ativo=1 AND u.cargo='VISTORIADOR' GROUP BY u.id,u.nome ORDER BY atrasadas DESC,futuras DESC");
-    $base['atividade']=dashRows($pdo,"SELECT l.acao,l.descricao,l.criado_em,u.nome usuario FROM logs_atividade l LEFT JOIN usuarios u ON u.id=l.usuario_id ORDER BY l.criado_em DESC LIMIT 5");
-    foreach ($base['atividade'] as &$atividade) $atividade['url'] = dashActivityUrl($atividade);
-    unset($atividade);
+    $rawAtividades = dashRows($pdo, "SELECT l.acao, l.descricao, l.criado_em, u.nome usuario FROM logs_atividade l LEFT JOIN usuarios u ON u.id = l.usuario_id ORDER BY l.criado_em DESC LIMIT 6");
+    $base['atividade'] = [];
+    foreach ($rawAtividades as $rawAtiv) {
+        $base['atividade'][] = formatarLogAtividadeDidatico($rawAtiv, $pdo);
+    }
+
+    $base['relatorios_prontos_certificacao'] = dashRows($pdo, "SELECT
+        v.id, v.numero, v.agendamento_id, v.embarcacao_id, v.data_vistoria, v.atualizado_em,
+        e.nome AS embarcacao_nome, e.registro AS embarcacao_registro,
+        c.nome AS cliente_nome, u.nome AS vistoriador_nome, v.assinatura_em, v.status
+    FROM vistorias v
+    JOIN embarcacoes e ON e.id = v.embarcacao_id
+    LEFT JOIN agendamentos a ON a.id = v.agendamento_id
+    LEFT JOIN clientes c ON c.id = COALESCE(a.cliente_id, e.proprietario_id)
+    LEFT JOIN usuarios u ON u.id = COALESCE(a.vistoriador_id, v.criado_por)
+    WHERE v.status IN ('APROVADA', 'APROVADA_COM_EXIGENCIAS')
+      AND v.assinatura_status = 'ASSINADO'
+      AND NOT EXISTS (
+          SELECT 1 FROM alertas_dispensados ad
+          WHERE ad.usuario_id = :uid_alerta
+            AND ad.alerta_tipo = 'RELATORIO_PRONTO_CERTIFICADO'
+            AND ad.referencia_id = v.id
+      )
+      AND NOT EXISTS (
+          SELECT 1 FROM (
+              SELECT vistoria_id, relatorio_numero FROM certificados_csn WHERE ativo = 1
+              UNION ALL
+              SELECT vistoria_id, relatorio_numero FROM certificados_cnbl WHERE ativo = 1
+              UNION ALL
+              SELECT vistoria_id, relatorio_numero FROM certificados_cnarq WHERE ativo = 1
+              UNION ALL
+              SELECT vistoria_id, NULL AS relatorio_numero FROM certificados_lp WHERE ativo = 1
+              UNION ALL
+              SELECT vistoria_id, relatorio_numero FROM certificados_lc WHERE ativo = 1
+          ) cert
+          WHERE cert.vistoria_id = v.id 
+             OR (v.numero IS NOT NULL AND v.numero <> '' AND cert.relatorio_numero = v.numero)
+      )
+    ORDER BY COALESCE(v.assinatura_em, v.atualizado_em) DESC
+    LIMIT 6", [':uid_alerta' => $usuarioId]);
     $receitasPorMes=[];
     foreach(dashRows($pdo,"SELECT DATE_FORMAT(fl.data,'%Y-%m') mes, SUM(CASE WHEN b.total_baixado IS NOT NULL THEN b.total_baixado WHEN fl.status = 'PAGO' THEN fl.valor_original ELSE 0 END) valor FROM financeiro_lancamentos fl LEFT JOIN (SELECT lancamento_id, SUM(valor_pago) AS total_baixado FROM financeiro_historico_baixas GROUP BY lancamento_id) b ON b.lancamento_id = fl.id WHERE fl.ativo=1 AND fl.tipo='RECEITA' AND (fl.status='PAGO' OR b.total_baixado > 0) AND fl.data>=DATE_FORMAT(DATE_SUB(CURDATE(),INTERVAL 5 MONTH),'%Y-%m-01') GROUP BY DATE_FORMAT(fl.data,'%Y-%m')") as $receitaMes) $receitasPorMes[$receitaMes['mes']] = (float)$receitaMes['valor'];
     $base['meses']=[]; for($i=5;$i>=0;$i--){$ini=date('Y-m-01',strtotime("-$i months"));$chave=date('Y-m',strtotime($ini));$base['meses'][]=['label'=>date('m/Y',strtotime($ini)),'valor'=>$receitasPorMes[$chave]??0];}

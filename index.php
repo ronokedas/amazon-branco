@@ -110,6 +110,7 @@ $rotas = [
     'sgq/riscos' => 'modules/sgq/riscos.php',
     'sgq/riscos/actions' => 'modules/sgq/riscos_actions.php',
     'dashboard'     => 'modules/dashboard/index.php',
+    'auditoria'     => 'modules/auditoria/index.php',
     'clientes'          => 'modules/clientes/index.php',
     'clientes/form'     => 'modules/clientes/form.php',
     'clientes/actions'  => 'modules/clientes/actions.php',
@@ -287,6 +288,7 @@ if (strpos($path, 'api/campo/v1') === 0) {
 } elseif (isset($rotas[$path])) {
     $permissoes_rota = [
         'dashboard' => 'dashboard',
+        'auditoria' => 'auditoria',
         'clientes' => 'clientes', 'clientes/form' => 'clientes', 'clientes/actions' => 'clientes',
         'armadores' => 'armadores', 'armadores/form' => 'armadores', 'armadores/actions' => 'armadores',
         'proprietarios' => 'proprietarios', 'proprietarios/form' => 'proprietarios', 'proprietarios/actions' => 'proprietarios',

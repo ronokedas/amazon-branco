@@ -12,15 +12,27 @@
             <span class="help-text">Checklist, exigências e resultado final</span>
         </div>
         <?php if (!empty($vistoria['id'])): ?>
-            <a href="<?= APP_URL ?>vistorias/relatorio_pdf.php?id=<?= urlencode($vistoria['id']); ?>"
-               target="_blank"
-               rel="noopener"
-               class="report-pdf-primary"
-               data-testid="abrir-pdf-completo">
-                <span class="report-pdf-primary-icon"><i class="fas fa-file-pdf"></i></span>
-                <span><strong>Visualizar PDF do relatório</strong><small>Disponível também enquanto estiver pendente</small></span>
-                <i class="fas fa-arrow-up-right-from-square"></i>
-            </a>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <?php if (in_array(($vistoria['status'] ?? ''), ['APROVADA','APROVADA_COM_EXIGENCIAS'], true)
+                          && ($vistoria['assinatura_status'] ?? '') === 'ASSINADO'
+                          && (podeAcessar('certificados') || in_array(getCargo(), ['ADMIN','SECRETARIA'], true))): ?>
+                    <a href="<?= APP_URL ?>documentacao/novo_certificado?vistoria_id=<?= urlencode($vistoria['id']); ?>&agendamento_id=<?= urlencode($vistoria['agendamento_id'] ?? $ag['id'] ?? ''); ?>"
+                       class="btn btn-success"
+                       style="display:inline-flex;align-items:center;gap:8px;font-weight:700;background:#059669;border-color:#059669;padding:9px 16px;border-radius:8px;color:#fff;text-decoration:none;box-shadow:0 4px 12px rgba(5,150,105,0.25);">
+                        <i class="fa-solid fa-award"></i>
+                        <span>Gerar Certificado</span>
+                    </a>
+                <?php endif; ?>
+                <a href="<?= APP_URL ?>vistorias/relatorio_pdf.php?id=<?= urlencode($vistoria['id']); ?>"
+                   target="_blank"
+                   rel="noopener"
+                   class="report-pdf-primary"
+                   data-testid="abrir-pdf-completo">
+                    <span class="report-pdf-primary-icon"><i class="fas fa-file-pdf"></i></span>
+                    <span><strong>Visualizar PDF do relatório</strong><small>Disponível também enquanto estiver pendente</small></span>
+                    <i class="fas fa-arrow-up-right-from-square"></i>
+                </a>
+            </div>
         <?php endif; ?>
     </div>
 

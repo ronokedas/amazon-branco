@@ -371,10 +371,14 @@ function assinaturaAssinarRelatorio(PDO $pdo,array $input): array
         @unlink($finalAbs);
         throw $e;
     }
+    $numRel = !empty($v['numero']) ? $v['numero'] : 'Sem número';
+    $nomeEmb = !empty($v['embarcacao_nome']) ? $v['embarcacao_nome'] : 'Embarcação';
+    $executorNome = (string)($_SESSION['usuario_nome'] ?? ($cargo === 'ADMIN' ? 'Diretoria' : 'Vistoriador'));
     log_atividade(
         $cargo==='ADMIN'?'relatorio_assinatura_substituta':'relatorio_assinado_vistoriador',
-        "Relatorio ID {$id}; responsavel tecnico {$resp['usuario_id']}; executor {$usuario}."
+        "Relatório Técnico {$numRel} ({$nomeEmb}) assinado digitalmente com fé pública por {$executorNome}."
     );
+    invalidarCacheDashboard();
     if (($v['status'] ?? '') === 'APROVADA_COM_EXIGENCIAS') {
         $proximaUrl = APP_URL . 'dashboard#retornos-as';
     } else {

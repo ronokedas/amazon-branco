@@ -318,6 +318,12 @@ if (!function_exists('isActive')) {
                     <span class="nav-text">Configurações</span>
                 </a>
             <?php endif; ?>
+            <?php if (temPerfil('ADMIN') || temPerfil('SECRETARIA') || podeAcessar('auditoria')): ?>
+                <a href="<?= APP_URL ?>auditoria" class="nav-item<?= strpos($pagina_atual, 'auditoria') === 0 ? ' active' : '' ?>" data-label="Auditoria do Sistema">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span class="nav-text">Auditoria do Sistema</span>
+                </a>
+            <?php endif; ?>
             <?php if (podeAcessar('configuracoes_normam202')): ?>
                 <a href="<?= APP_URL ?>configuracoes/normam202" class="nav-item<?= strpos($pagina_atual, 'configuracoes/normam202') === 0 ? ' active' : '' ?>" data-label="Exigências NORMAM-202">
                     <i class="fa-solid fa-list-check"></i>

@@ -760,6 +760,7 @@ function log_atividade($acao, $descricao = '', $usuario_id = null) {
             ':ip'       => $ip,
             ':data'     => $data,
         ]);
+        invalidarCacheDashboard();
     } catch (Exception $e) {
         // Se a tabela não existe, salvar em arquivo
         $logs_dir = __DIR__ . '/../logs/';
@@ -2456,6 +2457,27 @@ function obterTotalDocumentosVencidos(PDO $pdo): int {
         $total = 0;
     }
     return $total;
+}
+
+/**
+ * Invalida imediatamente todo o cache de dashboards do sistema.
+ * Deve ser chamado ao assinar relatórios, aprovar vistorias, emitir certificados ou dispensar alertas.
+ */
+function invalidarCacheDashboard(?string $usuarioId = null): void {
+    $cacheDir = sys_get_temp_dir() . '/erp_cache_dashboard';
+    if (!is_dir($cacheDir)) {
+        return;
+    }
+    try {
+        $files = glob($cacheDir . '/*.json');
+        if ($files) {
+            foreach ($files as $file) {
+                if (is_file($file)) {
+                    @unlink($file);
+                }
+            }
+        }
+    } catch (Throwable $e) {}
 }
 
 

@@ -505,6 +505,74 @@ $isSecretaria = in_array($usuarioCargo, ['SECRETARIA', 'ATENDIMENTO'], true);
         </div>
     </header>
 
+    <?php 
+    $relatoriosProntos = $dashboard['relatorios_prontos_certificacao'] ?? [];
+    if (!empty($relatoriosProntos)): 
+    ?>
+    <!-- BANNER DE DESTAQUE: RELATÓRIOS PRONTOS PARA EMISSÃO DE CERTIFICADOS -->
+    <section class="dash-hero-certificados" id="secaoRelatoriosProntos" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 78, 59, 0.22) 100%); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 14px; padding: 20px 24px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); margin-bottom: 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:42px; height:42px; border-radius:10px; background:rgba(16, 185, 129, 0.2); border:1px solid rgba(16, 185, 129, 0.4); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="fa-solid fa-certificate" style="font-size:1.35rem; color:#10b981;"></i>
+                </div>
+                <div>
+                    <h2 style="margin:0; font-size:1.15rem; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:8px;">
+                        <span>Relatórios Vistoriados e Assinados Prontos para Certificação</span>
+                        <span class="badge bg-success" style="font-size:0.75rem; font-weight:700; padding:4px 8px; border-radius:999px;">
+                            <?= count($relatoriosProntos) ?> <?= count($relatoriosProntos) === 1 ? 'relatório' : 'relatórios' ?>
+                        </span>
+                    </h2>
+                    <small class="text-muted" style="display:block; margin-top:2px; font-size:0.84rem; color:#94a3b8;">
+                        O vistoriador concluiu e assinou a vistoria com fé pública. A Secretaria ou Admin pode emitir o certificado estatutário imediatamente.
+                    </small>
+                </div>
+            </div>
+            <a href="<?= APP_URL ?>certificados" class="btn btn-sm btn-outline-secondary" style="font-size:0.82rem;">
+                <i class="fa-solid fa-award"></i> Central de Certificados
+            </a>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px;">
+            <?php foreach ($relatoriosProntos as $rp): ?>
+                <div class="card-relatorio-pronto" id="card-alerta-<?= h($rp['id']) ?>" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 14px 16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px; transition: transform .15s, border-color .15s;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                            <div>
+                                <strong style="font-size:0.98rem; color:#ffffff; display:flex; align-items:center; gap:6px;">
+                                    <i class="fa-solid fa-ship" style="color:#56e0ad; font-size:0.85rem;"></i>
+                                    <?= h($rp['embarcacao_nome']) ?>
+                                </strong>
+                                <span style="font-size:0.78rem; color:#94a3b8; display:block; margin-top:2px;">
+                                    Reg: <?= h($rp['embarcacao_registro'] ?: 'S/N') ?> · Relatório: <strong style="color:#10b981;"><?= h($rp['numero']) ?></strong>
+                                </span>
+                            </div>
+                            <button type="button" onclick="dispensarAlertaCertificado(this, '<?= h($rp['id']) ?>')" style="background:transparent; border:none; color:#64748b; font-size:1.1rem; cursor:pointer; padding:0 4px; line-height:1;" title="Dispensar este alerta para você">&times;</button>
+                        </div>
+                        <div style="font-size:0.78rem; color:#cbd5e1; margin-top:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span><i class="fa-solid fa-user-check text-muted"></i> <?= h($rp['vistoriador_nome'] ?: 'Vistoriador') ?></span>
+                            <span><i class="fa-solid fa-calendar text-muted"></i> <?= !empty($rp['assinatura_em']) ? date('d/m/Y H:i', strtotime($rp['assinatura_em'])) : date('d/m/Y', strtotime($rp['data_vistoria'])) ?></span>
+                            <span class="badge" style="background:rgba(16, 185, 129, 0.2); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3); font-size:0.7rem;">Assinado</span>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); flex-wrap:wrap;">
+                        <a href="<?= APP_URL ?>documentacao/novo_certificado?vistoria_id=<?= urlencode($rp['id']) ?>&agendamento_id=<?= urlencode((string)$rp['agendamento_id']) ?>" class="btn btn-sm btn-success" style="flex:1; min-width:140px; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700;">
+                            <i class="fa-solid fa-certificate"></i> Gerar Certificado
+                        </a>
+                        <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode((string)$rp['agendamento_id']) ?>&vistoria_id=<?= urlencode($rp['id']) ?>" class="btn btn-sm btn-secondary" style="display:inline-flex; align-items:center; gap:4px;" title="Ver detalhes do relatório">
+                            <i class="fa-solid fa-eye"></i> Relatório
+                        </a>
+                        <button type="button" onclick="dispensarAlertaCertificado(this, '<?= h($rp['id']) ?>')" class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem; padding:5px 8px;" title="Dispensar alerta">
+                            <i class="fa-solid fa-xmark"></i> Fechar
+                        </button>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
+
     <!-- 2. Grid de KPIs Operacionais Navais Modernos -->
     <section class="dash-kpi-grid">
         <!-- Frota Naval -->
@@ -937,23 +1005,57 @@ $isSecretaria = in_array($usuarioCargo, ['SECRETARIA', 'ATENDIMENTO'], true);
 
             <!-- Atividade Recente do Sistema -->
             <section class="dash-card-section">
-                <header class="dash-card-header">
+                <header class="dash-card-header" style="display:flex; justify-content:space-between; align-items:center;">
                     <h2><i class="fa-solid fa-clock-rotate-left text-accent"></i> Atividades Recentes</h2>
+                    <a href="<?= APP_URL ?>auditoria" class="btn btn-outline-secondary btn-sm" style="font-size:0.75rem; padding:4px 8px;" title="Ver registro completo de auditoria do sistema">
+                        <i class="fa-solid fa-list-ul"></i> Auditoria
+                    </a>
                 </header>
                 <?php if (empty($dashboard['atividade'])): ?>
                     <div style="padding: 20px; text-align: center; color: var(--cor-texto-secundario); font-size: 0.85rem;">
                         Nenhuma atividade recente registrada.
                     </div>
                 <?php else: ?>
+                    <div class="dash-activity-list" style="display:flex; flex-direction:column; gap:10px; padding:12px 14px;">
                     <?php foreach ($dashboard['atividade'] as $ativ): ?>
-                        <div class="dash-activity-item">
-                            <i class="fa-solid fa-circle-check text-accent" style="margin-top: 3px; font-size: 0.85rem;"></i>
-                            <div>
-                                <strong><?= h($ativ['descricao']) ?></strong>
-                                <span><?= h($ativ['usuario'] ?: 'Sistema') ?> · <?= date('d/m H:i', strtotime($ativ['criado_em'])) ?></span>
+                        <?php 
+                        $hasUrl = !empty($ativ['url']);
+                        $tag = $hasUrl ? 'a' : 'div';
+                        $hrefAttr = $hasUrl ? 'href="' . h($ativ['url']) . '"' : '';
+                        ?>
+                        <<?= $tag ?> <?= $hrefAttr ?> class="dash-activity-item <?= $hasUrl ? 'dash-activity-item--clickable' : '' ?>" style="text-decoration:none; color:inherit; display:flex; align-items:flex-start; gap:12px; padding:8px 10px; border-radius:8px; transition:background .15s; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04);">
+                            <div style="width:28px; height:28px; border-radius:6px; background:rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;">
+                                <i class="<?= h($ativ['icone'] ?? 'fa-solid fa-circle-check') ?>" style="color: <?= h($ativ['cor_icone'] ?? '#10b981') ?>; font-size: 0.9rem;"></i>
                             </div>
-                        </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+                                    <strong style="font-size:0.88rem; color:var(--cor-texto, #ffffff); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                        <?= h($ativ['titulo'] ?? $ativ['descricao']) ?>
+                                    </strong>
+                                    <?php if ($hasUrl): ?>
+                                        <i class="fa-solid fa-arrow-up-right-from-square text-muted" style="font-size:0.75rem;" title="Acessar documento"></i>
+                                    <?php endif; ?>
+                                </div>
+                                <?php if (!empty($ativ['detalhe'])): ?>
+                                    <div style="font-size:0.8rem; color:var(--cor-texto-secundario, #94a3b8); margin-top:2px; line-height:1.3;">
+                                        <?= h($ativ['detalhe']) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <div style="font-size:0.75rem; color:#64748b; margin-top:4px; display:flex; align-items:center; gap:6px;">
+                                    <span style="font-weight:600; color:#cbd5e1;"><?= h($ativ['usuario'] ?: 'Sistema') ?></span>
+                                    <span>·</span>
+                                    <span><?= date('d/m H:i', strtotime($ativ['criado_em'])) ?></span>
+                                </div>
+                            </div>
+                        </<?= $tag ?>>
                     <?php endforeach; ?>
+                    </div>
+                    <div style="padding:10px 14px 14px; text-align:center; border-top:1px solid rgba(255,255,255,0.05);">
+                        <a href="<?= APP_URL ?>auditoria" style="font-size:0.82rem; color:var(--cor-destaque, #56e0ad); text-decoration:none; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                            <span>Ver todas as movimentações e auditoria</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                    </div>
                 <?php endif; ?>
             </section>
         </div>

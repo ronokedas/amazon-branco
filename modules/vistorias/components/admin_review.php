@@ -319,6 +319,34 @@
                                         </div>
                                     </div>
                                 <?php endif; ?>
+                                <?php if (in_array(($vistoria['status'] ?? ''), ['APROVADA','APROVADA_COM_EXIGENCIAS'], true)
+                                          && ($vistoria['assinatura_status'] ?? '') === 'ASSINADO'): ?>
+                                    <?php $podeEmitirCert = podeAcessar('certificados') || in_array($cargo, ['ADMIN', 'SECRETARIA'], true); ?>
+                                    <div style="margin-top:14px;padding:16px;border:2px solid #10b981;border-radius:12px;background:#f0fdf4;box-shadow:0 6px 18px rgba(16,185,129,.12)">
+                                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                                            <span style="background:#10b981;color:#fff;border-radius:50%;width:24px;height:24px;display:grid;place-items:center;font-size:12px">
+                                                <i class="fas fa-check"></i>
+                                            </span>
+                                            <strong style="color:#065f46;font-size:14px">Relatório Concluído e Assinado Digitalmente</strong>
+                                        </div>
+                                        <p style="margin:0 0 12px;color:#166534;font-size:12.5px">
+                                            Este relatório possui fé pública e está apto para a emissão dos certificados estatutários e licenças perante a NORMAM.
+                                        </p>
+                                        <div style="display:flex;gap:10px;align-items:stretch;flex-wrap:wrap">
+                                            <?php if ($podeEmitirCert): ?>
+                                                <a href="<?= APP_URL ?>documentacao/novo_certificado?vistoria_id=<?= urlencode($vistoria['id']) ?>&agendamento_id=<?= urlencode($vistoria['agendamento_id']) ?>"
+                                                   class="btn btn-success"
+                                                   style="flex:1 1 230px;justify-content:center;background:#059669;border-color:#059669;font-weight:700;display:inline-flex;align-items:center;gap:8px">
+                                                    <i class="fas fa-award"></i> Gerar Certificado deste Relatório
+                                                </a>
+                                            <?php else: ?>
+                                                <div style="font-size:12px;color:#047857;background:#dcfce7;padding:8px 12px;border-radius:6px;width:100%">
+                                                    <i class="fas fa-info-circle"></i> A emissão dos certificados oficiais deste relatório está atribuída à Secretaria / Diretoria Técnica.
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
                                 <div style="margin-top: 12px;">
                                     <a href="<?= APP_URL ?>documentacao/aprovacao_relatorios" class="btn btn-secondary">
                                         Voltar para aprovacoes

@@ -198,6 +198,19 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
         </a>
 
+        <!-- Auditoria do Sistema & Movimentações -->
+        <a href="<?php echo APP_URL; ?>auditoria" class="card-link" style="text-decoration: none; color: inherit; display: block;">
+            <div class="card" style="height:100%;transition:transform .2s,box-shadow .2s;cursor:pointer;border-top:4px solid #0d9488;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 20px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='';">
+                <div class="card-body" style="text-align:center;padding:40px 20px">
+                    <i class="fa-solid fa-clock-rotate-left" style="font-size:3rem;color:#0d9488;margin-bottom:15px"></i>
+                    <h3 style="margin-bottom:10px;color:var(--cor-texto)">Auditoria do Sistema</h3>
+                    <p style="color:var(--cor-texto-secundario);font-size:.95rem">
+                        Acompanhe cada movimentação executada no ERP: quem fez, o que fez, hora, dia, IP e acesse os documentos.
+                    </p>
+                </div>
+            </div>
+        </a>
+
         <a href="<?php echo APP_URL; ?>configuracoes/exportacoes" class="card-link" style="text-decoration: none; color: inherit; display: block;">
             <div class="card" style="height:100%;transition:transform .2s,box-shadow .2s;cursor:pointer">
                 <div class="card-body" style="text-align:center;padding:40px 20px">

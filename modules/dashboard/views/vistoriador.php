@@ -1116,6 +1116,73 @@ function obterStatusHistoricoInfo(string $status, string $assinaturaStatus = '')
         </section>
     <?php endif; ?>
 
+    <?php
+    $relatoriosProntosVist = $dashboard['relatorios_prontos_certificacao'] ?? [];
+    $podeEmitirCert = podeAcessar('certificados');
+    ?>
+    <?php if (!empty($relatoriosProntosVist)): ?>
+        <section id="secaoVistoriadorProntos" class="dash-v-section mb-4" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 78, 59, 0.15) 100%); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 14px; padding: 18px 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:38px; height:38px; border-radius:8px; background:rgba(16, 185, 129, 0.2); border:1px solid rgba(16, 185, 129, 0.4); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="fa-solid fa-award" style="font-size:1.25rem; color:#10b981;"></i>
+                    </div>
+                    <div>
+                        <h2 style="margin:0; font-size:1.1rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                            <span>Relatórios Assinados com Sucesso</span>
+                            <span class="badge" style="background:#10b981; color:#fff; font-size:0.75rem; padding:3px 8px; border-radius:999px;">
+                                <?= count($relatoriosProntosVist) ?> pronto<?= count($relatoriosProntosVist) === 1 ? '' : 's' ?>
+                            </span>
+                        </h2>
+                        <small class="text-muted" style="display:block; margin-top:2px; font-size:0.82rem; color:#475569;">
+                            <?= $podeEmitirCert 
+                                ? 'Sua assinatura foi registrada. Você possui permissão para emitir os certificados estatutários ou aguardar a Secretaria.'
+                                : 'Sua assinatura foi registrada com fé pública. A Secretaria e a Diretoria já foram notificadas para a emissão dos certificados estatutários.' ?>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px;">
+                <?php foreach ($relatoriosProntosVist as $rp): ?>
+                    <div class="card-relatorio-pronto-vist" id="card-alerta-vist-<?= h($rp['id']) ?>" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px 16px; display:flex; flex-direction:column; justify-content:space-between; gap:10px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                                <div>
+                                    <strong style="font-size:0.95rem; color:#0f172a; display:flex; align-items:center; gap:6px;">
+                                        <i class="fa-solid fa-ship" style="color:#0d9488; font-size:0.85rem;"></i>
+                                        <?= h($rp['embarcacao_nome']) ?>
+                                    </strong>
+                                    <span style="font-size:0.78rem; color:#64748b; display:block; margin-top:2px;">
+                                        Reg: <?= h($rp['embarcacao_registro'] ?: 'S/N') ?> · Relatório: <strong style="color:#059669;"><?= h($rp['numero']) ?></strong>
+                                    </span>
+                                </div>
+                                <button type="button" onclick="dispensarAlertaVistoriador(this, '<?= h($rp['id']) ?>')" style="background:transparent; border:none; color:#94a3b8; font-size:1.15rem; cursor:pointer; padding:0 4px; line-height:1;" title="Dispensar este aviso">&times;</button>
+                            </div>
+                            <div style="font-size:0.78rem; color:#475569; margin-top:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <span><i class="fa-solid fa-check-double text-success"></i> Assinado em <?= !empty($rp['assinatura_em']) ? date('d/m/Y H:i', strtotime($rp['assinatura_em'])) : date('d/m/Y', strtotime($rp['data_vistoria'])) ?></span>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:10px; border-top:1px solid #f1f5f9; flex-wrap:wrap;">
+                            <?php if ($podeEmitirCert): ?>
+                                <a href="<?= APP_URL ?>documentacao/novo_certificado?vistoria_id=<?= urlencode($rp['id']) ?>&agendamento_id=<?= urlencode((string)$rp['agendamento_id']) ?>" class="btn btn-sm btn-success" style="flex:1; min-width:130px; display:inline-flex; align-items:center; justify-content:center; gap:5px; font-weight:700; background:#059669; border-color:#059669;">
+                                    <i class="fa-solid fa-certificate"></i> Gerar Certificado
+                                </a>
+                            <?php endif; ?>
+                            <a href="<?= APP_URL ?>vistorias/relatorio?agendamento_id=<?= urlencode((string)$rp['agendamento_id']) ?>&vistoria_id=<?= urlencode($rp['id']) ?>" class="btn btn-sm btn-outline-secondary" style="display:inline-flex; align-items:center; gap:4px;" title="Ver detalhes do relatório">
+                                <i class="fa-solid fa-eye"></i> Ver Relatório
+                            </a>
+                            <button type="button" onclick="dispensarAlertaVistoriador(this, '<?= h($rp['id']) ?>')" class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem; padding:5px 8px;" title="Dispensar alerta">
+                                <i class="fa-solid fa-xmark"></i> Fechar
+                            </button>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
+
     <!-- 3. Card Hero: Vistoria em Foco / Próxima Ação Principal -->
     <?php if ($vistoriaFoco): ?>
         <?php

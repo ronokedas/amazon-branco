@@ -1500,7 +1500,24 @@ switch ($action) {
 
             $pdo->commit();
 
-            log_atividade('relatorio_decisao_admin', "Relatorio ID {$id} definido como {$status_vistoria}.");
+            $numRel = !empty($vistoria['numero']) ? $vistoria['numero'] : 'Sem número';
+            $nomeEmb = '';
+            if (!empty($vistoria['embarcacao_id'])) {
+                $qEmb = $pdo->prepare("SELECT nome FROM embarcacoes WHERE id = :eid LIMIT 1");
+                $qEmb->execute([':eid' => $vistoria['embarcacao_id']]);
+                $nomeEmb = (string)($qEmb->fetchColumn() ?: '');
+            }
+            $complementoEmb = $nomeEmb !== '' ? " ({$nomeEmb})" : '';
+            $statusLabels = [
+                'APROVADA' => 'Aprovado pela Diretoria',
+                'APROVADA_COM_EXIGENCIAS' => 'Aprovado com Exigências pela Diretoria',
+                'RETORNO_AS' => 'encaminhado para Retorno A/S',
+                'REPROVADA' => 'Reprovado pela Diretoria',
+                'CANCELADA' => 'Cancelado'
+            ];
+            $statusLegivel = $statusLabels[$status_vistoria] ?? $status_vistoria;
+            log_atividade('relatorio_decisao_admin', "Relatório Técnico {$numRel}{$complementoEmb} definido como {$statusLegivel}.");
+            invalidarCacheDashboard();
             $mensagensStatus = [
                 'PENDENTE' => 'Relatorio mantido como pendente.',
                 'AGUARDANDO_APROVACAO' => 'Relatorio mantido aguardando aprovacao.',

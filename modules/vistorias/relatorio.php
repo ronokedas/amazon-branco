@@ -501,8 +501,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     <div class="flow-track-step"><span>01</span>Proposta</div>
     <div class="flow-track-step"><span>02</span>Agendamento</div>
     <div class="flow-track-step is-active"><span>03</span>Vistoria</div>
-    <div class="flow-track-step"><span>04</span>Aprovação</div>
-    <div class="flow-track-step"><span>05</span>Certificados</div>
+    <div class="flow-track-step <?= in_array($status_vistoria, ['APROVADA', 'APROVADA_COM_EXIGENCIAS']) ? 'is-complete' : '' ?>"><span>04</span>Aprovação</div>
+    <?php if ($pode_ir_etapa2 && podeAcessar('certificados')): ?>
+        <a href="<?php echo APP_URL; ?>documentacao/novo_certificado?agendamento_id=<?php echo urlencode($agendamento_id); ?>&vistoria_id=<?php echo urlencode($vistoria['id'] ?? ''); ?>" class="flow-track-step" style="cursor:pointer;text-decoration:none;"><span style="background:#10b981;color:#fff;">05</span><strong style="color:#10b981;">Certificados &rarr;</strong></a>
+    <?php else: ?>
+        <div class="flow-track-step"><span>05</span>Certificados</div>
+    <?php endif; ?>
 </div>
 
 <!-- BARRA DE ETAPAS -->
@@ -512,10 +516,17 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <span class="etapa-label">Relatório</span>
     </div>
     <div class="etapa-linha <?= $pode_ir_etapa2 ? 'completa' : '' ?>" style="flex: 1; height: 3px; background: #444; margin: 0 8px; margin-bottom: 20px;"></div>
-    <div class="etapa <?= $pode_ir_etapa2 ? 'ativa' : 'bloqueada' ?>">
-        <span class="etapa-numero">2</span>
-        <span class="etapa-label">Certificado</span>
-    </div>
+    <?php if ($pode_ir_etapa2 && podeAcessar('certificados')): ?>
+        <a href="<?php echo APP_URL; ?>documentacao/novo_certificado?agendamento_id=<?php echo urlencode($agendamento_id); ?>&vistoria_id=<?php echo urlencode($vistoria['id'] ?? ''); ?>" class="etapa ativa" style="cursor:pointer;text-decoration:none;" title="Clique para gerar certificado deste relatório aprovado">
+            <span class="etapa-numero" style="background:#10b981;border-color:#10b981;color:#fff;"><i class="fas fa-certificate"></i></span>
+            <span class="etapa-label" style="color:#10b981;font-weight:700;">Gerar Certificado &rarr;</span>
+        </a>
+    <?php else: ?>
+        <div class="etapa <?= $pode_ir_etapa2 ? 'ativa' : 'bloqueada' ?>">
+            <span class="etapa-numero">2</span>
+            <span class="etapa-label">Certificado</span>
+        </div>
+    <?php endif; ?>
 </div>
 
 <link rel="stylesheet" href="<?php echo APP_URL; ?>modules/vistorias/css/relatorio.css?v=<?php echo time(); ?>">
