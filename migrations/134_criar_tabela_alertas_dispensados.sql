@@ -10,4 +10,4 @@ CREATE TABLE IF NOT EXISTS `alertas_dispensados` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_usuario_alerta_ref` (`usuario_id`, `alerta_tipo`, `referencia_id`),
     KEY `idx_dispensa_busca` (`usuario_id`, `alerta_tipo`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
