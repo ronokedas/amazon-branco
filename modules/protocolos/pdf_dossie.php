@@ -151,17 +151,6 @@ if (!empty($d['destinatario_autoridade'])) {
 
 $normamRef = !empty($d['normam_referencia']) ? $d['normam_referencia'] : 'NORMAM 202/DPC';
 
-// Data e local por extenso
-$cidadeExtenso = !empty($d['unidade_cidade']) ? $d['unidade_cidade'] : 'Belém';
-$ufExtenso = !empty($d['unidade_uf']) ? $d['unidade_uf'] : 'PA';
-$dataReferencia = !empty($d['assinatura_em']) ? $d['assinatura_em'] : ($d['criado_em'] ?? null);
-$dataPorExtenso = $cidadeExtenso . '/' . $ufExtenso . ', ' . formatarDataExtensoNavalSemCidade($dataReferencia);
-
-// Assinante Oficial
-$assinanteNome = !empty($d['assinante_nome']) ? mb_strtoupper($d['assinante_nome'], 'UTF-8') : 'THAINARA BARROS';
-$assinanteCargo = !empty($d['assinante_cargo']) ? $d['assinante_cargo'] : 'Secretária';
-$assinado = !empty($d['assinado']);
-
 if (!function_exists('formatarDataExtensoNavalSemCidade')) {
     function formatarDataExtensoNavalSemCidade(?string $data): string {
         if (!$data) $data = date('Y-m-d');
@@ -173,6 +162,17 @@ if (!function_exists('formatarDataExtensoNavalSemCidade')) {
         return "{$dia} de {$mes} de {$ano}";
     }
 }
+
+// Data e local por extenso
+$cidadeExtenso = !empty($d['unidade_cidade']) ? $d['unidade_cidade'] : 'Belém';
+$ufExtenso = !empty($d['unidade_uf']) ? $d['unidade_uf'] : 'PA';
+$dataReferencia = !empty($d['assinatura_em']) ? $d['assinatura_em'] : ($d['criado_em'] ?? null);
+$dataPorExtenso = $cidadeExtenso . '/' . $ufExtenso . ', ' . formatarDataExtensoNavalSemCidade($dataReferencia);
+
+// Assinante Oficial
+$assinanteNome = !empty($d['assinante_nome']) ? mb_strtoupper($d['assinante_nome'], 'UTF-8') : 'THAINARA BARROS';
+$assinanteCargo = !empty($d['assinante_cargo']) ? $d['assinante_cargo'] : 'Secretária';
+$assinado = !empty($d['assinado']);
 
 require_once __DIR__ . '/../../includes/certificado_pdf_marca_dagua.php';
 
