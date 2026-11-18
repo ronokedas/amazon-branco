@@ -347,7 +347,10 @@ require __DIR__ . '/../../includes/sidebar.php';
             <h1><i class="fa-solid fa-arrow-right-arrow-left text-accent"></i> Protocolos Documentais Navais</h1>
             <p>Controle completo de entrada, custódia física, envio à Capitania dos Portos e devolução de documentos.</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-info" href="<?= APP_URL ?>protocolos/manual" title="Abrir Manual Passo a Passo Ilustrado">
+                <i class="fa-solid fa-book-open"></i> Como Usar (Manual)
+            </a>
             <?php if (in_array(getCargo(), ['ADMIN', 'SECRETARIA'], true)): ?>
                 <a class="btn btn-secondary" href="<?= APP_URL ?>protocolos/configuracoes">
                     <i class="fa-solid fa-building-flag text-accent"></i> Capitanias & Apoio
@@ -356,6 +359,49 @@ require __DIR__ . '/../../includes/sidebar.php';
             <a class="btn btn-primary" href="<?= APP_URL ?>protocolos/form">
                 <i class="fa-solid fa-plus"></i> Novo Dossiê
             </a>
+        </div>
+    </div>
+
+    <!-- Guia Rápido / Passo a Passo Visual para Usuários -->
+    <div class="card mb-4" style="background: linear-gradient(135deg, rgba(8, 118, 83, 0.18) 0%, rgba(7, 31, 27, 0.45) 100%); border: 1px solid var(--accent, #56e0ad); border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.25);">
+        <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 pb-2" style="border-bottom: 1px solid rgba(86, 224, 173, 0.2);">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge" style="background: var(--accent, #56e0ad); color: #042019; font-weight: 700; font-size: 0.8rem; padding: 5px 10px;">
+                        <i class="fa-solid fa-compass-drafting"></i> FLUXO NAVAL EM 4 PASSOS
+                    </span>
+                    <strong class="text-white" style="font-size: 0.95rem;">Como protocolar documentos e enviar à Capitania sem complicações</strong>
+                </div>
+                <a href="<?= APP_URL ?>protocolos/manual" class="btn btn-xs btn-outline-light py-1 px-3 d-inline-flex align-items-center gap-1" style="font-size: 0.82rem; font-weight: 600; border-color: rgba(255,255,255,0.3);">
+                    <i class="fa-solid fa-graduation-cap text-accent"></i> Abrir Manual Passo a Passo Ilustrado <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="row g-2 text-center mt-1">
+                <div class="col-md-3 col-sm-6">
+                    <div class="p-2 rounded h-100" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(86, 224, 173, 0.15);">
+                        <div class="text-accent fw-bold mb-1" style="font-size: 0.85rem;"><i class="fa-solid fa-folder-plus"></i> 1. Criar o Dossiê</div>
+                        <small class="text-secondary d-block" style="font-size: 0.78rem; line-height: 1.3;">Selecione a embarcação e a Capitania / Delegacia responsável.</small>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="p-2 rounded h-100" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(86, 224, 173, 0.15);">
+                        <div class="text-accent fw-bold mb-1" style="font-size: 0.85rem;"><i class="fa-solid fa-file-signature"></i> 2. Assinar o Ofício</div>
+                        <small class="text-secondary d-block" style="font-size: 0.78rem; line-height: 1.3;">A secretária ou engenheiro assina digitalmente com fé pública.</small>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="p-2 rounded h-100" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(86, 224, 173, 0.15);">
+                        <div class="text-accent fw-bold mb-1" style="font-size: 0.85rem;"><i class="fa-solid fa-paper-plane"></i> 3. Enviar por E-mail</div>
+                        <small class="text-secondary d-block" style="font-size: 0.78rem; line-height: 1.3;">1 clique: envia o Ofício com todos os laudos unificados em PDF.</small>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="p-2 rounded h-100" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(86, 224, 173, 0.15);">
+                        <div class="text-accent fw-bold mb-1" style="font-size: 0.85rem;"><i class="fa-solid fa-stamp"></i> 4. Registrar SISAP</div>
+                        <small class="text-secondary d-block" style="font-size: 0.78rem; line-height: 1.3;">Quando a Marinha responder, anote o nº de protocolo oficial.</small>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

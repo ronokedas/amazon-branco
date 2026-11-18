@@ -151,6 +151,9 @@ require __DIR__ . '/../../includes/sidebar.php';
             <p><?= $d ? h($d['assunto']) : 'Abra um novo processo para controlar custódia de documentos, envio à Capitania e devolução.' ?></p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-info" href="<?= APP_URL ?>protocolos/manual" target="_blank" title="Abrir Manual de Instruções Passo a Passo">
+                <i class="fa-solid fa-circle-question"></i> Como Usar (Manual)
+            </a>
             <a class="btn btn-secondary" href="<?= APP_URL ?>protocolos">
                 <i class="fa-solid fa-arrow-left"></i> Voltar à Lista
             </a>
@@ -215,6 +218,46 @@ require __DIR__ . '/../../includes/sidebar.php';
 
         <!-- Painel Retrátil de Edição de Vínculos -->
         <?php require __DIR__ . '/components/dossie_identificacao.php'; ?>
+
+        <!-- Régua Visual das Etapas do Trâmite Naval -->
+        <?php
+        $st = $d['status'] ?? 'EM_PREPARACAO';
+        $etapa1 = true;
+        $etapa2 = !empty($d['assinado']);
+        $etapa3 = in_array($st, ['ENVIADO_AO_ORGAO', 'PROTOCOLADO', 'EM_ANALISE_NO_ORGAO', 'EM_EXIGENCIA', 'A_DISPOSICAO', 'RETIRADO', 'ENTREGUE_AO_CLIENTE', 'ENCERRADO'], true);
+        $etapa4 = in_array($st, ['PROTOCOLADO', 'EM_ANALISE_NO_ORGAO', 'A_DISPOSICAO', 'RETIRADO', 'ENTREGUE_AO_CLIENTE', 'ENCERRADO'], true) || !empty($d['protocolo_externo_numero']);
+        $etapa5 = in_array($st, ['ENTREGUE_AO_CLIENTE', 'ENCERRADO'], true);
+        ?>
+        <div class="card mb-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(86, 224, 173, 0.2); border-radius: 10px;">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 text-center" style="font-size: 0.82rem;">
+                    <div class="d-flex align-items-center gap-2 <?= $etapa1 ? 'text-accent fw-bold' : 'text-muted' ?>">
+                        <span class="badge rounded-circle p-1" style="background: <?= $etapa1 ? '#087653' : '#334155' ?>; color: #fff; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;">1</span>
+                        <span>1. Dossiê Criado</span>
+                        <i class="fa-solid fa-chevron-right small text-muted ms-1"></i>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 <?= $etapa2 ? 'text-accent fw-bold' : 'text-muted' ?>">
+                        <span class="badge rounded-circle p-1" style="background: <?= $etapa2 ? '#087653' : '#334155' ?>; color: #fff; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;">2</span>
+                        <span>2. Ofício Assinado</span>
+                        <i class="fa-solid fa-chevron-right small text-muted ms-1"></i>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 <?= $etapa3 ? 'text-accent fw-bold' : 'text-muted' ?>">
+                        <span class="badge rounded-circle p-1" style="background: <?= $etapa3 ? '#087653' : '#334155' ?>; color: #fff; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;">3</span>
+                        <span>3. Enviado por E-mail</span>
+                        <i class="fa-solid fa-chevron-right small text-muted ms-1"></i>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 <?= $etapa4 ? 'text-accent fw-bold' : 'text-muted' ?>">
+                        <span class="badge rounded-circle p-1" style="background: <?= $etapa4 ? '#087653' : '#334155' ?>; color: #fff; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;">4</span>
+                        <span>4. Protocolado no SISAP</span>
+                        <i class="fa-solid fa-chevron-right small text-muted ms-1"></i>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 <?= $etapa5 ? 'text-accent fw-bold' : 'text-muted' ?>">
+                        <span class="badge rounded-circle p-1" style="background: <?= $etapa5 ? '#087653' : '#334155' ?>; color: #fff; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;">5</span>
+                        <span>5. Concluído & Recibo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Card Resumo Executivo do Dossiê -->
         <section class="card mb-4">
