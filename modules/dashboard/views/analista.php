@@ -41,9 +41,6 @@ $statusMap = [
             <p>Olá, <strong><?= h($usuarioNome) ?></strong>. Acompanhe as pranchas, cálculos de estabilidade, matriz normativa e emissão de pareceres.</p>
         </div>
         <div class="dash-analista-header__actions" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-            <a href="<?= APP_URL ?>vistorias/manual" class="btn btn-outline-info" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; border-color: #0d9488; color: #0d9488; background: #f0fdfa;">
-                <i class="fa-solid fa-clipboard-user"></i> Manual do Vistoriador
-            </a>
             <a href="<?= APP_URL ?>analises-planos/manual" class="btn btn-outline-info" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; border-color: #2563eb; color: #2563eb; background: #eff6ff;">
                 <i class="fa-solid fa-book-open-reader"></i> Manual do Analista
             </a>

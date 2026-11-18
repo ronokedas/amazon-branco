@@ -154,7 +154,6 @@ require_once __DIR__ . '/../../includes/header.php';
     <small>Agenda documental e relatórios técnicos conforme NORMAM-202/DPC.</small>
    </div>
    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-    <a class="btn btn-outline-info btn-sm" href="<?=APP_URL?>vistorias/manual" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;"><i class="fas fa-clipboard-user"></i> Manual do Vistoriador</a>
     <a class="btn btn-outline-info btn-sm" href="<?=APP_URL?>analises-planos/manual" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;"><i class="fas fa-book-open"></i> Manual do Analista</a>
     <a class="btn btn-secondary btn-sm" href="<?=APP_URL?>analises-planos/referencias"><i class="fas fa-book-bookmark"></i> Banco de Normas NORMAM</a>
     <a class="btn btn-primary btn-sm" href="<?=APP_URL?>analises-planos/form"><i class="fas fa-plus"></i> Nova Análise</a>

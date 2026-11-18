@@ -354,8 +354,27 @@ if (strpos($path, 'api/campo/v1') === 0) {
     if (in_array($path, ['vistorias/relatorio_pdf', 'vistorias/relatorio_pdf.php', 'vistorias/relatorio-pdf'], true) && podeAcessar('analise_planos')) {
         $permissao_rota = null;
     }
-    // Manuais operacionais e guias do sistema são de livre consulta para qualquer usuário autenticado
-    if (in_array($path, ['vistorias/manual', 'analises-planos/manual', 'protocolos/manual'], true)) {
+    // Controle de acesso estrito por cargo para os Manuais Operacionais
+    if ($path === 'vistorias/manual') {
+        $cargoAtual = getCargo();
+        if (!in_array($cargoAtual, ['VISTORIADOR', 'ADMIN', 'SECRETARIA'], true)) {
+            setMensagem('error', 'Acesso negado. O Manual do Vistoriador é de acesso exclusivo para Vistoriadores e Administradores.');
+            redirecionar(APP_URL . 'dashboard');
+        }
+        $permissao_rota = null;
+    } elseif ($path === 'analises-planos/manual') {
+        $cargoAtual = getCargo();
+        if (!in_array($cargoAtual, ['ANALISTA', 'ADMIN', 'SECRETARIA'], true)) {
+            setMensagem('error', 'Acesso negado. O Manual do Analista é de acesso exclusivo para Analistas e Administradores.');
+            redirecionar(APP_URL . 'dashboard');
+        }
+        $permissao_rota = null;
+    } elseif ($path === 'protocolos/manual') {
+        $cargoAtual = getCargo();
+        if (!in_array($cargoAtual, ['ADMIN', 'SECRETARIA'], true) && !podeAcessar('protocolos_documentais')) {
+            setMensagem('error', 'Acesso negado. Você não tem permissão para acessar o Manual de Protocolos.');
+            redirecionar(APP_URL . 'dashboard');
+        }
         $permissao_rota = null;
     }
     if ($permissao_rota !== null && !podeAcessar($permissao_rota)) {
