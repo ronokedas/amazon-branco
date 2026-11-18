@@ -28,7 +28,24 @@ try { $filtro_escritorio = financeiroResolverEscritorio($pdo, $_GET['escritorio_
 catch (Throwable $e) { setMensagem('error',$e->getMessage()); redirecionar(APP_URL.'dashboard'); }
 
 // Construir query com filtros
-$sql = "SELECT id, escritorio_id, responsavel_usuario_id, tipo, descricao, valor, valor_original, saldo_devedor, status, data, categoria, observacoes, criado_em, atualizado_em FROM financeiro_lancamentos WHERE ativo = 1";
+$parcelasFinanceirasDisponiveis = false;
+try {
+    $stmtColunasParcelas = $pdo->query("
+        SELECT COUNT(*)
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'financeiro_lancamentos'
+          AND COLUMN_NAME IN ('numero_parcela', 'total_parcelas')
+    ");
+    $parcelasFinanceirasDisponiveis = (int)$stmtColunasParcelas->fetchColumn() === 2;
+} catch (Throwable $e) {
+    error_log('Não foi possível verificar as colunas de parcelas do Financeiro: ' . $e->getMessage());
+}
+$camposParcelas = $parcelasFinanceirasDisponiveis
+    ? 'numero_parcela, total_parcelas'
+    : 'NULL AS numero_parcela, NULL AS total_parcelas';
+
+$sql = "SELECT id, escritorio_id, responsavel_usuario_id, tipo, descricao, valor, valor_original, saldo_devedor, status, data, data_vencimento, {$camposParcelas}, categoria, observacoes, criado_em, atualizado_em FROM financeiro_lancamentos WHERE ativo = 1";
 $params = [];
 if ($filtro_escritorio !== 'todos') { $sql .= ' AND escritorio_id = :escritorio'; $params[':escritorio']=$filtro_escritorio; }
 
@@ -249,7 +266,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <thead>
                     <tr>
                         <?php if($filtro_escritorio==='todos'): ?><th>Escritório</th><?php endif ?>
-                        <th>Data</th>
+                        <th>Data / vencimento</th>
+                        <th>Parcela</th>
                         <th>Tipo</th>
                         <th>Status</th>
                         <th>Descricao</th>
@@ -262,7 +280,23 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <?php foreach ($lancamentos as $l): ?>
                     <tr>
                         <?php if($filtro_escritorio==='todos'): ?><td><strong><?= h($escritoriosPorId[$l['escritorio_id']]['nome']??'Escritório') ?></strong></td><?php endif ?>
-                        <td><?php echo formatarData($l['data']); ?></td>
+                        <td data-label="Data / vencimento">
+                            <?php echo formatarData($l['data']); ?>
+                            <?php if (!empty($l['data_vencimento']) && $l['data_vencimento'] !== $l['data']): ?>
+                                <br><small class="text-muted">Vencimento: <?php echo formatarData($l['data_vencimento']); ?></small>
+                            <?php endif; ?>
+                        </td>
+                        <td data-label="Parcela">
+                            <?php if ($l['numero_parcela'] !== null): ?>
+                                <?php if ((int)$l['numero_parcela'] === 0): ?>
+                                    <span class="badge badge-info">Entrada</span>
+                                <?php else: ?>
+                                    <span class="badge badge-info"><?php echo (int)$l['numero_parcela']; ?>/<?php echo (int)$l['total_parcelas']; ?></span>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <span class="text-muted">—</span>
+                            <?php endif; ?>
+                        </td>
                         <td class="finance-transaction-description">
                             <?php if ($l['tipo'] === 'RECEITA'): ?>
                                 <span class="badge badge-success"><i class="fas fa-arrow-up"></i> Receita</span>
@@ -471,7 +505,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 .finance-filter-actions .btn { min-height:42px; white-space:nowrap; }
 .finance-table-scroll { width:100%; overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; scrollbar-gutter:stable; }
 .finance-scroll-hint { display:none; margin:8px 20px 0; color:var(--cor-texto-secundario); font-size:.78rem; }
-.finance-transactions-table { width:100% !important; min-width:1380px !important; table-layout:auto !important; }
+.finance-transactions-table { width:100% !important; min-width:1480px !important; table-layout:auto !important; }
 .finance-transactions-table th,.finance-transactions-table td { min-width:0 !important; overflow-wrap:normal !important; word-break:normal !important; }
 .finance-transactions-table th { white-space:nowrap !important; }
 .finance-transactions-table th:nth-child(1),.finance-transactions-table td:nth-child(1) { width:12%; min-width:105px !important; white-space:nowrap !important; }

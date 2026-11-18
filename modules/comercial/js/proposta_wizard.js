@@ -1090,8 +1090,10 @@ function atualizarTotais() {
     const totalGeralEl = document.getElementById('totalGeral');
     if (totalGeralEl) totalGeralEl.textContent = formatarMoeda(totalGeral);
 
-    const parcelas = parseInt(document.getElementById('parcelas')?.value) || 1;
-    const valorParcela = parcelas > 0 ? saldoRestante / parcelas : saldoRestante;
+    const parcelas = Math.max(1, Math.min(24, parseInt(document.getElementById('parcelas')?.value, 10) || 1));
+    const saldoParceladoCentavos = Math.max(0, Math.round(saldoRestante * 100));
+    const valorBaseCentavos = Math.floor(saldoParceladoCentavos / parcelas);
+    const centavosExtras = saldoParceladoCentavos % parcelas;
     const entradaResumo = document.getElementById('entradaResumo');
     if (entradaResumo) {
         entradaResumo.textContent = valorEntrada > 0
@@ -1104,7 +1106,8 @@ function atualizarTotais() {
         ph += `<div style="padding: 3px 0;">Entrada imediata: <strong>${formatarMoeda(valorEntrada)}</strong></div>`;
     }
     for (let i = 1; i <= parcelas; i++) {
-        ph += `<div style="padding: 3px 0;">Parcela ${i}/<strong>${parcelas}: ${formatarMoeda(valorParcela)}</strong></div>`;
+        const valorAtual = (valorBaseCentavos + (i <= centavosExtras ? 1 : 0)) / 100;
+        ph += `<div style="padding: 3px 0;">Parcela ${i}/<strong>${parcelas}: ${formatarMoeda(valorAtual)}</strong></div>`;
     }
     const parcelasInfoEl = document.getElementById('parcelasInfo');
     if (parcelasInfoEl) parcelasInfoEl.innerHTML = ph;
@@ -1163,7 +1166,7 @@ function montarRevisao() {
     const totalGeral = Math.max(0, subtotalGeral - descontoValor);
     const valorEntrada = obterValorEntrada(totalGeral);
     const saldoRestante = Math.max(0, totalGeral - valorEntrada);
-    const parcelas = parseInt(document.getElementById('parcelas').value) || 1;
+    const parcelas = Math.max(1, Math.min(24, parseInt(document.getElementById('parcelas').value, 10) || 1));
 
     document.getElementById('reviewCliente').innerHTML = `
         <strong>${clienteSelecionadoData?.nome || ''}</strong><br>
@@ -1216,11 +1219,14 @@ function montarRevisao() {
     document.getElementById('rSaldo').textContent = formatarMoeda(saldoRestante);
     document.getElementById('rTotalGeral').textContent = formatarMoeda(totalGeral);
 
-    const valorParcela = parcelas > 0 ? saldoRestante / parcelas : saldoRestante;
+    const saldoParceladoCentavos = Math.max(0, Math.round(saldoRestante * 100));
+    const valorBaseCentavos = Math.floor(saldoParceladoCentavos / parcelas);
+    const centavosExtras = saldoParceladoCentavos % parcelas;
     let rph = valorEntrada > 0 ? `Entrada de <strong>${formatarMoeda(valorEntrada)}</strong>` : '';
     for (let i = 1; i <= parcelas; i++) {
         if (rph) rph += ' &middot; ';
-        rph += `${i}x de <strong>${formatarMoeda(valorParcela)}</strong>`;
+        const valorAtual = (valorBaseCentavos + (i <= centavosExtras ? 1 : 0)) / 100;
+        rph += `${i}x de <strong>${formatarMoeda(valorAtual)}</strong>`;
     }
     document.getElementById('rParcelas').innerHTML = rph;
 

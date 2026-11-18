@@ -87,14 +87,12 @@
             <div class="form-group" style="margin-bottom: 10px;">
                 <label for="parcelas">Número de Parcelas</label>
                 <select id="parcelas" name="parcelas" style="width: auto; min-width: 150px;" onchange="atualizarTotais()">
-                    <?php $parcelasSelecionadas = (int)($propostaEdicao['parcelas'] ?? 3); ?>
-                    <option value="1" <?php echo $parcelasSelecionadas === 1 ? 'selected' : ''; ?>>1x (à vista)</option>
-                    <option value="2" <?php echo $parcelasSelecionadas === 2 ? 'selected' : ''; ?>>2x</option>
-                    <option value="3" <?php echo $parcelasSelecionadas === 3 ? 'selected' : ''; ?>>3x</option>
-                    <option value="4" <?php echo $parcelasSelecionadas === 4 ? 'selected' : ''; ?>>4x</option>
-                    <option value="5" <?php echo $parcelasSelecionadas === 5 ? 'selected' : ''; ?>>5x</option>
-                    <option value="6" <?php echo $parcelasSelecionadas === 6 ? 'selected' : ''; ?>>6x</option>
-                    <option value="12" <?php echo $parcelasSelecionadas === 12 ? 'selected' : ''; ?>>12x</option>
+                    <?php $parcelasSelecionadas = max(1, min(24, (int)($propostaEdicao['parcelas'] ?? 3))); ?>
+                    <?php for ($i = 1; $i <= 24; $i++): ?>
+                        <option value="<?php echo $i; ?>" <?php echo $parcelasSelecionadas === $i ? 'selected' : ''; ?>>
+                            <?php echo $i === 1 ? '1x (à vista)' : $i . 'x'; ?>
+                        </option>
+                    <?php endfor; ?>
                 </select>
             </div>
             <div id="parcelasInfo" style="padding: 12px 16px; background: var(--cor-fundo); border-radius: 8px; border: 1px solid var(--cor-borda); color: var(--cor-texto-secundario); font-size: 0.9rem;">

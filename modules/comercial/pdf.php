@@ -532,21 +532,15 @@ $pdf->Cell(0, 7, 'FORMA DE PAGAMENTO', 0, 1, 'L', true);
 $pdf->SetTextColor(0, 0, 0);
 $pdf->Ln(2);
 
-$parcelas = (int)$proposta['parcelas'];
-$valorParcela = ($parcelas > 0) ? round($totalGeral / $parcelas, 2) : $totalGeral;
-
-// Ajustar última parcela para fechar valor exato
-$somaParcelas = $valorParcela * ($parcelas - 1);
-$ultimaParcela = round($totalGeral - $somaParcelas, 2);
+$parcelas = max(1, min(24, (int)($proposta['parcelas'] ?? 1)));
 $valorEntrada = round((float)($proposta['valor_entrada'] ?? 0), 2);
 if ($valorEntrada > $totalGeral) {
     $valorEntrada = $totalGeral;
 }
 $saldoParcelado = max(0, round($totalGeral - $valorEntrada, 2));
-$parcelas = max(1, $parcelas);
-$valorParcela = ($parcelas > 0) ? round($saldoParcelado / $parcelas, 2) : $saldoParcelado;
-$somaParcelas = $valorParcela * max(0, ($parcelas - 1));
-$ultimaParcela = round($saldoParcelado - $somaParcelas, 2);
+$saldoParceladoCentavos = (int)round($saldoParcelado * 100);
+$valorBaseCentavos = intdiv($saldoParceladoCentavos, $parcelas);
+$centavosExtras = $saldoParceladoCentavos % $parcelas;
 
 $pdf->SetFont('helvetica', '', 8);
 $formaPagamentoTexto = '';
@@ -587,7 +581,8 @@ if ($valorEntrada > 0) {
 }
 
 for ($i = 1; $i <= $parcelas; $i++) {
-    $valor = ($i == $parcelas) ? $ultimaParcela : $valorParcela;
+    $valorCentavos = $valorBaseCentavos + ($i <= $centavosExtras ? 1 : 0);
+    $valor = $valorCentavos / 100;
     $vencimento = $i === 1 ? '30 dias após assinatura' : ($i * 30) . ' dias após assinatura';
     $condicao = ($i == 1) ? '1ª parcela' : (($i == $parcelas) ? 'Última parcela' : 'Parcela intermediária');
 

@@ -42,23 +42,37 @@ try {
 
     gerarEfeitosPropostaAssinada($pdo, $prop1, $vendedorId, true);
 
-    $stmtLanc1 = $pdo->prepare("SELECT * FROM financeiro_lancamentos WHERE proposta_id = :pid");
+    $stmtLanc1 = $pdo->prepare("SELECT * FROM financeiro_lancamentos WHERE proposta_id = :pid ORDER BY numero_parcela");
     $stmtLanc1->execute([':pid' => $prop1Id]);
-    $lanc1 = $stmtLanc1->fetch(PDO::FETCH_ASSOC);
+    $lancs1 = $stmtLanc1->fetchAll(PDO::FETCH_ASSOC);
+    $entradas1 = array_values(array_filter($lancs1, static fn(array $l): bool => (int)$l['numero_parcela'] === 0));
+    $parcelas1 = array_values(array_filter($lancs1, static fn(array $l): bool => (int)$l['numero_parcela'] > 0));
 
-    if (!$lanc1) throw new RuntimeException('Lançamento financeiro do Caso 1 não foi criado.');
-    if ($lanc1['status'] !== 'PARCIAL') throw new RuntimeException("Status esperado: PARCIAL. Obtido: {$lanc1['status']}");
-    if ((float)$lanc1['valor_original'] !== 6000.00) throw new RuntimeException("Valor original esperado: 6000.00. Obtido: {$lanc1['valor_original']}");
-    if ((float)$lanc1['saldo_devedor'] !== 4000.00) throw new RuntimeException("Saldo devedor esperado: 4000.00. Obtido: {$lanc1['saldo_devedor']}");
+    if (count($lancs1) !== 3 || count($entradas1) !== 1 || count($parcelas1) !== 2) {
+        throw new RuntimeException('A proposta 1 deveria gerar 1 entrada e 2 parcelas independentes.');
+    }
+    $entrada1 = $entradas1[0];
+    if ($entrada1['status'] !== 'PAGO' || (float)$entrada1['valor_original'] !== 2000.00 || (float)$entrada1['saldo_devedor'] !== 0.00) {
+        throw new RuntimeException('A entrada de R$ 2.000 deveria aparecer quitada em lançamento próprio.');
+    }
+    $somaParcelas1 = 0.00;
+    foreach ($parcelas1 as $i => $parcela) {
+        if ($parcela['status'] !== 'PENDENTE') throw new RuntimeException('As parcelas futuras devem iniciar pendentes.');
+        if ((int)$parcela['numero_parcela'] !== ($i + 1) || (int)$parcela['total_parcelas'] !== 2) {
+            throw new RuntimeException('A numeração das parcelas da proposta 1 está incorreta.');
+        }
+        $somaParcelas1 += (float)$parcela['valor_original'];
+    }
+    if (abs($somaParcelas1 - 4000.00) > 0.001) throw new RuntimeException("Saldo parcelado esperado: 4000.00. Obtido: {$somaParcelas1}");
 
     $stmtBaixas1 = $pdo->prepare("SELECT * FROM financeiro_historico_baixas WHERE lancamento_id = :lid");
-    $stmtBaixas1->execute([':lid' => $lanc1['id']]);
+    $stmtBaixas1->execute([':lid' => $entrada1['id']]);
     $baixas1 = $stmtBaixas1->fetchAll(PDO::FETCH_ASSOC);
 
-    if (count($baixas1) !== 1) throw new RuntimeException('Deveria haver exatamente 1 baixa para a entrada.');
+    if (count($baixas1) !== 1) throw new RuntimeException('Deveria haver exatamente 1 baixa vinculada à entrada.');
     if ((float)$baixas1[0]['valor_pago'] !== 2000.00) throw new RuntimeException("Valor da baixa esperado: 2000.00. Obtido: {$baixas1[0]['valor_pago']}");
     if ($baixas1[0]['forma_pagamento'] !== 'pix') throw new RuntimeException("Forma da baixa esperada: pix. Obtido: {$baixas1[0]['forma_pagamento']}");
-    echo "  -> OK: Lançamento PARCIAL criado, saldo devedor R$ 4.000 e baixa de entrada de R$ 2.000 confirmada.\n";
+    echo "  -> OK: Entrada quitada de R$ 2.000 e duas parcelas pendentes somando R$ 4.000.\n";
 
     // --- CASO 2: Proposta 100% à vista (Total R$ 4.500, Entrada R$ 4.500) ---
     echo "[2/3] Testando proposta 100% quitada à vista (Total R$ 4.500, Entrada R$ 4.500)...\n";
@@ -85,11 +99,16 @@ try {
 
     $stmtLanc2 = $pdo->prepare("SELECT * FROM financeiro_lancamentos WHERE proposta_id = :pid");
     $stmtLanc2->execute([':pid' => $prop2Id]);
-    $lanc2 = $stmtLanc2->fetch(PDO::FETCH_ASSOC);
+    $lancs2 = $stmtLanc2->fetchAll(PDO::FETCH_ASSOC);
 
-    if (!$lanc2) throw new RuntimeException('Lançamento financeiro do Caso 2 não foi criado.');
-    if ($lanc2['status'] !== 'PAGO') throw new RuntimeException("Status esperado: PAGO. Obtido: {$lanc2['status']}");
-    if ((float)$lanc2['saldo_devedor'] !== 0.00) throw new RuntimeException("Saldo devedor esperado: 0.00. Obtido: {$lanc2['saldo_devedor']}");
+    if (count($lancs2) !== 1) throw new RuntimeException('A proposta quitada na entrada deve gerar somente um lançamento de entrada.');
+    $lanc2 = $lancs2[0];
+    if ((int)$lanc2['numero_parcela'] !== 0 || $lanc2['status'] !== 'PAGO') {
+        throw new RuntimeException('A entrada integral deve ficar identificada como Entrada e PAGO.');
+    }
+    if ((float)$lanc2['valor_original'] !== 4500.00 || (float)$lanc2['saldo_devedor'] !== 0.00) {
+        throw new RuntimeException('A entrada integral deve registrar R$ 4.500 e saldo zero.');
+    }
 
     $stmtBaixas2 = $pdo->prepare("SELECT * FROM financeiro_historico_baixas WHERE lancamento_id = :lid");
     $stmtBaixas2->execute([':lid' => $lanc2['id']]);
@@ -97,7 +116,7 @@ try {
 
     if (count($baixas2) !== 1) throw new RuntimeException('Deveria haver exatamente 1 baixa integral.');
     if ((float)$baixas2[0]['valor_pago'] !== 4500.00) throw new RuntimeException("Valor da baixa esperado: 4500.00. Obtido: {$baixas2[0]['valor_pago']}");
-    echo "  -> OK: Lançamento PAGO criado, saldo devedor R$ 0 e baixa integral de R$ 4.500 confirmada.\n";
+    echo "  -> OK: Entrada integral quitada de R$ 4.500, sem parcelas futuras.\n";
 
     // --- CASO 3: Proposta sem entrada (Total R$ 3.000, Entrada R$ 0.00) ---
     echo "[3/3] Testando proposta sem entrada (Total R$ 3.000, Entrada R$ 0.00)...\n";
@@ -122,18 +141,30 @@ try {
 
     gerarEfeitosPropostaAssinada($pdo, $prop3, $vendedorId, true);
 
-    $stmtLanc3 = $pdo->prepare("SELECT * FROM financeiro_lancamentos WHERE proposta_id = :pid");
+    $stmtLanc3 = $pdo->prepare("SELECT * FROM financeiro_lancamentos WHERE proposta_id = :pid ORDER BY numero_parcela");
     $stmtLanc3->execute([':pid' => $prop3Id]);
-    $lanc3 = $stmtLanc3->fetch(PDO::FETCH_ASSOC);
+    $lancs3 = $stmtLanc3->fetchAll(PDO::FETCH_ASSOC);
 
-    if (!$lanc3) throw new RuntimeException('Lançamento financeiro do Caso 3 não foi criado.');
-    if ($lanc3['status'] !== 'PENDENTE') throw new RuntimeException("Status esperado: PENDENTE. Obtido: {$lanc3['status']}");
-    if ((float)$lanc3['saldo_devedor'] !== 3000.00) throw new RuntimeException("Saldo devedor esperado: 3000.00. Obtido: {$lanc3['saldo_devedor']}");
+    if (count($lancs3) !== 3) throw new RuntimeException('A proposta sem entrada deveria gerar 3 lançamentos de parcela.');
+    $somaSaldo3 = 0.00;
+    foreach ($lancs3 as $i => $parcela) {
+        if ($parcela['status'] !== 'PENDENTE') throw new RuntimeException('Todas as parcelas sem entrada devem iniciar pendentes.');
+        if ((int)$parcela['numero_parcela'] !== ($i + 1) || (int)$parcela['total_parcelas'] !== 3) {
+            throw new RuntimeException('A numeração das parcelas da proposta 3 está incorreta.');
+        }
+        $somaSaldo3 += (float)$parcela['saldo_devedor'];
+    }
+    if (abs($somaSaldo3 - 3000.00) > 0.001) throw new RuntimeException("Saldo devedor esperado: 3000.00. Obtido: {$somaSaldo3}");
 
-    $stmtBaixas3 = $pdo->prepare("SELECT COUNT(*) FROM financeiro_historico_baixas WHERE lancamento_id = :lid");
-    $stmtBaixas3->execute([':lid' => $lanc3['id']]);
+    $stmtBaixas3 = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM financeiro_historico_baixas b
+        INNER JOIN financeiro_lancamentos l ON l.id = b.lancamento_id
+        WHERE l.proposta_id = :pid
+    ");
+    $stmtBaixas3->execute([':pid' => $prop3Id]);
     if ((int)$stmtBaixas3->fetchColumn() !== 0) throw new RuntimeException('Não deveria haver baixas para proposta sem entrada.');
-    echo "  -> OK: Lançamento PENDENTE criado com saldo integral e zero baixas.\n";
+    echo "  -> OK: 3 parcelas pendentes geradas com saldo total de R$ 3.000 e zero baixas.\n";
 
     // --- TESTE DE CÁLCULO DE RECEITA NO FINANCEIRO ---
     echo "\nValidando agregação de receitas no módulo Financeiro (index.php)...\n";

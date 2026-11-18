@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../../includes/functions.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../includes/financeiro_escritorios.php';
 require_once __DIR__ . '/../../../includes/analise_planos.php';
+require_once __DIR__ . '/../../../includes/financeiro_propostas.php';
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
@@ -131,95 +132,15 @@ function validarDescontoProposta(string $tipo, float $valor): void
     }
 }
 
-function gerarEfeitosPropostaAssinada(PDO $pdo, array $prop, ?string $criado_por, bool $manual = false): void
+function gerarEfeitosPropostaAssinada(
+    PDO $pdo,
+    array $prop,
+    ?string $criado_por,
+    bool $manual = false,
+    ?string $dataReferencia = null
+): void
 {
-    $descricaoFinanceiro = 'Referente à Proposta Comercial nº ' . $prop['numero'];
-    $stmtFinExiste = $pdo->prepare("
-        SELECT COUNT(*)
-        FROM financeiro_lancamentos
-        WHERE cliente_id = :cliente_id
-          AND tipo = 'RECEITA'
-          AND descricao = :descricao
-          AND ativo = 1
-    ");
-    $stmtFinExiste->execute([
-        ':cliente_id' => $prop['cliente_id'],
-        ':descricao' => $descricaoFinanceiro,
-    ]);
-
-    if ((int)$stmtFinExiste->fetchColumn() === 0) {
-        $escritorioLancamento = (string)($prop['escritorio_id'] ?? '');
-        if ($escritorioLancamento === '') {
-            throw new RuntimeException('A proposta não possui um escritório responsável.');
-        }
-        $responsavelVendaId = financeiroResponsavelVenda($pdo, $prop['criado_por'] ?? null);
-
-        $valorTotal = round((float)($prop['valor_total'] ?? 0), 2);
-        $valorEntrada = round(max(0, min($valorTotal, (float)($prop['valor_entrada'] ?? 0))), 2);
-        $saldoDevedor = round(max(0, $valorTotal - $valorEntrada), 2);
-
-        if ($valorEntrada >= $valorTotal && $valorTotal > 0) {
-            $statusFin = 'PAGO';
-            $saldoDevedor = 0.00;
-            $dataVencimento = date('Y-m-d');
-            $obsFin = $manual
-                ? 'Lançamento quitado integralmente à vista após autorização interna da proposta nº ' . $prop['numero'] . '.'
-                : 'Lançamento quitado integralmente à vista após assinatura da proposta nº ' . $prop['numero'] . '.';
-        } elseif ($valorEntrada > 0) {
-            $statusFin = 'PARCIAL';
-            $dataVencimento = date('Y-m-d', strtotime('+15 days'));
-            $obsFin = ($manual
-                ? 'Lançamento gerado após autorização interna da proposta nº ' . $prop['numero'] . '.'
-                : 'Lançamento gerado após assinatura da proposta nº ' . $prop['numero'] . '.')
-                . ' Entrada à vista de R$ ' . number_format($valorEntrada, 2, ',', '.') . ' quitada; saldo restante de R$ ' . number_format($saldoDevedor, 2, ',', '.') . ' a receber.';
-        } else {
-            $statusFin = 'PENDENTE';
-            $saldoDevedor = $valorTotal;
-            $dataVencimento = date('Y-m-d', strtotime('+15 days'));
-            $obsFin = $manual
-                ? 'Lançamento gerado automaticamente após aprovação interna da proposta.'
-                : 'Lançamento gerado automaticamente após assinatura da proposta.';
-        }
-
-        $lancamentoId = gerarUUID();
-        $stmtFin = $pdo->prepare("INSERT INTO financeiro_lancamentos
-            (id, tipo, frequencia, status, data_vencimento, cliente_id, descricao, valor, valor_original, saldo_devedor, data, categoria, observacoes, criado_por, escritorio_id, responsavel_usuario_id, proposta_id)
-            VALUES (:id, 'RECEITA', 'unica', :status, :data_vencimento, :cliente_id, :descricao, :valor, :valor_original, :saldo_devedor, CURDATE(), 'SERVIÇOS', :observacoes, :criado_por, :escritorio, :responsavel, :proposta)");
-        $stmtFin->execute([
-            ':id' => $lancamentoId,
-            ':status' => $statusFin,
-            ':data_vencimento' => $dataVencimento,
-            ':cliente_id' => $prop['cliente_id'],
-            ':descricao' => $descricaoFinanceiro,
-            ':valor' => $valorTotal,
-            ':valor_original' => $valorTotal,
-            ':saldo_devedor' => $saldoDevedor,
-            ':observacoes' => $obsFin,
-            ':criado_por' => $criado_por,
-            ':escritorio' => $escritorioLancamento,
-            ':responsavel' => $responsavelVendaId,
-            ':proposta' => $prop['id'],
-        ]);
-
-        if ($valorEntrada > 0) {
-            $formaBaixa = in_array($prop['forma_pagamento'] ?? '', ['a_vista', 'parcelado', 'boleto', 'pix'], true)
-                ? $prop['forma_pagamento']
-                : 'a_vista';
-            $stmtBaixa = $pdo->prepare("
-                INSERT INTO financeiro_historico_baixas
-                    (id, lancamento_id, valor_pago, data_pagamento, forma_pagamento, criado_por)
-                VALUES
-                    (:id, :lancamento_id, :valor_pago, CURDATE(), :forma_pagamento, :criado_por)
-            ");
-            $stmtBaixa->execute([
-                ':id' => gerarUUID(),
-                ':lancamento_id' => $lancamentoId,
-                ':valor_pago' => number_format($valorEntrada, 2, '.', ''),
-                ':forma_pagamento' => $formaBaixa,
-                ':criado_por' => $criado_por,
-            ]);
-        }
-    }
+    gerarLancamentosFinanceirosProposta($pdo, $prop, $criado_por, $manual, $dataReferencia);
 
     $stmtEmb = $pdo->prepare("
         SELECT pe.embarcacao_id,
@@ -325,7 +246,7 @@ if ($action !== '') {
 
             $tipo_desconto       = (string)($_POST['tipo_desconto'] ?? 'perc');
             $desconto_input      = normalizarDecimalProposta($_POST['desconto_global'] ?? 0);
-            $parcelas            = max(1, min(12, (int)($_POST['parcelas'] ?? 3)));
+            $parcelas            = max(1, min(24, (int)($_POST['parcelas'] ?? 3)));
             $valor_entrada_input = normalizarDecimalProposta($_POST['valor_entrada'] ?? 0);
             validarDescontoProposta($tipo_desconto, $desconto_input);
 
@@ -536,7 +457,7 @@ if ($action !== '') {
             $tipoDesconto = (string)($_POST['tipo_desconto'] ?? 'perc');
             $descontoInput = normalizarDecimalProposta($_POST['desconto_global'] ?? 0);
             $valorEntradaInput = normalizarDecimalProposta($_POST['valor_entrada'] ?? 0);
-            $parcelas = max(1, min(12, (int)($_POST['parcelas'] ?? 3)));
+            $parcelas = max(1, min(24, (int)($_POST['parcelas'] ?? 3)));
             validarDescontoProposta($tipoDesconto, $descontoInput);
 
             $formaPagamento = (string)($_POST['forma_pagamento'] ?? 'parcelado');
@@ -1009,7 +930,7 @@ if ($action !== '') {
 
             $prop['assinado'] = 1;
             $prop['status'] = 'assinada';
-            gerarEfeitosPropostaAssinada($pdo, $prop, $_SESSION['usuario_id'] ?? null, true);
+            gerarEfeitosPropostaAssinada($pdo, $prop, $_SESSION['usuario_id'] ?? null, true, $dataAssinatura);
             $proximoAgendamentoId = proximoAgendamentoPendenteProposta($pdo, (string)$prop['id']);
 
             $pdo->commit();
