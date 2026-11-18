@@ -1,0 +1,1577 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manual Operacional do Vistoriador Naval - Amazon Certificadora</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    :root {
+      --ink: #0c1e1b;
+      --muted: #4e6561;
+      --light-muted: #738b87;
+      --soft: #f2f7f5;
+      --soft-card: #f8fbfa;
+      --paper: #ffffff;
+      --line: #d3e2dd;
+      --line-light: #e8f0ec;
+      
+      --navy-950: #021714;
+      --navy-900: #062c26;
+      --navy-850: #0a3d35;
+      --navy-800: #0f4e44;
+      --navy-700: #146b5d;
+      
+      --accent-mint: #2ad59d;
+      --accent-teal: #0d9488;
+      --accent-cyan: #22c7b8;
+      --accent-gold: #e6a229;
+      --accent-red: #d94343;
+      --accent-blue: #2475ba;
+      
+      --font-main: "Segoe UI", Inter, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #dde5e2;
+      color: var(--ink);
+      font-family: var(--font-main);
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    .sheet {
+      position: relative;
+      width: 210mm;
+      height: 297mm;
+      min-height: 297mm;
+      max-height: 297mm;
+      margin: 0 auto;
+      padding: 16mm 18mm 16mm;
+      overflow: hidden;
+      background: var(--paper);
+      page-break-after: always;
+      page-break-inside: avoid;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sheet:last-child {
+      page-break-after: auto;
+    }
+
+    /* Top Page Header Kicker */
+    .page-header-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 7px;
+      margin-bottom: 13px;
+    }
+
+    .page-header-strip .module-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--navy-900);
+      color: var(--accent-mint);
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .page-header-strip .chapter-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    /* Page Footer */
+    .page-footer-strip {
+      position: absolute;
+      bottom: 10mm;
+      left: 18mm;
+      right: 18mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      padding-top: 6px;
+      font-size: 9px;
+      color: var(--light-muted);
+      font-weight: 600;
+    }
+
+    .page-footer-strip .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .page-footer-strip .page-num {
+      font-weight: 800;
+      color: var(--navy-850);
+      background: var(--soft);
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+    }
+
+    /* Typography */
+    h1, h2, h3, h4, p {
+      margin: 0;
+    }
+
+    h2.page-title {
+      font-size: 21px;
+      line-height: 1.15;
+      font-weight: 850;
+      color: var(--navy-950);
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    p.page-subtitle {
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.4;
+      margin-bottom: 13px;
+    }
+
+    h3.section-subtitle {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: var(--navy-900);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 8px;
+    }
+
+    h3.section-subtitle::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 13px;
+      background: var(--accent-mint);
+      border-radius: 2px;
+    }
+
+    /* Callout & Alerts */
+    .callout {
+      background: var(--soft);
+      border-left: 4px solid var(--navy-800);
+      padding: 8px 11px;
+      border-radius: 0 6px 6px 0;
+      margin: 9px 0;
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .callout.warning {
+      background: #fdf8eb;
+      border-left-color: var(--accent-gold);
+      color: #744e05;
+    }
+
+    .callout.danger {
+      background: #fdf2f2;
+      border-left-color: var(--accent-red);
+      color: #7d1c1c;
+    }
+
+    .callout.success {
+      background: #edfcf5;
+      border-left-color: var(--accent-mint);
+      color: #0c563d;
+    }
+
+    .callout.info {
+      background: #f0f9ff;
+      border-left-color: var(--accent-blue);
+      color: #0c4a6e;
+    }
+
+    /* Cards & UI Blocks */
+    .ui-panel {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--paper);
+      overflow: hidden;
+      box-shadow: 0 3px 10px rgba(6, 44, 38, .04);
+      margin-bottom: 11px;
+    }
+
+    .ui-panel-header {
+      background: var(--soft);
+      padding: 6px 11px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 9.5px;
+      font-weight: 800;
+      color: var(--navy-900);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .ui-panel-body {
+      padding: 9px 11px;
+    }
+
+    /* Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 11px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 8.5px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+
+    .badge-success { background: #dcfce7; color: #166534; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-danger  { background: #fee2e2; color: #991b1b; }
+    .badge-info    { background: #e0f2fe; color: #075985; }
+    .badge-navy    { background: var(--navy-900); color: var(--accent-mint); }
+    .badge-as      { background: #dc2626; color: #ffffff; font-weight: 900; }
+
+    /* Tables */
+    .mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5px;
+      margin: 6px 0;
+    }
+
+    .mini-table th, .mini-table td {
+      padding: 5px 7px;
+      border-bottom: 1px solid var(--line-light);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .mini-table th {
+      background: var(--soft);
+      font-weight: 800;
+      color: var(--navy-900);
+      text-transform: uppercase;
+      font-size: 8.5px;
+      letter-spacing: .05em;
+    }
+
+    .mini-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Steps list */
+    .step-list {
+      display: grid;
+      gap: 7px;
+      margin: 7px 0;
+    }
+
+    .step-item {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 9px;
+      align-items: start;
+      background: var(--soft-card);
+      border: 1px solid var(--line-light);
+      border-radius: 6px;
+      padding: 7px 9px;
+    }
+
+    .step-badge {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--navy-900);
+      color: var(--accent-mint);
+      font-size: 10.5px;
+      font-weight: 900;
+      display: grid;
+      place-items: center;
+    }
+
+    .step-content strong {
+      display: block;
+      color: var(--navy-950);
+      font-size: 10.5px;
+      margin-bottom: 2px;
+    }
+
+    .step-content p {
+      font-size: 9.5px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    /* Screen Mockup Components */
+    .screen-mockup {
+      border: 1px solid #b8cdc7;
+      border-radius: 6px;
+      background: #ffffff;
+      overflow: hidden;
+      margin: 7px 0 10px;
+      box-shadow: 0 3px 12px rgba(3, 23, 20, .07);
+    }
+
+    .mockup-topbar {
+      background: #062b25;
+      color: #ffffff;
+      padding: 5px 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 8.5px;
+      font-weight: 700;
+    }
+
+    .mockup-topbar .dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .mockup-topbar .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .3);
+    }
+
+    .mockup-body {
+      padding: 9px;
+      background: #f8faf9;
+    }
+
+    /* Cover Styling */
+    .sheet.cover {
+      background:
+        linear-gradient(135deg, rgba(2, 23, 20, 0.98) 0%, rgba(6, 44, 38, 0.95) 50%, rgba(13, 148, 136, 0.92) 100%),
+        url("../assets/img/portal-hero-ship.png") center center / cover no-repeat;
+      color: #ffffff;
+      padding: 22mm 20mm 18mm;
+      justify-content: space-between;
+    }
+
+    .cover-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(42, 213, 157, 0.15);
+      border: 1px solid var(--accent-mint);
+      color: var(--accent-mint);
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      padding: 4px 11px;
+      border-radius: 999px;
+      margin-bottom: 16px;
+    }
+
+    .cover-title {
+      font-size: 34px;
+      line-height: 1.05;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      color: #ffffff;
+    }
+
+    .cover-title span {
+      color: var(--accent-mint);
+    }
+
+    .cover-subtitle {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #b3d1ca;
+      max-width: 540px;
+      margin-bottom: 24px;
+    }
+
+    .cover-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      background: rgba(2, 23, 20, 0.65);
+      border: 1px solid rgba(42, 213, 157, 0.3);
+      padding: 14px 16px;
+      border-radius: 8px;
+      backdrop-filter: blur(8px);
+      margin-bottom: 26px;
+    }
+
+    .cover-meta-item strong {
+      display: block;
+      color: var(--accent-mint);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 2px;
+    }
+
+    .cover-meta-item span {
+      font-size: 11.5px;
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .cover-toc-box {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 14px 18px;
+    }
+
+    .cover-toc-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--accent-mint);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .cover-toc-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 16px;
+      font-size: 10px;
+      color: #e2f1ed;
+    }
+
+    .cover-toc-list div {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px dotted rgba(255, 255, 255, 0.2);
+      padding-bottom: 2px;
+    }
+
+    .cover-toc-list b {
+      color: var(--accent-mint);
+      margin-right: 6px;
+    }
+
+    .cover-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      padding-top: 10px;
+      font-size: 9px;
+      color: #8daea5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================= -->
+  <!-- PÁGINA 1: CAPA OFICIAL -->
+  <!-- ========================================================================= -->
+  <section class="sheet cover">
+    <div>
+      <div class="cover-kicker">
+        ⚓ DIRETRIZES DA AUTORIDADE MARÍTIMA DO BRASIL &bull; DPC
+      </div>
+      <h1 class="cover-title">
+        MANUAL DO <span>VISTORIADOR</span> NAVAL
+      </h1>
+      <p class="cover-subtitle">
+        Guia Operacional Passo a Passo para Inspeções em Campo, Aplicativo Offline (PWA), Checklist NORMAM Inteligente, Classificação de Exigências A/S e Emissão de Laudos Técnicos Oficiais com Fé Pública.
+      </p>
+
+      <div class="cover-meta-grid">
+        <div class="cover-meta-item">
+          <strong>Regulamentação DPC</strong>
+          <span>NORMAM-201 / 202 / 211 / 212</span>
+        </div>
+        <div class="cover-meta-item">
+          <strong>Governo & Navegação</strong>
+          <span>RIPEAM &bull; NPCP/NPCF Regionais</span>
+        </div>
+        <div class="cover-meta-item">
+          <strong>Auditoria & Escopo</strong>
+          <span>Foco Naval &bull; Zero ISO/SGQ</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cover-toc-box">
+        <div class="cover-toc-title">
+          <span>Estrutura do Manual &mdash; Roteiro do Vistoriador</span>
+          <span>10 Páginas</span>
+        </div>
+        <div class="cover-toc-list">
+          <div><span><b>02</b> Painel do Vistoriador & Escala Diária</span> <span>Pág. 2</span></div>
+          <div><span><b>03</b> Modo Campo no Celular / App Offline</span> <span>Pág. 3</span></div>
+          <div><span><b>04</b> Checklist NORMAM & Categorias 'a' a 'f'</span> <span>Pág. 4</span></div>
+          <div><span><b>05</b> O Critério Crítico: A/S vs Comum</span> <span>Pág. 5</span></div>
+          <div><span><b>06</b> Registro de Fotos & Evidências Navais</span> <span>Pág. 6</span></div>
+          <div><span><b>07</b> Exigências Avulsas Fora do Catálogo</span> <span>Pág. 7</span></div>
+          <div><span><b>08</b> Vistoria de Retorno & Cumprimento</span> <span>Pág. 8</span></div>
+          <div><span><b>09</b> Conclusão, Assinatura Eletrônica & PDF</span> <span>Pág. 9</span></div>
+          <div><span><b>10</b> Matriz "O Que Fazer Quando..." & FAQ</span> <span>Pág. 10</span></div>
+        </div>
+      </div>
+
+      <div class="cover-footer" style="margin-top: 20px;">
+        <span>Amazon Certificadora &bull; Setor de Vistorias Técnicas Navais</span>
+        <span>Versão 2026.1 &bull; Documento Oficial de Instrução de Campo</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- PÁGINA 2: CAPÍTULO 1 — PAINEL DO VISTORIADOR & ESCALA DIÁRIA -->
+  <!-- ========================================================================= -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Módulo de Vistorias</span>
+      <span class="chapter-title">Capítulo 1 &bull; Painel de Trabalho & Escala de Campo</span>
+    </div>
+
+    <h2 class="page-title">1. Recepção do Agendamento & Escala Diária</h2>
+    <p class="page-subtitle">
+      Como o vistoriador acessa a fila de trabalho, confere as embarcações agendadas pela administração e inicia a coleta de dados técnicos no ERP Web.
+    </p>
+
+    <div class="grid-2">
+      <div>
+        <h3 class="section-subtitle">O Fluxo Inicial de Atribuição</h3>
+        <p style="font-size: 10.5px; color: var(--muted); margin-bottom: 8px;">
+          Toda vistoria tem origem em um agendamento prévio com cliente, embarcação, armador e local de atracação/rampa definidos. O vistoriador visualiza apenas as vistorias sob sua responsabilidade técnica ou sem vistoriador atribuído.
+        </p>
+
+        <div class="step-list">
+          <div class="step-item">
+            <span class="step-badge">1</span>
+            <div class="step-content">
+              <strong>Acesse a tela de Vistorias</strong>
+              <p>No menu lateral esquerdo, clique em <code>Operação Naval &rarr; Vistorias Técnicas</code> (rota <code>/vistorias</code>).</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge">2</span>
+            <div class="step-content">
+              <strong>Localize o Card de Escala Imediata</strong>
+              <p>No topo da página, o painel destacado em verde reúne as vistorias <em>Agendadas</em> e <em>Em Andamento</em> atribuídas a você.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge">3</span>
+            <div class="step-content">
+              <strong>Inicie ou Continue o Relatório</strong>
+              <p>Clique em <b>Iniciar Vistoria</b> (novo laudo) ou <b>Continuar Vistoria</b> (para retomar um relatório em andamento sem perder dados).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="section-subtitle">Os 6 Status Oficiais de Vistoria</h3>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Significado Operacional</th>
+              <th>Próxima Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-warning">PENDENTE</span></td>
+              <td>Relatório em preenchimento pelo vistoriador em campo.</td>
+              <td>Concluir checklist e enviar.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-warning">AGUARDANDO APROVAÇÃO</span></td>
+              <td>Enviado pelo vistoriador; aguarda homologação da Mesa Técnica.</td>
+              <td>Engenheiro revisa laudo e fotos.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-info">APROVADA C/ EXIGÊNCIAS</span></td>
+              <td>Aprovada com pendências comuns (prazo de 60 ou 90 dias).</td>
+              <td>Emite certificado provisório.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-as">RETORNO A/S</span></td>
+              <td>Pelo menos 1 exigência impeditiva (Antes de Suspender).</td>
+              <td>Embarcação retida até retorno.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-success">APROVADA</span></td>
+              <td>100% conforme. Liberação irrestrita de certificação.</td>
+              <td>Emissão de CSN, CNBL, CNARQ.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-danger">REPROVADA</span></td>
+              <td>Condições inaceitáveis de segurança ou documentação falsa.</td>
+              <td>Processo arquivado / Capitania.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout warning">
+          <strong>Atenção ao Local da Vistoria:</strong> Verifique sempre o campo de local (ex.: Estaleiro Juruá, Porto de Santana, Ilha de Santana). Deslocamentos fluviais exigem conferência prévia da maré e contato antecipado com o mestre da embarcação.
+        </div>
+      </div>
+    </div>
+
+    <!-- MOCKUP DO PAINEL -->
+    <div class="screen-mockup">
+      <div class="mockup-topbar">
+        <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <span>ERP Web &bull; Painel de Escala de Vistorias Imediatas (/vistorias)</span>
+        <span>Sessão: Vistoriador Credenciado</span>
+      </div>
+      <div class="mockup-body" style="background:#ffffff;">
+        <div style="border: 2px solid var(--accent-teal); border-radius: 6px; padding: 10px 12px; background: #f0fdfa;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="font-size:11px; color:#0f766e;"><i class="fa-solid fa-calendar-days"></i> Vistorias Agendadas & Em Andamento</strong>
+            <span class="badge badge-success">1 pendente na sua escala</span>
+          </div>
+          <div style="background:#ffffff; border:1px solid #ccfbf1; border-radius:6px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <span style="font-size:9px; font-weight:700; color:#0f766e; background:#e6fffa; padding:1px 6px; border-radius:3px;">
+                📅 20/11/2026 às 09:00
+              </span>
+              <span class="badge badge-warning" style="margin-left:4px;">AGENDADA</span>
+              <div style="font-size:12px; font-weight:800; color:var(--navy-950); margin-top:3px;">
+                🚢 F/B RIO AMAZONAS IV &mdash; <span style="font-size:10px; font-weight:600; color:var(--muted);">Inscrição: 021-004523-9</span>
+              </div>
+              <div style="font-size:9.5px; color:var(--muted);">
+                Armador: <b>Navegações Tapajós Ltda</b> &bull; Tipo: <b>Vistoria Flutuando / Periódica</b> &bull; Local: <b>Porto de Santana/AP</b>
+              </div>
+            </div>
+            <a href="#" style="background:#0d9488; color:#ffffff; padding:6px 14px; border-radius:5px; font-weight:700; font-size:10.5px; text-decoration:none; display:inline-block;">
+              ▶ Iniciar Vistoria
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer-strip">
+      <span class="footer-left">Manual do Vistoriador Naval &bull; Amazon Certificadora</span>
+      <span class="page-num">Pág. 02</span>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- PÁGINA 3: CAPÍTULO 2 — MODO CAMPO & APP OFFLINE (PWA) -->
+  <!-- ========================================================================= -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Módulo de Vistorias</span>
+      <span class="chapter-title">Capítulo 2 &bull; Operação em Campo & PWA Offline</span>
+    </div>
+
+    <h2 class="page-title">2. Modo Campo no Smartphone / Tablet (PWA Offline)</h2>
+    <p class="page-subtitle">
+      Como inspecionar embarcações em ilhas, furos e rios sem sinal de celular usando o aplicativo progressivo com gravação no IndexedDB e sincronização automática.
+    </p>
+
+    <div class="grid-3" style="margin-bottom: 11px;">
+      <div class="ui-panel">
+        <div class="ui-panel-header">1. No Cais com Internet</div>
+        <div class="ui-panel-body">
+          <p style="font-size: 10px; color: var(--muted); line-height: 1.4;">
+            Abra o navegador no celular e digite <code>/campo/</code>. Localize a embarcação agendada e toque em <b>Iniciar Vistoria</b>. O app baixa todo o pacote de dados técnicos e checklist para a memória local do aparelho.
+          </p>
+        </div>
+      </div>
+      <div class="ui-panel">
+        <div class="ui-panel-header">2. A Bordo Sem Sinal</div>
+        <div class="ui-panel-body">
+          <p style="font-size: 10px; color: var(--muted); line-height: 1.4;">
+            Pode navegar nos porões ou entrar em modo avião. O sistema salva notas, checklist e fotos da câmera no <b>IndexedDB criptografado</b>. O aplicativo funciona normalmente sem internet.
+          </p>
+        </div>
+      </div>
+      <div class="ui-panel">
+        <div class="ui-panel-header">3. Retorno & Sincronização</div>
+        <div class="ui-panel-body">
+          <p style="font-size: 10px; color: var(--muted); line-height: 1.4;">
+            Ao retornar à área com cobertura 4G ou Wi-Fi, o aplicativo detecta o sinal e envia toda a fila acumulada para o servidor de forma <b>idempotente</b>, sem duplicar dados nem apagar arquivos locais antes da confirmação.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">Arquitetura de Segurança de Dados Anti-Perda</h3>
+    <div class="grid-2">
+      <div>
+        <div class="callout success">
+          <strong>Proteção Contra Bateria Fraca / Aparelho Desligado:</strong>
+          Cada toque em <em>Conforme</em>, <em>Não Conforme</em> ou cada foto capturada é gravada no mesmo milissegundo no banco interno do navegador. Mesmo que o aparelho desligue por falta de bateria ou o navegador seja fechado acidentalmente, ao reabrir tudo continua exatamente no mesmo ponto.
+        </div>
+        <div class="callout warning">
+          <strong>Regra de Limpeza de Cache:</strong>
+          Nunca execute "Limpar dados de navegação" ou "Limpar armazenamento do navegador" durante o período em que estiver em campo com vistorias pendentes de sincronização.
+        </div>
+      </div>
+
+      <div>
+        <div class="ui-panel" style="margin-bottom: 0;">
+          <div class="ui-panel-header">Checklist de Preparação Antes de Ir ao Barco</div>
+          <div class="ui-panel-body">
+            <ul style="font-size: 10px; color: var(--navy-900); padding-left: 14px; margin: 0; line-height: 1.6;">
+              <li>Bateria do celular/tablet carregada em 100% (levar powerbank).</li>
+              <li>Acessar <code>/campo/</code> ainda no hotel/escritório e abrir a vistoria.</li>
+              <li>Conferir se a mensagem <em>"Pacote baixado com sucesso"</em> apareceu.</li>
+              <li>Lente da câmera limpa para fotos nítidas da praça de máquinas.</li>
+              <li>Trena métrica ou fita metálica para conferência de borda livre/calados.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOCKUP CELULAR -->
+    <div class="screen-mockup" style="margin-top: 10px;">
+      <div class="mockup-topbar" style="background:#0f172a;">
+        <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <span>Interface Mobile do Vistoriador (/campo/) &bull; Modo Avião Ativo</span>
+        <span style="color:#2ad59d;">⚡ MODO OFFLINE ATIVO</span>
+      </div>
+      <div class="mockup-body" style="background:#f1f5f9; padding: 10px 14px;">
+        <div style="background:#ffffff; border-radius:6px; border:1px solid #cbd5e1; padding:8px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong style="font-size:11px; color:#0f172a;">🚢 B/M ESTRELA DO NORTE</strong>
+            <div style="font-size:9.5px; color:#64748b;">Itens: <b>14 respondidos de 18</b> &bull; Fotos locais: <b>5 prontas</b></div>
+          </div>
+          <span class="badge badge-info">Salvando no aparelho</span>
+        </div>
+        <div style="background:#ffffff; border-radius:6px; border:1px solid #cbd5e1; padding:8px 12px;">
+          <div style="font-size:10px; font-weight:700; color:#0f172a; margin-bottom:4px;">
+            Item 04.2 &mdash; Bombas de Esgoto dos Porões (NORMAM-202, Cap. 03)
+          </div>
+          <div style="display:flex; gap:6px;">
+            <span style="background:#15803d; color:#fff; font-size:9px; font-weight:800; padding:4px 10px; border-radius:4px;">✓ CONFORME</span>
+            <span style="background:#e2e8f0; color:#64748b; font-size:9px; font-weight:700; padding:4px 10px; border-radius:4px;">NÃO CONFORME</span>
+            <span style="background:#e2e8f0; color:#64748b; font-size:9px; font-weight:700; padding:4px 10px; border-radius:4px;">N/A</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer-strip">
+      <span class="footer-left">Manual do Vistoriador Naval &bull; Amazon Certificadora</span>
+      <span class="page-num">Pág. 03</span>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- PÁGINA 4: CAPÍTULO 3 — ENQUADRAMENTO NORMAM & CHECKLIST INTELIGENTE -->
+  <!-- ========================================================================= -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Módulo de Vistorias</span>
+      <span class="chapter-title">Capítulo 3 &bull; Enquadramento & Checklist NORMAM</span>
+    </div>
+
+    <h2 class="page-title">3. Checklist NORMAM & Categorias Navais</h2>
+    <p class="page-subtitle">
+      O motor de regras do sistema aplica automaticamente os requisitos da NORMAM-202 (Categorias 'a' a 'f') e divide a vistoria nos 4 blocos técnicos de inspeção.
+    </p>
+
+    <div class="grid-2">
+      <div>
+        <h3 class="section-subtitle">Matriz de Categorias Navais (NORMAM-202)</h3>
+        <p style="font-size: 10px; color: var(--muted); margin-bottom: 6px;">
+          O enquadramento é calculado pelo sistema combinando Arqueação Bruta (AB), presença de propulsão mecânica e capacidade de passageiros:
+        </p>
+
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Cat.</th>
+              <th>Parâmetros da Embarcação</th>
+              <th>Exigências Foco</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>'a'</b></td>
+              <td>Com propulsão, AB 20 a 500 c/ passageiros (ou AB 50 a 500 s/ pass.).</td>
+              <td>Salvatagem completa, estanqueidade, esgoto duplo.</td>
+            </tr>
+            <tr>
+              <td><b>'b'</b></td>
+              <td>Sem propulsão, AB 50 a 500 (balsas de carga geral/tanque).</td>
+              <td>Borda livre, cavername, anodos, bombas de lastro.</td>
+            </tr>
+            <tr>
+              <td><b>'c'</b></td>
+              <td>Flutuantes (com passageiros ou AB 100 a 500).</td>
+              <td>Flutuabilidade, amarras, extintores e vias de escape.</td>
+            </tr>
+            <tr>
+              <td><b>'d'</b></td>
+              <td>Com propulsão, AB &ge; 500 (grandes empurradores/navios).</td>
+              <td>SOLAS/NORMAM integral, gerador de emergência.</td>
+            </tr>
+            <tr>
+              <td><b>'e'</b></td>
+              <td>Sem propulsão, AB &ge; 500 (grandes cábreas/balsas graneleiras).</td>
+              <td>Borda livre oficial, integridade de conveses e fundo.</td>
+            </tr>
+            <tr>
+              <td><b>'f'</b></td>
+              <td>Demais embarcações menores dispensadas de certificado estatutário.</td>
+              <td>Dotação básica de coletes e extintor manual.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h3 class="section-subtitle">Os 4 Blocos Técnicos de Inspeção</h3>
+        <div class="step-list">
+          <div class="step-item">
+            <span class="step-badge" style="background:#0284c7;">1</span>
+            <div class="step-content">
+              <strong>Vistoria em Seco</strong>
+              <p>Carena, chapeamento de fundo e costado, leme, hélice, eixo propulsor, anodos de sacrifício de zinco, válvulas de mar e tomadas de água salgada/doce.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge" style="background:#0d9488;">2</span>
+            <div class="step-content">
+              <strong>Vistoria Flutuando</strong>
+              <p>Dotação de salvatagem (coletes/boias homologados), combate a incêndio, bombas de esgoto, luzes e sinais do RIPEAM, quadro elétrico e estanqueidade.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge" style="background:#d97706;">3</span>
+            <div class="step-content">
+              <strong>Borda Livre (CNBL)</strong>
+              <p>Disco de Plimsoll e marcas de borda livre gravadas/soldadas a meia-nau, calados a vante, meia-nau e ré, alvarás, portas estanques e respiradouros.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge" style="background:#16a34a;">4</span>
+            <div class="step-content">
+              <strong>Arqueação (CNARQ)</strong>
+              <p>Medição in loco do Comprimento Total (LOA), Boca Moldada (B) e Pontal Moldado (D) para conferência com o memorial de cálculo aprovado.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle" style="margin-top: 10px;">Como Operar a Barra de Ferramentas do Checklist</h3>
+    <div class="ui-panel" style="margin-bottom: 0;">
+      <div class="ui-panel-body" style="background:#ffffff;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div style="display:flex; gap:6px;">
+            <span class="badge badge-navy">Expandir Todas</span>
+            <span class="badge badge-navy">Recolher Todas</span>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <span class="badge badge-navy">Todos (18)</span>
+            <span class="badge badge-warning">Só Pendentes (4)</span>
+            <span class="badge badge-success">Conformes (12)</span>
+            <span class="badge badge-danger">Exigências (2)</span>
+            <span class="badge badge-info">N/A (0)</span>
+          </div>
+          <div style="font-size:9.5px; color:var(--muted); font-family:var(--font-mono);">
+            🔍 Campo de Busca Rápida por Palavra ou Artigo da NORMAM
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer-strip">
+      <span class="footer-left">Manual do Vistoriador Naval &bull; Amazon Certificadora</span>
+      <span class="page-num">Pág. 04</span>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- PÁGINA 5: CAPÍTULO 4 — CRITÉRIO CRÍTICO: A/S VS COMUM -->
+  <!-- ========================================================================= -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Módulo de Vistorias</span>
+      <span class="chapter-title">Capítulo 4 &bull; O Critério Mandatório: A/S vs Comum</span>
+    </div>
+
+    <h2 class="page-title">4. Classificação de Exigências: A/S vs Comum</h2>
+    <p class="page-subtitle">
+      A distinção técnica entre o risco iminente que retém a embarcação ("Antes de Suspender") e as deficiências de prazo regulamentar (60 ou 90 dias).
+    </p>
+
+    <div class="grid-2">
+      <!-- BLOCO A/S -->
+      <div style="border: 2px solid var(--accent-red); border-radius: 8px; padding: 12px; background: #fff5f5;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span class="badge badge-as" style="font-size:10px;">⛔ EXIGÊNCIA A/S</span>
+          <span style="font-size:9px; font-weight:800; color:#dc2626; text-transform:uppercase;">IMPEDITIVA DE VIAGEM</span>
+        </div>
+        <h4 style="font-size:13px; color:#991b1b; margin-bottom:4px;">"Antes de Suspender" (Embarcação Retida)</h4>
+        <p style="font-size:10px; color:#7f1d1d; line-height:1.45; margin-bottom:8px;">
+          Aplica-se quando a não conformidade compromete <b>gravemente e de forma imediata</b> a vida humana, a flutuabilidade ou a manobrabilidade. A embarcação <b>NÃO PODE NAVEGAR</b> até que uma vistoria de retorno comprove a solução do problema.
+        </p>
+
+        <div style="background:#ffffff; border:1px solid #fecaca; border-radius:6px; padding:8px 10px;">
+          <strong style="font-size:9.5px; color:#991b1b; display:block; margin-bottom:4px;">Exemplos Práticos Mandatórios de A/S:</strong>
+          <ul style="font-size:9px; color:#7f1d1d; padding-left:14px; margin:0; line-height:1.5;">
+            <li>Falta de coletes salva-vidas homologados suficientes para a lotação real.</li>
+            <li>Extintores de incêndio descarregados ou ausentes na praça de máquinas.</li>
+            <li>Leme inoperante, madre empenada ou cabos de governo partidos.</li>
+            <li>Trinca passante, rombo ou corrosão severa no chapeamento de fundo/costado.</li>
+            <li>Inoperância total das bombas de esgoto ou luzes de navegação à noite.</li>
+          </ul>
+        </div>
+
+        <div class="callout danger" style="margin-top:8px; margin-bottom:0;">
+          <strong>Efeito no Sistema:</strong> Bloqueia a emissão do Certificado de Segurança da Navegação (CSN) e força a rota de <b>Retorno A/S</b>.
+        </div>
+      </div>
+
+      <!-- BLOCO COMUM -->
+      <div style="border: 2px solid var(--accent-gold); border-radius: 8px; padding: 12px; background: #fffdf5;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span class="badge badge-warning" style="font-size:10px;">⚠️ EXIGÊNCIA COMUM</span>
+          <span style="font-size:9px; font-weight:800; color:#92400e; text-transform:uppercase;">PRAZO: 60 OU 90 DIAS</span>
+        </div>
+        <h4 style="font-size:13px; color:#92400e; margin-bottom:4px;">Exigência com Prazo Regulamentar</h4>
+        <p style="font-size:10px; color:#78350f; line-height:1.45; margin-bottom:8px;">
+          Deficiência que, pela sua natureza secundária ou documental, <b>não impede a viagem imediata</b> em condições seguras, mas exige reparo dentro do prazo estabelecido pelo vistoriador (60 ou 90 dias).
+        </p>
+
+        <div style="background:#ffffff; border:1px solid #fef3c7; border-radius:6px; padding:8px 10px;">
+          <strong style="font-size:9.5px; color:#92400e; display:block; margin-bottom:4px;">Exemplos Práticos de Exigência Comum:</strong>
+          <ul style="font-size:9px; color:#78350f; padding-left:14px; margin:0; line-height:1.5;">
+            <li>Marcas de calado ou escala de borda livre necessitando de repintura.</li>
+            <li>Placa de instruções de salvatagem desbotada ou parcialmente ilegível.</li>
+            <li>Suporte de fixação de extintor solto ou precisando de aperto mecânico.</li>
+            <li>Lanterna de emergência reserva aguardando substituição de pilhas.</li>
+            <li>Pequenos reparos de vedação em escotilhas secundárias de convés.</li>
+          </ul>
+        </div>
+
+        <div class="callout warning" style="margin-top:8px; margin-bottom:0;">
+          <strong>Efeito no Sistema:</strong> O laudo é emitido como <b>Aprovada com Exigências</b>, liberando certificado provisório pelo prazo determinado.
+        </div>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle" style="margin-top: 12px;">Como Marcar no Sistema Durante a Vistoria</h3>
+    <div class="screen-mockup" style="margin-bottom:0;">
+      <div class="mockup-topbar">
+        <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <span>Detalhamento de Não Conformidade no Checklist</span>
+      </div>
+      <div class="mockup-body" style="background:#ffffff;">
+        <div style="border: 1px solid #fca5a5; border-radius: 6px; padding: 8px 10px; background: #fff5f5;">
+          <div style="font-weight:700; font-size:10.5px; color:#991b1b; margin-bottom:4px;">
+            Item 03.1 &mdash; Coletes Salva-Vidas (NORMAM-202, Cap. 04) &bull; <span class="badge badge-danger">NÃO CONFORME</span>
+          </div>
+          <div class="grid-2" style="gap:8px;">
+            <div>
+              <label style="font-size:8.5px; font-weight:700; color:#374151; display:block;">Referência da NORMAM:</label>
+              <input type="text" value="NORMAM-202/DPC, Cap. 04, Item 4.2" readonly style="width:100%; font-size:9px; padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; background:#f9fafb;">
+            </div>
+            <div>
+              <label style="font-size:8.5px; font-weight:700; color:#374151; display:block;">Observação Técnica do Defeito:</label>
+              <input type="text" value="Faltam 8 coletes para atingir a lotação máxima de 45 passageiros." readonly style="width:100%; font-size:9px; padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; background:#f9fafb;">
+            </div>
+          </div>
+          <div style="margin-top:6px; display:flex; align-items:center; gap:6px;">
+            <input type="checkbox" checked disabled>
+            <strong style="font-size:10px; color:#dc2626;">A/S &mdash; Antes de suspender (Bloqueia a embarcação de navegar até o retorno)</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer-strip">
+      <span class="footer-left">Manual do Vistoriador Naval &bull; Amazon Certificadora</span>
+      <span class="page-num">Pág. 05</span>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- PÁGINA 6: CAPÍTULO 5 — FOTO OFICIAL & EVIDÊNCIAS FOTOGRÁFICAS -->
+  <!-- ========================================================================= -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Módulo de Vistorias</span>
+      <span class="chapter-title">Capítulo 5 &bull; Registro Fotográfico & Evidências</span>
+    </div>
+
+    <h2 class="page-title">5. Registro de Fotos & Evidências Técnicas</h2>
+    <p class="page-subtitle">
+      A vistoria naval perante a Capitania dos Portos exige evidências irrefutáveis. Conheça as regras para a Foto Oficial da Embarcação e fotos de checklist.
+    </p>
+
+    <div class="grid-2">
+      <div class="ui-panel">
+        <div class="ui-panel-header" style="color:#0f766e;">1. A Foto Oficial da Embarcação (Mestre)</div>
+        <div class="ui-panel-body">
+          <p style="font-size:10px; color:var(--muted); line-height:1.45; margin-bottom:6px;">
+            Localizada no card superior da vistoria. É a foto que representa a embarcação em todo o sistema e sairá na primeira página do laudo pericial oficial:
+          </p>
+          <ul style="font-size:9.5px; color:var(--navy-900); padding-left:14px; margin:0; line-height:1.5;">
+            <li><b>Enquadramento Obrigatório:</b> Costado completo, de proa a popa, na diagonal ou perpendicular.</li>
+            <li><b>Legibilidade Mandatória:</b> O nome da embarcação e o porto de inscrição pintados na proa/popa devem estar 100% nítidos.</li>
+            <li><b>Estado de Conservação:</b> Deve mostrar a condição geral da pintura, calados e linha d'água.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ui-panel">
+        <div class="ui-panel-header" style="color:#991b1b;">2. Fotos de Evidências por Item</div>
+        <div class="ui-panel-body">
+          <p style="font-size:10px; color:var(--muted); line-height:1.45; margin-bottom:6px;">
+            Abaixo de cada item do checklist marcado como <em>Não Conforme</em> (ou para comprovar conformidades críticas), há suporte para <b>múltiplas fotos</b>:
+          </p>
+          <ul style="font-size:9.5px; color:var(--navy-900); padding-left:14px; margin:0; line-height:1.5;">
+            <li><b>Foto de Contexto:</b> Plano aberto mostrando a localização a bordo (ex.: praça de máquinas).</li>
+            <li><b>Foto de Detalhe:</b> Close-up com boa luz no defeito (ex.: manômetro sem pressão, furo de corrosão).</li>
+            <li><b>Exclusão Rápida:</b> Caso a foto fique borrada ou escura, clique no botão <b>"X" vermelho</b> na miniatura para descartar na hora.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">Exemplo Visual de Boas e Más Práticas Fotográficas</h3>
+    <table class="mini-table">
+      <thead>
+        <tr>
+          <th style="width:140px;">Tipo de Foto</th>
+          <th style="width:45%;">Como DEVE ser tirada (Correto)</th>
+          <th style="width:45%;">O que NUNCA fazer (Incorreto)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Foto Oficial do Barco</b></td>
+          <td>Embarcação inteira enquadrada, iluminação solar favorável, nome e inscrição legíveis.</td>
+          <td>Foto cortando a proa ou popa, tirada contra a luz do sol poente, ou barco coberto por lona.</td>
+        </tr>
+        <tr>
+          <td><b>Extintores de Incêndio</b></td>
+          <td>Foco direto no selo do INMETRO, data de validade da carga e ponteiro do manômetro na faixa verde.</td>
+          <td>Foto distante no escuro da praça de máquinas onde não se lê a etiqueta de validade.</td>
+        </tr>
+        <tr>
+          <td><b>Leme & Hélice (Seco)</b></td>
+          <td>Foto clara do bordo de ataque e fuga das pás, folga do eixo e anodos de sacrifício metálicos.</td>
+          <td>Foto sem iluminação por baixo do casco com sombras escuras impedindo a avaliação pericial.</td>
+        </tr>
+        <tr>
+          <td><b>Borda Livre / Plimsoll</b></td>
+          <td>Trena posicionada perpendicularmente entre o convés estanque e a linha da marca de borda livre.</td>
+          <td>Foto na diagonal sem trena ou com marcas cobertas por óleo e incrustações biológicas.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout info" style="margin-top:8px; margin-bottom:0;">
+      <strong>Compressão Automática Inteligente:</strong> Não se preocupe com o tamanho dos arquivos da sua câmera. O sistema redimensiona e comprime as imagens preservando a nitidez pericial, viabilizando o upload mesmo em conexões lentas de 3G nos portos fluviais.
+    </div>
+
+    <div class="page-footer-strip">
+      <span class="footer-left">Manual do Vistoriador Naval &bull; Amazon Certificadora</span>
+      <span class="page-num">Pág. 06</span>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- PÁGINA 7: CAPÍTULO 6 — EXIGÊNCIAS AVULSAS FORA DO CATÁLOGO -->
+  <!-- ========================================================================= -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Módulo de Vistorias</span>
+      <span class="chapter-title">Capítulo 6 &bull; Exigências Avulsas Fora do Catálogo</span>
+    </div>
+
+    <h2 class="page-title">6. Exigências Avulsas (Deficiências Específicas)</h2>
+    <p class="page-subtitle">
+      Como registrar achados técnicos e deficiências construtivas a bordo que não constam na lista padrão de itens do catálogo NORMAM.
+    </p>
+
+    <div class="grid-2">
+      <div>
+        <h3 class="section-subtitle">Quando Utilizar o Recurso Avulso</h3>
+        <p style="font-size:10px; color:var(--muted); line-height:1.45; margin-bottom:8px;">
+          Cada embarcação tem características construtivas próprias. Ao constatar um risco que não se encaixa perfeitamente em nenhuma pergunta padrão do checklist, o vistoriador deve recorrer à tabela de <b>Exigências Avulsas</b>.
+        </p>
+
+        <div class="step-list">
+          <div class="step-item">
+            <span class="step-badge">1</span>
+            <div class="step-content">
+              <strong>Clique em "Adicionar Item Avulso"</strong>
+              <p>O botão fica localizado logo abaixo do checklist principal. Uma nova linha dinâmica será criada na tabela.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge">2</span>
+            <div class="step-content">
+              <strong>Selecione o Bloco Correspondente</strong>
+              <p>Escolha se a exigência pertence ao bloco de <em>Vistoria em Seco</em>, <em>Flutuando</em>, <em>Borda Livre</em> ou <em>Arqueação</em>.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge">3</span>
+            <div class="step-content">
+              <strong>Descreva com Clareza Pericial</strong>
+              <p>Informe o compartimento, o elemento estrutural e a falha observada com terminologia naval correta.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge">4</span>
+            <div class="step-content">
+              <strong>Cite a NORMAM & Marque se é A/S</strong>
+              <p>Informe o artigo de referência e marque a caixa A/S caso o defeito impeça a segurança imediata da viagem.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="section-subtitle">Padrão Mandatório de Redação Técnica</h3>
+        <div class="callout warning">
+          <strong>Evite Termos Vagos:</strong> Descrições genéricas como <em>"ajeitar o barco"</em> ou <em>"ferro ruim"</em> são sumariamente rejeitadas em auditorias e pela Capitania dos Portos.
+        </div>
+
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Redação Inadequada (Erro)</th>
+              <th>Redação Técnica Correta (Padrão DPC)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="color:#dc2626;">"Pintar a frente"</td>
+              <td style="color:#166534;">"Repintar as marcas de calado a vante em ambos os bordos (NORMAM-202, Cap. 02)."</td>
+            </tr>
+            <tr>
+              <td style="color:#dc2626;">"Trocar a luz do mastro"</td>
+              <td style="color:#166534;">"Substituir o farolete de alcançado inoperante por modelo homologado (RIPEAM, Regra 21)."</td>
+            </tr>
+            <tr>
+              <td style="color:#dc2626;">"Bomba vazando água"</td>
+              <td style="color:#166534;">"Sanar vazamento na tubulação de recalque da bomba de esgoto da praça de máquinas."</td>
+            </tr>
+            <tr>
+              <td style="color:#dc2626;">"Falta ferro"</td>
+              <td style="color:#166534;">"Apresentar âncora principal de 150 kg com o respectivo comprimento de amarra regulamentar."</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout success">
+          <strong>Dica Operacional:</strong> Uma exigência bem escrita evita retrabalho e contestações jurídicas por parte do armador, acelerando o cumprimento no retorno.
+        </div>
+      </div>
+    </div>
+
+    <!-- MOCKUP TABELA AVULSA -->
+    <div class="screen-mockup" style="margin-top:10px; margin-bottom:0;">
+      <div class="mockup-topbar">
+        <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <span>Tabela Dinâmica de Itens Avulsos &bull; Interface do Vistoriador</span>
+      </div>
+      <div class="mockup-body" style="background:#ffffff;">
+        <table class="mini-table" style="margin:0;">
+          <thead>
+            <tr style="background:#0f2420; color:#2dd4bf;">
+              <th style="width:30px; text-align:center;">#</th>
+              <th style="width:130px;">Bloco</th>
+              <th>Descrição Técnica da Exigência</th>
+              <th style="width:150px;">Item da NORMAM</th>
+              <th style="width:110px; text-align:center;">A/S?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="text-align:center; font-weight:700;">1</td>
+              <td>Vistoria Flutuando</td>
+              <td>Substituir cabo de reboque com alma de aço rompida por cabo sintético homologado.</td>
+              <td>NORMAM-202, Cap. 05</td>
+              <td style="text-align:center;"><span class="badge badge-as">SIM (A/S)</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="page-footer-strip">
+      <span class="footer-left">Manual do Vistoriador Naval &bull; Amazon Certificadora</span>
+      <span class="page-num">Pág. 07</span>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- PÁGINA 8: CAPÍTULO 7 — VISTORIAS DE RETORNO & CUMPRIMENTO -->
+  <!-- ========================================================================= -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Módulo de Vistorias</span>
+      <span class="chapter-title">Capítulo 7 &bull; Vistoria de Retorno & Cumprimento</span>
+    </div>
+
+    <h2 class="page-title">7. Vistoria de Retorno & Cumprimento de Exigências</h2>
+    <p class="page-subtitle">
+      Como verificar o saneamento das pendências de laudos anteriores, herdar a cadeia de rastreabilidade e liberar embarcações impedidas por A/S.
+    </p>
+
+    <div class="grid-2">
+      <div>
+        <h3 class="section-subtitle">O Ciclo de Retorno e Rastreabilidade</h3>
+        <p style="font-size:10px; color:var(--muted); line-height:1.45; margin-bottom:6px;">
+          Quando o armador conclui os reparos de um laudo que gerou pendências, é emitido um agendamento de retorno. Ao abri-lo, o sistema carrega o <b>Relatório de Verificação de Cumprimento de Exigências</b>, herdando exatamente todos os itens pendentes do laudo pai.
+        </p>
+
+        <div class="callout warning">
+          <strong>Rastreabilidade Imutável:</strong> O sistema não permite apagar o histórico de exigências de um relatório anterior. Cada item herdado deve ter seu resultado registrado formalmente.
+        </div>
+
+        <h4 style="font-size:11px; color:var(--navy-900); margin:8px 0 4px;">As 3 Opções de Baixa do Item Herdado:</h4>
+        <div class="step-list">
+          <div class="step-item">
+            <span class="step-badge" style="background:#16a34a;">✓</span>
+            <div class="step-content">
+              <strong>Cumprida</strong>
+              <p>O armador efetuou o reparo completo conforme a norma e comprovou a bordo. Deve-se anexar a foto da evidência sanada.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge" style="background:#d97706;">&frac12;</span>
+            <div class="step-content">
+              <strong>Parcialmente Cumprida / Reescrita</strong>
+              <p>O armador executou parte do reparo. O vistoriador reescreve a exigência deixando apenas o saldo que ainda falta cumprir.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge" style="background:#dc2626;">✗</span>
+            <div class="step-content">
+              <strong>Não Cumprida / Transcrita</strong>
+              <p>O reparo não foi executado ou foi feito de forma inadequada. O item continua em aberto e bloqueia o navio se for A/S.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="section-subtitle">Regras para Liberação de Embarcação Retida por A/S</h3>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Cenário Encontrado no Retorno</th>
+              <th>Status do Laudo</th>
+              <th>Efeito Regulamentar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Todas as A/S cumpridas</b> e sem novas faltas graves.</td>
+              <td><span class="badge badge-success">APROVADA</span></td>
+              <td>Embarcação liberada. Emissão normal de CSN/Certificados.</td>
+            </tr>
+            <tr>
+              <td>A/S cumpridas, mas restam <b>exigências comuns</b>.</td>
+              <td><span class="badge badge-info">APROVADA C/ EXIGÊNCIAS</span></td>
+              <td>Embarcação liberada com prazo provisório (60/90 dias).</td>
+            </tr>
+            <tr>
+              <td>Pelo menos <b>uma A/S não foi cumprida</b>.</td>
+              <td><span class="badge badge-as">RETORNO A/S</span></td>
+              <td>Embarcação continua <b>retida</b>. Novo agendamento exigido.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4 style="font-size:11px; color:var(--navy-900); margin:12px 0 4px;">Novas Deficiências Detectadas no Retorno:</h4>
+        <p style="font-size:10px; color:var(--muted); line-height:1.45; margin-bottom:6px;">
+          Se durante a visita de cumprimento você observar uma nova avaria grave que não existia na vistoria original, clique em <b>"Adicionar Nova Exigência Nesta Visita"</b>. Ela será incorporada ao laudo mantendo o rigor da segurança da navegação.
+        </p>
+      </div>
+    </div>
+
+    <!-- MOCKUP TELA DE CUMPRIMENTO -->
+    <div class="screen-mockup" style="margin-top:10px; margin-bottom:0;">
+      <div class="mockup-topbar" style="background:#0a2620;">
+        <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <span>Relatório de Verificação de Cumprimento &bull; Laudo Original: REL-2026-0042</span>
+        <span class="badge badge-as">RETORNO A/S</span>
+      </div>
+      <div class="mockup-body" style="background:#ffffff;">
+        <div style="border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; margin-bottom:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <strong style="font-size:10.5px; color:#0f172a;">Exigência #1: Recarregar 2 extintores de CO2 da praça de máquinas</strong>
+            <span class="badge badge-as">A/S DE ORIGEM</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:9.5px; color:#475569;">Resultado:</span>
+              <span class="badge badge-success" style="padding:4px 8px; font-size:9.5px;">✓ CUMPRIDA</span>
+            </div>
+            <span style="font-size:9px; color:#166534; font-weight:700;">📸 Foto do novo selo INMETRO anexada com sucesso</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer-strip">
+      <span class="footer-left">Manual do Vistoriador Naval &bull; Amazon Certificadora</span>
+      <span class="page-num">Pág. 08</span>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- PÁGINA 9: CAPÍTULO 8 — CONCLUSÃO, ASSINATURA ELETRÔNICA & LAUDO PDF -->
+  <!-- ========================================================================= -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Módulo de Vistorias</span>
+      <span class="chapter-title">Capítulo 8 &bull; Conclusão, Assinatura Eletrônica & PDF</span>
+    </div>
+
+    <h2 class="page-title">8. Conclusão Técnica, Fé Pública & Laudo Oficial</h2>
+    <p class="page-subtitle">
+      A finalização do trabalho técnico: preenchimento dos dados do operador presente, parecer conclusivo, aplicação da assinatura digital criptográfica e emissão do laudo.
+    </p>
+
+    <div class="grid-2">
+      <div>
+        <h3 class="section-subtitle">Dados de Realização & Responsáveis</h3>
+        <div class="step-list">
+          <div class="step-item">
+            <span class="step-badge">1</span>
+            <div class="step-content">
+              <strong>Data da Realização da Vistoria</strong>
+              <p>Confirme a data exata da subida a bordo. Esta data serve de marco zero para a validade dos certificados estatutários emitidos posteriormente.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge">2</span>
+            <div class="step-content">
+              <strong>Prazo de Validade do Laudo (60 ou 90 dias)</strong>
+              <p>Selecione a validade conforme a norma da Capitania regional (NPCP/NPCF). Se houver exigências comuns, este é o prazo fatal para o cumprimento.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge">3</span>
+            <div class="step-content">
+              <strong>Operador / Responsável Presente</strong>
+              <p>Identifique o Armador titular e digite o nome completo do Mestre da embarcação ou preposto do estaleiro que acompanhou você durante a vistoria.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <span class="step-badge">4</span>
+            <div class="step-content">
+              <strong>Parecer Conclusivo & Encaminhamento</strong>
+              <p>Digite observações técnicas gerais e selecione <b>Aguardando Aprovação</b> para encaminhar o laudo para a Mesa Técnica de Engenharia.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="section-subtitle">Assinatura Eletrônica & Autenticidade</h3>
+        <p style="font-size:10px; color:var(--muted); line-height:1.45; margin-bottom:8px;">
+          O laudo técnico tem força legal e fé pública perante a Capitania dos Portos. A assinatura eletrônica do vistoriador credenciado incorpora elementos criptográficos invioláveis:
+        </p>
+
+        <div style="border:1px solid #bbf7d0; border-radius:8px; padding:10px 12px; background:#f0fdf4; margin-bottom:10px;">
+          <strong style="font-size:10px; color:#166534; display:block; margin-bottom:4px;">
+            🔒 Elementos de Segurança Criptográfica Registrados:
+          </strong>
+          <ul style="font-size:9px; color:#14532d; padding-left:14px; margin:0; line-height:1.5;">
+            <li><b>Hash SHA-256:</b> Resumo criptográfico único de todo o conteúdo do laudo.</li>
+            <li><b>Carimbo de Tempo (Timestamp):</b> Data e hora sincronizadas com precisão.</li>
+            <li><b>Rastreabilidade de Rede:</b> Endereço IP e geolocalização do dispositivo.</li>
+            <li><b>QR Code Oficial no Rodapé:</b> Permite à Capitania e à Marinha checar a autenticidade do laudo pelo smartphone em segundos.</li>
+          </ul>
+        </div>
+
+        <div class="callout info" style="margin-bottom:0;">
+          <strong>O que ocorre após o envio?</strong> O processo migra para a fila da Mesa Técnica. O Engenheiro Naval / Analista homologa o laudo e emite os certificados estatutários (CSN, CNBL, CNARQ).
+        </div>
+      </div>
+    </div>
+
+    <!-- MOCKUP PDF OFICIAL -->
+    <div class="screen-mockup" style="margin-top:10px; margin-bottom:0;">
+      <div class="mockup-topbar" style="background:#022c22;">
+        <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <span>Laudo Técnico Oficial em PDF com QR Code de Validação Pública</span>
+        <span style="color:#2ad59d;">PADRÃO DPC / MARINHA DO BRASIL</span>
+      </div>
+      <div class="mockup-body" style="background:#ffffff; padding:10px 14px;">
+        <div style="border:1px solid #cbd5e1; border-radius:6px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:9px; font-weight:800; color:#0f766e; text-transform:uppercase;">AMAZON CERTIFICADORA &bull; LAUDO PERICIAL NAVAL</span>
+            <div style="font-size:12px; font-weight:800; color:#0f172a; margin:2px 0;">REL-2026-0042 &mdash; F/B RIO AMAZONAS IV</div>
+            <div style="font-size:9px; color:#64748b;">Assinado digitalmente por Eng. Vistoriador &bull; CREA-AP 12458/D &bull; Hash: 8f4e2c...b91a</div>
+          </div>
+          <div style="text-align:center; border:1px dashed #94a3b8; padding:4px 8px; border-radius:4px; background:#f8fafc;">
+            <div style="font-size:16px;">📱</div>
+            <div style="font-size:7.5px; font-weight:700; color:#475569;">QR CODE DE FÉ PÚBLICA</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer-strip">
+      <span class="footer-left">Manual do Vistoriador Naval &bull; Amazon Certificadora</span>
+      <span class="page-num">Pág. 09</span>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- PÁGINA 10: CAPÍTULO 9 — MATRIZ DE RESOLUÇÃO RÁPIDA & FAQ DO VISTORIADOR -->
+  <!-- ========================================================================= -->
+  <section class="sheet">
+    <div class="page-header-strip">
+      <span class="module-badge">Módulo de Vistorias</span>
+      <span class="chapter-title">Capítulo 9 &bull; Guia Rápido & Resolução de Dúvidas</span>
+    </div>
+
+    <h2 class="page-title">9. Guia Rápido "O Que Fazer Quando..." & FAQ</h2>
+    <p class="page-subtitle">
+      Resolução imediata para situações imprevistas de campo, contingências operacionais e dúvidas frequentes do vistoriador a bordo.
+    </p>
+
+    <h3 class="section-subtitle">Matriz de Resolução Rápida de Campo</h3>
+    <table class="mini-table" style="margin-bottom:12px;">
+      <thead>
+        <tr>
+          <th style="width:25%;">Situação no Barco</th>
+          <th style="width:40%;">Diagnóstico & Impacto</th>
+          <th style="width:35%;">O Que Fazer no Sistema</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Sem sinal de internet no furo ou ilha</b></td>
+          <td>Comunicação com o servidor indisponível. Risco zero de perda de dados.</td>
+          <td>Continue no modo Campo PWA normalmente. Tudo é gravado no aparelho e sincronizará ao voltar ao sinal.</td>
+        </tr>
+        <tr>
+          <td><b>Bateria do aparelho descarregando rápido</b></td>
+          <td>Risco de desligamento forçado durante a vistoria.</td>
+          <td>O sistema salva a cada toque. Ao ligar o powerbank ou trocar de celular, o rascunho é restaurado.</td>
+        </tr>
+        <tr>
+          <td><b>Armador ausente no momento da vistoria</b></td>
+          <td>Dificuldade de colher assinatura presencial do proprietário.</td>
+          <td>Mantenha o armador titular selecionado e preencha o nome do Mestre presente na vistoria.</td>
+        </tr>
+        <tr>
+          <td><b>Divergência entre medidas reais e documento</b></td>
+          <td>Boca ou pontal reais diferem do TIE antigo da Capitania.</td>
+          <td>Registre as medidas reais no laudo e informe na observação técnica para cálculo do CNARQ.</td>
+        </tr>
+        <tr>
+          <td><b>Falta grave que o mestre promete resolver amanhã</b></td>
+          <td>Pressão psicológica a bordo para não travar a viagem.</td>
+          <td><b>Jamais aprove!</b> Marque A/S obrigatoriamente. A segurança da vida humana é inegociável.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 class="section-subtitle">Perguntas Frequentes (FAQ Operacional)</h3>
+    <div class="grid-2">
+      <div>
+        <div class="callout" style="margin:4px 0 8px;">
+          <strong style="color:var(--navy-900); font-size:10px;">❓ Posso tirar várias fotos da mesma não conformidade?</strong>
+          <p style="font-size:9.5px; color:var(--muted); margin-top:2px;">
+            <b>Sim!</b> Recomenda-se tirar uma foto geral de localização e fotos detalhadas aproximadas do defeito. O sistema comprime tudo automaticamente.
+          </p>
+        </div>
+        <div class="callout" style="margin:4px 0 8px;">
+          <strong style="color:var(--navy-900); font-size:10px;">❓ O que acontece se eu marcar "N/A" num item obrigatório?</strong>
+          <p style="font-size:9.5px; color:var(--muted); margin-top:2px;">
+            Apenas use <em>N/A</em> para itens que realmente não se aplicam àquele tipo de barco (ex.: balsa inflável em barco fluvial pequeno). A Mesa Técnica audita cada N/A.
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <div class="callout" style="margin:4px 0 8px;">
+          <strong style="color:var(--navy-900); font-size:10px;">❓ Quanto tempo o armador tem para cumprir as exigências?</strong>
+          <p style="font-size:9.5px; color:var(--muted); margin-top:2px;">
+            Exigências comuns têm o prazo estipulado no relatório (<b>60 ou 90 dias</b>). Já exigências <b>A/S devem ser cumpridas imediatamente</b> antes de navegar.
+          </p>
+        </div>
+        <div class="callout" style="margin:4px 0 8px;">
+          <strong style="color:var(--navy-900); font-size:10px;">❓ Quem emite os Certificados CSN, CNBL e CNARQ?</strong>
+          <p style="font-size:9.5px; color:var(--muted); margin-top:2px;">
+            Após você assinar e enviar o laudo, o Engenheiro Naval da Mesa Técnica homologa o processo e emite os certificados estatutários correspondentes.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#062c26; color:#ffffff; border-radius:6px; padding:10px 14px; margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <strong style="font-size:11px; color:var(--accent-mint);">Plantão de Apoio Técnico ao Vistoriador Naval</strong>
+        <div style="font-size:9.5px; color:#b3d1ca;">Em caso de dúvidas a bordo, contate a Mesa Técnica de Engenharia pelo canal interno do ERP.</div>
+      </div>
+      <span class="badge badge-navy" style="border:1px solid var(--accent-mint); font-size:9px; padding:4px 8px;">Suporte Técnico Ativo</span>
+    </div>
+
+    <div class="page-footer-strip">
+      <span class="footer-left">Manual do Vistoriador Naval &bull; Amazon Certificadora</span>
+      <span class="page-num">Pág. 10</span>
+    </div>
+  </section>
+
+</body>
+</html>

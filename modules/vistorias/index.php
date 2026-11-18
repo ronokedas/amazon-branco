@@ -241,9 +241,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <h1>Vistorias</h1>
             <p>Acompanhe a execução, a análise e o resultado de cada vistoria.</p>
         </div>
-        <a href="<?php echo APP_URL; ?>agendamentos" class="inspection-new-button">
-            <i class="fas fa-calendar-check" aria-hidden="true"></i> Ver todos agendamentos
-        </a>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <a href="<?php echo APP_URL; ?>vistorias/manual" class="inspection-manual-button" style="display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none; border: 1px solid #0d9488; color: #0d9488; background: #f0fdfa; transition: all 0.2s ease;">
+                <i class="fa-solid fa-book-open" aria-hidden="true" style="color: #0d9488;"></i> Manual do Vistoriador
+            </a>
+            <a href="<?php echo APP_URL; ?>agendamentos" class="inspection-new-button">
+                <i class="fas fa-calendar-check" aria-hidden="true"></i> Ver todos agendamentos
+            </a>
+        </div>
     </header>
 
     <?php if (!empty($agendamentos_escala)): ?>

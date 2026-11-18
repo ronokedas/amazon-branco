@@ -490,7 +490,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <h1><i class="fas fa-clipboard-list"></i> Relatório técnico de vistoria</h1>
         <p>Registre a vistoria, marque conformidades, detalhe exigências e envie o relatório para aprovação administrativa.</p>
     </div>
-    <div class="flow-actions">
+    <div class="flow-actions" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <a href="<?php echo APP_URL; ?>vistorias/manual" target="_blank" class="btn btn-sm btn-outline-info" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; border-color: #0d9488; color: #0d9488; background: rgba(13, 148, 136, 0.08);">
+            <i class="fa-solid fa-book-open"></i> Manual do Vistoriador
+        </a>
         <a href="<?php echo APP_URL; ?>agendamentos" class="btn btn-secondary btn-sm">
             <i class="fas fa-arrow-left"></i> Voltar
         </a>
