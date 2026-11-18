@@ -191,9 +191,9 @@ if (!class_exists('ProtocoloOficioNavalPdf')) {
             $this->Ln(1.8);
             $this->SetTextColor(70, 80, 75);
             $this->SetFont('helvetica', '', 7);
-            $this->Cell(85, 3.5, 'Ofício ' . $this->numeroOficio . ' · Amazon Certificadora Naval', 0, 0, 'L');
-            $this->Cell(65, 3.5, 'Validação Criptográfica: ' . $this->codigoIntegridade, 0, 0, 'C');
-            $this->Cell(20, 3.5, 'Página ' . $this->getAliasNumPage() . ' de ' . $this->getAliasNbPages(), 0, 0, 'R');
+            $this->Cell(65, 3.5, 'Ofício ' . $this->numeroOficio . ' · Amazon Certificadora Naval', 0, 0, 'L');
+            $this->Cell(80, 3.5, 'Validação Criptográfica: ' . $this->codigoIntegridade, 0, 0, 'C');
+            $this->Cell(25, 3.5, 'Página ' . $this->getAliasNumPage() . ' de ' . $this->getAliasNbPages(), 0, 0, 'R');
             $this->Ln(3.2);
             $this->SetFont('helvetica', 'I', 6);
             $this->SetTextColor(110, 120, 115);
@@ -239,8 +239,8 @@ if (!function_exists('gerarPdfOficioPagina1')) {
         // 1. Logotipo oficial centralizado (fiel ao modelo oficial do usuário)
         $logoFile = __DIR__ . '/../../img/logo.png';
         if (is_file($logoFile)) {
-            $pdf->Image($logoFile, 88, 14, 34, 0, 'PNG', '', '', false, 200, 'C');
-            $pdf->SetY(40);
+            $pdf->Image($logoFile, 89, 13, 32, 0, 'PNG', '', '', false, 200, 'C');
+            $pdf->SetY(47);
         } else {
             $pdf->SetY(18);
         }
@@ -412,19 +412,23 @@ if (!$unificado) {
 $arquivosParaAnexar = [];
 
 // 1. Relatório de Vistoria
-if (!empty($d['vistoria_id'])) {
-    $tmpVistoria = tempnam(sys_get_temp_dir(), 'vist_anexo_') . '.pdf';
-    $id = $d['vistoria_id'];
-    $salvar_pdf_caminho = $tmpVistoria;
-    try {
-        require __DIR__ . '/../vistorias/relatorio_pdf.php';
-        if (is_file($tmpVistoria) && filesize($tmpVistoria) > 1000) {
-            $arquivosParaAnexar[] = ['caminho' => $tmpVistoria, 'temp' => true];
+if (!empty($d['vistoria_id']) && preg_match('/^[a-f0-9-]{36}$/i', (string)$d['vistoria_id'])) {
+    $qCheckV = $pdo->prepare("SELECT id FROM vistorias WHERE id = :id");
+    $qCheckV->execute([':id' => $d['vistoria_id']]);
+    if ($qCheckV->fetchColumn()) {
+        $tmpVistoria = tempnam(sys_get_temp_dir(), 'vist_anexo_') . '.pdf';
+        $id = $d['vistoria_id'];
+        $salvar_pdf_caminho = $tmpVistoria;
+        try {
+            require __DIR__ . '/../vistorias/relatorio_pdf.php';
+            if (is_file($tmpVistoria) && filesize($tmpVistoria) > 1000) {
+                $arquivosParaAnexar[] = ['caminho' => $tmpVistoria, 'temp' => true];
+            }
+        } catch (Throwable $e) {
+            error_log('Erro ao anexar relatório de vistoria no dossiê: ' . $e->getMessage());
         }
-    } catch (Throwable $e) {
-        error_log('Erro ao anexar relatório de vistoria no dossiê: ' . $e->getMessage());
+        unset($salvar_pdf_caminho);
     }
-    unset($salvar_pdf_caminho);
 }
 
 // 2. Análise de Planos (Parecer)
