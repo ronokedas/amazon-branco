@@ -224,9 +224,9 @@ if (!function_exists('isActive')) {
                 </a>
             <?php endif; ?>
             <?php if (podeAcessar('clientes') || podeAcessar('armadores') || podeAcessar('proprietarios') || podeAcessar('despachantes')): ?>
-                <a href="<?= APP_URL ?>clientes" class="nav-item<?= (strpos($pagina_atual,'clientes')===0 || strpos($pagina_atual,'armadores')===0 || strpos($pagina_atual,'proprietarios')===0 || strpos($pagina_atual,'despachantes')===0)?' active':'' ?>" data-label="Clientes e Atores">
+                <a href="<?= APP_URL ?>clientes" class="nav-item<?= (strpos($pagina_atual,'clientes')===0 || strpos($pagina_atual,'armadores')===0 || strpos($pagina_atual,'proprietarios')===0 || strpos($pagina_atual,'despachantes')===0)?' active':'' ?>" data-label="Clientes e Armadores">
                     <i class="fa-solid fa-users-gear"></i>
-                    <span class="nav-text">Clientes & Atores</span>
+                    <span class="nav-text">Clientes & Armadores</span>
                 </a>
             <?php endif; ?>
         <?php endif; ?>
