@@ -2,7 +2,7 @@
 /**
  * Manual Interativo do Usuário - Módulo de Protocolos e Dossiês Navais
  * Arquivo: modules/protocolos/manual.php
- * Criado especialmente para usuários leigos com passo a passo didático, ilustrado e autoexplicativo.
+ * Passo a passo didático, ilustrado e autoexplicativo para operação naval.
  */
 
 require_once __DIR__ . '/../../config.php';
@@ -178,7 +178,7 @@ require __DIR__ . '/../../includes/sidebar.php';
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
                 <div>
                     <span class="badge" style="background: var(--accent, #56e0ad); color: #042019; font-weight: 800; font-size: 0.85rem; padding: 6px 12px; margin-bottom: 12px; display: inline-block;">
-                        <i class="fa-solid fa-graduation-cap"></i> GUIA RÁPIDO PARA LEIGOS
+                        <i class="fa-solid fa-book-open"></i> GUIA PRÁTICO PASSO A PASSO
                     </span>
                     <h1 class="text-white fw-bold mb-2" style="font-size: 2rem;">
                         Manual do Usuário: Protocolos e Dossiês Navais
