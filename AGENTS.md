@@ -21,3 +21,20 @@
 - **Cards de Indicadores (KPIs) com Filtragem Instantânea**: Listagens devem exibir no topo métricas acionáveis (alertas de exigências, custódia de originais pendente, prazos) com abas de filtros de situação rápida.
 - **Vínculos Inteligentes Automáticos**: A seleção de uma entidade principal (ex.: Embarcação) deve atualizar ou pré-filtrar automaticamente entidades dependentes (Cliente/Armador, Processos de Análise abertos, Ordens de Vistoria).
 - **Ações Rápidas de Compartilhamento**: Manter links tokenizados e botões de compartilhamento direto via WhatsApp e cópia de link para validação ou aceite com clientes e despachantes.
+
+## Ambiente de Produção & VPS (Deploy e Execução)
+- **Servidor VPS**: IP `143.95.211.108`, porta SSH `22022`, usuário `root`.
+- **Script Auxiliar**: Utilizar sempre `vps_exec.py` na raiz (`from vps_exec import run_vps; out, err = run_vps('...')`) para rodar comandos remotos no servidor ou dentro dos containers Docker.
+- **Estrutura Docker**:
+  - Container de aplicação: `erp_app` (código em `/opt/sistema-amazon`, mapeado internamente em `/var/www/html`).
+  - Container do banco: `erp_db` (MySQL 8.0, database `erp_sistema`).
+- **Fluxo de Deploy Obrigatório**:
+  - Sempre testar/comitar localmente: `git add <arquivos> && git commit -m "..." && git push origin main`.
+  - Em seguida, atualizar o servidor VPS imediatamente: `python -c "from vps_exec import run_vps; run_vps('cd /opt/sistema-amazon && git pull origin main')"`.
+- **Autenticação e Sessão**:
+  - O cookie de sessão do sistema chama-se **`ERPSESSID`** (não `PHPSESSID`).
+  - As sessões ficam salvas em `/opt/sistema-amazon/storage/sessions/`.
+- **Padrão dos Manuais do Usuário**:
+  - Sempre criar passo a passo didático, ilustrado e intuitivo, com linguagem acessível (evitar rótulos como "leigo", preferir "Guia Prático Passo a Passo").
+  - Estrutura rica em HTML responsivo, índice clicável, suporte a impressão (`window.print()`) e FAQs interativos.
+
