@@ -162,14 +162,16 @@ $assinanteNome = !empty($d['assinante_nome']) ? mb_strtoupper($d['assinante_nome
 $assinanteCargo = !empty($d['assinante_cargo']) ? $d['assinante_cargo'] : 'Secretária';
 $assinado = !empty($d['assinado']);
 
-function formatarDataExtensoNavalSemCidade(?string $data): string {
-    if (!$data) $data = date('Y-m-d');
-    $ts = strtotime($data);
-    $meses = [1=>'Janeiro',2=>'Fevereiro',3=>'Março',4=>'Abril',5=>'Maio',6=>'Junho',7=>'Julho',8=>'Agosto',9=>'Setembro',10=>'Outubro',11=>'Novembro',12=>'Dezembro'];
-    $dia = date('d', $ts);
-    $mes = $meses[(int)date('m', $ts)] ?? '';
-    $ano = date('Y', $ts);
-    return "{$dia} de {$mes} de {$ano}";
+if (!function_exists('formatarDataExtensoNavalSemCidade')) {
+    function formatarDataExtensoNavalSemCidade(?string $data): string {
+        if (!$data) $data = date('Y-m-d');
+        $ts = strtotime($data);
+        $meses = [1=>'Janeiro',2=>'Fevereiro',3=>'Março',4=>'Abril',5=>'Maio',6=>'Junho',7=>'Julho',8=>'Agosto',9=>'Setembro',10=>'Outubro',11=>'Novembro',12=>'Dezembro'];
+        $dia = date('d', $ts);
+        $mes = $meses[(int)date('m', $ts)] ?? '';
+        $ano = date('Y', $ts);
+        return "{$dia} de {$mes} de {$ano}";
+    }
 }
 
 require_once __DIR__ . '/../../includes/certificado_pdf_marca_dagua.php';
@@ -203,168 +205,170 @@ if (!class_exists('ProtocoloOficioNavalPdf')) {
 // -------------------------------------------------------------
 // Função geradora da Página 1 (Ofício Oficial)
 // -------------------------------------------------------------
-function gerarPdfOficioPagina1(
-    PDO $pdo,
-    array $d,
-    string $numeroOficio,
-    string $destinatarioPara,
-    string $destinatarioAC,
-    string $normamRef,
-    string $citacaoDocumentos,
-    string $dataPorExtenso,
-    string $assinanteNome,
-    string $assinanteCargo,
-    bool $assinado,
-    string $codigoIntegridade,
-    string $caminhoSaida
-): void {
-    $pdf = new ProtocoloOficioNavalPdf('P', 'mm', 'A4', true, 'UTF-8', false);
-    $pdf->numeroOficio = $numeroOficio;
-    $pdf->codigoIntegridade = $codigoIntegridade;
-    $pdf->SetCreator('Amazon Certificadora Naval');
-    $pdf->SetAuthor('Amazon Certificadora Naval');
-    $pdf->SetTitle('Ofício ' . $numeroOficio . ' - ' . $d['embarcacao_nome']);
-    $pdf->SetSubject('Encaminhamento de documentos emitidos/aprovados para arquivo nesta OM');
-    $pdf->SetMargins(20, 15, 20);
-    $pdf->SetAutoPageBreak(false); // Garante rigorosamente PÁGINA ÚNICA
-    $pdf->setPrintHeader(false);
-    $pdf->setPrintFooter(true);
-    $pdf->AddPage();
+if (!function_exists('gerarPdfOficioPagina1')) {
+    function gerarPdfOficioPagina1(
+        PDO $pdo,
+        array $d,
+        string $numeroOficio,
+        string $destinatarioPara,
+        string $destinatarioAC,
+        string $normamRef,
+        string $citacaoDocumentos,
+        string $dataPorExtenso,
+        string $assinanteNome,
+        string $assinanteCargo,
+        bool $assinado,
+        string $codigoIntegridade,
+        string $caminhoSaida
+    ): void {
+        $pdf = new ProtocoloOficioNavalPdf('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->numeroOficio = $numeroOficio;
+        $pdf->codigoIntegridade = $codigoIntegridade;
+        $pdf->SetCreator('Amazon Certificadora Naval');
+        $pdf->SetAuthor('Amazon Certificadora Naval');
+        $pdf->SetTitle('Ofício ' . $numeroOficio . ' - ' . $d['embarcacao_nome']);
+        $pdf->SetSubject('Encaminhamento de documentos emitidos/aprovados para arquivo nesta OM');
+        $pdf->SetMargins(20, 15, 20);
+        $pdf->SetAutoPageBreak(false); // Garante rigorosamente PÁGINA ÚNICA
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(true);
+        $pdf->AddPage();
 
-    $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-    // 1. Logotipo oficial centralizado (fiel ao modelo oficial do usuário)
-    $logoFile = __DIR__ . '/../../img/logo.png';
-    if (is_file($logoFile)) {
-        $pdf->Image($logoFile, 88, 14, 34, 0, 'PNG', '', '', false, 200, 'C');
-        $pdf->SetY(40);
-    } else {
-        $pdf->SetY(18);
-    }
+        // 1. Logotipo oficial centralizado (fiel ao modelo oficial do usuário)
+        $logoFile = __DIR__ . '/../../img/logo.png';
+        if (is_file($logoFile)) {
+            $pdf->Image($logoFile, 88, 14, 34, 0, 'PNG', '', '', false, 200, 'C');
+            $pdf->SetY(40);
+        } else {
+            $pdf->SetY(18);
+        }
 
-    // 2. Endereço e Contato Centralizados
-    $pdf->SetFont('helvetica', '', 7.5);
-    $pdf->SetTextColor(50, 50, 50);
-    $pdf->Cell(0, 3.8, 'TRAVESSA QUINTINO BOCAIÚVA, Nº 2301 EDIFÍCIO ROGÉLIO FERNANDEZ, SALA 1116. CREMAÇÃO, Belém, PA – (91) 99111-2065', 0, 1, 'C');
-    $pdf->Cell(0, 3.8, 'www.amazonnaval.com.br - amazoncertificados@gmail.com', 0, 1, 'C');
+        // 2. Endereço e Contato Centralizados
+        $pdf->SetFont('helvetica', '', 7.5);
+        $pdf->SetTextColor(50, 50, 50);
+        $pdf->Cell(0, 3.8, 'TRAVESSA QUINTINO BOCAIÚVA, Nº 2301 EDIFÍCIO ROGÉLIO FERNANDEZ, SALA 1116. CREMAÇÃO, Belém, PA – (91) 99111-2065', 0, 1, 'C');
+        $pdf->Cell(0, 3.8, 'www.amazonnaval.com.br - amazoncertificados@gmail.com', 0, 1, 'C');
 
-    $pdf->Ln(5);
+        $pdf->Ln(5);
 
-    // 3. Tabela 4x2 Oficial (bordas pretas sólidas finas, exatamente como no modelo do PDF)
-    $htmlTabela = '
-    <table cellpadding="4" cellspacing="0" style="border-collapse: collapse; font-family: helvetica; width: 100%; border: 0.5px solid #000000;">
-        <tr>
-            <td width="30%" style="font-size: 8.5pt; font-weight: bold; color: #000000; border: 0.5px solid #000000;">
-                TIPO DE DOCUMENTO
-            </td>
-            <td width="70%" style="font-size: 8.5pt; color: #000000; border: 0.5px solid #000000;">
-                OFÍCIO ' . (!empty($numeroOficio) ? 'Nº ' . $e($numeroOficio) : '') . '
-            </td>
-        </tr>
-        <tr>
-            <td width="30%" style="font-size: 8.5pt; font-weight: bold; color: #000000; border: 0.5px solid #000000;">
-                DESTINATÁRIO (PARA):
-            </td>
-            <td width="70%" style="font-size: 8.5pt; color: #000000; border: 0.5px solid #000000;">
-                ' . $e($destinatarioPara) . '
-            </td>
-        </tr>
-        <tr>
-            <td width="30%" style="font-size: 8.5pt; font-weight: bold; color: #000000; border: 0.5px solid #000000;">
-                À ATENÇÃO (A/C):
-            </td>
-            <td width="70%" style="font-size: 8.5pt; color: #000000; border: 0.5px solid #000000;">
-                ' . $e($destinatarioAC) . '
-            </td>
-        </tr>
-        <tr>
-            <td width="30%" style="font-size: 8.5pt; font-weight: bold; color: #000000; border: 0.5px solid #000000;">
-                ASSUNTO:
-            </td>
-            <td width="70%" style="font-size: 8.5pt; color: #000000; border: 0.5px solid #000000;">
-                Encaminhamento de documentos emitidos/aprovados por esta Entidade Certificadora para arquivo nesta OM.
-            </td>
-        </tr>
-    </table>
-    ';
-    $pdf->writeHTML($htmlTabela, true, false, true, false, '');
+        // 3. Tabela 4x2 Oficial (bordas pretas sólidas finas, exatamente como no modelo do PDF)
+        $htmlTabela = '
+        <table cellpadding="4" cellspacing="0" style="border-collapse: collapse; font-family: helvetica; width: 100%; border: 0.5px solid #000000;">
+            <tr>
+                <td width="30%" style="font-size: 8.5pt; font-weight: bold; color: #000000; border: 0.5px solid #000000;">
+                    TIPO DE DOCUMENTO
+                </td>
+                <td width="70%" style="font-size: 8.5pt; color: #000000; border: 0.5px solid #000000;">
+                    OFÍCIO ' . (!empty($numeroOficio) ? 'Nº ' . $e($numeroOficio) : '') . '
+                </td>
+            </tr>
+            <tr>
+                <td width="30%" style="font-size: 8.5pt; font-weight: bold; color: #000000; border: 0.5px solid #000000;">
+                    DESTINATÁRIO (PARA):
+                </td>
+                <td width="70%" style="font-size: 8.5pt; color: #000000; border: 0.5px solid #000000;">
+                    ' . $e($destinatarioPara) . '
+                </td>
+            </tr>
+            <tr>
+                <td width="30%" style="font-size: 8.5pt; font-weight: bold; color: #000000; border: 0.5px solid #000000;">
+                    À ATENÇÃO (A/C):
+                </td>
+                <td width="70%" style="font-size: 8.5pt; color: #000000; border: 0.5px solid #000000;">
+                    ' . $e($destinatarioAC) . '
+                </td>
+            </tr>
+            <tr>
+                <td width="30%" style="font-size: 8.5pt; font-weight: bold; color: #000000; border: 0.5px solid #000000;">
+                    ASSUNTO:
+                </td>
+                <td width="70%" style="font-size: 8.5pt; color: #000000; border: 0.5px solid #000000;">
+                    Encaminhamento de documentos emitidos/aprovados por esta Entidade Certificadora para arquivo nesta OM.
+                </td>
+            </tr>
+        </table>
+        ';
+        $pdf->writeHTML($htmlTabela, true, false, true, false, '');
 
-    $pdf->Ln(6);
+        $pdf->Ln(6);
 
-    // 4. Corpo Formal com Linha Corrida de Documentos (fiel ao modelo oficial)
-    $htmlCorpo = '
-    <div style="font-family: helvetica; font-size: 9.5pt; color: #000000; line-height: 1.6;">
-        <p style="margin-bottom: 12px;">Prezado Senhor,</p>
+        // 4. Corpo Formal com Linha Corrida de Documentos (fiel ao modelo oficial)
+        $htmlCorpo = '
+        <div style="font-family: helvetica; font-size: 9.5pt; color: #000000; line-height: 1.6;">
+            <p style="margin-bottom: 12px;">Prezado Senhor,</p>
 
-        <p style="text-align: justify; margin-bottom: 16px;">
-            Atendendo ao disposto no artigo da ' . $e($normamRef) . ', a Entidade Certificadora Amazon Naval vem, através do presente ofício, encaminhar os documentos anexados da seguinte embarcação:
-        </p>
+            <p style="text-align: justify; margin-bottom: 16px;">
+                Atendendo ao disposto no artigo da ' . $e($normamRef) . ', a Entidade Certificadora Amazon Naval vem, através do presente ofício, encaminhar os documentos anexados da seguinte embarcação:
+            </p>
 
-        <p style="margin-left: 15px; margin-bottom: 24px; font-weight: bold;">
-            • ' . $e(mb_strtoupper($d['embarcacao_nome'], 'UTF-8')) . ' – ' . $e($citacaoDocumentos) . '
-        </p>
+            <p style="margin-left: 15px; margin-bottom: 24px; font-weight: bold;">
+                • ' . $e(mb_strtoupper($d['embarcacao_nome'], 'UTF-8')) . ' – ' . $e($citacaoDocumentos) . '
+            </p>
 
-        <p style="margin-bottom: 18px;">
-            ' . $e($dataPorExtenso) . '
-        </p>
+            <p style="margin-bottom: 18px;">
+                ' . $e($dataPorExtenso) . '
+            </p>
 
-        <p style="margin-bottom: 12px;">
-            Atenciosamente,
-        </p>
-    </div>
-    ';
-    $pdf->writeHTML($htmlCorpo, true, false, true, false, '');
+            <p style="margin-bottom: 12px;">
+                Atenciosamente,
+            </p>
+        </div>
+        ';
+        $pdf->writeHTML($htmlCorpo, true, false, true, false, '');
 
-    // 5. Bloco de Assinatura
-    $pdf->Ln(4);
-    $yAssinatura = $pdf->GetY();
+        // 5. Bloco de Assinatura
+        $pdf->Ln(4);
+        $yAssinatura = $pdf->GetY();
 
-    $temImagemAssinatura = false;
-    $tmpSigFile = null;
+        $temImagemAssinatura = false;
+        $tmpSigFile = null;
 
-    if (!empty($d['assinatura_imagem'])) {
-        $imgData = $d['assinatura_imagem'];
-        if (str_starts_with($imgData, 'data:image')) {
-            $imgData = substr($imgData, strpos($imgData, ',') + 1);
-            $decoded = base64_decode($imgData);
-            if ($decoded !== false) {
-                $tmpSigFile = tempnam(sys_get_temp_dir(), 'sig_of_') . '.png';
-                file_put_contents($tmpSigFile, $decoded);
+        if (!empty($d['assinatura_imagem'])) {
+            $imgData = $d['assinatura_imagem'];
+            if (str_starts_with($imgData, 'data:image')) {
+                $imgData = substr($imgData, strpos($imgData, ',') + 1);
+                $decoded = base64_decode($imgData);
+                if ($decoded !== false) {
+                    $tmpSigFile = tempnam(sys_get_temp_dir(), 'sig_of_') . '.png';
+                    file_put_contents($tmpSigFile, $decoded);
+                    $temImagemAssinatura = true;
+                }
+            } elseif (is_file(__DIR__ . '/../../' . $imgData)) {
+                $tmpSigFile = __DIR__ . '/../../' . $imgData;
                 $temImagemAssinatura = true;
             }
-        } elseif (is_file(__DIR__ . '/../../' . $imgData)) {
-            $tmpSigFile = __DIR__ . '/../../' . $imgData;
-            $temImagemAssinatura = true;
+        } elseif (!empty($d['responsavel_assinatura_id'])) {
+            $qResp = $pdo->prepare("SELECT assinatura_arquivo FROM responsaveis_assinatura WHERE id = :id LIMIT 1");
+            $qResp->execute([':id' => $d['responsavel_assinatura_id']]);
+            $arq = $qResp->fetchColumn();
+            if ($arq && is_file(__DIR__ . '/../../' . $arq)) {
+                $tmpSigFile = __DIR__ . '/../../' . $arq;
+                $temImagemAssinatura = true;
+            }
         }
-    } elseif (!empty($d['responsavel_assinatura_id'])) {
-        $qResp = $pdo->prepare("SELECT assinatura_arquivo FROM responsaveis_assinatura WHERE id = :id LIMIT 1");
-        $qResp->execute([':id' => $d['responsavel_assinatura_id']]);
-        $arq = $qResp->fetchColumn();
-        if ($arq && is_file(__DIR__ . '/../../' . $arq)) {
-            $tmpSigFile = __DIR__ . '/../../' . $arq;
-            $temImagemAssinatura = true;
+
+        // Se houver imagem da assinatura, estampa discretamente
+        if ($temImagemAssinatura && $tmpSigFile) {
+            $pdf->Image($tmpSigFile, 84, $yAssinatura, 42, 16, 'PNG', '', '', true, 300, 'C');
+            if (str_contains($tmpSigFile, 'sig_of_')) @unlink($tmpSigFile);
+            $pdf->SetY($yAssinatura + 17);
+        } else {
+            $pdf->SetY($yAssinatura + 14);
         }
+
+        // Nome e Cargo Centralizados
+        $pdf->SetFont('helvetica', 'B', 10);
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->Cell(0, 4.5, $assinanteNome, 0, 1, 'C');
+
+        $pdf->SetFont('helvetica', '', 9);
+        $pdf->SetTextColor(40, 40, 40);
+        $pdf->Cell(0, 4.0, $assinanteCargo, 0, 1, 'C');
+
+        $pdf->Output($caminhoSaida, 'F');
     }
-
-    // Se houver imagem da assinatura, estampa discretamente
-    if ($temImagemAssinatura && $tmpSigFile) {
-        $pdf->Image($tmpSigFile, 84, $yAssinatura, 42, 16, 'PNG', '', '', true, 300, 'C');
-        if (str_contains($tmpSigFile, 'sig_of_')) @unlink($tmpSigFile);
-        $pdf->SetY($yAssinatura + 17);
-    } else {
-        $pdf->SetY($yAssinatura + 14);
-    }
-
-    // Nome e Cargo Centralizados
-    $pdf->SetFont('helvetica', 'B', 10);
-    $pdf->SetTextColor(0, 0, 0);
-    $pdf->Cell(0, 4.5, $assinanteNome, 0, 1, 'C');
-
-    $pdf->SetFont('helvetica', '', 9);
-    $pdf->SetTextColor(40, 40, 40);
-    $pdf->Cell(0, 4.0, $assinanteCargo, 0, 1, 'C');
-
-    $pdf->Output($caminhoSaida, 'F');
 }
 
 // Arquivo temporário para a página 1 (Ofício)
