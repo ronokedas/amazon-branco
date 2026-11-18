@@ -163,9 +163,31 @@ require __DIR__ . '/../../includes/sidebar.php';
                 <a class="btn btn-success" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text=<?= $msgWhatsStatus ?>" style="background: #25d366; border-color: #25d366; color: #fff;" title="Avisar cliente/armador via WhatsApp">
                     <i class="fa-brands fa-whatsapp"></i> Notificar Cliente
                 </a>
-                <a class="btn btn-primary" target="_blank" href="<?= APP_URL ?>protocolos/pdf-dossie?id=<?= urlencode($id) ?>">
-                    <i class="fa-solid fa-file-pdf"></i> Visualizar Ofício (PDF)
-                </a>
+                <div class="btn-group">
+                    <a class="btn btn-primary" target="_blank" href="<?= APP_URL ?>protocolos/pdf-dossie?id=<?= urlencode($id) ?>" title="Abrir página 1 do Ofício Oficial">
+                        <i class="fa-solid fa-file-pdf"></i> Visualizar Ofício (PDF)
+                    </a>
+                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Mais opções</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                        <li>
+                            <a class="dropdown-item" target="_blank" href="<?= APP_URL ?>protocolos/pdf-dossie?id=<?= urlencode($id) ?>">
+                                <i class="fa-solid fa-file-lines text-primary me-2"></i> Somente o Ofício (Página 1)
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" target="_blank" href="<?= APP_URL ?>protocolos/pdf-dossie?id=<?= urlencode($id) ?>&unificado=1">
+                                <i class="fa-solid fa-file-circle-check text-success me-2"></i> Dossiê Completo Unificado (Ofício + Laudos e Certificados)
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" onclick="abrirModalEnviarEmailCapitania()" style="background: #087653; border-color: #087653;" title="Enviar Ofício e Documentos por E-mail para a Capitania">
+                    <i class="fa-solid fa-paper-plane"></i> Enviar p/ Capitania por E-mail
+                </button>
+
                 <?php if (!empty($d['assinado'])): ?>
                     <span class="badge bg-success d-inline-flex align-items-center gap-1 py-2 px-3" style="font-size: 0.85rem;" title="Assinado por <?= h($d['assinante_nome'] ?: 'Digital') ?> em <?= formatarDataHora($d['assinatura_em']) ?>">
                         <i class="fa-solid fa-circle-check"></i> Ofício Assinado
@@ -592,6 +614,7 @@ require __DIR__ . '/../../includes/sidebar.php';
         }
         </script>
         <?php require __DIR__ . '/components/modal_assinar_oficio.php'; ?>
+        <?php require __DIR__ . '/components/modal_enviar_email_capitania.php'; ?>
     <?php endif; ?>
 </main>
 

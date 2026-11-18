@@ -246,7 +246,159 @@ try{
   $pdo->commit();
   setMensagem('success','Andamento do órgão registrado na auditoria.');redirecionar($voltar($id, 'marinha'));
  }
- if($acao==='encerrar'){$pdo->prepare("UPDATE protocolo_dossies SET status='ENCERRADO' WHERE id=:id")->execute([':id'=>$id]);protocoloAuditar($pdo,$id,null,'DOSSIE_ENCERRADO',$d['status'],'ENCERRADO');setMensagem('success','Dossiê encerrado.');redirecionar($voltar($id, 'auditoria'));}
+  if($acao==='enviar_email_capitania'){
+   $destEmail=filter_var(trim($_POST['destinatario_email']??''),FILTER_VALIDATE_EMAIL);
+   if(!$destEmail)throw new InvalidArgumentException('E-mail oficial da Capitania inválido.');
+   $destNome=trim($_POST['destinatario_nome']??'')?:($d['unidade_nome']?:'Capitania dos Portos');
+   $assunto=trim($_POST['assunto']??'');
+   if(!$assunto)$assunto="Ofício " . (!empty($d['numero_oficio']) ? $d['numero_oficio'] : $d['numero']) . " - Encaminhamento de Documentos - {$d['embarcacao_nome']}";
+   $tipoAnexo=trim($_POST['tipo_anexo']??'unificado');
+   $msgCorpo=trim($_POST['mensagem_corpo']??'');
+   $emailsCC=trim($_POST['emails_cc']??'');
+   $listaCCs=[];
+   if($emailsCC!==''){
+    foreach(explode(',',$emailsCC) as $cRaw){
+     $cLimpo=filter_var(trim($cRaw),FILTER_VALIDATE_EMAIL);
+     if($cLimpo)$listaCCs[]=$cLimpo;
+    }
+   }
+   
+   $ano=date('Y');
+   $pastaEnvios=dirname(__DIR__,2)."/storage/protocolos/{$ano}/{$id}/envios";
+   if(!is_dir($pastaEnvios)){@mkdir($pastaEnvios,0777,true);@chmod($pastaEnvios,0777);}
+   $prefixo=($tipoAnexo==='unificado')?'Dossie_Unificado_':'Oficio_';
+   $baseNome=preg_replace('/[^A-Za-z0-9_-]/','_',!empty($d['numero_oficio']) ? $d['numero_oficio'] : $d['numero']);
+   $nomeArquivo="{$prefixo}{$baseNome}_".date('Ymd_His').'.pdf';
+   $absCaminho="{$pastaEnvios}/{$nomeArquivo}";
+   $relCaminho="storage/protocolos/{$ano}/{$id}/envios/{$nomeArquivo}";
+
+   $salvar_pdf_dossie_caminho=$absCaminho;
+   $dossie_pdf_id=$id;
+   $dossie_unificado=($tipoAnexo==='unificado');
+   require __DIR__.'/pdf_dossie.php';
+   unset($salvar_pdf_dossie_caminho,$dossie_pdf_id,$dossie_unificado);
+
+   if(!is_file($absCaminho)||filesize($absCaminho)<1000){
+    throw new RuntimeException('Falha ao gerar o documento PDF para envio à Capitania.');
+   }
+   $sha256=hash_file('sha256',$absCaminho);
+
+   $htmlEmail="
+   <div style='font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; border: 1px solid #dcdcdc; border-radius: 8px; overflow: hidden; background: #ffffff;'>
+       <div style='background: #003d34; color: #ffffff; padding: 20px; text-align: center;'>
+           <h2 style='margin: 0; font-size: 19px;'>Amazon Certificadora Naval</h2>
+           <p style='margin: 5px 0 0 0; font-size: 12px; color: #c5a059; font-weight: bold;'>ENTIDADE CERTIFICADORA NAVAL &bull; DIRETRIZES DPC / MARINHA DO BRASIL</p>
+       </div>
+       <div style='padding: 24px; color: #2d3748; line-height: 1.6; font-size: 14px;'>
+           ".nl2br(htmlspecialchars($msgCorpo, ENT_QUOTES, 'UTF-8'))."
+           <div style='margin-top: 24px; padding: 14px; background: #e7f3ee; border: 1px solid #b8d9cc; border-radius: 6px;'>
+               <p style='margin: 0 0 6px 0; font-weight: bold; color: #003d34; font-size: 13px;'>Detalhes do Documento Anexo:</p>
+               <table style='width: 100%; font-size: 12px; border-collapse: collapse;'>
+                   <tr><td style='padding: 3px 0; font-weight: bold; width: 35%;'>Arquivo:</td><td>".htmlspecialchars($nomeArquivo, ENT_QUOTES, 'UTF-8')."</td></tr>
+                   <tr><td style='padding: 3px 0; font-weight: bold;'>Tipo:</td><td>".($tipoAnexo==='unificado'?'Dossiê Completo Unificado (Ofício + Laudos e Certificados)':'Ofício Oficial de Encaminhamento')."</td></tr>
+                   <tr><td style='padding: 3px 0; font-weight: bold;'>Hash SHA-256:</td><td style='font-family: monospace; font-size: 11px;'>".htmlspecialchars($sha256, ENT_QUOTES, 'UTF-8')."</td></tr>
+               </table>
+           </div>
+       </div>
+       <div style='background: #f8fafc; padding: 14px; text-align: center; color: #718096; font-size: 11px; border-top: 1px solid #e2e8f0;'>
+           Documento oficial emitido em conformidade com as diretrizes da DPC / NORMAM-202.<br>
+           Amazon Certificadora Naval &bull; Trav. Quintino Bocaiúva, 2301, Sala 1116, Cremação, Belém/PA &bull; (91) 99111-2065
+       </div>
+   </div>";
+
+   require_once dirname(__DIR__,2).'/includes/mailer.php';
+   $resEmail=enviarEmail($destEmail,$destNome,$assunto,$htmlEmail,[$absCaminho],$listaCCs);
+   if(!$resEmail['success']){
+    throw new RuntimeException('Erro no envio do e-mail: '.$resEmail['message']);
+   }
+
+   $pdo->beginTransaction();
+   $envioId=gerarUUID();
+   $insEnv=$pdo->prepare("INSERT INTO protocolo_envios_email(
+       id,dossie_id,destinatario_tipo,destinatario_nome,destinatario_email,
+       emails_cc,assunto,corpo,tipo_documento,arquivo_caminho,arquivo_sha256,
+       status,criado_por,enviado_em
+   )VALUES(
+       :id,:dossie,'CAPITANIA',:nome,:email,
+       :cc,:assunto,:corpo,:tipo_doc,:arq,:hash,
+       'ENVIADO',:usuario,NOW()
+   )");
+   $insEnv->execute([
+       ':id'=>$envioId,
+       ':dossie'=>$id,
+       ':nome'=>$destNome,
+       ':email'=>$destEmail,
+       ':cc'=>$emailsCC?:null,
+       ':assunto'=>$assunto,
+       ':corpo'=>$msgCorpo,
+       ':tipo_doc'=>($tipoAnexo==='unificado'?'DOSSIE_UNIFICADO':'OFICIO'),
+       ':arq'=>$relCaminho,
+       ':hash'=>$sha256,
+       ':usuario'=>$_SESSION['usuario_id']??null
+   ]);
+
+   // Adicionar movimentação automática e atualizar status do dossiê
+   $qSeq=$pdo->prepare('SELECT COALESCE(MAX(sequencia),0)+1 FROM protocolo_movimentacoes WHERE dossie_id=:id');
+   $qSeq->execute([':id'=>$id]);
+   $seq=(int)$qSeq->fetchColumn();
+   $mov=gerarUUID();
+
+   $qInsMov=$pdo->prepare("INSERT INTO protocolo_movimentacoes(
+       id,dossie_id,sequencia,tipo,natureza,origem_tipo,origem_nome,destino_tipo,
+       destino_nome,unidade_maritima_id,cidade,uf,meio_envio,movimentado_em,
+       observacoes,pdf_caminho,pdf_hash,status,confirmado_por,confirmado_em,criado_por
+   )VALUES(
+       :id,:dossie,:seq,'SAIDA','ENVIO_ORGAO','AMAZON_NAVAL','Amazon Certificadora Naval',
+       'CAPITANIA',:dest_nome,:unidade,:cidade,:uf,'EMAIL',NOW(),
+       :obs,:pdf,:hash,'CONFIRMADA',:usuario,NOW(),:usuario
+   )");
+   $qInsMov->execute([
+       ':id'=>$mov,
+       ':dossie'=>$id,
+       ':seq'=>$seq,
+       ':dest_nome'=>$destNome,
+       ':unidade'=>$d['unidade_maritima_id']?:null,
+       ':cidade'=>!empty($d['unidade_cidade']) ? $d['unidade_cidade'] : 'Belém',
+       ':uf'=>!empty($d['unidade_uf']) ? $d['unidade_uf'] : 'PA',
+       ':obs'=>"Envio oficial por e-mail para {$destEmail}".($emailsCC ? " (CC: {$emailsCC})" : "")." contendo {$nomeArquivo}.",
+       ':pdf'=>$relCaminho,
+       ':hash'=>$sha256,
+       ':usuario'=>$_SESSION['usuario_id']??null
+   ]);
+
+   // Inserir item da movimentação
+   $insItem=$pdo->prepare("INSERT INTO protocolo_movimentacao_itens(
+       id,movimentacao_id,descricao,categoria,suporte,forma,quantidade,arquivo_nome,arquivo_hash,observacao
+   )VALUES(
+       UUID(),:mov,:desc,'DOCUMENTACAO','DIGITAL','NATO_DIGITAL',1,:anome,:ahash,:obs
+   )");
+   $insItem->execute([
+       ':mov'=>$mov,
+       ':desc'=>($tipoAnexo==='unificado'?'Dossiê Completo Unificado (Ofício + Laudos e Certificados)':'Ofício Oficial de Encaminhamento'),
+       ':anome'=>$nomeArquivo,
+       ':ahash'=>$sha256,
+       ':obs'=>"Enviado por e-mail em ".date('d/m/Y H:i:s')." para ".$destEmail
+   ]);
+
+   $pdo->prepare("UPDATE protocolo_dossies SET status='ENVIADO_AO_ORGAO' WHERE id=:id")->execute([':id'=>$id]);
+   protocoloAuditar($pdo,$id,$mov,'ENVIO_EMAIL_CAPITANIA',$d['status'],'ENVIADO_AO_ORGAO',"Documentos enviados por e-mail para {$destEmail} ({$nomeArquivo})",$sha256);
+
+   if(!empty($d['analise_id'])){
+       try{
+           $pdo->prepare("INSERT INTO analise_planos_historico(analise_id,usuario_id,evento,status_anterior,status_novo,detalhe)VALUES(:aid,:uid,'TRAMITE_MARINHA',:ant,'ENVIADO_AO_ORGAO',:desc)")->execute([
+               ':aid'=>$d['analise_id'],
+               ':uid'=>$_SESSION['usuario_id'],
+               ':ant'=>$d['status'],
+               ':desc'=>"Dossiê {$d['numero']} enviado por e-mail para a Capitania ({$destEmail})"
+           ]);
+       }catch(Throwable $e){}
+   }
+
+   $pdo->commit();
+   setMensagem('success',"Ofício e documentos enviados com sucesso por e-mail para {$destEmail}!");
+   redirecionar($voltar($id, 'timeline'));
+  }
+  if($acao==='encerrar'){$pdo->prepare("UPDATE protocolo_dossies SET status='ENCERRADO' WHERE id=:id")->execute([':id'=>$id]);protocoloAuditar($pdo,$id,null,'DOSSIE_ENCERRADO',$d['status'],'ENCERRADO');setMensagem('success','Dossiê encerrado.');redirecionar($voltar($id, 'auditoria'));}
  if($acao==='cancelar'){$motivo=trim($_POST['motivo']??'');if(!$motivo)throw new InvalidArgumentException('Informe o motivo do cancelamento.');$pdo->prepare("UPDATE protocolo_dossies SET status='CANCELADO',cancelado_motivo=:motivo,cancelado_por=:usuario,cancelado_em=NOW() WHERE id=:id")->execute([':motivo'=>$motivo,':usuario'=>$_SESSION['usuario_id'],':id'=>$id]);protocoloAuditar($pdo,$id,null,'DOSSIE_CANCELADO',$d['status'],'CANCELADO',$motivo);setMensagem('success','Dossiê cancelado sem apagar o histórico.');redirecionar($voltar($id, 'auditoria'));}
  throw new RuntimeException('Ação inválida.');
 }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Erro em protocolos: '.$e->getMessage());setMensagem('error',$e->getMessage());redirecionar($voltar($id?:null));}

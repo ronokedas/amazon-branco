@@ -35,22 +35,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Informe o nome da unidade, cidade e UF válida.');
             }
 
-            $q = $pdo->prepare("INSERT INTO protocolo_unidades_maritimas (id, codigo, nome, tipo, cidade, uf, endereco, telefone, email, jurisdicao, url_consulta, ativo, criado_por)
-                VALUES (:id, :codigo, :nome, :tipo, :cidade, :uf, :endereco, :telefone, :email, :jurisdicao, :url, 1, :usuario)
+            $autoridadeNome = trim($_POST['autoridade_nome'] ?? '') ?: null;
+            $autoridadeCargo = trim($_POST['autoridade_cargo'] ?? '') ?: null;
+            $emailsAdicionais = trim($_POST['emails_adicionais'] ?? '') ?: null;
+            $sigla = trim($_POST['codigo'] ?? '') ?: null;
+
+            $q = $pdo->prepare("INSERT INTO protocolo_unidades_maritimas (id, codigo, sigla, nome, tipo, cidade, uf, autoridade_nome, autoridade_cargo, endereco, telefone, email, emails_adicionais, jurisdicao, url_consulta, ativo, criado_por)
+                VALUES (:id, :codigo, :sigla, :nome, :tipo, :cidade, :uf, :autoridade_nome, :autoridade_cargo, :endereco, :telefone, :email, :emails_adicionais, :jurisdicao, :url, 1, :usuario)
                 ON DUPLICATE KEY UPDATE 
-                    codigo = VALUES(codigo), nome = VALUES(nome), tipo = VALUES(tipo), cidade = VALUES(cidade), uf = VALUES(uf),
-                    endereco = VALUES(endereco), telefone = VALUES(telefone), email = VALUES(email), jurisdicao = VALUES(jurisdicao),
-                    url_consulta = VALUES(url_consulta), ativo = 1");
+                    codigo = VALUES(codigo), sigla = VALUES(sigla), nome = VALUES(nome), tipo = VALUES(tipo), cidade = VALUES(cidade), uf = VALUES(uf),
+                    autoridade_nome = VALUES(autoridade_nome), autoridade_cargo = VALUES(autoridade_cargo),
+                    endereco = VALUES(endereco), telefone = VALUES(telefone), email = VALUES(email), emails_adicionais = VALUES(emails_adicionais),
+                    jurisdicao = VALUES(jurisdicao), url_consulta = VALUES(url_consulta), ativo = 1");
             $q->execute([
                 ':id' => $id,
-                ':codigo' => trim($_POST['codigo'] ?? '') ?: null,
+                ':codigo' => $sigla,
+                ':sigla' => $sigla,
                 ':nome' => $nome,
                 ':tipo' => $tipo,
                 ':cidade' => $cidade,
                 ':uf' => $uf,
+                ':autoridade_nome' => $autoridadeNome,
+                ':autoridade_cargo' => $autoridadeCargo,
                 ':endereco' => trim($_POST['endereco'] ?? '') ?: null,
                 ':telefone' => trim($_POST['telefone'] ?? '') ?: null,
                 ':email' => trim($_POST['email'] ?? '') ?: null,
+                ':emails_adicionais' => $emailsAdicionais,
                 ':jurisdicao' => trim($_POST['jurisdicao'] ?? '') ?: null,
                 ':url' => trim($_POST['url_consulta'] ?? '') ?: null,
                 ':usuario' => $_SESSION['usuario_id']
@@ -90,17 +100,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setMensagem('success', 'Parâmetros de alerta atualizados com sucesso.');
             $abaAtiva = 'alertas';
         } elseif ($a === 'seed_unidades') {
-            // Auto-popula as principais Capitanias da Amazônia se não existirem
+            // Auto-popula as principais Capitanias da Amazônia com autoridade e e-mails oficiais
             $unidadesPadrao = [
-                ['codigo' => 'DelSantarem', 'nome' => 'Delegacia da Capitania dos Portos em Santarém', 'tipo' => 'DELEGACIA', 'cidade' => 'Santarém', 'uf' => 'PA', 'url' => 'https://atendimento-dpc.marinha.mil.br/sisap/agendamento/consultaprocesso/#/'],
-                ['codigo' => 'CPAOC', 'nome' => 'Capitania Fluvial da Amazônia Ocidental', 'tipo' => 'CAPITANIA', 'cidade' => 'Manaus', 'uf' => 'AM', 'url' => 'https://atendimento-dpc.marinha.mil.br/sisap/agendamento/consultaprocesso/#/'],
-                ['codigo' => 'CPAP', 'nome' => 'Capitania dos Portos do Amapá', 'tipo' => 'CAPITANIA', 'cidade' => 'Santana', 'uf' => 'AP', 'url' => 'https://atendimento-dpc.marinha.mil.br/sisap/agendamento/consultaprocesso/#/'],
-                ['codigo' => 'DelItacoatiara', 'nome' => 'Delegacia Fluvial de Itacoatiara', 'tipo' => 'DELEGACIA', 'cidade' => 'Itacoatiara', 'uf' => 'AM', 'url' => 'https://atendimento-dpc.marinha.mil.br/sisap/agendamento/consultaprocesso/#/'],
-                ['codigo' => 'AgBreves', 'nome' => 'Agência Fluvial de Breves', 'tipo' => 'AGENCIA', 'cidade' => 'Breves', 'uf' => 'PA', 'url' => 'https://atendimento-dpc.marinha.mil.br/sisap/agendamento/consultaprocesso/#/']
+                [
+                    'codigo' => 'CPAOR', 'sigla' => 'CPAOR', 'nome' => 'Capitania dos Portos da Amazônia Oriental',
+                    'tipo' => 'CAPITANIA', 'cidade' => 'Belém', 'uf' => 'PA',
+                    'autoridade_nome' => 'CAPITÃO DE MAR E GUERRA – ALEXANDRE BATISTA PIMENTEL', 'autoridade_cargo' => 'Capitão dos Portos',
+                    'email' => 'cpaor.protocolo@marinha.mil.br', 'emails_adicionais' => 'cpaor.gabinete@marinha.mil.br',
+                    'url' => 'https://atendimento-dpc.marinha.mil.br/sisap/agendamento/consultaprocesso/#/'
+                ],
+                [
+                    'codigo' => 'CPAOC', 'sigla' => 'CPAOC', 'nome' => 'Capitania Fluvial da Amazônia Ocidental',
+                    'tipo' => 'CAPITANIA', 'cidade' => 'Manaus', 'uf' => 'AM',
+                    'autoridade_nome' => 'CAPITÃO DE MAR E GUERRA – COMANDANTE DA CPAOC', 'autoridade_cargo' => 'Capitão Fluvial',
+                    'email' => 'cpaoc.protocolo@marinha.mil.br', 'emails_adicionais' => 'cpaoc.gabinete@marinha.mil.br',
+                    'url' => 'https://atendimento-dpc.marinha.mil.br/sisap/agendamento/consultaprocesso/#/'
+                ],
+                [
+                    'codigo' => 'CPAP', 'sigla' => 'CPAP', 'nome' => 'Capitania dos Portos do Amapá',
+                    'tipo' => 'CAPITANIA', 'cidade' => 'Santana', 'uf' => 'AP',
+                    'autoridade_nome' => 'CAPITÃO DE FRAGATA – CAPITÃO DOS PORTOS DO AMAPÁ', 'autoridade_cargo' => 'Capitão dos Portos',
+                    'email' => 'cpap.protocolo@marinha.mil.br', 'emails_adicionais' => null,
+                    'url' => 'https://atendimento-dpc.marinha.mil.br/sisap/agendamento/consultaprocesso/#/'
+                ],
+                [
+                    'codigo' => 'DelSantarem', 'sigla' => 'DelSantarém', 'nome' => 'Delegacia da Capitania dos Portos em Santarém',
+                    'tipo' => 'DELEGACIA', 'cidade' => 'Santarém', 'uf' => 'PA',
+                    'autoridade_nome' => 'CAPITÃO DE CORVETA – DELEGADO EM SANTARÉM', 'autoridade_cargo' => 'Delegado da Capitania',
+                    'email' => 'delsantarem.protocolo@marinha.mil.br', 'emails_adicionais' => null,
+                    'url' => 'https://atendimento-dpc.marinha.mil.br/sisap/agendamento/consultaprocesso/#/'
+                ],
+                [
+                    'codigo' => 'DelItacoatiara', 'sigla' => 'DelItacoatiara', 'nome' => 'Delegacia Fluvial de Itacoatiara',
+                    'tipo' => 'DELEGACIA', 'cidade' => 'Itacoatiara', 'uf' => 'AM',
+                    'autoridade_nome' => 'CAPITÃO-TENENTE – DELEGADO FLUVIAL', 'autoridade_cargo' => 'Delegado Fluvial',
+                    'email' => 'delitacoatiara.protocolo@marinha.mil.br', 'emails_adicionais' => null,
+                    'url' => 'https://atendimento-dpc.marinha.mil.br/sisap/agendamento/consultaprocesso/#/'
+                ],
+                [
+                    'codigo' => 'AgBreves', 'sigla' => 'AgBreves', 'nome' => 'Agência Fluvial de Breves',
+                    'tipo' => 'AGENCIA', 'cidade' => 'Breves', 'uf' => 'PA',
+                    'autoridade_nome' => 'CAPITÃO-TENENTE – AGENTE FLUVIAL DE BREVES', 'autoridade_cargo' => 'Agente Fluvial',
+                    'email' => 'agbreves.protocolo@marinha.mil.br', 'emails_adicionais' => null,
+                    'url' => 'https://atendimento-dpc.marinha.mil.br/sisap/agendamento/consultaprocesso/#/'
+                ]
             ];
-            $ins = $pdo->prepare("INSERT IGNORE INTO protocolo_unidades_maritimas (id, codigo, nome, tipo, cidade, uf, url_consulta, ativo, criado_por) VALUES (UUID(), :codigo, :nome, :tipo, :cidade, :uf, :url, 1, :usuario)");
+            $ins = $pdo->prepare("INSERT INTO protocolo_unidades_maritimas (id, codigo, sigla, nome, tipo, cidade, uf, autoridade_nome, autoridade_cargo, email, emails_adicionais, url_consulta, ativo, criado_por) 
+                VALUES (UUID(), :codigo, :sigla, :nome, :tipo, :cidade, :uf, :autoridade_nome, :autoridade_cargo, :email, :emails_adicionais, :url, 1, :usuario)
+                ON DUPLICATE KEY UPDATE 
+                    codigo = VALUES(codigo), sigla = VALUES(sigla), nome = VALUES(nome), tipo = VALUES(tipo), cidade = VALUES(cidade), uf = VALUES(uf),
+                    autoridade_nome = VALUES(autoridade_nome), autoridade_cargo = VALUES(autoridade_cargo),
+                    email = VALUES(email), emails_adicionais = VALUES(emails_adicionais), url_consulta = VALUES(url_consulta), ativo = 1");
             foreach ($unidadesPadrao as $up) {
-                $ins->execute([':codigo' => $up['codigo'], ':nome' => $up['nome'], ':tipo' => $up['tipo'], ':cidade' => $up['cidade'], ':uf' => $up['uf'], ':url' => $up['url'], ':usuario' => $_SESSION['usuario_id']]);
+                $ins->execute([
+                    ':codigo' => $up['codigo'],
+                    ':sigla' => $up['sigla'],
+                    ':nome' => $up['nome'],
+                    ':tipo' => $up['tipo'],
+                    ':cidade' => $up['cidade'],
+                    ':uf' => $up['uf'],
+                    ':autoridade_nome' => $up['autoridade_nome'],
+                    ':autoridade_cargo' => $up['autoridade_cargo'],
+                    ':email' => $up['email'],
+                    ':emails_adicionais' => $up['emails_adicionais'],
+                    ':url' => $up['url'],
+                    ':usuario' => $_SESSION['usuario_id']
+                ]);
             }
             setMensagem('success', 'Capitanias e Delegacias regionais da Amazônia importadas com sucesso.');
             $abaAtiva = 'unidades';
@@ -183,6 +248,20 @@ require __DIR__ . '/../../includes/sidebar.php';
                             <div class="mb-2">
                                 <label class="form-label small fw-bold">Nome da Unidade Marítima *</label>
                                 <input class="form-control form-control-sm" name="nome" id="u-nome" required placeholder="Ex.: Capitania dos Portos da Amazônia Oriental">
+                                <small class="text-muted">Nome oficial da OM da Marinha do Brasil.</small>
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-7">
+                                    <label class="form-label small fw-bold">Autoridade Titular (A/C no Ofício)</label>
+                                    <input class="form-control form-control-sm" name="autoridade_nome" id="u-autoridade_nome" placeholder="Ex.: CAPITÃO DE MAR E GUERRA – ALEXANDRE BATISTA PIMENTEL">
+                                    <small class="text-muted">Nome e patente que saem no campo 'A/C:' do Ofício.</small>
+                                </div>
+                                <div class="col-5">
+                                    <label class="form-label small fw-bold">Cargo da Autoridade</label>
+                                    <input class="form-control form-control-sm" name="autoridade_cargo" id="u-autoridade_cargo" placeholder="Ex.: Capitão dos Portos">
+                                    <small class="text-muted">Função oficial.</small>
+                                </div>
                             </div>
 
                             <div class="row g-2 mb-2">
@@ -202,14 +281,21 @@ require __DIR__ . '/../../includes/sidebar.php';
                             </div>
 
                             <div class="row g-2 mb-2">
-                                <div class="col-6">
+                                <div class="col-5">
                                     <label class="form-label small fw-bold">Telefone</label>
                                     <input class="form-control form-control-sm" name="telefone" id="u-telefone" placeholder="(91) 3216-4900">
                                 </div>
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold">E-mail de Contato</label>
+                                <div class="col-7">
+                                    <label class="form-label small fw-bold">E-mail Oficial (Protocolo) *</label>
                                     <input class="form-control form-control-sm" type="email" name="email" id="u-email" placeholder="cpaor.protocolo@marinha.mil.br">
+                                    <small class="text-muted">Destinatário principal para envio de documentos.</small>
                                 </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold">E-mails Adicionais de Cópia (separados por vírgula)</label>
+                                <input class="form-control form-control-sm" name="emails_adicionais" id="u-emails_adicionais" placeholder="gabinete@marinha.mil.br, vistoria@marinha.mil.br">
+                                <small class="text-muted">Setores complementares que também devem receber o ofício por e-mail.</small>
                             </div>
 
                             <div class="mb-3">
@@ -264,11 +350,24 @@ require __DIR__ . '/../../includes/sidebar.php';
                                         <tr style="border-bottom: 1px solid var(--border); vertical-align: middle;">
                                             <td>
                                                 <strong><?= h($u['nome']) ?></strong>
-                                                <?php if ($u['codigo']): ?>
-                                                    <span class="badge bg-dark ms-1"><?= h($u['codigo']) ?></span>
+                                                <?php if (!empty($u['codigo']) || !empty($u['sigla'])): ?>
+                                                    <span class="badge bg-dark ms-1"><?= h($u['sigla'] ?: $u['codigo']) ?></span>
                                                 <?php endif; ?>
-                                                <?php if ($u['telefone']): ?>
-                                                    <div class="text-secondary small"><?= h($u['telefone']) ?></div>
+                                                <?php if (!empty($u['autoridade_nome'])): ?>
+                                                    <div class="text-primary small fw-bold mt-1">
+                                                        <i class="fa-solid fa-user-tie"></i> A/C: <?= h($u['autoridade_nome']) ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <?php if (!empty($u['email'])): ?>
+                                                    <div class="text-secondary small mt-1">
+                                                        <i class="fa-solid fa-envelope"></i> <?= h($u['email']) ?>
+                                                        <?php if (!empty($u['emails_adicionais'])): ?>
+                                                            <span class="text-muted">(+cópias)</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <?php if (!empty($u['telefone'])): ?>
+                                                    <div class="text-secondary small"><i class="fa-solid fa-phone"></i> <?= h($u['telefone']) ?></div>
                                                 <?php endif; ?>
                                             </td>
                                             <td><span class="badge bg-secondary"><?= h($u['tipo']) ?></span></td>
@@ -283,7 +382,7 @@ require __DIR__ . '/../../includes/sidebar.php';
                                                 <?php endif; ?>
                                             </td>
                                             <td style="text-align: right;">
-                                                <button type="button" class="btn btn-sm btn-secondary" onclick='editarUnidade(<?= json_encode($u, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) ?>)'>
+                                                <button type="button" class="btn btn-sm btn-secondary" onclick='editarUnidade(<?= json_encode($u, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) ?>)' title="Editar Unidade">
                                                     <i class="fa-solid fa-pen"></i>
                                                 </button>
                                             </td>
@@ -300,14 +399,17 @@ require __DIR__ . '/../../includes/sidebar.php';
         <script>
         function editarUnidade(u) {
             document.getElementById('form-unidade-id').value = u.id || '';
-            document.getElementById('u-codigo').value = u.codigo || '';
+            document.getElementById('u-codigo').value = u.sigla || u.codigo || '';
             document.getElementById('u-tipo').value = u.tipo || 'CAPITANIA';
             document.getElementById('u-nome').value = u.nome || '';
+            document.getElementById('u-autoridade_nome').value = u.autoridade_nome || '';
+            document.getElementById('u-autoridade_cargo').value = u.autoridade_cargo || '';
             document.getElementById('u-cidade').value = u.cidade || '';
             document.getElementById('u-uf').value = u.uf || '';
             document.getElementById('u-endereco').value = u.endereco || '';
             document.getElementById('u-telefone').value = u.telefone || '';
             document.getElementById('u-email').value = u.email || '';
+            document.getElementById('u-emails_adicionais').value = u.emails_adicionais || '';
             document.getElementById('u-url').value = u.url_consulta || '';
             document.getElementById('u-nome').focus();
         }
@@ -316,11 +418,14 @@ require __DIR__ . '/../../includes/sidebar.php';
             document.getElementById('u-codigo').value = '';
             document.getElementById('u-tipo').value = 'CAPITANIA';
             document.getElementById('u-nome').value = '';
+            document.getElementById('u-autoridade_nome').value = '';
+            document.getElementById('u-autoridade_cargo').value = '';
             document.getElementById('u-cidade').value = '';
             document.getElementById('u-uf').value = '';
             document.getElementById('u-endereco').value = '';
             document.getElementById('u-telefone').value = '';
             document.getElementById('u-email').value = '';
+            document.getElementById('u-emails_adicionais').value = '';
         }
         </script>
 

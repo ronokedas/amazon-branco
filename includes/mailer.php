@@ -336,10 +336,11 @@ function testarConexaoSMTP(string $destinatario, ?array $overrideConfig = null, 
  * @param string $assunto      Assunto do e-mail
  * @param string $htmlBody     Corpo do e-mail em HTML
  * @param array  $anexos       Array opcional com caminhos absolutos dos arquivos para anexar
+ * @param array  $ccs          Array opcional com e-mails para cópia (CC)
  * 
  * @return array ['success' => bool, 'message' => string]
  */
-function enviarEmail(string $destinatario, string $nome, string $assunto, string $htmlBody, array $anexos = []): array
+function enviarEmail(string $destinatario, string $nome, string $assunto, string $htmlBody, array $anexos = [], array $ccs = []): array
 {
     $mail = new PHPMailer(true);
 
@@ -382,6 +383,16 @@ function enviarEmail(string $destinatario, string $nome, string $assunto, string
         $mail->setFrom($remetente, $cfg['mail_from_name']);
         $mail->addAddress($destinatario, $nome);
         $mail->addReplyTo($remetente, $cfg['mail_from_name']);
+
+        // E-mails em cópia (CC)
+        if (!empty($ccs)) {
+            foreach ($ccs as $cc) {
+                $cc = trim((string)$cc);
+                if (filter_var($cc, FILTER_VALIDATE_EMAIL)) {
+                    $mail->addCC($cc);
+                }
+            }
+        }
 
         // Anexos
         if (!empty($anexos)) {

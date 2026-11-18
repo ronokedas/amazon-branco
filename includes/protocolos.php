@@ -87,8 +87,10 @@ function protocoloUsuarioPodeAcessar(PDO $pdo, array $dossie): bool
 
 function protocoloCarregar(PDO $pdo, string $id, bool $lock=false): array
 {
-    $q=$pdo->prepare("SELECT d.*,e.nome embarcacao_nome,c.nome cliente_nome,u.nome criador_nome,
-        um.nome unidade_nome,um.tipo unidade_tipo,um.url_consulta
+    $q=$pdo->prepare("SELECT d.*,e.nome embarcacao_nome,e.registro,c.nome cliente_nome,c.email cliente_email,u.nome criador_nome,
+        um.nome unidade_nome,um.tipo unidade_tipo,um.url_consulta,um.cidade unidade_cidade,um.uf unidade_uf,
+        um.email unidade_email,um.emails_adicionais unidade_emails_adicionais,
+        um.autoridade_nome unidade_autoridade_nome,um.autoridade_cargo unidade_autoridade_cargo
         FROM protocolo_dossies d INNER JOIN embarcacoes e ON e.id=d.embarcacao_id
         LEFT JOIN clientes c ON c.id=d.cliente_id LEFT JOIN usuarios u ON u.id=d.criado_por
         LEFT JOIN protocolo_unidades_maritimas um ON um.id=d.unidade_maritima_id

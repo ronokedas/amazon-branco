@@ -22,3 +22,6 @@
 docs/.chrome-pdf*
 docs/.temp-profile*
 /scratch/
+vps_exec.py
+*.pyc
+__pycache__/
