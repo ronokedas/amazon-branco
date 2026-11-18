@@ -309,6 +309,21 @@ if (!function_exists('isActive')) {
             </div>
         <?php endif; ?>
 
+        <!-- MANUAIS & GUIAS OPERACIONAIS -->
+        <div class="nav-group-label">MANUAIS & GUIAS</div>
+        <a href="<?= APP_URL ?>vistorias/manual" class="nav-item<?= (strpos($pagina_atual, 'vistorias/manual') === 0) ? ' active' : '' ?>" data-label="Manual do Vistoriador">
+            <i class="fa-solid fa-clipboard-user"></i>
+            <span class="nav-text">Manual do Vistoriador</span>
+        </a>
+        <a href="<?= APP_URL ?>analises-planos/manual" class="nav-item<?= (strpos($pagina_atual, 'analises-planos/manual') === 0) ? ' active' : '' ?>" data-label="Manual do Analista">
+            <i class="fa-solid fa-book-open-reader"></i>
+            <span class="nav-text">Manual do Analista</span>
+        </a>
+        <a href="<?= APP_URL ?>protocolos/manual" class="nav-item<?= (strpos($pagina_atual, 'protocolos/manual') === 0) ? ' active' : '' ?>" data-label="Manual de Protocolos">
+            <i class="fa-solid fa-folder-open"></i>
+            <span class="nav-text">Manual de Protocolos</span>
+        </a>
+
         <!-- 9. CONFIGURAÇÕES -->
         <?php if (podeAcessar('configuracoes') || podeAcessar('usuarios') || podeAcessar('configuracoes_normam202')): ?>
             <div class="nav-group-label">CONFIGURAÇÕES</div>

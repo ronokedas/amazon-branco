@@ -10,11 +10,10 @@ require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
-// Exigir login e permissão de acesso a vistorias
+// Exigir login (consulta permitida a qualquer perfil autenticado do sistema: Vistoriador, Analista, Admin, etc.)
 verificar_sessao();
-if (!podeAcessar('vistorias')) {
-    setMensagem('error', 'Acesso negado. Você não tem permissão para acessar este módulo.');
-    redirecionar(APP_URL . 'dashboard');
+if (!estaLogado()) {
+    redirecionar(APP_URL . 'login');
 }
 
 $titulo_page = 'Guia Prático Passo a Passo — Módulo do Vistoriador Naval';

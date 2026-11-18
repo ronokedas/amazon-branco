@@ -137,6 +137,7 @@ $rotas = [
     'analises-planos/parecer-pdf' => 'modules/analises_planos/parecer_pdf.php',
     'analises-planos/referencias' => 'modules/analises_planos/referencias.php',
     'analises-planos/referencias-actions' => 'modules/analises_planos/referencias_actions.php',
+    'analises-planos/manual' => 'modules/analises_planos/manual.php',
     'protocolos' => 'modules/protocolos/index.php',
     'protocolos/form' => 'modules/protocolos/form.php',
     'protocolos/actions' => 'modules/protocolos/actions.php',
@@ -351,6 +352,10 @@ if (strpos($path, 'api/campo/v1') === 0) {
     if (strpos($path, 'sgq') === 0) $permissao_rota = 'sgq';
     // Analista técnico pode visualizar relatório de vistoria vinculado a processos de análise
     if (in_array($path, ['vistorias/relatorio_pdf', 'vistorias/relatorio_pdf.php', 'vistorias/relatorio-pdf'], true) && podeAcessar('analise_planos')) {
+        $permissao_rota = null;
+    }
+    // Manuais operacionais e guias do sistema são de livre consulta para qualquer usuário autenticado
+    if (in_array($path, ['vistorias/manual', 'analises-planos/manual', 'protocolos/manual'], true)) {
         $permissao_rota = null;
     }
     if ($permissao_rota !== null && !podeAcessar($permissao_rota)) {
