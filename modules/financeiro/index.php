@@ -27,6 +27,38 @@ $escritoriosPorId=[];foreach($escritorios as $e)$escritoriosPorId[$e['id']]=$e;
 try { $filtro_escritorio = financeiroResolverEscritorio($pdo, $_GET['escritorio_id'] ?? null); }
 catch (Throwable $e) { setMensagem('error',$e->getMessage()); redirecionar(APP_URL.'dashboard'); }
 
+// Paginação
+$porPagina = (int)($_GET['por_pagina'] ?? 15);
+if (!in_array($porPagina, [10, 15, 25, 50, 100], true)) {
+    $porPagina = 15;
+}
+$paginaAtual = max(1, (int)($_GET['pagina'] ?? 1));
+
+// Helper para URLs mantendo filtros e paginação
+if (!function_exists('financeiroUrlPaginacao')) {
+    function financeiroUrlPaginacao(array $overrides = []): string {
+        global $filtro_tipo, $filtro_data_ini, $filtro_data_fim, $filtro_categoria, $filtro_escritorio, $porPagina, $paginaAtual;
+        $params = [
+            'escritorio_id' => $filtro_escritorio !== 'todos' ? $filtro_escritorio : (financeiroEhAdmin() ? 'todos' : null),
+            'tipo'          => !empty($filtro_tipo) ? $filtro_tipo : null,
+            'data_ini'      => !empty($filtro_data_ini) ? $filtro_data_ini : null,
+            'data_fim'      => !empty($filtro_data_fim) ? $filtro_data_fim : null,
+            'categoria'     => !empty($filtro_categoria) ? $filtro_categoria : null,
+            'por_pagina'    => $porPagina !== 15 ? $porPagina : null,
+            'pagina'        => $paginaAtual > 1 ? $paginaAtual : null,
+        ];
+        foreach ($overrides as $k => $v) {
+            if ($v === null || $v === '' || ($k === 'pagina' && (int)$v <= 1) || ($k === 'por_pagina' && (int)$v === 15)) {
+                unset($params[$k]);
+            } else {
+                $params[$k] = $v;
+            }
+        }
+        $qs = http_build_query(array_filter($params, fn($val) => $val !== null && $val !== ''));
+        return APP_URL . 'financeiro' . ($qs ? '?' . $qs : '');
+    }
+}
+
 // Construir query com filtros
 $parcelasFinanceirasDisponiveis = false;
 try {
@@ -45,35 +77,59 @@ $camposParcelas = $parcelasFinanceirasDisponiveis
     ? 'numero_parcela, total_parcelas'
     : 'NULL AS numero_parcela, NULL AS total_parcelas';
 
-$sql = "SELECT id, escritorio_id, responsavel_usuario_id, tipo, descricao, valor, valor_original, saldo_devedor, status, data, data_vencimento, {$camposParcelas}, categoria, observacoes, criado_em, atualizado_em FROM financeiro_lancamentos WHERE ativo = 1";
+$whereLancamentos = "WHERE ativo = 1";
 $params = [];
-if ($filtro_escritorio !== 'todos') { $sql .= ' AND escritorio_id = :escritorio'; $params[':escritorio']=$filtro_escritorio; }
+if ($filtro_escritorio !== 'todos') { $whereLancamentos .= ' AND escritorio_id = :escritorio'; $params[':escritorio']=$filtro_escritorio; }
 
 if (!empty($filtro_tipo) && in_array($filtro_tipo, ['RECEITA', 'DESPESA'])) {
-    $sql .= " AND tipo = :tipo";
+    $whereLancamentos .= " AND tipo = :tipo";
     $params[':tipo'] = $filtro_tipo;
 }
 
 if (!empty($filtro_data_ini)) {
-    $sql .= " AND data >= :data_ini";
+    $whereLancamentos .= " AND data >= :data_ini";
     $params[':data_ini'] = $filtro_data_ini;
 }
 
 if (!empty($filtro_data_fim)) {
-    $sql .= " AND data <= :data_fim";
+    $whereLancamentos .= " AND data <= :data_fim";
     $params[':data_fim'] = $filtro_data_fim;
 }
 
 if (!empty($filtro_categoria)) {
-    $sql .= " AND categoria LIKE :categoria";
+    $whereLancamentos .= " AND categoria LIKE :categoria";
     $params[':categoria'] = '%' . $filtro_categoria . '%';
 }
 
-$sql .= " ORDER BY data DESC, criado_em DESC";
+// Obter contagem total de registros filtrados para a paginação
+$totalLancamentos = 0;
+try {
+    $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM financeiro_lancamentos {$whereLancamentos}");
+    $stmtCount->execute($params);
+    $totalLancamentos = (int)$stmtCount->fetchColumn();
+} catch (Exception $e) {
+    error_log('Erro ao contar lancamentos: ' . $e->getMessage());
+    $totalLancamentos = 0;
+}
+
+$totalPaginas = max(1, (int)ceil($totalLancamentos / $porPagina));
+if ($paginaAtual > $totalPaginas) {
+    $paginaAtual = $totalPaginas;
+}
+$offset = ($paginaAtual - 1) * $porPagina;
+$registroInicio = $totalLancamentos > 0 ? $offset + 1 : 0;
+$registroFim = min($offset + $porPagina, $totalLancamentos);
+
+$sql = "SELECT id, escritorio_id, responsavel_usuario_id, tipo, descricao, valor, valor_original, saldo_devedor, status, data, data_vencimento, {$camposParcelas}, categoria, observacoes, criado_em, atualizado_em FROM financeiro_lancamentos {$whereLancamentos} ORDER BY data DESC, criado_em DESC LIMIT :limite OFFSET :offset";
 
 try {
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    foreach ($params as $k => $v) {
+        $stmt->bindValue($k, $v);
+    }
+    $stmt->bindValue(':limite', $porPagina, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
     $lancamentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     error_log('Erro ao listar lancamentos: ' . $e->getMessage());
@@ -217,6 +273,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
         <!-- Filtros -->
         <form method="GET" action="<?php echo APP_URL; ?>financeiro" class="finance-filter-form">
+            <?php if ($porPagina !== 15): ?>
+                <input type="hidden" name="por_pagina" value="<?php echo (int)$porPagina; ?>">
+            <?php endif; ?>
             <div class="finance-filter-fields">
                 <div class="form-group finance-filter-office"><label><i class="fas fa-building"></i> Escritório</label><select name="escritorio_id" <?= $podeSelecionarEscritorio?'':'disabled' ?>><?php if(financeiroEhAdmin()): ?><option value="todos" <?= $filtro_escritorio==='todos'?'selected':'' ?>>Todos os escritórios</option><?php endif ?><?php foreach($escritorios as $e): ?><option value="<?= h($e['id']) ?>" <?= $filtro_escritorio===$e['id']?'selected':'' ?>><?= h($e['nome'].' · '.$e['cidade'].'/'.$e['uf']) ?></option><?php endforeach ?></select><?php if(!$podeSelecionarEscritorio): ?><input type="hidden" name="escritorio_id" value="<?= h($filtro_escritorio) ?>"><?php endif ?></div>
                 <div class="form-group">
@@ -246,7 +305,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
                 <?php if (!empty($filtro_tipo) || !empty($filtro_data_ini) || !empty($filtro_data_fim) || !empty($filtro_categoria) || $filtro_escritorio!=='todos'): ?>
                 <div class="form-group finance-filter-actions">
-                    <a href="<?php echo financeiroUrl(['escritorio_id'=>financeiroEhAdmin()?'todos':$filtro_escritorio]); ?>" class="btn btn-secondary btn-sm">
+                    <a href="<?php echo financeiroUrlPaginacao(['tipo' => '', 'data_ini' => '', 'data_fim' => '', 'categoria' => '', 'pagina' => 1, 'escritorio_id'=>financeiroEhAdmin()?'todos':$filtro_escritorio]); ?>" class="btn btn-secondary btn-sm">
                         <i class="fas fa-times"></i> Limpar
                     </a>
                 </div>
@@ -261,19 +320,19 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <p>Clique em "Novo Lancamento" para cadastrar o primeiro.</p>
             </div>
         <?php else: ?>
-            <div class="finance-table-scroll" tabindex="0" aria-label="Tabela de lançamentos financeiros. Deslize horizontalmente para ver todas as colunas.">
-            <table class="finance-transactions-table">
+            <div class="finance-table-scroll" tabindex="0" aria-label="Tabela de lançamentos financeiros.">
+            <table class="finance-transactions-table table-sticky-actions">
                 <thead>
                     <tr>
                         <?php if($filtro_escritorio==='todos'): ?><th>Escritório</th><?php endif ?>
-                        <th>Data / vencimento</th>
+                        <th>Data / Vencimento</th>
                         <th>Parcela</th>
                         <th>Tipo</th>
                         <th>Status</th>
-                        <th>Descricao</th>
+                        <th>Descrição</th>
                         <th>Categoria</th>
                         <th>Valor</th>
-                        <th>Acoes</th>
+                        <th class="text-right">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -297,7 +356,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <span class="text-muted">—</span>
                             <?php endif; ?>
                         </td>
-                        <td class="finance-transaction-description">
+                        <td class="finance-transaction-type">
                             <?php if ($l['tipo'] === 'RECEITA'): ?>
                                 <span class="badge badge-success"><i class="fas fa-arrow-up"></i> Receita</span>
                             <?php else: ?>
@@ -315,10 +374,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <span class="badge badge-danger">Cancelado</span>
                             <?php endif; ?>
                         </td>
-                        <td>
-                            <strong><?php echo h($l['descricao']); ?></strong>
+                        <td class="finance-transaction-description">
+                            <strong title="<?php echo h($l['descricao']); ?>"><?php echo h($l['descricao']); ?></strong>
                             <?php if (!empty($l['observacoes'])): ?>
-                                <br><small class="text-muted"><?php echo h(mb_strimwidth($l['observacoes'], 0, 60, '...')); ?></small>
+                                <small class="text-muted" title="<?php echo h($l['observacoes']); ?>"><?php echo h(mb_strimwidth($l['observacoes'], 0, 75, '...')); ?></small>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -335,26 +394,32 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <br><small class="text-muted">de <?php echo formatarMoeda($l['valor_original']); ?></small>
                             <?php endif; ?>
                         </td>
-                        <td class="finance-transaction-actions">
-                            <div class="d-flex gap-1 finance-action-buttons">
+                        <td class="finance-transaction-actions text-right">
+                            <div class="finance-action-buttons">
                                 <?php if (in_array($l['status'], ['PENDENTE', 'PARCIAL'], true)): ?>
                                 <button type="button"
-                                        class="btn btn-success btn-sm js-abrir-baixa"
-                                        title="Baixar lancamento"
+                                        class="btn-baixa-financeiro js-abrir-baixa"
+                                        title="Registrar baixa neste lançamento (dar entrada/saída de valor em caixa)"
+                                        data-tooltip="Registrar Baixa / Pagamento"
                                         aria-label="Baixar lançamento <?php echo h($l['descricao']); ?>"
                                         data-id="<?php echo h($l['id']); ?>"
                                         data-descricao="<?php echo h($l['descricao']); ?>"
                                         data-saldo="<?php echo h(number_format((float)$l['saldo_devedor'], 2, '.', '')); ?>"
                                         data-tipo="<?php echo h($l['tipo']); ?>">
-                                    <i class="fas fa-check"></i>
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Baixar</span>
                                 </button>
+                                <?php elseif ($l['status'] === 'PAGO'): ?>
+                                <span class="badge-quitado" title="Lançamento quitado integralmente">
+                                    <i class="fas fa-check-double"></i> Quitado
+                                </span>
                                 <?php endif; ?>
                                 <a href="<?php echo APP_URL; ?>financeiro/form?id=<?php echo urlencode($l['id']); ?>" 
-                                   class="btn btn-secondary btn-sm" title="Editar">
+                                   class="btn btn-secondary btn-sm" title="Editar lançamento">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <a href="<?php echo APP_URL; ?>financeiro/actions?action=excluir&id=<?php echo urlencode($l['id']); ?>" 
-                                   class="btn btn-danger btn-sm" title="Excluir"
+                                   class="btn btn-danger btn-sm" title="Excluir lançamento"
                                    onclick="return confirm('Excluir este lancamento?')">
                                     <i class="fas fa-trash"></i>
                                 </a>
@@ -365,23 +430,109 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </tbody>
             </table>
             </div>
-            <p class="finance-scroll-hint"><i class="fas fa-arrows-left-right"></i> Arraste a tabela para o lado para ver todas as colunas e ações.</p>
+            <p class="finance-scroll-hint"><i class="fas fa-arrows-left-right"></i> Arraste a tabela para o lado para ver todas as colunas.</p>
         <?php endif; ?>
 
-        <!-- Resumo -->
-        <div class="card-footer finance-page-footer">
-            <small class="text-muted">
-                <i class="fas fa-info-circle"></i> 
-                Total: <?php echo count($lancamentos); ?> lancamento(s) | 
-                Receitas pagas: <?php echo formatarMoeda($totalReceitas); ?> |
-            <small class="text-muted">
-                <i class="fas fa-info-circle"></i> 
-                Total: <?php echo count($lancamentos); ?> lancamento(s) | 
-                Receitas pagas: <?php echo formatarMoeda($totalReceitas); ?> |
-                A receber: <?php echo formatarMoeda($totalAReceber); ?> |
-                Despesas: <?php echo formatarMoeda($totalDespesas); ?> | 
-                Saldo: <strong style="color: <?php echo $saldo >= 0 ? 'var(--cor-sucesso)' : 'var(--cor-erro)'; ?>;"><?php echo formatarMoeda($saldo); ?></strong>
-            </small>
+        <!-- Rodapé com Paginação e Resumo Financeiro -->
+        <div class="card-footer finance-page-footer" style="padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; border-top: 1px solid var(--cor-borda);">
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    Mostrando <strong><?php echo $registroInicio; ?></strong> a <strong><?php echo $registroFim; ?></strong> de <strong><?php echo $totalLancamentos; ?></strong> lançamento(s)
+                    <?php if ($filtro_escritorio !== 'todos'): ?>
+                        em <strong><?= h($escritoriosPorId[$filtro_escritorio]['nome'] ?? 'Escritório') ?></strong>
+                    <?php endif; ?>
+                    <?php if (!empty($filtro_tipo)): ?>
+                        (tipo: <strong><?php echo ucfirst(strtolower($filtro_tipo)); ?></strong>)
+                    <?php endif; ?>
+                </small>
+
+                <!-- Seletor de Itens por Página -->
+                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                    <label for="selectPorPaginaFinanceiro" style="margin: 0; font-size: 0.8rem; color: var(--cor-texto-secundario); white-space: nowrap;">Exibir:</label>
+                    <select id="selectPorPaginaFinanceiro" 
+                            class="form-control form-control-sm" 
+                            style="width: auto; height: 32px; padding: 2px 8px; font-size: 0.82rem; border-radius: 4px;" 
+                            onchange="window.location.href=this.value">
+                        <?php foreach ([10, 15, 25, 50, 100] as $qtd): ?>
+                            <option value="<?php echo h(financeiroUrlPaginacao(['por_pagina' => $qtd, 'pagina' => 1])); ?>" <?php echo $porPagina === $qtd ? 'selected' : ''; ?>>
+                                <?php echo $qtd; ?> por pág.
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Navegação de Páginas -->
+            <?php if ($totalPaginas > 1): ?>
+                <nav aria-label="Navegação de páginas do financeiro">
+                    <ul class="paginacao-financeiro" style="display: flex; align-items: center; gap: 5px; margin: 0; padding: 0; list-style: none;">
+                        <!-- Primeira página -->
+                        <li class="paginacao-item <?php echo $paginaAtual <= 1 ? 'disabled' : ''; ?>">
+                            <a class="paginacao-link" 
+                               href="<?php echo $paginaAtual <= 1 ? 'javascript:void(0)' : h(financeiroUrlPaginacao(['pagina' => 1])); ?>" 
+                               title="Primeira página">
+                                <i class="fas fa-angles-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Página anterior -->
+                        <li class="paginacao-item <?php echo $paginaAtual <= 1 ? 'disabled' : ''; ?>">
+                            <a class="paginacao-link" 
+                               href="<?php echo $paginaAtual <= 1 ? 'javascript:void(0)' : h(financeiroUrlPaginacao(['pagina' => $paginaAtual - 1])); ?>" 
+                               title="Página anterior">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Janela de páginas -->
+                        <?php
+                        $janelaInicio = max(1, $paginaAtual - 2);
+                        $janelaFim = min($totalPaginas, $paginaAtual + 2);
+
+                        if ($janelaInicio > 1) {
+                            echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h(financeiroUrlPaginacao(['pagina' => 1])) . '">1</a></li>';
+                            if ($janelaInicio > 2) {
+                                echo '<li class="paginacao-ellipsis" style="padding: 0 4px; color: #94a3b8;">...</li>';
+                            }
+                        }
+
+                        for ($p = $janelaInicio; $p <= $janelaFim; $p++) {
+                            if ($p === $paginaAtual) {
+                                echo '<li class="paginacao-item active"><span class="paginacao-link active-link" style="background: var(--cor-primaria, #1e4d3f); color: #fff; border-color: var(--cor-primaria, #1e4d3f);">' . $p . '</span></li>';
+                            } else {
+                                echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h(financeiroUrlPaginacao(['pagina' => $p])) . '">' . $p . '</a></li>';
+                            }
+                        }
+
+                        if ($janelaFim < $totalPaginas) {
+                            if ($janelaFim < $totalPaginas - 1) {
+                                echo '<li class="paginacao-ellipsis" style="padding: 0 4px; color: #94a3b8;">...</li>';
+                            }
+                            echo '<li class="paginacao-item"><a class="paginacao-link" href="' . h(financeiroUrlPaginacao(['pagina' => $totalPaginas])) . '">' . $totalPaginas . '</a></li>';
+                        }
+                        ?>
+
+                        <!-- Próxima página -->
+                        <li class="paginacao-item <?php echo $paginaAtual >= $totalPaginas ? 'disabled' : ''; ?>">
+                            <a class="paginacao-link" 
+                               href="<?php echo $paginaAtual >= $totalPaginas ? 'javascript:void(0)' : h(financeiroUrlPaginacao(['pagina' => $paginaAtual + 1])); ?>" 
+                               title="Próxima página">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+
+                        <!-- Última página -->
+                        <li class="paginacao-item <?php echo $paginaAtual >= $totalPaginas ? 'disabled' : ''; ?>">
+                            <a class="paginacao-link" 
+                               href="<?php echo $paginaAtual >= $totalPaginas ? 'javascript:void(0)' : h(financeiroUrlPaginacao(['pagina' => $totalPaginas])); ?>" 
+                               title="Última página">
+                                <i class="fas fa-angles-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -503,19 +654,80 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 .finance-filter-fields label { display:block; margin-bottom:5px; font-size:.8rem; }
 .finance-filter-fields select,.finance-filter-fields input { width:100%; min-height:42px; padding:8px 10px; box-sizing:border-box; }
 .finance-filter-actions .btn { min-height:42px; white-space:nowrap; }
-.finance-table-scroll { width:100%; overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; scrollbar-gutter:stable; }
+.finance-table-scroll { width:100%; overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; scrollbar-gutter:stable; position:relative; }
 .finance-scroll-hint { display:none; margin:8px 20px 0; color:var(--cor-texto-secundario); font-size:.78rem; }
-.finance-transactions-table { width:100% !important; min-width:1480px !important; table-layout:auto !important; }
-.finance-transactions-table th,.finance-transactions-table td { min-width:0 !important; overflow-wrap:normal !important; word-break:normal !important; }
-.finance-transactions-table th { white-space:nowrap !important; }
-.finance-transactions-table th:nth-child(1),.finance-transactions-table td:nth-child(1) { width:12%; min-width:105px !important; white-space:nowrap !important; }
-.finance-transactions-table th:nth-child(2),.finance-transactions-table td:nth-child(2) { width:10%; min-width:92px !important; white-space:nowrap !important; }
-.finance-transactions-table th:nth-child(3),.finance-transactions-table td:nth-child(3) { width:11%; min-width:105px !important; white-space:nowrap !important; }
-.finance-transaction-description { width:28%; min-width:210px !important; overflow-wrap:anywhere !important; }
-.finance-transaction-value { min-width:128px !important; white-space:nowrap !important; }
-.finance-transaction-value strong { font-size:1rem; }.finance-transaction-value.is-income{color:var(--cor-sucesso)}.finance-transaction-value.is-expense{color:var(--cor-erro)}
-.finance-transaction-actions { min-width:132px !important; white-space:nowrap !important; }.finance-action-buttons { flex-wrap:wrap; }
-.finance-page-footer { padding:12px 20px; }
+.finance-transactions-table { width:100% !important; min-width:960px !important; table-layout:auto !important; border-collapse:separate !important; border-spacing:0 !important; }
+.finance-transactions-table th,.finance-transactions-table td { padding:12px 14px !important; vertical-align:middle !important; border-bottom:1px solid var(--cor-borda) !important; background:#ffffff; }
+.finance-transactions-table thead th { background:#f8faf9 !important; color:#475569 !important; font-size:0.82rem !important; font-weight:700 !important; text-transform:uppercase !important; letter-spacing:0.04em !important; white-space:nowrap !important; }
+.finance-transactions-table tbody tr:hover td { background-color:#f8fafc !important; }
+.finance-transaction-description { max-width:280px; min-width:180px; }
+.finance-transaction-description strong { display:block; line-height:1.35; word-break:break-word; }
+.finance-transaction-value { min-width:115px !important; white-space:nowrap !important; }
+.finance-transaction-value strong { font-size:0.98rem; }.finance-transaction-value.is-income{color:var(--cor-sucesso)}.finance-transaction-value.is-expense{color:var(--cor-erro)}
+.finance-transactions-table th:last-child,
+.finance-transactions-table td:last-child {
+    position:sticky !important;
+    right:0 !important;
+    z-index:4 !important;
+    min-width:160px !important;
+    width:160px !important;
+    text-align:right !important;
+    box-shadow:-4px 0 10px rgba(15,23,42,0.07) !important;
+    background:#ffffff !important;
+}
+.finance-transactions-table thead th:last-child { background:#f1f5f9 !important; }
+.finance-transactions-table tbody tr:hover td:last-child { background:#f1f5f9 !important; }
+.finance-action-buttons { display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:nowrap; }
+
+/* Paginação Financeiro */
+.paginacao-financeiro { display:flex; align-items:center; gap:5px; margin:0; padding:0; list-style:none; }
+.paginacao-item { display:inline-block; }
+.paginacao-link {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:34px;
+    height:34px;
+    padding:0 8px;
+    border-radius:6px;
+    border:1px solid var(--cor-borda, #e2e8f0);
+    background:var(--cor-card-bg, #ffffff);
+    color:var(--cor-texto, #334155);
+    font-size:0.85rem;
+    font-weight:500;
+    text-decoration:none;
+    transition:all 0.15s ease;
+    user-select:none;
+}
+.paginacao-link:hover:not(.disabled) {
+    border-color:var(--cor-primaria, #1e4d3f);
+    color:var(--cor-primaria, #1e4d3f);
+    background:rgba(30,77,63,0.06);
+}
+.paginacao-item.active .paginacao-link {
+    background:var(--cor-primaria, #1e4d3f) !important;
+    border-color:var(--cor-primaria, #1e4d3f) !important;
+    color:#ffffff !important;
+    font-weight:700;
+    box-shadow:0 2px 4px rgba(30,77,63,0.25);
+}
+.paginacao-item.disabled .paginacao-link {
+    color:#cbd5e1 !important;
+    border-color:#f1f5f9 !important;
+    background:#f8fafc !important;
+    cursor:not-allowed;
+    opacity:0.7;
+}
+.paginacao-ellipsis {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:28px;
+    height:34px;
+    color:#94a3b8;
+    font-size:0.9rem;
+}
+.finance-page-footer { padding:14px 20px; }
 @media (max-width:1180px) { .finance-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.finance-filter-fields{grid-template-columns:repeat(3,minmax(0,1fr))}.finance-filter-office{grid-column:span 2}.finance-filter-actions{width:100%}.finance-filter-actions .btn{width:100%;justify-content:center} }
 @media (min-width:769px) and (max-width:1400px) { .finance-scroll-hint{display:block} }
 @media (max-width:768px) { .finance-page{overflow:visible!important}.finance-summary-grid{grid-template-columns:1fr;margin:12px}.finance-summary-card{padding:15px}.finance-filter-form{margin:0 12px 14px}.finance-filter-fields{grid-template-columns:1fr}.finance-filter-office{grid-column:auto}.finance-filter-actions .btn{width:100%}.finance-table-scroll{overflow:visible}.finance-transactions-table,.finance-transactions-table tbody,.finance-transactions-table tr,.finance-transactions-table td{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important}.finance-transactions-table thead{display:none!important}.finance-transactions-table{background:transparent!important}.finance-transactions-table tbody{background:transparent!important}.finance-transactions-table tbody tr{margin:0 12px 12px;padding:12px 14px;overflow:hidden;border:1px solid var(--cor-borda)!important;border-radius:12px;background:var(--cor-painel);box-shadow:0 2px 10px rgba(14,52,43,.035)}.finance-transactions-table td{min-height:38px;padding:8px 0!important;display:grid!important;grid-template-columns:minmax(96px,38%) minmax(0,1fr);align-items:start;gap:12px;border:0!important;border-bottom:1px solid var(--cor-borda)!important;background:transparent!important;text-align:left!important;white-space:normal!important;overflow-wrap:anywhere!important}.finance-transactions-table td:last-child{border-bottom:0!important}.finance-transactions-table td::before{content:attr(data-label);color:var(--cor-texto-secundario);font-size:10px;font-weight:800;letter-spacing:.045em;text-transform:uppercase}.finance-transactions-table td[data-label="Acoes"],.finance-transactions-table td[data-label="Ações"]{grid-template-columns:1fr}.finance-action-buttons{display:flex;gap:8px}.finance-action-buttons .btn{min-width:42px;min-height:42px}.finance-page-footer{padding:12px}.finance-page-footer small{display:block;line-height:1.65} }

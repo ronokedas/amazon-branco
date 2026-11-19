@@ -304,8 +304,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
             </div>
         <?php else: ?>
-            <div class="table-responsive" style="overflow-x: auto;">
-                <table id="tabelaClientes" class="table" style="margin-bottom: 0;">
+            <div class="table-responsive" style="overflow-x: auto; position: relative;">
+                <table id="tabelaClientes" class="table table-sticky-actions" style="margin-bottom: 0;">
                     <thead>
                         <tr>
                             <th>Nome / Razão Social</th>
@@ -313,11 +313,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <th>CPF / CNPJ</th>
                             <th>Contato (Telefone / E-mail)</th>
                             <th class="text-center">Embarcações</th>
-                            <?php if ($perfilFiltro === 'despachante' || $perfilFiltro === 'todos'): ?>
+                            <?php if ($perfilFiltro === 'despachante'): ?>
                                 <th>Tipos Atendidos</th>
                             <?php endif; ?>
                             <th class="text-center">Financeiro / PIX</th>
-                            <th class="text-right" style="min-width: 145px;">Ações</th>
+                            <th class="text-right" style="min-width: 155px; width: 155px;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -398,7 +398,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <span class="text-muted">0</span>
                                 <?php endif; ?>
                             </td>
-                            <?php if ($perfilFiltro === 'despachante' || $perfilFiltro === 'todos'): ?>
+                            <?php if ($perfilFiltro === 'despachante'): ?>
                                 <td>
                                     <?php if (!empty($c['tipos_atendidos'])): ?>
                                         <small style="color: var(--cor-primaria); font-weight: 500;">
@@ -577,6 +577,37 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 </div>
 
 <style>
+/* Coluna de Ações Fixa (Sticky Right) */
+#tabelaClientes th:last-child,
+#tabelaClientes td:last-child {
+    position: sticky !important;
+    right: 0 !important;
+    background: #ffffff !important;
+    z-index: 5 !important;
+    box-shadow: -4px 0 10px rgba(15, 23, 42, 0.08) !important;
+    min-width: 155px !important;
+    width: 155px !important;
+    text-align: right !important;
+}
+
+#tabelaClientes thead th:last-child {
+    background: #f8fafc !important;
+}
+
+#tabelaClientes tbody tr:hover td:last-child {
+    background: #f8fafc !important;
+}
+
+/* Otimização de colunas para caber na tela */
+#tabelaClientes td:first-child {
+    max-width: 250px;
+}
+#tabelaClientes td:first-child strong {
+    display: block;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
 /* Estilo dedicado para o Botão do WhatsApp */
 .btn-whatsapp {
     background-color: #25d366 !important;

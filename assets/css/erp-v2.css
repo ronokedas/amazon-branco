@@ -3214,7 +3214,7 @@ table td strong { color: var(--erp-text) !important; }
 @media(max-width:1350px){.feedback-layout{grid-template-columns:1fr}.feedback-filters{grid-template-columns:1fr 1fr}.feedback-filters input:first-child{grid-column:1/-1}.feedback-message{max-width:94%}.feedback-dashboard-card{align-items:flex-start;flex-direction:column}}@media(max-width:600px){.feedback-page{padding:14px}.feedback-fields,.feedback-filters{grid-template-columns:1fr}.feedback-thread-head{flex-direction:column}.feedback-dashboard-card small{display:none}}
 .feedback-tabs{display:flex;gap:6px;margin:-4px 0 18px;border-bottom:1px solid #dbe5e0}.feedback-tabs a{padding:10px 14px;color:#607169!important;border-bottom:3px solid transparent;font-size:12px;font-weight:750}.feedback-tabs a.active{color:#087b5c!important;border-color:#0a9d70}.feedback-compliance,.feedback-audit-notice{display:flex;align-items:flex-start;gap:9px;margin-bottom:16px;padding:11px 13px;border-radius:8px;font-size:11px;line-height:1.45}.feedback-compliance{color:#526860;background:#f0f6f3;border:1px solid #d3e3dc}.feedback-audit-notice{color:#745509;background:#fff7df;border:1px solid #ecd28b}.feedback-audit-notice strong{display:block;margin-bottom:2px}.feedback-audit-filters{display:grid;grid-template-columns:2fr repeat(3,minmax(135px,1fr));gap:8px;margin-bottom:18px}.feedback-audit-filters input,.feedback-audit-filters select{min-width:0;margin:0}.feedback-audit .feedback-results{border-top:1px solid #edf1ef}.feedback-thread-page>.feedback-compliance,.feedback-thread-page>.feedback-audit-notice{margin-top:4px}@media(max-width:1100px){.feedback-audit-filters{grid-template-columns:1fr 1fr}}@media(max-width:600px){.feedback-metrics{display:grid;grid-template-columns:1fr}.feedback-audit-filters{grid-template-columns:1fr}.feedback-tabs a{flex:1;text-align:center}}
 
-/* Padrão de tabelas extensas: preserva colunas e ações no desktop com rolagem apenas na tabela. */
+/* Padrão de tabelas extensas: preserva colunas e ações no desktop com rolagem suave na tabela. */
 @media (min-width: 1025px) {
     .erp-table-scroll {
         max-width: 100%;
@@ -3223,15 +3223,15 @@ table td strong { color: var(--erp-text) !important; }
         -webkit-overflow-scrolling: touch;
         scrollbar-gutter: stable;
         touch-action: pan-x pan-y;
+        position: relative;
     }
     .erp-table-scroll > table:not(.finance-transactions-table) {
-        width: max-content !important;
-        min-width: 100% !important;
+        width: 100% !important;
+        min-width: 860px !important;
         table-layout: auto !important;
     }
     .erp-table-scroll > table:not(.finance-transactions-table) th,
     .erp-table-scroll > table:not(.finance-transactions-table) td {
-        white-space: nowrap;
         word-break: normal;
         overflow-wrap: normal;
     }
@@ -3256,4 +3256,75 @@ table td strong { color: var(--erp-text) !important; }
 @media (max-width: 1024px) {
     .erp-table-scroll { overflow: visible !important; }
     .erp-table-scroll-hint { display: none !important; }
+}
+
+/* ==============================================================
+   PADRÃO DE TABELAS COM AÇÕES FIXAS (STICKY ACTIONS) E BOTÕES INTERATIVOS
+   ============================================================== */
+.table-sticky-actions th:last-child,
+.table-sticky-actions td:last-child {
+    position: sticky !important;
+    right: 0 !important;
+    background: #ffffff !important;
+    z-index: 5 !important;
+    box-shadow: -4px 0 10px rgba(15, 23, 42, 0.08) !important;
+}
+
+.table-sticky-actions thead th:last-child {
+    background: #f8fafc !important;
+}
+
+.table-sticky-actions tbody tr:hover td:last-child {
+    background: #f8fafc !important;
+}
+
+/* Botão Moderno e Interativo "Dar Baixa" */
+.btn-baixa-financeiro {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    border: 1px solid #059669 !important;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.22);
+    white-space: nowrap;
+}
+
+.btn-baixa-financeiro:hover,
+.btn-baixa-financeiro:focus-visible {
+    background: linear-gradient(135deg, #059669, #047857) !important;
+    border-color: #047857 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(5, 150, 105, 0.35);
+}
+
+.btn-baixa-financeiro:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.25);
+}
+
+.btn-baixa-financeiro i {
+    font-size: 0.95rem;
+}
+
+.badge-quitado {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #065f46;
+    background: #d1fae5;
+    border: 1px solid #a7f3d0;
+    border-radius: 6px;
+    white-space: nowrap;
 }
