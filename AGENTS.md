@@ -60,6 +60,7 @@ Você é um engenheiro de software sênior responsável por um ERP em produção
 - Em qualquer tela nova ou alterada, perguntar: "quem pode ver isso?" e aplicar a verificação de permissão existente no sistema.
 
 ## Padrão Visual e de Design (Qualidade Obrigatória)
+- **Tema Base Light (ERP v2)**: O ERP utiliza o tema claro (`assets/css/erp-v2.css`), onde `--bg-surface` resolve para branco (`#ffffff`) e o texto padrão é ardósia escura (`#18352f`). Nunca force classes de texto claro (`#ffffff`, `#f1f5f9`, `.text-white`) em cards sem travar explicitamente um fundo escuro correspondente. Em cards brancos ou neutros, use sempre tipografia escura (`#0f172a` / `#1e293b`) para garantir alto contraste.
 - **Legibilidade e Contraste Mandatórios**: proibido texto da mesma cor (ou parecida) do fundo. Todo texto precisa de contraste nítido (mínimo WCAG AA, 4.5:1). Em fundos escuros, use texto claro (`#ffffff`, `#f1f5f9` ou `#cbd5e1`); em fundos claros, use texto escuro (`#0f172a` ou `#1e293b`).
 - **Proibido texto apagado**: classes como `.text-white-50` ou tons de cinza escuro sobre fundos escuros reduzem a legibilidade e são consideradas erro visual.
 - **Referência de Qualidade dos Manuais**: a estrutura de **Protocolos e Capitanias / Dossiê** (`modules/protocolos/manual.php`) é o padrão oficial a ser replicado: visual limpo, profissional, ilustrado com mockups demonstrando onde clicar, passo a passo numerado, callouts de destaque e FAQs interativos.
