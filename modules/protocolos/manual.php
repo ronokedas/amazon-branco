@@ -36,33 +36,36 @@ require __DIR__ . '/../../includes/sidebar.php';
     align-items: center;
     gap: 8px;
     padding: 10px 16px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(86, 224, 173, 0.25);
-    border-radius: 10px;
-    color: var(--text-primary, #ffffff);
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px;
+    color: #0f172a !important;
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 600;
     transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .manual-nav-pill:hover {
-    background: rgba(86, 224, 173, 0.15);
-    border-color: var(--accent, #56e0ad);
-    color: var(--accent, #56e0ad);
+    background: #ecfdf5 !important;
+    border-color: #087653 !important;
+    color: #087653 !important;
     transform: translateY(-2px);
 }
 .step-card {
-    background: var(--bg-surface, #0c2b24);
-    border: 1px solid rgba(86, 224, 173, 0.2);
+    background: #ffffff !important;
+    border: 1px solid #dce5e2 !important;
     border-radius: 14px;
-    padding: 24px;
+    padding: 26px;
     margin-bottom: 30px;
     scroll-margin-top: 90px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+    color: #1e293b !important;
     transition: border-color 0.2s ease;
 }
 .step-card:hover {
-    border-color: rgba(86, 224, 173, 0.45);
+    border-color: #087653 !important;
+}
 }
 .step-badge {
     display: inline-flex;
@@ -118,20 +121,30 @@ require __DIR__ . '/../../includes/sidebar.php';
     padding: 20px;
 }
 .callout-box {
-    background: rgba(86, 224, 173, 0.08);
-    border-left: 4px solid var(--accent, #56e0ad);
-    border-radius: 6px;
-    padding: 14px 18px;
-    margin: 16px 0;
-    font-size: 0.92rem;
+    background: #ecfdf5 !important;
+    border-left: 5px solid #087653 !important;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 18px 0;
+    font-size: 0.95rem;
+    color: #064e3b !important;
+    line-height: 1.6;
+}
+.callout-box strong {
+    color: #022c22 !important;
 }
 .callout-tip {
-    background: rgba(245, 158, 11, 0.08);
-    border-left: 4px solid #f59e0b;
-    border-radius: 6px;
-    padding: 14px 18px;
-    margin: 16px 0;
-    font-size: 0.92rem;
+    background: #fffbeb !important;
+    border-left: 5px solid #d97706 !important;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 18px 0;
+    font-size: 0.95rem;
+    color: #78350f !important;
+    line-height: 1.6;
+}
+.callout-tip strong {
+    color: #451a03 !important;
 }
 .btn-demo {
     display: inline-flex;
