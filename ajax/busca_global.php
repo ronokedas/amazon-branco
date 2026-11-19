@@ -425,29 +425,54 @@ try {
     // 7. PROPOSTAS COMERCIAIS
     // ---------------------------------------------------------
     if ($podeComercial) {
+        require_once __DIR__ . '/../includes/propostas_filtros.php';
         $stmt = $pdo->prepare("
             SELECT p.id, p.numero, p.valor_total, p.status, c.nome AS cliente_nome,
-                   CONCAT('comercial/propostas?busca=', p.numero) AS url
+                   CONCAT('comercial/propostas?id=', p.id, '&visualizar=1') AS url
             FROM propostas p
             LEFT JOIN clientes c ON c.id = p.cliente_id
-            WHERE p.numero LIKE ? OR c.nome LIKE ?
+            WHERE p.numero LIKE ? 
+               OR c.nome LIKE ? 
+               OR c.cpf_cnpj LIKE ?
+               OR EXISTS (
+                   SELECT 1 FROM propostas_embarcacoes pe 
+                   INNER JOIN embarcacoes e ON e.id = pe.embarcacao_id 
+                   WHERE pe.proposta_id = p.id AND (e.nome LIKE ? OR e.registro LIKE ? OR e.numero_inscricao LIKE ?)
+               )
+               OR EXISTS (
+                   SELECT 1 FROM propostas_servicos ps 
+                   INNER JOIN embarcacoes e2 ON e2.id = ps.embarcacao_id 
+                   WHERE ps.proposta_id = p.id AND (e2.nome LIKE ? OR e2.registro LIKE ? OR e2.numero_inscricao LIKE ?)
+               )
             ORDER BY p.data_emissao DESC
-            LIMIT 5
+            LIMIT 6
         ");
-        $stmt->execute([$like, $like]);
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $stmt->execute([$like, $like, $like, $like, $like, $like, $like, $like, $like]);
+        $rowsPropostas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $mapaEmbs = (!empty($rowsPropostas) && function_exists('propostasBuscarEmbarcacoesMapa')) 
+            ? propostasBuscarEmbarcacoesMapa($pdo, array_column($rowsPropostas, 'id')) 
+            : [];
+
+        foreach ($rowsPropostas as $row) {
             $badge = formatarBadgeStatus($row['status']);
             $val = !empty($row['valor_total']) ? 'R$ ' . number_format((float)$row['valor_total'], 2, ',', '.') : 'Valor sob consulta';
-            $cliente = !empty($row['cliente_nome']) ? 'Cliente: ' . $row['cliente_nome'] . ' · ' : '';
-            $subtitulo = $cliente . $val;
+            $cliente = !empty($row['cliente_nome']) ? $row['cliente_nome'] : 'Cliente não informado';
+            $embarcacoesLista = $mapaEmbs[$row['id']] ?? [];
+            $embTexto = !empty($embarcacoesLista) ? implode(', ', $embarcacoesLista) : 'Embarcação N/I';
+
+            // Título: Número da Proposta + Nome da Empresa
+            $tituloProposta = $row['numero'] . ' · ' . $cliente;
+            // Subtítulo: Embarcação em destaque + Valor
+            $subtitulo = 'Barco: ' . $embTexto . ' · ' . $val;
 
             $resultados[] = [
                 'id' => $row['id'],
                 'tipo' => 'proposta',
                 'categoria' => 'Propostas Comerciais',
                 'categoria_slug' => 'comercial',
-                'nome' => $row['numero'] . ' · ' . $subtitulo,
-                'titulo' => $row['numero'],
+                'nome' => $tituloProposta . ' · ' . $subtitulo,
+                'titulo' => $tituloProposta,
                 'subtitulo' => $subtitulo,
                 'badge' => $badge['label'],
                 'badge_class' => $badge['class'],

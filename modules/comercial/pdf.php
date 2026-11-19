@@ -198,7 +198,8 @@ class PropostaPDF extends \setasign\Fpdi\Tcpdf\Fpdi {
 
         $this->SetCreator(APP_NAME);
         $this->SetAuthor('Amazon Naval Ltda');
-        $this->SetTitle('Proposta de Serviço - ' . $proposta['numero']);
+        $clienteNomePdf = !empty($proposta['cliente_nome']) ? ' - ' . $proposta['cliente_nome'] : '';
+        $this->SetTitle('Proposta de Serviço - ' . $proposta['numero'] . $clienteNomePdf);
         // Cabecalho e rodape sao aplicados pelo ciclo de pagina abaixo para
         // cobrir tambem quebras automaticas abertas dentro de MultiCell.
         $this->setPrintHeader(false);
@@ -266,10 +267,11 @@ class PropostaPDF extends \setasign\Fpdi\Tcpdf\Fpdi {
         $this->SetTextColor(0, 96, 78);
         $this->Cell(0, 5, 'AMAZON NAVAL LTDA', 0, 1, 'C');
 
-        // Número da proposta
-        $this->SetFont('helvetica', 'B', 9);
+        // Número da proposta e nome da empresa
+        $this->SetFont('helvetica', 'B', 8.5);
         $this->SetTextColor(0, 61, 52);
-        $this->Cell(0, 5, $this->numero, 0, 1, 'R');
+        $empresaCliente = !empty($this->proposta['cliente_nome']) ? ' — ' . $this->proposta['cliente_nome'] : '';
+        $this->Cell(0, 5, $this->numero . $empresaCliente, 0, 1, 'R');
 
         // Linha separadora
         $this->SetDrawColor(0, 61, 52);
@@ -909,7 +911,8 @@ if (!empty($proposta['token_assinatura'])) {
 // ============================================
 // SAÍDA DO PDF
 // ============================================
-$nomeArquivo = 'Proposta_' . str_replace('/', '-', $proposta['numero']) . '.pdf';
+$sufixoCliente = !empty($proposta['cliente_nome']) ? '_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', mb_substr($proposta['cliente_nome'], 0, 30)) : '';
+$nomeArquivo = 'Proposta_' . str_replace('/', '-', $proposta['numero']) . $sufixoCliente . '.pdf';
 $conteudoBase = $pdf->Output($nomeArquivo, 'S');
 
 // O TCPDF pode reordenar o buffer de paginas criadas dentro de MultiCell.

@@ -164,6 +164,35 @@ if ($visualizar) {
         $propostaDetalhe = $stmtDet->fetch(PDO::FETCH_ASSOC);
 
         if ($propostaDetalhe) {
+            // Buscar embarcações vinculadas diretamente ou via serviços
+            $stmtEmbDet = $pdo->prepare("
+                SELECT DISTINCT sub.id, sub.nome, sub.registro, sub.numero_inscricao, sub.tipo_embarcacao,
+                       sub.comprimento_total, sub.boca_moldada, sub.pontal_moldado, sub.porto_inscricao
+                FROM (
+                    SELECT e.id, e.nome, e.registro, e.numero_inscricao, e.tipo_embarcacao,
+                           e.comprimento_total, e.boca_moldada, e.pontal_moldado, e.porto_inscricao
+                    FROM propostas_embarcacoes pe
+                    INNER JOIN embarcacoes e ON e.id = pe.embarcacao_id
+                    WHERE pe.proposta_id = :pid1
+                    UNION
+                    SELECT e2.id, e2.nome, e2.registro, e2.numero_inscricao, e2.tipo_embarcacao,
+                           e2.comprimento_total, e2.boca_moldada, e2.pontal_moldado, e2.porto_inscricao
+                    FROM propostas_servicos ps
+                    INNER JOIN embarcacoes e2 ON e2.id = ps.embarcacao_id
+                    WHERE ps.proposta_id = :pid2
+                ) sub
+                ORDER BY sub.nome ASC
+            ");
+            $stmtEmbDet->execute([':pid1' => $idDetalhe, ':pid2' => $idDetalhe]);
+            $embarcacoesDetalhe = $stmtEmbDet->fetchAll(PDO::FETCH_ASSOC);
+
+            $nomesEmbarcacoesDetalhe = [];
+            foreach ($embarcacoesDetalhe as $emb) {
+                $reg = !empty($emb['numero_inscricao']) ? $emb['numero_inscricao'] : ($emb['registro'] ?? '');
+                $nomesEmbarcacoesDetalhe[] = $emb['nome'] . (!empty($reg) ? ' (' . $reg . ')' : '');
+            }
+            $embResumoTexto = !empty($nomesEmbarcacoesDetalhe) ? implode(', ', $nomesEmbarcacoesDetalhe) : 'Não informada';
+
             // Buscar serviços do detalhe
             $stmtServDet = $pdo->prepare("
                 SELECT ps.*, s.nome AS servico_nome, e.nome AS embarcacao_nome, e.registro AS embarcacao_registro
@@ -190,13 +219,14 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
     <!-- ===== MODO VISUALIZAÇÃO DE DETALHE ===== -->
     <div class="welcome-section" style="margin-bottom: 20px;">
         <div>
-            <h1><i class="fas fa-file-invoice"></i> Proposta <?php echo h($propostaDetalhe['numero']); ?></h1>
+            <h1><i class="fas fa-file-invoice text-success"></i> Proposta <?php echo h($propostaDetalhe['numero']); ?> &mdash; <?php echo h($propostaDetalhe['cliente_nome']); ?></h1>
             <p>
                 <span class="badge badge-<?php echo $statusConfig[$propostaDetalhe['status']]['cor'] ?? 'secondary'; ?>">
                     <?php echo $statusConfig[$propostaDetalhe['status']]['label'] ?? $propostaDetalhe['status']; ?>
                 </span>
+                &middot; <i class="fas fa-ship" style="color: #087653;"></i> <strong>Embarcação:</strong> <span style="font-weight: 600; color: #087653;"><?php echo h($embResumoTexto); ?></span>
                 &middot; Emitida em <?php echo date('d/m/Y', strtotime($propostaDetalhe['data_emissao'])); ?>
-                &middot; Válida até <?php echo date('d/m/Y', strtotime($propostaDetalhe['data_validade'] ?? '')); ?>
+                &middot; Válida até <?php echo !empty($propostaDetalhe['data_validade']) ? date('d/m/Y', strtotime($propostaDetalhe['data_validade'])) : '-'; ?>
             </p>
         </div>
         <div style="display: flex; gap: 10px;">
@@ -273,6 +303,56 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                 <small class="text-muted">Email</small>
                 <div><?php echo h($propostaDetalhe['cliente_email'] ?? '-'); ?></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Dados da Embarcação (Identificação Náutica) -->
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;"><i class="fas fa-ship text-success"></i> <?php echo count($embarcacoesDetalhe) > 1 ? 'Embarcações Vinculadas' : 'Dados da Embarcação'; ?></h3>
+            <?php if (!empty($embarcacoesDetalhe)): ?>
+                <span class="badge badge-info"><?php echo count($embarcacoesDetalhe); ?> embarcação(ões)</span>
+            <?php endif; ?>
+        </div>
+        <div class="card-body" style="padding: 16px 20px;">
+            <?php if (empty($embarcacoesDetalhe)): ?>
+                <div style="color: var(--cor-texto-secundario); padding: 8px 0;">
+                    <i class="fas fa-info-circle"></i> Nenhuma embarcação vinculada diretamente a esta proposta.
+                </div>
+            <?php else: ?>
+                <?php foreach ($embarcacoesDetalhe as $idx => $emb): ?>
+                    <?php if ($idx > 0): ?><hr style="margin: 16px 0; border: 0; border-top: 1px dashed var(--cor-borda);"><?php endif; ?>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: start;">
+                        <div>
+                            <small class="text-muted" style="display: block; margin-bottom: 2px;">Nome da Embarcação</small>
+                            <div style="font-weight: 700; font-size: 1.05rem; color: #087653;">
+                                <a href="<?php echo APP_URL; ?>embarcacoes/ver?id=<?php echo urlencode($emb['id']); ?>" target="_blank" style="text-decoration: none; color: inherit;" title="Abrir cadastro da embarcação">
+                                    <i class="fas fa-ship me-1"></i> <?php echo h($emb['nome']); ?> <i class="fas fa-external-link-alt" style="font-size: 0.75rem; vertical-align: middle;"></i>
+                                </a>
+                            </div>
+                        </div>
+                        <div>
+                            <small class="text-muted" style="display: block; margin-bottom: 2px;">Inscrição / Registro Capitania</small>
+                            <div style="font-weight: 600;"><?php echo h(!empty($emb['numero_inscricao']) ? $emb['numero_inscricao'] : ($emb['registro'] ?? '-')); ?></div>
+                        </div>
+                        <div>
+                            <small class="text-muted" style="display: block; margin-bottom: 2px;">Tipo de Embarcação</small>
+                            <div><?php echo h($emb['tipo_embarcacao'] ?? 'Não informado'); ?></div>
+                        </div>
+                        <div>
+                            <small class="text-muted" style="display: block; margin-bottom: 2px;">Porto de Inscrição</small>
+                            <div><?php echo h($emb['porto_inscricao'] ?? '-'); ?></div>
+                        </div>
+                        <?php if (!empty($emb['comprimento_total']) || !empty($emb['boca_moldada']) || !empty($emb['pontal_moldado'])): ?>
+                        <div style="grid-column: 1 / -1; background: var(--bg-surface-2, #f8fafc); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border, #e2e8f0); display: flex; gap: 20px; flex-wrap: wrap; font-size: 0.88rem;">
+                            <span><small class="text-muted">Comprimento:</small> <strong><?php echo number_format((float)$emb['comprimento_total'], 2, ',', '.'); ?> m</strong></span>
+                            <span><small class="text-muted">Boca:</small> <strong><?php echo number_format((float)$emb['boca_moldada'], 2, ',', '.'); ?> m</strong></span>
+                            <span><small class="text-muted">Pontal:</small> <strong><?php echo number_format((float)$emb['pontal_moldado'], 2, ',', '.'); ?> m</strong></span>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -437,8 +517,8 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
             <table id="tabelaPropostas">
                 <thead>
                     <tr>
-                        <th>Número</th>
-                        <th>Cliente</th>
+                        <th>Número / Empresa</th>
+                        <th>CPF / CNPJ</th>
                         <th>Embarcação(ões)</th>
                         <th>Valor Total</th>
                         <th>Parcelas</th>
@@ -466,13 +546,22 @@ require_once __DIR__ . '/../../../includes/sidebar.php';
                     ?>
                     <tr>
                         <td>
-                            <strong style="font-family: monospace; font-size: 0.9rem;"><?php echo h($p['numero']); ?></strong>
+                            <strong style="font-family: monospace; font-size: 0.95rem; color: #087653;"><?php echo h($p['numero']); ?></strong>
+                            <div style="font-weight: 600; font-size: 0.88rem; color: var(--cor-texto, #0f172a); margin-top: 2px;">
+                                <?php echo h($p['cliente_nome']); ?>
+                            </div>
                         </td>
                         <td>
-                            <div style="font-weight: 600;"><?php echo h($p['cliente_nome']); ?></div>
-                            <small style="color: var(--cor-texto-secundario);"><?php echo h($p['cliente_cpfcnpj'] ?? ''); ?></small>
+                            <div style="font-weight: 600;"><?php echo h(!empty($p['cliente_cpfcnpj']) ? $p['cliente_cpfcnpj'] : '-'); ?></div>
+                            <?php if (!empty($p['cliente_email'])): ?>
+                                <small style="color: var(--cor-texto-secundario); display: block;"><?php echo h($p['cliente_email']); ?></small>
+                            <?php endif; ?>
                         </td>
-                        <td><small><?php echo $embNomes; ?></small></td>
+                        <td>
+                            <span style="display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: #087653;">
+                                <i class="fas fa-ship"></i> <?php echo $embNomes; ?>
+                            </span>
+                        </td>
                         <td>
                             <strong style="color: var(--cor-destaque);">R$ <?php echo number_format((float)$p['valor_total'], 2, ',', '.'); ?></strong>
                         </td>

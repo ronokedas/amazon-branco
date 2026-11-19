@@ -360,6 +360,11 @@ try {
 
     ")->fetchAll(PDO::FETCH_ASSOC);
 
+    require_once __DIR__ . '/../../includes/propostas_filtros.php';
+    $embarcacoesMapaPropostas = (!empty($propostas) && function_exists('propostasBuscarEmbarcacoesMapa'))
+        ? propostasBuscarEmbarcacoesMapa($pdo, array_column($propostas, 'id'))
+        : [];
+
 
 
     $vistoriadores = [];
@@ -905,7 +910,10 @@ if (!empty($agendamento['proposta_id'])) {
                             <option value="">-- Sem proposta vinculada --</option>
 
                             <?php foreach ($propostas as $prop): ?>
-
+                                <?php
+                                    $embPropLista = $embarcacoesMapaPropostas[$prop['id']] ?? [];
+                                    $embPropTexto = !empty($embPropLista) ? ' — [Barco: ' . implode(', ', $embPropLista) . ']' : '';
+                                ?>
                                 <option value="<?php echo h($prop['id']); ?>"
 
                                         data-cliente="<?php echo h($prop['cliente_nome']); ?>"
@@ -916,7 +924,7 @@ if (!empty($agendamento['proposta_id'])) {
 
                                         <?php echo $agendamento['proposta_id'] === $prop['id'] ? 'selected' : ''; ?>>
 
-                                    <?php echo h($prop['numero']); ?> — <?php echo h($prop['cliente_nome']); ?> (<?php echo formatarMoeda($prop['valor_total']); ?>)
+                                    <?php echo h($prop['numero']); ?> — <?php echo h($prop['cliente_nome']); ?><?php echo h($embPropTexto); ?> (<?php echo formatarMoeda($prop['valor_total']); ?>)
 
                                 </option>
 
